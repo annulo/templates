@@ -10,13 +10,9 @@ Each directory is one template, ready to use as is. A project created from a tem
 
 ## Use a template
 
-New project → pick a template. Templates in this repository are built into Annulo. To add templates from another repository, list them in `~/.shuttle/config.json`:
+New project → pick a template. Templates in this repository are built into Annulo.
 
-```json
-{ "template_sources": ["https://github.com/you/your-templates#my-template"] }
-```
-
-`<repository>#<directory>`; leave out `#<directory>` when the template is the whole repository. Private repositories work with the credentials your git already has.
+To use templates from your own repository: New project → **Add a git template**, then enter `<repository>#<directory>` (leave out `#<directory>` when the template is the whole repository), for example `https://github.com/you/templates#crm`. Annulo reads the repository first and only adds it if it finds a version tag with a template in it. Private repositories work with the credentials your git already has.
 
 ## Versions
 
