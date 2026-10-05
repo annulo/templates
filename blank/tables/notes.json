@@ -1,0 +1,12 @@
+{
+  "name": "备忘",
+  "desc": "示例表：首页上能新增、删除的备忘。用不上了就连同首页的示例一起删掉",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "text": { "type": "string", "description": "内容" },
+      "done": { "type": "boolean", "description": "做完了没有" }
+    },
+    "required": ["text"]
+  }
+}

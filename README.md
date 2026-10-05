@@ -1,0 +1,41 @@
+# Annulo templates
+
+Starting points for [Annulo](https://github.com/annulo) projects. *A home for what AI builds you, ring by ring.*
+
+Each directory is one template, ready to use as is. A project created from a template keeps upgrading with it: Annulo merges each new version into the project and keeps the project's own changes, including everything under `user/`.
+
+| Template | What you get |
+|---|---|
+| [`blank`](blank) | A home page, one sample table and one local function. Tell the assistant what you need and it builds from there. |
+
+## Use a template
+
+New project → pick a template. Templates in this repository are built into Annulo. To add templates from another repository, list them in `~/.shuttle/config.json`:
+
+```json
+{ "template_sources": ["https://github.com/you/your-templates#my-template"] }
+```
+
+`<repository>#<directory>`; leave out `#<directory>` when the template is the whole repository. Private repositories work with the credentials your git already has.
+
+## Versions
+
+A version is a semver tag (`v1.2.0`) on this repository; pre-releases (`v1.3.0-beta.1`) are not offered. The tag message is the upgrade note users see. Every tag must contain finished templates: Annulo copies the directory as it is at the tag.
+
+## Template layout
+
+| Path | What it is |
+|---|---|
+| `annulo.json` | Name, description (`{"zh": …, "en": …}`) and `min_annulo_api`, the Annulo capability version the template needs |
+| `ANNULO.md` | Notes for the assistant: what the project is and how to extend it |
+| `pages/` | Pages (React), rendered by Annulo on your computer |
+| `tables/<table>.json` | Data tables |
+| `local/*.ts` | Local functions: deterministic scripts that pages and schedules run without the model |
+| `schedules/`, `tasks/` | Scheduled jobs; long jobs handed to the assistant |
+| `messages/` | UI text per language |
+
+Never put files under `user/`: that directory belongs to the user, so upgrades never touch it.
+
+## License
+
+[Apache-2.0](LICENSE)

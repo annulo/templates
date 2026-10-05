@@ -1,0 +1,8 @@
+{
+  "name": { "zh": "空白项目", "en": "Blank project" },
+  "description": {
+    "zh": "从零开始：一个首页、一张示例表、一个本机函数。告诉右侧的助手你想要什么，它会把页面、表和脚本加进来。",
+    "en": "Start from scratch: a home page, a sample table and one local function. Tell the assistant on the right what you need and it adds the pages, tables and scripts."
+  },
+  "min_annulo_api": 26
+}
