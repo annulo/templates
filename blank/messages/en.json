@@ -11,5 +11,6 @@
   "stats": "Count (local function notes.stats)",
   "statsResult": "{total} in total, {done} done",
   "sent": "Sent to the assistant; follow along on the right",
-  "notInApp": "Open this page in Annulo to read and write data."
+  "notInApp": "Open this page in Annulo to read and write data.",
+  "confirmDelete": "Delete “{text}”?"
 }

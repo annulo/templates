@@ -10,6 +10,14 @@ const themeScript = `<script>(function(){
 })()</script>`
 
 export default {
+  // 页面默认能加载的包（react、radix-ui、lucide-react……）之外，要用的包在这里声明：写死版本，加 ?bundle 把依赖打成一个文件，
+  // external 掉 react（不然页面里有两份 React）；子路径每个一条。用 esm.talizen.com：esm.sh 的 ?bundle 不打 date-fns 这类包，一次要请求几百个文件。
+  importMap: {
+    imports: {
+      'react-day-picker': 'https://esm.talizen.com/react-day-picker@9.14.0?bundle&external=react,react-dom',
+      'date-fns/locale/zh-CN': 'https://esm.talizen.com/date-fns@4.1.0/locale/zh-CN?bundle',
+    },
+  },
   i18n: { defaultLocale: 'zh', locales: ['zh', 'en'], localeDetection: true },
   metadata: (ctx) => (ctx.locale === 'en' ? { title: 'My project' } : { title: '我的项目' }),
   html: { 'data-theme': 'dark' },

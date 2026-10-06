@@ -11,5 +11,6 @@
   "stats": "统计（本机函数 notes.stats）",
   "statsResult": "共 {total} 条，做完 {done} 条",
   "sent": "已经交给助手，在右侧看过程",
-  "notInApp": "这个页面要在 Annulo 里打开才能读写数据。"
+  "notInApp": "这个页面要在 Annulo 里打开才能读写数据。",
+  "confirmDelete": "删除「{text}」？"
 }

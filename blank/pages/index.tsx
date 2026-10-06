@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'talizen'
 import { BarChart3, Check, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { ask, db, openChat, runLocal } from '../lib/annulo'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { confirm } from '../components/ui/confirm'
 
 type Note = { id: string; text: string; done?: boolean }
 
@@ -38,6 +41,7 @@ export default function Home() {
     load()
   }
   const remove = async (n: Note) => {
+    if (!(await confirm({ title: t('confirmDelete', { text: n.text }), danger: true }))) return
     await db.remove('notes', n.id)
     load()
   }
@@ -89,16 +93,11 @@ export default function Home() {
                 add()
               }}
             >
-              <input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={t('placeholder')}
-                className="h-9 flex-1 rounded-lg border border-input bg-input-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50"
-              />
-              <button type="submit" className="inline-flex h-9 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground">
-                <Plus className="size-4" />
+              <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={t('placeholder')} className="flex-1" />
+              <Button type="submit">
+                <Plus />
                 {t('add')}
-              </button>
+              </Button>
             </form>
             <ul className="divide-y divide-border rounded-lg border border-border">
               {notes.length === 0 && <li className="px-4 py-3 text-sm text-muted-foreground">{t('empty')}</li>}
@@ -115,10 +114,10 @@ export default function Home() {
               ))}
             </ul>
             <div className="flex items-center gap-3">
-              <button type="button" onClick={count} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium hover:bg-accent">
+              <Button variant="outline" size="sm" onClick={count}>
                 <BarChart3 className="size-3.5" />
                 {t('stats')}
-              </button>
+              </Button>
               {stats && <span className="text-xs text-muted-foreground">{stats}</span>}
             </div>
           </>
