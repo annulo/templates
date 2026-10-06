@@ -1,0 +1,84 @@
+{
+  "name": "文章",
+  "desc": "为渠道写的文章，审核通过后发布到独立站 CMS",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "写的时候面向哪个网站（参照它的写法）；实际发到哪些网站看 publications"
+      },
+      "topic_id": {
+        "type": "string",
+        "description": "来自哪个选题"
+      },
+      "title": {
+        "type": "string",
+        "description": "标题"
+      },
+      "summary": {
+        "type": "string",
+        "description": "摘要"
+      },
+      "body": {
+        "type": "string",
+        "description": "正文 HTML（发布时各网站的发布脚本按需要转换）"
+      },
+      "video": {
+        "type": "string",
+        "description": "可选的视频素材公开 https 地址；本机视频须先上传到素材库，网站发布时随文章嵌入"
+      },
+      "keywords": {
+        "type": "string",
+        "description": "关键词，逗号分隔"
+      },
+      "status": {
+        "type": "string",
+        "description": "draft / published（初稿不审核，审核按渠道版本走；老数据的 pending_review、rejected 按 draft 看）"
+      },
+      "review_note": {
+        "type": "string",
+        "description": "审核意见"
+      },
+      "cms_collection": {
+        "type": "string",
+        "description": "旧字段（一篇只发一个网站时用）；现在发布记录在 publications"
+      },
+      "cms_id": {
+        "type": "string",
+        "description": "旧字段；现在发布记录在 publications"
+      },
+      "url": {
+        "type": "string",
+        "description": "第一个发布成功的网站上的地址（发社媒时带这个链接）；每个网站的地址在 publications"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      },
+      "published_at": {
+        "type": "string",
+        "description": "发布时间 ISO8601"
+      },
+      "slug": {
+        "type": "string",
+        "description": "文章的 slug（地址里的那段，英文小写短横线）"
+      },
+      "evidence_id": {
+        "type": "string",
+        "description": "写作时读取的不可变依据记录，用于重试去重"
+      },
+      "evidence_snapshot": {
+        "type": "string",
+        "description": "生成时简报、选中产品事实与调研依据快照 JSON，不随来源更新"
+      }
+    },
+    "required": [
+      "title"
+    ]
+  }
+}

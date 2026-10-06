@@ -1,0 +1,56 @@
+{
+  "name": "选题",
+  "desc": "内容选题池，也是选题记忆，避免重复",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "选题标题"
+      },
+      "angle": {
+        "type": "string",
+        "description": "切入点 / 写作思路"
+      },
+      "keywords": {
+        "type": "string",
+        "description": "目标关键词，逗号分隔"
+      },
+      "source": {
+        "type": "string",
+        "description": "来源：manual / agent / search / geo / research"
+      },
+      "status": {
+        "type": "string",
+        "description": "idea / writing / done / dropped"
+      },
+      "article_id": {
+        "type": "string",
+        "description": "写成的文章"
+      },
+      "search_query": {
+        "type": "string",
+        "description": "来自搜索（source=search）：对应的 Google 搜索词"
+      },
+      "search_impressions": {
+        "type": "number",
+        "description": "来自搜索：这个词近 28 天的曝光（gsc.sync 更新）"
+      },
+      "search_position": {
+        "type": "number",
+        "description": "来自搜索：这个词近 28 天的平均排名"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "brief": {
+        "type": "string",
+        "description": "写作简报 JSON：audience / buyer_question / product_ids / outline / language / channels / cta / gaps"
+      }
+    },
+    "required": [
+      "title"
+    ]
+  }
+}

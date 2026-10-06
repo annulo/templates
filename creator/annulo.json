@@ -1,19 +1,32 @@
 {
-  "name": { "zh": "自媒体工作台", "en": "Creator studio" },
+  "name": {
+    "zh": "自媒体工作台",
+    "en": "Creator studio"
+  },
   "description": {
-    "zh": "给自媒体人：按定位出选题、写稿、改稿，一篇稿件一键改写成 X、小红书、LinkedIn 等各平台的版本，审核后发布或排期，账号数据自动采集。",
-    "en": "For creators: ideas from your profile, drafts and revisions, then one draft rewritten for X, LinkedIn, Xiaohongshu and other platforms, published or scheduled after review, with account data collected automatically."
+    "zh": "给自媒体人：定好定位，按定位出选题、写文章，一篇文章改写成小红书、X、LinkedIn 等各平台的帖子，审核后发布或排期；粉丝和互动自动采集，每周一份总结。",
+    "en": "For creators: set your positioning, get ideas and drafts from it, turn one draft into posts for Xiaohongshu, X, LinkedIn and more, publish or schedule after review, with followers and engagement collected and a weekly summary."
   },
   "min_annulo_api": 33,
-  "plugins": { "social": "https://github.com/annulo/plugins#social" },
+  "plugins": {
+    "social": "https://github.com/annulo/plugins#social"
+  },
   "assistant": {
     "intro": {
-      "zh": "出选题、写稿、改写成各平台的帖子，交给我。发出去之前都会先给你审核。",
-      "en": "Ideas, drafts, and posts for each platform: leave them to me. Nothing goes out before you review it."
+      "zh": "出选题、写文章、改写成各平台的帖子、写每周总结，交给我。发出去之前都会先给你审核。",
+      "en": "Ideas, drafts, posts for each platform and the weekly summary: leave them to me. Nothing goes out before you review it."
     },
     "suggestions": {
-      "zh": ["按我的定位出 8 个选题", "把最新的稿件改得更口语一点", "最近 30 天哪条帖子表现最好？"],
-      "en": ["Suggest 8 ideas from my profile", "Make my latest draft more conversational", "Which post did best in the last 30 days?"]
+      "zh": [
+        "按我的定位出 8 个选题",
+        "把最新的文章改得更口语一点",
+        "最近 30 天哪条帖子表现最好？"
+      ],
+      "en": [
+        "Suggest 8 ideas from my positioning",
+        "Make my latest draft more conversational",
+        "Which post did best in the last 30 days?"
+      ]
     }
   }
 }

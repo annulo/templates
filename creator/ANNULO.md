@@ -1,31 +1,61 @@
 # 自媒体工作台
 
-这是一个从「自媒体工作台」模板建的项目：用户是自媒体人，在这里按定位出选题、写稿、改稿，再把一篇稿件改写成各社媒平台的帖子，审核后发布或排期，看各账号的数据。
+这是一个从「自媒体工作台」模板建的项目：用户是自媒体人，在这里定好自己的定位，按定位出选题、写文章，再把一篇文章改写成各社媒平台的帖子，审核后发布或排期，看各账号的数据和每周总结。
+项目里只有一个业务；定位在 `profile` 表（只有一行），各业务表里没有「所属项目」字段。
 
-## 流程和数据
+## 用户是谁、怎么跟他说话
 
-| 页面（`pages/index.tsx`，`?view=`） | 表 | 本机函数、任务 |
+用户是写内容的人，不是技术人员。回复和写进界面的文字用他们的话：
+
+| 不要说 | 要说 |
+|---|---|
+| 写作计划、写作主题、简报、topics | 选题（简报是选题的详情，在「编辑选题」里） |
+| 初稿、内容稿、稿件、articles | 文章 |
+| 渠道、social_accounts | 账号 |
+| 项目资料、profile | 我的定位 |
+| 运营周报 | 每周总结 |
+
+本机函数、任务、表名这些是你自己用的，不要出现在给用户看的话里。
+
+## 页面和数据
+
+入口是 `pages/Index.tsx`，用查询参数 `view` 切换视图（`/?view=content`，不是 `/content`）。改完页面调 `page_errors` 时传真实地址，例如 `{"reload":true,"path":"/?view=content"}`。
+
+| 页面（`?view=`） | 表 | 本机函数、任务 |
 |---|---|---|
-| 定位（`profile`） | `profile`（只有一行：我是谁、写给谁、主要写什么、风格、不写什么） | 页面直接读写 |
-| 选题（`ideas`） | `ideas`（`status`：idea 待写 / drafting 已成稿 / dropped 不写了） | 任务 `suggest-ideas`（出一批选题）；`ideas.context` / `ideas.save` |
-| 稿件（`drafts`，`?draft=<id>` 是一篇） | `drafts`（Markdown 正文，`status`：draft / ready / archived，`idea_id` 指回选题） | 任务 `write-draft`（选题写成稿件）、`revise-draft`（改稿）；`drafts.context` / `drafts.save` |
-| 稿件里的「发到社媒」 | 社媒插件的 `social_posts`（`article_id` 是稿件 id） | 插件的任务 `social/write-<平台>`，参数 `{ source: { fn: "drafts.source", id: <稿件 id> }, channel_ids }`；发布 `social/social.publish` |
-| 账号与数据（`accounts`） | 社媒插件的 `social_accounts`、`social_health` | `social/social.login` / `collect` / `probe` / `health`、`social/stats.summary`；修平台按插件的任务 `social/fix-platform` |
+| 总览 `overview`（起步步骤 + 今天要做的 + 粉丝、发布数） | `checklist` | `today.list`（用户问「接下来做什么」先跑它照着答）、`channels.stats` |
+| 每周总结 `reports` | `reports` | `reports.data` / `reports.save`；任务 `weekly-report`（每 7 天定时，也能在页面点） |
+| 社媒 `social`（账号概览、数据表现） | 社媒插件的 `social_accounts`、`social_daily`、`social_post_daily`、`social_health` | `social/social.*`、`social/stats.summary` |
+| 内容中心 `content`（选题 → 文章 → 各账号的版本 → 审核 → 发布 / 排期） | `topics`、`articles`、插件的 `social_posts` | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.socialSource` |
+| 发布日历 `calendar`（按天看排期和发布，拖动改排期） | 读 `social_posts`、`articles` | |
+| 我的定位 `company` | `profile` | `profile.get` / `save` |
+| 素材库 `assets` | `assets` | |
+| 账号 `channels`（添加、登录、移除、自检） | 插件的 `social_accounts` | `channels.remove`、`social/social.login` / `probe` |
 
-写稿、出选题、改写帖子这些要 AI 想的活都是任务（`tasks/<id>.md`），按钮开一段对话交给你。用户在对话里让你做同样的事，照同一份任务做。
-任务的「怎么写」用户能在页面上改（「AI 要求」按钮）：默认在 `prompts/<id>.md`，用户改的在 `user/prompts/<id>.md`；社媒的写法是插件的，用户改的在 `user/plugins/social/prompts/`。
+新项目先走向导：填定位（`components/wizard/CreatorProfile.tsx`，存 `profile.save`），再添加第一个账号。起步步骤在 `local/_checklist.ts`：定位、添加账号、写第一篇文章、发出第一条帖子。
+
+做页面、加功能、手动改一条数据先读 **ops-backend**（改记录用 `annulo run records.patch`，不要用 creght 命令行）；出选题、写文章、改文章读 **content-studio**；找图、配图读 **assets**；社媒先读 `plugins/social/PLUGIN.md`；本机函数、表声明见 **annulo** skill。
+
+## 定位怎么用
+
+`profile` 的字段：`name`（名字 / 账号名）、`positioning`（一句话定位）、`business`（主要写什么）、`profile`（关于我：经历、身份、为什么值得听）、`customer_types`（写给谁）、`buyer_concerns`（读者关心什么）、`advantages`（我的独特之处）、`cooperation`（接什么合作）、`markets`（主要平台和语言）、`tone`（语气）、`keywords`（常写的话题）、`avoid`（不写什么）。
+出选题、写文章、写帖子、写总结前都先读它，写出来要像这个人写的；`avoid` 里的话题和说法不要碰。
+
+## 看数据
+
+`annulo run channels.stats --input '{"days":30}'` 一次拿到所有账号的粉丝和互动（`social`）；单个账号用 `annulo run social/stats.summary --input '{"channel_id":"…","days":30}'`，和「社媒 → 数据表现」是同一份数。
+`has_base` 为 false 时 `totals` 是这段时间发的帖子的累计值、不是增量，回答时照 `note` 说明口径。
 
 ## 社媒插件
 
-社媒（账号登录、发布、采集、自检、各平台的写法）是 Annulo 插件 **social**（`plugins/social/`，github.com/annulo/plugins），先读 `plugins/social/PLUGIN.md`。
-插件不带页面：这个模板的 `lib/social.ts`、`components/views/Distribute.tsx`、`Accounts.tsx` 是接它的地方，要换样子直接改它们。
-稿件内容给插件的写作任务用 `drafts.source`（标题、纯文本正文、链接、Markdown 里的图、定位）。
+社媒（账号、登录、发布、采集、自检、各平台的写法）是公开的 Annulo 插件 **social**（`plugins/social/`，github.com/annulo/plugins），这个模板接它的地方：
 
-插件没装时页面会提示去 设置 → 项目 → 插件 装上（模板在 `annulo.json` 里声明了它，新建项目时会自动装）。
+- 页面：`lib/shuttle.ts` 的 `listChannels` 读 `social_accounts`；社媒页、内容页的按钮调 `social/social.*`，写帖子开插件的任务 `social/write-<平台>`，参数 `{ source: { fn: "content.socialSource", id: <文章 id> }, channel_ids }`。
+- 文章内容：`content.socialSource({ id })` 给插件的写作任务用（标题、正文、配图、素材库里的视频、定位）。
+- 视频：`lib/social.ts` 里平台的 `video` 是 `'only'`（YouTube、B 站、抖音）或 `'optional'`；`social_posts.video` 有值就按视频发，可以是素材库的视频地址，或编辑框里「上传本机视频」存在这台电脑上的 `local:<name>`。
+- 插件不带页面，要换样子直接改这个项目的页面。平台的脚本坏了改 `plugins/social/local/<平台>.ts`（插件升级时三方合并），用户点「交给助手修」开的是插件任务 `social/fix-platform`。
+- 插件没装时页面顶部提示去 设置 → 项目 → 插件 装上（模板在 `annulo.json` 里声明了它，新建项目自动装）。
 
-## 改这个项目
+## 浏览器窗口
 
-- 页面在 `pages/index.tsx`，各视图在 `components/views/`；控件用 `components/ui/`（照 shadcn/ui 的写法），不要用浏览器自带的 `<select>`、`confirm`、`alert`。
-- 页面文案在 `messages/zh.json`、`messages/en.json`，两边都要写。
-- 加表：`tables/<表>.json`；页面用 `lib/annulo.ts` 的 `db` 读写。确定的、反复跑的活写成 `local/<文件>.ts` 本机函数，按钮用 `components/RunButton.tsx`；要 AI 写的活写成任务，按钮用 `components/Task.tsx` 的 `TaskButton`，旁边放 `TaskRequirements`。
-- 改完用 page_errors 确认页面没有报错（`{"reload":true,"path":"/?view=drafts"}`）。
+「打开主页」执行 `social/social.openProfile({ channel_id })`，用账号的 `browser_profile`，窗口留给用户看。你要检查或修的时候，在本机函数里用同一个 `browser_profile` 调 `ctx.browser.open({ profile })` 接管原窗口，不要另开默认浏览器或换 profile（登录状态不同）。

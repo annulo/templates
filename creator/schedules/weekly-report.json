@@ -1,0 +1,5 @@
+{
+  "task": "weekly-report",
+  "every": "7d",
+  "name": "写运营周报"
+}

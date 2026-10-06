@@ -1,6 +1,6 @@
 /*
-  设计令牌和 Annulo 外壳是同一套。
-  <html data-theme="dark|light">：在 Annulo 里打开时跟随 Annulo 的主题，单独打开时跟随系统。
+  设计令牌照搬 talizen 平台（folia-web/src/index.css），和 Shuttle 外壳是同一套。
+  <html data-theme="dark|light">：从 Shuttle 打开时跟随 Shuttle 的主题，单独打开时跟随系统。
 */
 @custom-variant dark (&:is([data-theme="dark"] *, [data-kb-theme="dark"] *));
 
@@ -180,10 +180,6 @@
   * {
     @apply border-border outline-ring/50;
   }
-  /* 给滚动条留位置：页面长短切换时导航不左右跳 */
-  html {
-    scrollbar-gutter: stable;
-  }
   body {
     @apply bg-background text-foreground font-sans text-base antialiased;
   }
@@ -199,3 +195,35 @@
 }
 
 /* 文章正文编辑器（components/rich/TiptapEditor.tsx）：排版照飞书 / Notion，空行显示占位提示 */
+.rich-content { font-size: 14px; line-height: 1.8; }
+.rich-content > * + * { margin-top: 0.6em; }
+.rich-content h2 { font-size: 1.35em; font-weight: 600; line-height: 1.4; margin-top: 1.4em; }
+.rich-content h3 { font-size: 1.12em; font-weight: 600; line-height: 1.45; margin-top: 1.2em; }
+.rich-content ul { list-style: disc; padding-left: 1.5em; }
+.rich-content ol { list-style: decimal; padding-left: 1.5em; }
+.rich-content li > p { margin: 0.15em 0; }
+.rich-content blockquote { border-left: 3px solid var(--border); padding-left: 1em; color: var(--muted-foreground); }
+.rich-content a { color: var(--primary-text); text-decoration: underline; text-underline-offset: 2px; }
+.rich-content code { background: var(--muted); border-radius: 4px; padding: 0.1em 0.35em; font-family: var(--font-mono); font-size: 0.88em; }
+.rich-content pre { background: var(--muted); border-radius: 8px; padding: 0.8em 1em; overflow-x: auto; }
+.rich-content pre code { background: none; padding: 0; }
+.rich-content hr { border: none; border-top: 1px solid var(--border); margin: 1.4em 0; }
+.rich-content img { max-width: 100%; border-radius: 8px; }
+.rich-content img.ProseMirror-selectednode { outline: 2px solid var(--ring); outline-offset: 2px; }
+.rich-content .is-empty::before { content: attr(data-placeholder); color: var(--muted-foreground); opacity: 0.6; float: left; height: 0; pointer-events: none; }
+
+/* 运营后台在 Shuttle 里用，不要平台角落的「Made by Creght」标记 */
+#__talizen_made_in_wrap {
+  display: none !important;
+}
+
+/* 原生进度条继承主题；进度来自实际的起步清单，不依赖内联宽度。 */
+@utility setup-progress {
+  appearance: none;
+  border: 0;
+  background: var(--border);
+  color: var(--primary);
+  &::-webkit-progress-bar { background: var(--border); border-radius: 999px; }
+  &::-webkit-progress-value { background: var(--primary); border-radius: 999px; }
+  &::-moz-progress-bar { background: var(--primary); border-radius: 999px; }
+}

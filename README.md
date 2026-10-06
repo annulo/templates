@@ -7,7 +7,7 @@ Each directory is one template, ready to use as is. A project created from a tem
 | Template | What you get |
 |---|---|
 | [`blank`](blank) | A home page, one sample table and one local function. Tell the assistant what you need and it builds from there. |
-| [`creator`](creator) | Creator studio: ideas from your profile, drafts in Markdown, revisions, then one draft rewritten for X, LinkedIn, Xiaohongshu and other platforms, reviewed, published or scheduled, with account data. Uses the [social plugin](https://github.com/annulo/plugins/tree/main/social). |
+| [`creator`](creator) | Creator studio: set your positioning, get topics and articles from it, edit them in a rich-text editor, turn one article into posts for X, LinkedIn, Xiaohongshu and other platforms, review and publish or schedule them, with an asset library, a publishing calendar, followers and engagement collected, and a weekly summary. Uses the [social plugin](https://github.com/annulo/plugins/tree/main/social). |
 
 ## Use a template
 

@@ -1,16 +1,64 @@
 {
-  "name": "定位",
-  "desc": "账号的定位，只有一行：我是谁、写给谁、什么风格。出选题、写稿、改写成社媒帖子时都参考它",
+  "name": "我的定位",
+  "desc": "账号的定位只有一行：我是谁、写给谁、写什么、什么风格。出选题、写文章、改写成社媒帖子时 AI 都照它来",
   "json_schema": {
     "type": "object",
     "properties": {
-      "name": { "type": "string", "description": "名字或账号名" },
-      "about": { "type": "string", "description": "我是谁、做什么、有什么经历（写稿时能用的真实背景）" },
-      "audience": { "type": "string", "description": "写给谁：读者是什么人、关心什么" },
-      "pillars": { "type": "string", "description": "主要写哪几类内容，一行一个" },
-      "voice": { "type": "string", "description": "说话的风格、语气" },
-      "avoid": { "type": "string", "description": "不写什么、不能说的话" },
-      "updated_at": { "type": "string" }
-    }
+      "name": {
+        "type": "string",
+        "description": "名字或账号名"
+      },
+      "positioning": {
+        "type": "string",
+        "description": "一句话定位：我是谁、给谁提供什么"
+      },
+      "business": {
+        "type": "string",
+        "description": "主要写什么：几类内容"
+      },
+      "profile": {
+        "type": "string",
+        "description": "关于我：经历、背景、做过的事（写文章时用到的个人经历只从这里取，不编）"
+      },
+      "advantages": {
+        "type": "string",
+        "description": "专长和可核实的经历、成绩"
+      },
+      "cooperation": {
+        "type": "string",
+        "description": "能提供什么：课程、咨询、作品、商品等（文末引导用）"
+      },
+      "customer_types": {
+        "type": "string",
+        "description": "写给谁：读者是什么人"
+      },
+      "markets": {
+        "type": "string",
+        "description": "发在哪些平台、用什么语言"
+      },
+      "buyer_concerns": {
+        "type": "string",
+        "description": "读者最关心、最常问的问题"
+      },
+      "tone": {
+        "type": "string",
+        "description": "说话风格、语气"
+      },
+      "keywords": {
+        "type": "string",
+        "description": "常写的话题关键词，逗号分隔"
+      },
+      "avoid": {
+        "type": "string",
+        "description": "不写什么：不碰的话题、不能说的话"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      }
+    },
+    "required": [
+      "name"
+    ]
   }
 }

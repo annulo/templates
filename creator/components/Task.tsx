@@ -1,81 +1,140 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { useTranslations } from 'talizen'
-import { Loader2, MessageSquareText, Pencil, RotateCcw, SlidersHorizontal, type LucideIcon } from 'lucide-react'
-import { openChat, tasks, type Task, type TaskRun } from '../lib/annulo'
-import { Button } from './ui/button'
-import { Textarea } from './ui/input'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog'
-import { Markdown } from './Markdown'
+import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
+import { Loader2, MessageSquareText, Pencil, RotateCcw, SlidersHorizontal, X } from 'lucide-react'
+import Markdown from './Markdown'
+import { Button, Dialog, ErrorDetails, Notice, inputCls } from './ui'
+import { getTask, listTasks, openChat, resetPrompt, runTask, savePrompt, type Task, type TaskRun } from '../lib/shuttle'
+import { tr } from '../lib/i18n'
+import { useAssistant } from '../lib/useShuttle'
 
-// 任务（tasks/<id>.md）：出选题、写稿这类要 AI 想、要写的活。按钮点了新开一段对话交给右侧的助手，过程看得见；
-// 跑的时候按钮变成「进行中 · 看过程」，跑完页面重拉数据。不在本机函数里调模型写长内容。
-
-/** 几个任务里符合 match 的正在跑的；有一次跑完就调 onFinished。也返回这几个任务本身（给「AI 要求」用） */
-export function useTaskRuns(ids: string[], match: (r: TaskRun) => boolean = () => true, onFinished?: () => void) {
-  const [list, setList] = useState<Task[]>([])
+/**
+ * 项目的任务（tasks/<id>.md）：写周报、写文章这类长流程交给助手，在一段对话里跑，过程看得见。
+ * useTask 轮询任务状态，running 变少了（有一次跑完）就调 onFinished 让页面重拉数据。
+ */
+export function useTask(id: string, onFinished?: () => void) {
+  const [task, setTask] = useState<Task | null>(null)
+  const [error, setError] = useState('')
+  const [starting, setStarting] = useState(false)
+  const shuttle = useAssistant()
   const prev = useRef(0)
-  const latest = useRef({ match, onFinished })
-  latest.current = { match, onFinished }
+  const done = useRef(onFinished)
+  done.current = onFinished
+
+  const apply = useCallback((t: Task) => {
+    setTask(t)
+    if (t.running.length < prev.current) done.current?.()
+    prev.current = t.running.length
+  }, [])
+  const load = useCallback(() => {
+    if (!shuttle) return
+    getTask(id)
+      .then(apply)
+      .catch(() => {})
+  }, [id, shuttle, apply])
+  useEffect(() => {
+    load()
+    // 在跑的时候看得勤一点
+    const t = window.setInterval(load, 4000)
+    return () => clearInterval(t)
+  }, [load])
+
+  /** 开一段对话交给助手；成功返回对话 id */
+  const run = async (input?: unknown) => {
+    setStarting(true)
+    setError('')
+    try {
+      const r = await runTask(id, input)
+      apply(r.task)
+      return r.chat_id
+    } catch (e) {
+      setError((e as Error).message)
+      return ''
+    } finally {
+      setStarting(false)
+    }
+  }
+  return { task, setTask, error, starting, run, reload: load, shuttle }
+}
+
+/**
+ * 几个任务里符合条件的正在跑的（比如这篇文章的社媒改写，跨小红书、X 两个任务），有一次跑完就调 onFinished。
+ * 也返回这几个任务本身（给 TaskRequirements 用）。
+ */
+export function useTaskRuns(ids: string[], match: (r: TaskRun) => boolean = () => true, onFinished?: () => void) {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const shuttle = useAssistant()
+  const prev = useRef(0)
+  const done = useRef({ onFinished, match })
+  done.current = { onFinished, match }
   const key = ids.join(',')
   const load = useCallback(() => {
-    tasks
-      .list()
-      .then((all) => {
-        const mine = all.filter((t) => key.split(',').includes(t.id))
-        setList(mine)
-        const n = mine.flatMap((t) => t.running).filter((r) => latest.current.match(r)).length
-        if (n < prev.current) latest.current.onFinished?.()
+    if (!shuttle) return
+    listTasks()
+      .then((l) => {
+        const mine = l.filter((t) => key.split(',').includes(t.id))
+        setTasks(mine)
+        const n = mine.flatMap((t) => t.running).filter((r) => done.current.match(r)).length
+        if (n < prev.current) done.current.onFinished?.()
         prev.current = n
       })
       .catch(() => {})
-  }, [key])
+  }, [key, shuttle])
   useEffect(() => {
     load()
-    const t = setInterval(load, 4000)
+    const t = window.setInterval(load, 4000)
     return () => clearInterval(t)
   }, [load])
-  const runs = list.flatMap((t) => t.running).filter(match)
-  const setTask = (t: Task) => setList((l) => l.map((x) => (x.id === t.id ? t : x)))
-  return { tasks: list, runs, reload: load, setTask }
+  const runs = tasks.flatMap((t) => t.running).filter(match)
+  const setTask = (t: Task) => setTasks((l) => l.map((x) => (x.id === t.id ? t : x)))
+  return { tasks, runs, reload: load, setTask, shuttle }
 }
 
-/** 交给助手的按钮。正在跑（符合 match 的）时变成「进行中 · 看过程」 */
+/**
+ * 交给助手的任务按钮：点了开一段对话、在右侧打开（过程看得见）。
+ * 这个任务有符合 match 的在跑时，按钮变成「进行中 · 看过程」，点了打开那段对话；跑完调 onFinished。
+ * 要 AI 想、要写的活都用它，不在本机函数里调模型写长内容（见 AGENTS.md「后台功能怎么分」）。
+ */
 export function TaskButton({
   task,
   input,
-  match,
+  match = () => true,
   onFinished,
+  beforeRun,
+  disabled = false,
   icon: Icon,
   variant = 'default',
   size = 'sm',
-  disabled,
+  className,
   children,
 }: {
   task: string
   input?: unknown
   match?: (r: TaskRun) => boolean
   onFinished?: () => void
-  icon?: LucideIcon
-  variant?: 'default' | 'outline' | 'ghost'
-  size?: 'sm' | 'default'
+  /** 表单先校验/保存，再把返回值作为本次任务参数。 */
+  beforeRun?: () => Promise<unknown>
   disabled?: boolean
+  icon?: ComponentType<{ className?: string }>
+  variant?: 'default' | 'outline' | 'ghost'
+  size?: 'default' | 'sm'
+  className?: string
   children: ReactNode
 }) {
-  const t = useTranslations('task')
-  const { runs, reload } = useTaskRuns([task], match, onFinished)
+  const { runs, shuttle, reload } = useTaskRuns([task], match, onFinished)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
-  if (runs[0])
+  const run = runs[0]
+  if (run)
     return (
-      <Button variant="outline" size={size} onClick={() => openChat(runs[0].chat_id)}>
-        <Loader2 className="animate-spin" /> {t('running')}
+      <Button variant="outline" size={size} className={className} onClick={() => openChat(run.chat_id)}>
+        <Loader2 className="animate-spin" /> {tr('task.running')} · {tr('task.view')}
       </Button>
     )
   const start = async () => {
     setStarting(true)
     setError('')
     try {
-      const r = await tasks.run(task, input)
+      const prepared = beforeRun ? await beforeRun() : input
+      const r = await runTask(task, prepared)
       openChat(r.chat_id)
       reload()
     } catch (e) {
@@ -85,28 +144,30 @@ export function TaskButton({
     }
   }
   return (
-    <span className="inline-flex max-w-full flex-col items-start gap-1">
-      <Button variant={variant} size={size} disabled={disabled || starting} onClick={start}>
+    <span className="inline-flex max-w-full min-w-0 w-fit flex-col items-start gap-1.5">
+      <Button feedback={false} variant={variant} size={size} className={className} disabled={disabled || !shuttle || starting} onClick={start}>
         {starting ? <Loader2 className="animate-spin" /> : Icon && <Icon />}
         {children}
       </Button>
-      {error && <span className="max-w-80 text-xs text-destructive [overflow-wrap:anywhere]">{error}</span>}
+      {error && <span className="w-64 min-w-0 max-w-full"><ErrorDetails message={error} /></span>}
     </span>
   )
 }
 
-/** 正在跑的任务，一行一个，带「看过程」 */
-export function TaskRunning({ runs, title }: { runs: TaskRun[]; title: (r: TaskRun) => string }) {
-  const t = useTranslations('task')
+/** 正在跑的任务：一行一个，带「看过程」（在右侧打开那段对话） */
+export function TaskRunning({ runs, title, desc }: { runs: TaskRun[]; title: (r: TaskRun) => string; desc?: string }) {
   if (!runs.length) return null
   return (
     <div className="space-y-2">
       {runs.map((r) => (
-        <div key={r.chat_id} className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+        <div key={r.chat_id} className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
           <Loader2 className="size-4 shrink-0 animate-spin text-primary-text" />
-          <span className="min-w-0 flex-1 truncate">{title(r)}</span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-semibold">{title(r)}</div>
+            {desc && <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>}
+          </div>
           <Button variant="outline" size="sm" onClick={() => openChat(r.chat_id)}>
-            <MessageSquareText /> {t('view')}
+            <MessageSquareText /> {tr('task.view')}
           </Button>
         </div>
       ))}
@@ -114,84 +175,142 @@ export function TaskRunning({ runs, title }: { runs: TaskRun[]; title: (r: TaskR
   )
 }
 
+/** 最近一次失败：可以手动关闭；关闭只隐藏本次运行的提示，不删除任务记录。 */
+export function TaskFailed({ task }: { task: Task | null }) {
+  const last = task?.last
+  if (!last || last.ok || task.running.length) return null
+  return <TaskFailureNotice key={`${last.chat_id}:${last.started_at}`} run={last} />
+}
+
+function TaskFailureNotice({ run }: { run: TaskRun }) {
+  const storageKey = `shuttle.task-failure.dismissed:${run.chat_id}:${run.started_at}`
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(storageKey) === '1' } catch { return false }
+  })
+  const dismiss = () => {
+    setDismissed(true)
+    try { localStorage.setItem(storageKey, '1') } catch { /* 存储不可用时仍能关闭本页提示 */ }
+  }
+  if (dismissed) return null
+  return (
+    <Notice tone="error">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="min-w-0 flex-1">
+          {tr('task.failed', { error: run.error ?? '' })}
+          <button type="button" className="ml-2 font-semibold underline underline-offset-2" onClick={() => openChat(run.chat_id)}>
+            {tr('task.view')}
+          </button>
+        </div>
+        <button type="button" className="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-destructive/10 outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={tr('common.close')} title={tr('common.close')} onClick={dismiss}><X className="size-3.5" /></button>
+      </div>
+    </Notice>
+  )
+}
+
+/** 任务的「要求」：用户自己能改的说明（就是 tasks/<id>.md 的正文），改完下一次就照新的做 */
 /**
- * 「AI 要求」：放在发起任务的按钮旁边，点开看、改这个任务的「怎么写」。
- * 默认的在 prompts/<id>.md（模板的），用户改了存 user/prompts/<id>.md（插件的任务存 user/plugins/<插件>/prompts/），能恢复默认。
+ * 需求类任务的「AI 要求」：放在发起任务的按钮旁边的小按钮，点开弹窗，显示、编辑这个任务的「怎么写」。
+ * 模板默认的在 prompts/<id>.md，用户改了存到 user/prompts/<id>.md（能恢复默认）；任务文件本身是系统流程，不给看。
+ * 没有「怎么写」的任务（系统任务）不显示。
  */
-/** label：按钮上的字，同一处有好几个时写清楚是哪个（「写稿要求」「X 的写法」），默认「AI 要求」 */
-export function TaskRequirements({ task, onSaved, label }: { task?: Task; onSaved: (t: Task) => void; label?: string }) {
-  const t = useTranslations('task')
-  const [open, setOpen] = useState(false)
+export function TaskRequirements({ task, onSaved, title, hint, label, open: controlledOpen, onOpenChange }: { task: Task | null; onSaved: (t: Task) => void; title: string; hint: string; label?: string; open?: boolean; onOpenChange?: (open: boolean) => void }) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   if (!task || !(task.prompt_file || task.prompt_has_default)) return null
-  const wrap = async (fn: () => Promise<Task>) => {
-    setBusy(true)
+  const text = task.prompt
+
+  const close = () => {
+    setOpen(false)
+    setEditing(false)
+    setError('')
+  }
+  const save = async () => {
+    setSaving(true)
     setError('')
     try {
-      onSaved(await fn())
+      onSaved(await savePrompt(task.id, draft))
       setEditing(false)
     } catch (e) {
       setError((e as Error).message)
+      return false
     } finally {
-      setBusy(false)
+      setSaving(false)
+    }
+  }
+  const reset = async () => {
+    setSaving(true)
+    setError('')
+    try {
+      onSaved(await resetPrompt(task.id))
+    } catch (e) {
+      setError((e as Error).message)
+      return false
+    } finally {
+      setSaving(false)
     }
   }
   return (
     <>
-      <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setOpen(true)}>
-        <SlidersHorizontal /> {label ?? t('requirements')}
-      </Button>
+      {controlledOpen === undefined && <Button variant="ghost" size="sm" onClick={() => setOpen(true)} title={title} className="text-muted-foreground">
+        <SlidersHorizontal /> {label ?? tr('task.ai_settings')}
+      </Button>}
       <Dialog
         open={open}
-        onOpenChange={(o) => {
-          setOpen(o)
-          if (!o) setEditing(false)
-        }}
-      >
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>{t('requirementsTitle', { name: task.name })}</DialogTitle>
-            <DialogDescription>{task.prompt_custom ? t('requirementsCustom') : t('requirementsHint')}</DialogDescription>
-          </DialogHeader>
-          {editing ? (
-            <Textarea autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} rows={12} className="text-sm leading-relaxed" />
+        onClose={close}
+        title={title}
+        width={640}
+        footer={
+          editing ? (
+            <>
+              <Button variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
+                {tr('common.cancel')}
+              </Button>
+              <Button successLabel={tr('ui.saved')} onClick={save} disabled={saving || !draft.trim()}>
+                {saving && <Loader2 className="animate-spin" />}
+                {tr('common.save')}
+              </Button>
+            </>
           ) : (
-            <div className="max-h-[50vh] overflow-y-auto rounded-lg bg-muted/50 p-3">{task.prompt ? <Markdown text={task.prompt} /> : <p className="text-sm text-muted-foreground">{t('requirementsEmpty')}</p>}</div>
-          )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
-          <DialogFooter>
-            {editing ? (
-              <>
-                <Button variant="ghost" onClick={() => setEditing(false)} disabled={busy}>
-                  {t('cancel')}
+            <>
+              {task.prompt_custom && task.prompt_has_default && (
+                <Button variant="ghost" onClick={reset} disabled={saving} className="mr-auto text-muted-foreground">
+                  <RotateCcw /> {tr('task.reset')}
                 </Button>
-                <Button onClick={() => wrap(() => tasks.savePrompt(task.id, draft))} disabled={busy || !draft.trim()}>
-                  {busy && <Loader2 className="animate-spin" />} {t('save')}
-                </Button>
-              </>
-            ) : (
-              <>
-                {task.prompt_custom && task.prompt_has_default && (
-                  <Button variant="ghost" className="mr-auto text-muted-foreground" onClick={() => wrap(() => tasks.resetPrompt(task.id))} disabled={busy}>
-                    <RotateCcw /> {t('reset')}
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setDraft(task.prompt)
-                    setEditing(true)
-                  }}
-                >
-                  <Pencil /> {t('edit')}
-                </Button>
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDraft(text)
+                  setError('')
+                  setEditing(true)
+                }}
+              >
+                <Pencil /> {tr('task.edit')}
+              </Button>
+            </>
+          )
+        }
+      >
+        <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+          {hint}
+          {task.prompt_custom && ` ${tr('task.custom_note')}`}
+        </p>
+        {editing ? (
+          <div className="space-y-3">
+            <textarea autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} rows={14} className={`${inputCls} py-2 text-sm leading-relaxed`} />
+            {error && <Notice tone="error">{error}</Notice>}
+          </div>
+        ) : (
+          <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+            {text ? <Markdown text={text} className="text-sm" /> : <p className="text-sm text-muted-foreground">{tr('task.prompt_empty')}</p>}
+            {error && <Notice tone="error">{error}</Notice>}
+          </div>
+        )}
       </Dialog>
     </>
   )
