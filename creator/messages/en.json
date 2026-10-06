@@ -921,6 +921,7 @@
     "eng_search_models": "Models that can search the web:"
   },
   "social": {
+    "drag_sort": "Drag to reorder",
     "f_media": "Images or video",
     "remove_video": "Remove video",
     "media_video_only": "This platform only takes video",
@@ -1299,6 +1300,7 @@
     "setup_desc": "Not set up yet. The AI reads this site's article fields (and builds a blog if there isn't one), writes the mapping and test-publishes; then articles can be published here."
   },
   "versions": {
+    "stale": "This version was just changed elsewhere (the AI finished, for example) and you have unsaved edits here: saving will overwrite those changes.",
     "publish_batch": "Publish in bulk · {n}",
     "all_added": "Every account already has a version",
     "no_channels": "No social accounts to publish to yet.",

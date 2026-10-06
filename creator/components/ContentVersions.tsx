@@ -9,7 +9,7 @@ import { Badge, Button, Dialog, Field, Notice, cx, fmtTime, inputCls } from './u
 import { fmtNum } from '../lib/format'
 import { CHANNEL_TYPES } from '../lib/channels'
 import { useInShuttle } from '../lib/useShuttle'
-import { dbCreate, dbDelete, dbList, dbPatch, runLocal, shuttleImage, uploadLocalFile, videoSrc, type Article, type Channel, type SocialPost } from '../lib/shuttle'
+import { dbCreate, dbDelete, dbList, dbPatch, openChat, runLocal, shuttleImage, uploadLocalFile, videoSrc, type Article, type Channel, type SocialPost } from '../lib/shuttle'
 import { SOCIAL, SOCIAL_TASKS, writeSocial } from '../lib/social'
 import { tr } from '../lib/i18n'
 import type { Ctx } from './views/types'
@@ -106,7 +106,8 @@ export default function ContentVersions({ ctx, article, focus, onChanged }: { ct
               <ChannelAvatar ch={ch} />
               <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{ch.name}</span><span className="block truncate text-xs text-muted-foreground">{pf.label}{own.length > 1 ? ` · ${tr('versions.count', { n: own.length })}` : ''}{live ? ` · ${metricsLine(live)}` : ''}</span></span>
             </button>
-            {run ? <Badge tone="warn">{tr('versions.generating')}</Badge> : head && <Badge tone={statusTone(head.status)}>{tr(`meta.social_status.${head.status}`)}</Badge>}
+            {/* AI 在写这个账号的版本：和别的交给助手的按钮一样，「进行中 · 看过程」打开那段对话 */}
+            {run ? <Button variant="outline" size="sm" onClick={() => openChat(run.chat_id)}><Loader2 className="animate-spin" />{tr('task.running')} · {tr('task.view')}</Button> : head && <Badge tone={statusTone(head.status)}>{tr(`meta.social_status.${head.status}`)}</Badge>}
             <AccountMenu disabled={!!busy} running={!!run} task={writer.tasks.find((t) => t.id === pf.task) ?? null} onSavedTask={writer.setTask} pfLabel={pf.label} noun={pf.noun}
               onAi={() => act(ch.id, () => writeSocial(article.id, [ch.id], accounts))}
               onBlank={() => act(ch.id, async () => { const p = await blankPost(ch); setSelected(p.id) })} />
@@ -115,7 +116,7 @@ export default function ContentVersions({ ctx, article, focus, onChanged }: { ct
             {own.length > 1 && <div className="border-b border-border p-4">
               <Select value={post?.id ?? ''} onChange={setSelected} ariaLabel={tr('versions.choose')} title={tr('versions.choose')} options={own.map((p) => ({ value: p.id, label: `${p.title || tr('versions.untitled')} · ${tr(`meta.social_status.${p.status}`)}`, icon: <FileText className="size-4" /> }))} />
             </div>}
-            {post ? <SocialVersion key={post.id} post={post} ch={ch} act={act} busy={busy} onChanged={load} onOpenData={() => ctx.go('social', { section: 'data', account: ch.id })} /> : <div className="p-4"><Notice>{run ? tr('versions.generating_hint') : tr('versions.not_created')}</Notice></div>}
+            {post ? <SocialVersion key={post.id} post={post} ch={ch} act={act} busy={busy} onChanged={load} onOpenData={() => ctx.go('social', { section: 'data', account: ch.id })} /> : <div className="p-4"><Notice>{run ? <div className="flex flex-wrap items-center gap-2"><span className="min-w-0 flex-1">{tr('versions.generating_hint')}</span><Button variant="outline" size="sm" onClick={() => openChat(run.chat_id)}>{tr('task.view')}</Button></div> : tr('versions.not_created')}</Notice></div>}
           </div>}
         </div>
       })}
@@ -219,6 +220,27 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
   const [images, setImages] = useState(parse(post.images))
   const [video, setVideo] = useState(post.video || '')
   const [category, setCategory] = useState(post.category || '')
+  // 表里这条在别处变了（AI 改完、别的窗口保存）：表单没动过就直接换成新的，动过了提示用户选（和文章页一样）
+  const snap = (f: { title: string; body: string; tags: string; cover: string; images: string[]; video: string; category: string }) => JSON.stringify([f.title, f.body, f.tags.split(/[\s,，#]+/).filter(Boolean), f.cover, f.images, f.video, f.category])
+  const fromPost = () => ({ title: post.title, body: post.body || '', tags: parse(post.tags).join(' '), cover: post.cover_text || '', images: parse(post.images), video: post.video || '', category: post.category || '' })
+  const base = useRef(snap(fromPost()))
+  const [stale, setStale] = useState(false)
+  const loadPost = () => {
+    const f = fromPost()
+    setTitle(f.title); setBody(f.body); setTags(f.tags); setCover(f.cover); setImages(f.images); setVideo(f.video); setCategory(f.category)
+    base.current = snap(f)
+    setStale(false)
+  }
+  useEffect(() => {
+    const now = snap(fromPost())
+    if (now === base.current) return
+    const mine = snap({ title, body, tags, cover, images, video, category })
+    if (mine === base.current || mine === now) loadPost()
+    else setStale(true)
+  }, [post.updated_at, post.title, post.body, post.tags, post.cover_text, post.images, post.video, post.category])
+  // 配图拖动排序：拖到哪张上就插到那张的位置（第一张通常是封面）
+  const [dragFrom, setDragFrom] = useState<number | null>(null)
+  const moveImage = (from: number, to: number) => setImages((l) => { const n = [...l]; const [x] = n.splice(from, 1); n.splice(to, 0, x); return n })
   const [schedule, setSchedule] = useState('')
   const [picker, setPicker] = useState<'image' | 'video' | ''>('')
   const [uploading, setUploading] = useState(false)
@@ -251,13 +273,14 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
       {post.post_url && <a href={post.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary-text">{tr('content.view_live')}<ArrowUpRight className="size-3" /></a>}
     </div>}
     {published && <Notice>{tr('versions.published_locked')}</Notice>}
+    {stale && <Notice><div className="flex flex-wrap items-center gap-2"><span className="min-w-0 flex-1">{tr('versions.stale')}</span><Button size="sm" variant="outline" onClick={loadPost}>{tr('content.stale_load')}</Button></div></Notice>}
     <fieldset disabled={published} className="space-y-4">
     <Field label={pf.title ? tr('social.f_title') : tr('social.f_title_x')} hint={String([...title].length)}><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
     <Field label={tr('social.f_body')} hint={`${pf.len(body, tagList)} · ${pf.bodyHint}`}><textarea className={cx(inputCls, 'min-h-64 py-3 leading-relaxed')} value={body} onChange={(e) => setBody(e.target.value)} /></Field>
     <Field label={tr('social.f_tags')}><input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} /></Field>
     <Field label={videoOnly ? tr('social.f_video') : tr('social.f_media')} hint={mediaHint}>
       <div className="space-y-2">
-        {canImages && !hasVideo && !!images.length && <div className="flex flex-wrap gap-2">{images.map((u, i) => <div key={u + i} className="relative"><img src={u} alt="" className="size-24 rounded border border-border object-cover" /><button type="button" aria-label={tr('social.remove_image')} onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-foreground text-background opacity-80 hover:opacity-100"><X className="size-3" /></button></div>)}</div>}
+        {canImages && !hasVideo && !!images.length && <div className="flex flex-wrap gap-2">{images.map((u, i) => <div key={u + i} draggable={!published && images.length > 1} onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = 'move' }} onDragOver={(e) => { if (dragFrom !== null) e.preventDefault() }} onDrop={(e) => { e.preventDefault(); if (dragFrom !== null && dragFrom !== i) moveImage(dragFrom, i); setDragFrom(null) }} onDragEnd={() => setDragFrom(null)} title={images.length > 1 ? tr('social.drag_sort') : undefined} className={cx('relative', images.length > 1 && !published && 'cursor-grab active:cursor-grabbing', dragFrom === i && 'opacity-40')}><img src={u} alt="" draggable={false} className="size-24 rounded border border-border object-cover" /><button type="button" aria-label={tr('social.remove_image')} onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-foreground text-background opacity-80 hover:opacity-100"><X className="size-3" /></button></div>)}</div>}
         {hasVideo && <div className="relative"><video src={videoSrc(video)} controls className="max-h-72 w-full rounded bg-black" /><Button size="sm" variant="ghost" className="mt-1" onClick={() => setVideo('')}><X />{tr('social.remove_video')}</Button></div>}
         <div className="flex flex-wrap gap-2">
           {canImages && !hasVideo && images.length < pf.imagesMax && <Button size="sm" variant="outline" onClick={() => setPicker('image')}><Plus />{tr('social.pick_assets')}</Button>}

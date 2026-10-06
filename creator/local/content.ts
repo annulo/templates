@@ -139,7 +139,8 @@ export function socialSource(input: { id: string }, ctx: any) {
     summary: a.summary ?? '',
     text: $.text().slice(0, 8000),
     url: /^https?:\/\//.test(a.url ?? '') ? a.url : '',
-    images: $.find('img[src]').map((i: any) => String(i.attrs.src)).filter((u: string) => /^https?:\/\//.test(u)),
+    // 公开地址，或离线项目传到本机的 /_annulo/uploaded/…（发帖时 b.upload 认它）
+    images: $.find('img[src]').map((i: any) => String(i.attrs.src)).filter((u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/)/.test(u)),
     videos,
     project: projectBrief(profile(ctx)),
   }

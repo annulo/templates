@@ -303,7 +303,8 @@ function SelectionMenu({ editor }: { editor: Editor }) {
     setLinking(false)
   }
   return (
-    <BubbleMenu editor={editor} options={{ placement: 'top' }} shouldShow={({ editor: e, state }) => !state.selection.empty && !e.isActive('image') && !e.isActive('codeBlock')}>
+    // z-30：要盖过吸顶的工具条（z-10）和文章页顶上那条（z-20），选中第一行时浮条才不会被挡住
+    <BubbleMenu editor={editor} className="z-30" options={{ placement: 'top' }} shouldShow={({ editor: e, state }) => !state.selection.empty && !e.isActive('image') && !e.isActive('codeBlock')}>
       <div className="flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
         {linking ? (
           <>
