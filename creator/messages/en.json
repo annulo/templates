@@ -1,0 +1,190 @@
+{
+  "nav": {
+    "title": "Creator studio",
+    "drafts": "Drafts",
+    "ideas": "Ideas",
+    "accounts": "Accounts & data",
+    "profile": "Profile",
+    "notInApp": "Open this page in Annulo to read and write data."
+  },
+  "profile": {
+    "title": "Profile",
+    "desc": "Who you are, who you write for, and how you sound. AI follows this when it suggests ideas, writes drafts and rewrites them into posts.",
+    "name": {
+      "label": "Name",
+      "placeholder": "Your name or account name"
+    },
+    "about": {
+      "label": "About me",
+      "placeholder": "What you do, your experience and expertise. Personal stories in drafts only come from here; AI won't make them up"
+    },
+    "audience": {
+      "label": "Audience",
+      "placeholder": "Who reads you, what they care about, where they get stuck"
+    },
+    "pillars": {
+      "label": "Topics",
+      "placeholder": "A few kinds of content, one per line, e.g.: AI tools, building in public, book notes"
+    },
+    "voice": {
+      "label": "Voice",
+      "placeholder": "How you sound, e.g.: casual, direct, a bit self-deprecating, no exclamation marks"
+    },
+    "avoid": {
+      "label": "Avoid",
+      "placeholder": "Topics you don't touch, things not to say"
+    },
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "ideas": {
+    "title": "Ideas",
+    "desc": "Things to write about: let AI suggest a batch from your profile, or jot your own. Pick one and let AI write the draft.",
+    "noProfile": "Your profile is empty, so AI ideas will be generic.",
+    "fillProfile": "Fill in your profile",
+    "hintPlaceholder": "Any direction for this batch (optional)",
+    "suggest": "Suggest ideas",
+    "suggestHint": "Watch the assistant on the right; new ideas show up below when it's done.",
+    "titlePlaceholder": "Jot down an idea",
+    "anglePlaceholder": "Angle (optional)",
+    "add": "Add",
+    "writingRun": "Writing a draft: {title}",
+    "filter": {
+      "idea": "To write",
+      "drafting": "Drafted",
+      "dropped": "Dropped"
+    },
+    "empty": {
+      "idea": "No ideas to write yet. Let AI suggest some, or add your own.",
+      "drafting": "No ideas have been drafted yet.",
+      "dropped": "No dropped ideas."
+    },
+    "openDraft": "Open draft",
+    "restore": "Restore",
+    "write": "Write draft",
+    "drop": "Drop",
+    "delete": "Delete",
+    "confirmDelete": "Delete the idea \"{title}\"?"
+  },
+  "drafts": {
+    "title": "Drafts",
+    "desc": "The master copy of a piece (Markdown). When it's final, turn it into a version for each social account below.",
+    "newPlaceholder": "Title of a new draft",
+    "new": "New",
+    "empty": "No drafts yet.",
+    "goIdeas": "Go to Ideas and let AI write one",
+    "noSummary": "(no summary)",
+    "status": {
+      "draft": "Writing",
+      "ready": "Final",
+      "archived": "Archived"
+    },
+    "confirmDelete": "Delete the draft \"{title}\"?",
+    "confirmDeleteHint": "Social versions already created are not deleted.",
+    "back": "All drafts",
+    "save": "Save",
+    "saved": "Saved",
+    "delete": "Delete",
+    "summaryPlaceholder": "A one or two sentence summary",
+    "edit": "Edit",
+    "preview": "Preview",
+    "bodyEmpty": "No body yet.",
+    "bodyPlaceholder": "Body in Markdown. Images: ![caption](image URL)",
+    "urlPlaceholder": "Link to the original (blog, newsletter; optional)",
+    "revise": "Revise with AI",
+    "revisePlaceholder": "What to change, e.g.: a punchier opening, cut to 800 words (leave empty for a general pass)",
+    "reviseBtn": "Revise",
+    "saveFirst": "Save your edits before asking AI to revise.",
+    "reqWrite": "Drafting instructions",
+    "reqRevise": "Revising instructions"
+  },
+  "dist": {
+    "title": "Post to social media",
+    "desc": "Pick accounts and AI writes a version for each, following each platform's instructions. Publish or schedule after review.",
+    "noPlugin": "Posting needs the social plugin, which this project hasn't installed: install social in Settings → Project → Plugins.",
+    "openSettings": "Open settings",
+    "noAccounts": "No social accounts yet.",
+    "addAccount": "Add an account",
+    "generate": "Write for {n} accounts",
+    "needBody": "The draft has no body yet",
+    "writingRun": "Writing the {platform} version",
+    "unknownAccount": "(deleted account)",
+    "status": {
+      "draft": "Draft",
+      "pending_review": "To review",
+      "approved": "Approved",
+      "scheduled": "Scheduled",
+      "publishing": "Publishing",
+      "published": "Published",
+      "failed": "Failed",
+      "rejected": "Rejected",
+      "removed": "Removed from platform"
+    },
+    "openPost": "Open",
+    "videoPlaceholder": "Video URL (public http(s) address)",
+    "save": "Save",
+    "cancel": "Cancel",
+    "needVideo": "This platform only takes videos: edit this version and add a video URL.",
+    "metrics": "Views {views} · Likes {likes} · Comments {comments}",
+    "edit": "Edit",
+    "approve": "Approve",
+    "reject": "Reject",
+    "publish": "Publish",
+    "schedule": "Schedule",
+    "unschedule": "Unschedule",
+    "removeFromPlatform": "Delete from platform",
+    "purge": "Delete version",
+    "confirmPurge": "Delete this version? Only the record is deleted; nothing changes on the platform.",
+    "reqPlatform": "{platform} instructions",
+    "day": "Pick a date"
+  },
+  "accounts": {
+    "title": "Accounts & data",
+    "desc": "Social accounts log in with this computer's browser, and the login stays on this computer. Data is collected every 6 hours.",
+    "noPlugin": "Social accounts are managed by the social plugin, which this project hasn't installed: install social in Settings → Project → Plugins.",
+    "openSettings": "Open settings",
+    "add": "Add account",
+    "login": "Log in",
+    "loginHint": "A browser window opens; log in to your account there and it's added automatically.",
+    "empty": "No accounts yet.",
+    "expired": "Login expired: click \"Log in again\"",
+    "followers": "{n} followers",
+    "collectedAt": "collected {at}",
+    "collect": "Collect",
+    "probe": "Self-test",
+    "openProfile": "Profile",
+    "relogin": "Log in again",
+    "healthExpired": "The login expired: click \"Log in again\".",
+    "healthBroken": "{op} fails at \"{step}\"; the platform may have changed:",
+    "op": {
+      "probe": "Self-test",
+      "publish": "Publishing",
+      "remove": "Deleting",
+      "collect": "Collecting"
+    },
+    "fix": "Have the assistant fix it",
+    "stats": "Last 30 days",
+    "s": {
+      "published": "Posts",
+      "followersGain": "New followers",
+      "views": "Views",
+      "likes": "Likes",
+      "comments": "Comments",
+      "pending": "Pending"
+    },
+    "row": "Views {views} · Likes {likes} · Comments {comments}"
+  },
+  "task": {
+    "running": "Running · view",
+    "view": "View",
+    "requirements": "AI instructions",
+    "requirementsTitle": "Instructions for \"{name}\"",
+    "requirementsHint": "AI follows these instructions. Changes apply from the next run.",
+    "requirementsCustom": "This is your edited version; you can restore the default.",
+    "requirementsEmpty": "No instructions yet.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "reset": "Restore default",
+    "edit": "Edit"
+  }
+}

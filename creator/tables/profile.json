@@ -1,0 +1,16 @@
+{
+  "name": "定位",
+  "desc": "账号的定位，只有一行：我是谁、写给谁、什么风格。出选题、写稿、改写成社媒帖子时都参考它",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string", "description": "名字或账号名" },
+      "about": { "type": "string", "description": "我是谁、做什么、有什么经历（写稿时能用的真实背景）" },
+      "audience": { "type": "string", "description": "写给谁：读者是什么人、关心什么" },
+      "pillars": { "type": "string", "description": "主要写哪几类内容，一行一个" },
+      "voice": { "type": "string", "description": "说话的风格、语气" },
+      "avoid": { "type": "string", "description": "不写什么、不能说的话" },
+      "updated_at": { "type": "string" }
+    }
+  }
+}

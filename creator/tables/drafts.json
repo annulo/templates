@@ -1,0 +1,18 @@
+{
+  "name": "稿件",
+  "desc": "一篇内容的母稿（Markdown）。发到各社媒的版本在社媒插件的 social_posts 里，article_id 指向这里",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string", "description": "标题" },
+      "summary": { "type": "string", "description": "一两句话的摘要" },
+      "body": { "type": "string", "description": "正文，Markdown；配图写成 ![说明](公开的图片地址)" },
+      "status": { "type": "string", "description": "draft 在写 / ready 定稿 / archived 归档" },
+      "idea_id": { "type": "string", "description": "出自哪个选题" },
+      "url": { "type": "string", "description": "这篇内容的链接（发在博客、公众号等地方的原文），改写成帖子时有的平台会带上" },
+      "created_at": { "type": "string" },
+      "updated_at": { "type": "string" }
+    },
+    "required": ["title"]
+  }
+}

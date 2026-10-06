@@ -1,0 +1,190 @@
+{
+  "nav": {
+    "title": "自媒体工作台",
+    "drafts": "稿件",
+    "ideas": "选题",
+    "accounts": "账号与数据",
+    "profile": "定位",
+    "notInApp": "这个页面要在 Annulo 里打开才能读写数据。"
+  },
+  "profile": {
+    "title": "定位",
+    "desc": "我是谁、写给谁、什么风格。出选题、写稿、改写成社媒帖子时，AI 都按这里来。",
+    "name": {
+      "label": "名字",
+      "placeholder": "你的名字或账号名"
+    },
+    "about": {
+      "label": "我是谁",
+      "placeholder": "做什么、有什么经历和专长。写进稿件的个人经历只会从这里取，不会编"
+    },
+    "audience": {
+      "label": "写给谁",
+      "placeholder": "读者是什么人、关心什么、卡在哪里"
+    },
+    "pillars": {
+      "label": "主要写什么",
+      "placeholder": "几类内容，一行一个，比如：AI 工具上手、独立开发记录、读书笔记"
+    },
+    "voice": {
+      "label": "风格",
+      "placeholder": "说话的样子，比如：口语、直接、偶尔自嘲，不用感叹号"
+    },
+    "avoid": {
+      "label": "不写什么",
+      "placeholder": "不碰的话题、不能说的话"
+    },
+    "save": "保存",
+    "saved": "已保存"
+  },
+  "ideas": {
+    "title": "选题",
+    "desc": "想写的题目：让 AI 按定位出一批，或者自己记下来。挑一个交给 AI 写成稿件。",
+    "noProfile": "还没填定位，AI 出的选题会比较泛。",
+    "fillProfile": "去填定位",
+    "hintPlaceholder": "这次想写什么方向（可以不填）",
+    "suggest": "AI 出一批选题",
+    "suggestHint": "在右侧看 AI 出选题的过程，出完自动出现在下面。",
+    "titlePlaceholder": "自己记一个题目",
+    "anglePlaceholder": "切入角度（可以不填）",
+    "add": "记下",
+    "writingRun": "正在写成稿件：{title}",
+    "filter": {
+      "idea": "待写",
+      "drafting": "已成稿",
+      "dropped": "不写了"
+    },
+    "empty": {
+      "idea": "还没有待写的选题。让 AI 出一批，或者自己记一个。",
+      "drafting": "还没有写成稿件的选题。",
+      "dropped": "没有放弃的选题。"
+    },
+    "openDraft": "看稿件",
+    "restore": "放回待写",
+    "write": "写成稿件",
+    "drop": "不写了",
+    "delete": "删除",
+    "confirmDelete": "删除选题「{title}」？"
+  },
+  "drafts": {
+    "title": "稿件",
+    "desc": "一篇内容的母稿（Markdown）。定稿后在下面一键改写成各社媒的版本。",
+    "newPlaceholder": "新稿件的标题",
+    "new": "新建",
+    "empty": "还没有稿件。",
+    "goIdeas": "去选题，让 AI 写一篇",
+    "noSummary": "（没有摘要）",
+    "status": {
+      "draft": "在写",
+      "ready": "定稿",
+      "archived": "归档"
+    },
+    "confirmDelete": "删除稿件「{title}」？",
+    "confirmDeleteHint": "已经生成的社媒版本不会一起删。",
+    "back": "全部稿件",
+    "save": "保存",
+    "saved": "已保存",
+    "delete": "删除",
+    "summaryPlaceholder": "一两句话的摘要",
+    "edit": "编辑",
+    "preview": "预览",
+    "bodyEmpty": "还没有正文。",
+    "bodyPlaceholder": "正文，Markdown。配图写成 ![说明](图片地址)",
+    "urlPlaceholder": "原文链接（发在博客、公众号的地址，可以不填）",
+    "revise": "让 AI 改稿",
+    "revisePlaceholder": "想怎么改，比如：开头更抓人、压到 800 字（不填就按写法通读改一遍）",
+    "reviseBtn": "改稿",
+    "saveFirst": "先保存手上的修改，再让 AI 改。",
+    "reqWrite": "写稿要求",
+    "reqRevise": "改稿要求"
+  },
+  "dist": {
+    "title": "发到社媒",
+    "desc": "勾选账号，AI 按每个平台的写法各写一版；审核通过后发布或排期。",
+    "noPlugin": "发到社媒要用社媒插件，这个项目还没装：在 设置 → 项目 → 插件 里装上 social。",
+    "openSettings": "打开设置",
+    "noAccounts": "还没有社媒账号。",
+    "addAccount": "去添加账号",
+    "generate": "为 {n} 个账号生成",
+    "needBody": "稿件还没有正文",
+    "writingRun": "正在写 {platform} 的版本",
+    "unknownAccount": "（账号已删除）",
+    "status": {
+      "draft": "草稿",
+      "pending_review": "待审核",
+      "approved": "已通过",
+      "scheduled": "已排期",
+      "publishing": "发布中",
+      "published": "已发布",
+      "failed": "发布失败",
+      "rejected": "已退回",
+      "removed": "已从平台删除"
+    },
+    "openPost": "打开",
+    "videoPlaceholder": "视频地址（公开的 http(s) 地址）",
+    "save": "保存",
+    "cancel": "取消",
+    "needVideo": "这个平台只发视频：编辑这一版，填上视频地址。",
+    "metrics": "浏览 {views} · 点赞 {likes} · 评论 {comments}",
+    "edit": "编辑",
+    "approve": "通过",
+    "reject": "退回",
+    "publish": "发布",
+    "schedule": "排期",
+    "unschedule": "取消排期",
+    "removeFromPlatform": "从平台删除",
+    "purge": "删除这一版",
+    "confirmPurge": "删除这一版？只删记录，不影响平台上的内容。",
+    "reqPlatform": "{platform} 写法",
+    "day": "选日期"
+  },
+  "accounts": {
+    "title": "账号与数据",
+    "desc": "社媒账号用这台电脑的浏览器登录，登录状态只留在这台电脑上。数据每 6 小时自动采集一次。",
+    "noPlugin": "社媒账号由社媒插件管理，这个项目还没装：在 设置 → 项目 → 插件 里装上 social。",
+    "openSettings": "打开设置",
+    "add": "添加账号",
+    "login": "登录添加",
+    "loginHint": "会弹出一个浏览器窗口，在里面登录你的账号；登录好了自动添加。",
+    "empty": "还没有账号。",
+    "expired": "登录已过期，点「重新登录」",
+    "followers": "粉丝 {n}",
+    "collectedAt": "采集于 {at}",
+    "collect": "采集",
+    "probe": "自检",
+    "openProfile": "主页",
+    "relogin": "重新登录",
+    "healthExpired": "登录过期了：点「重新登录」。",
+    "healthBroken": "{op}在「{step}」这一步走不通了，平台可能改版了：",
+    "op": {
+      "probe": "自检",
+      "publish": "发布",
+      "remove": "删除",
+      "collect": "采集"
+    },
+    "fix": "交给助手修",
+    "stats": "近 30 天数据",
+    "s": {
+      "published": "发布",
+      "followersGain": "新增粉丝",
+      "views": "浏览",
+      "likes": "点赞",
+      "comments": "评论",
+      "pending": "待处理"
+    },
+    "row": "浏览 {views} · 点赞 {likes} · 评论 {comments}"
+  },
+  "task": {
+    "running": "进行中 · 看过程",
+    "view": "看过程",
+    "requirements": "AI 要求",
+    "requirementsTitle": "「{name}」的要求",
+    "requirementsHint": "AI 照这份要求写。改了以后下一次就照新的做。",
+    "requirementsCustom": "这是你改过的版本，可以恢复成默认。",
+    "requirementsEmpty": "还没有要求。",
+    "cancel": "取消",
+    "save": "保存",
+    "reset": "恢复默认",
+    "edit": "修改"
+  }
+}
