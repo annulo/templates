@@ -4,7 +4,7 @@
     "zh": "给自媒体人：按定位出选题、写稿、改稿，一篇稿件一键改写成 X、小红书、LinkedIn 等各平台的版本，审核后发布或排期，账号数据自动采集。",
     "en": "For creators: ideas from your profile, drafts and revisions, then one draft rewritten for X, LinkedIn, Xiaohongshu and other platforms, published or scheduled after review, with account data collected automatically."
   },
-  "min_annulo_api": 28,
+  "min_annulo_api": 33,
   "plugins": { "social": "https://github.com/annulo/plugins#social" },
   "assistant": {
     "intro": {

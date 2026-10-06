@@ -59,7 +59,7 @@ export function source(input: { id: string }, ctx: any) {
   const d = get(ctx, 'drafts', input?.id, ['稿件', 'draft'])
   if (!d) throw new Error(L(ctx, '要给出 id', 'id is required'))
   const body = String(d.body ?? '')
-  const images = [...body.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)[^)]*\)/g)].map((m) => m[1])
+  const images = [...body.matchAll(/!\[[^\]]*\]\(((?:https?:\/\/|\/_annulo\/uploaded\/)[^)\s]+)[^)]*\)/g)].map((m) => m[1])
   return {
     id: d.id,
     title: d.title,
