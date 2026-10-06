@@ -319,14 +319,15 @@ function ArticleDetail({ ctx, a, version, displayStatus, onBack, onChanged }: { 
   // 顶上这条（页签和按钮）是吸顶的：编辑器的工具条吸在它下面，不能吸到 top-0 被它盖住。高度会随换行变，量出来交给 --sticky-top
   const [headerH, setHeaderH] = useState(0)
   const headerObserver = useRef<ResizeObserver | null>(null)
-  const headerRef = (el: HTMLDivElement | null) => {
+  // 固定的回调（不然每次渲染都重新挂一遍）；量到的高度下一帧再设，免得在 ResizeObserver 回调里改布局
+  const headerRef = useCallback((el: HTMLDivElement | null) => {
     headerObserver.current?.disconnect()
     if (!el) return
-    const measure = () => setHeaderH(el.offsetHeight)
+    const measure = () => requestAnimationFrame(() => setHeaderH(el.offsetHeight))
     measure()
     headerObserver.current = new ResizeObserver(measure)
     headerObserver.current.observe(el)
-  }
+  }, [])
   const [pickingVideo, setPickingVideo] = useState(false)
   const [asking, setAsking] = useState(false)
   const [note, setNote] = useState('')
