@@ -61,6 +61,7 @@
     "overview_sub": "Step-by-step checklist",
     "reports_sub": "How this week went",
     "content_sub": "Plan, write, review",
+    "pending_badge": "{n} versions awaiting review",
     "calendar_sub": "What goes out when",
     "assets_sub": "Images, videos, copy",
     "social_sub": "Account status, followers and engagement",

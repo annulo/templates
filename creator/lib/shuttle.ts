@@ -654,14 +654,22 @@ async function orFunc<T>(local: () => Promise<T>, key: string, input: unknown): 
   }
 }
 
+// 页面里写了表就发 db:changed（detail.table 是表名），别处跟着重拉：比如左侧导航「内容中心」的待审数量
+function changed<R>(table: keyof Tables, p: Promise<R>): Promise<R> {
+  return p.then((r) => {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('db:changed', { detail: { table } }))
+    return r
+  })
+}
+
 export const dbCreate = <T extends keyof Tables>(table: T, data: Partial<Tables[T]>) =>
-  orFunc(() => api<Tables[T]>(`db/${table}`, { method: 'POST', body: data }), 'db.create', { table, data })
+  changed(table, orFunc(() => api<Tables[T]>(`db/${table}`, { method: 'POST', body: data }), 'db.create', { table, data }))
 
 export const dbPatch = <T extends keyof Tables>(table: T, id: string, patch: Partial<Tables[T]>) =>
-  orFunc(() => api<Tables[T]>(`db/${table}?id=${encodeURIComponent(id)}`, { method: 'PATCH', body: patch }), 'db.update', { table, id, patch })
+  changed(table, orFunc(() => api<Tables[T]>(`db/${table}?id=${encodeURIComponent(id)}`, { method: 'PATCH', body: patch }), 'db.update', { table, id, patch }))
 
 export const dbDelete = (table: keyof Tables, id: string) =>
-  orFunc(() => api<{ ok: boolean }>(`db/${table}?id=${encodeURIComponent(id)}`, { method: 'DELETE' }), 'db.remove', { table, id })
+  changed(table, orFunc(() => api<{ ok: boolean }>(`db/${table}?id=${encodeURIComponent(id)}`, { method: 'DELETE' }), 'db.remove', { table, id }))
 
 // ---- 交给运营助手 ----
 

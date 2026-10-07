@@ -18,7 +18,7 @@ import Assistant from '../components/views/Assistant'
 import type { Ctx, View } from '../components/views/types'
 import { Notice, Skeleton, cx } from '../components/ui'
 import PluginNotice from '../components/PluginNotice'
-import { channelStats, watchComputer, type ComputerStatus, listChannels, loadProfile, memberLoginURL, MemberLoginRequired, openShuttle, ShuttleUnavailable, type Channel, type ChannelStats, type Profile } from '../lib/shuttle'
+import { channelStats, dbList, watchComputer, type ComputerStatus, listChannels, loadProfile, memberLoginURL, MemberLoginRequired, openShuttle, ShuttleUnavailable, type Channel, type ChannelStats, type Profile } from '../lib/shuttle'
 import { useT } from '../lib/i18n'
 import { useInShuttle } from '../lib/useShuttle'
 import { NAV } from '../lib/edition'
@@ -155,6 +155,26 @@ export default function Index() {
   }, [days, channels.length, rev])
 
   const checklist = useChecklist(rev)
+
+  // 左侧「内容中心」后面的待审数量：和总览「待审核版本」同一口径（各渠道待审核的版本）。
+  // 助手改了数据（rev）、页面里改了版本表（db:changed）、切回窗口时重拉
+  const [pendingReview, setPendingReview] = useState(0)
+  const loadPendingReview = useCallback(() => {
+    dbList('social_posts')
+      .then((posts) => setPendingReview(posts.filter((p) => p.status === 'pending_review' && !!p.article_id).length))
+      .catch(() => setPendingReview(0))
+  }, [])
+  useEffect(() => {
+    if (!routeReady || needLogin) return
+    loadPendingReview()
+    const onChanged = (e: Event) => { if ((e as CustomEvent<{ table?: string }>).detail?.table === 'social_posts') loadPendingReview() }
+    window.addEventListener('db:changed', onChanged)
+    window.addEventListener('focus', loadPendingReview)
+    return () => {
+      window.removeEventListener('db:changed', onChanged)
+      window.removeEventListener('focus', loadPendingReview)
+    }
+  }, [routeReady, needLogin, rev, loadPendingReview])
   const wizard = checklist.data?.wizard
   const autoWizard = !!wizard?.current && !wizard.closed
   useEffect(() => { if (autoWizard) setWizardSession(true) }, [autoWizard])
@@ -232,6 +252,7 @@ export default function Index() {
                 {g.items.map((n) => <button type="button" key={n.view} onClick={(e) => goFrom(e, n.view)} disabled={!ctx} aria-current={n.view === navView ? 'page' : undefined} title={t(n.view + '_sub')} className={navClass(n.view === navView)}>
                   <n.icon className="size-4 shrink-0" strokeWidth={1.8} />
                   <span className="truncate">{t(n.view)}</span>
+                  {n.view === 'content' && pendingReview > 0 && <span title={t('pending_badge', { n: pendingReview })} aria-label={t('pending_badge', { n: pendingReview })} className="ml-auto shrink-0 rounded-full bg-amber-500/15 px-1.5 text-xs leading-5 font-medium tabular-nums text-amber-700 dark:text-amber-400">{pendingReview > 99 ? '99+' : pendingReview}</span>}
                 </button>)}
               </div>
             </div>
