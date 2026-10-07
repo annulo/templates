@@ -226,14 +226,17 @@ function DialogInner({ onClose, title, children, footer, width }: { onClose: () 
 }
 
 /** 表单项 */
-export function Field({ label, hint, children }: { label: ReactNode; hint?: ReactNode; children: ReactNode }) {
-  return (
-    <label className="grid content-start gap-2">
-      <span className="text-sm leading-none font-medium">{label}</span>
-      {children}
-      {hint && <span className="text-xs leading-relaxed text-muted-foreground">{hint}</span>}
-    </label>
-  )
+/**
+ * 表单的一项：标题 + 控件 + 说明。默认是 <label>，点标题就聚焦里面的输入框。
+ * 里面放的是一组按钮、图片（配图、视频这类）时传 group：label 里点哪儿都会替你点第一个按钮（比如删除图片），要换成 div。
+ */
+export function Field({ label, hint, group, children }: { label: ReactNode; hint?: ReactNode; group?: boolean; children: ReactNode }) {
+  const body = <>
+    <span className="text-sm leading-none font-medium">{label}</span>
+    {children}
+    {hint && <span className="text-xs leading-relaxed text-muted-foreground">{hint}</span>}
+  </>
+  return group ? <div role="group" className="grid content-start gap-2">{body}</div> : <label className="grid content-start gap-2">{body}</label>
 }
 
 /** 页面标题行：字号、间距和运营总览的标题一样（Overview.tsx 自己写的那行），改一处要一起改 */

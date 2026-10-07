@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowUpRight, Check, ChevronDown, Clock3, FileText, Loader2, MoreHorizontal, Plus, Send, SlidersHorizontal, Sparkles, Trash2, Upload, X } from 'lucide-react'
 import AssetPicker from './AssetPicker'
+import Lightbox from './Lightbox'
 import Select from './Select'
 import RichEditor from './RichEditor'
 import RunButton from './RunButton'
@@ -240,6 +241,7 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
   }, [post.updated_at, post.title, post.body, post.tags, post.cover_text, post.images, post.video, post.category])
   // 配图拖动排序：拖到哪张上就插到那张的位置（第一张通常是封面）
   const [dragFrom, setDragFrom] = useState<number | null>(null)
+  const [zoom, setZoom] = useState('')
   const moveImage = (from: number, to: number) => setImages((l) => { const n = [...l]; const [x] = n.splice(from, 1); n.splice(to, 0, x); return n })
   const [schedule, setSchedule] = useState('')
   const [picker, setPicker] = useState<'image' | 'video' | ''>('')
@@ -278,9 +280,9 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
     <Field label={pf.title ? tr('social.f_title') : tr('social.f_title_x')} hint={String([...title].length)}><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
     <Field label={tr('social.f_body')} hint={`${pf.len(body, tagList)} · ${pf.bodyHint}`}><textarea className={cx(inputCls, 'min-h-64 py-3 leading-relaxed')} value={body} onChange={(e) => setBody(e.target.value)} /></Field>
     <Field label={tr('social.f_tags')}><input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} /></Field>
-    <Field label={videoOnly ? tr('social.f_video') : tr('social.f_media')} hint={mediaHint}>
+    <Field group label={videoOnly ? tr('social.f_video') : tr('social.f_media')} hint={mediaHint}>
       <div className="space-y-2">
-        {canImages && !hasVideo && !!images.length && <div className="flex flex-wrap gap-2">{images.map((u, i) => <div key={u + i} draggable={!published && images.length > 1} onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = 'move' }} onDragOver={(e) => { if (dragFrom !== null) e.preventDefault() }} onDrop={(e) => { e.preventDefault(); if (dragFrom !== null && dragFrom !== i) moveImage(dragFrom, i); setDragFrom(null) }} onDragEnd={() => setDragFrom(null)} title={images.length > 1 ? tr('social.drag_sort') : undefined} className={cx('relative', images.length > 1 && !published && 'cursor-grab active:cursor-grabbing', dragFrom === i && 'opacity-40')}><img src={u} alt="" draggable={false} className="size-24 rounded border border-border object-cover" /><button type="button" aria-label={tr('social.remove_image')} onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-foreground text-background opacity-80 hover:opacity-100"><X className="size-3" /></button></div>)}</div>}
+        {canImages && !hasVideo && !!images.length && <div className="flex flex-wrap gap-2">{images.map((u, i) => <div key={u + i} draggable={!published && images.length > 1} onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = 'move' }} onDragOver={(e) => { if (dragFrom !== null) e.preventDefault() }} onDrop={(e) => { e.preventDefault(); if (dragFrom !== null && dragFrom !== i) moveImage(dragFrom, i); setDragFrom(null) }} onDragEnd={() => setDragFrom(null)} title={images.length > 1 ? tr('social.drag_sort') : undefined} className={cx('relative', images.length > 1 && !published && 'cursor-grab active:cursor-grabbing', dragFrom === i && 'opacity-40')}><button type="button" onClick={() => setZoom(u)} aria-label={tr('social.view_image')} className="block cursor-zoom-in rounded"><img src={u} alt="" draggable={false} className="size-24 rounded border border-border object-cover" /></button><button type="button" aria-label={tr('social.remove_image')} onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-foreground text-background opacity-80 hover:opacity-100"><X className="size-3" /></button></div>)}</div>}
         {hasVideo && <div className="relative"><video src={videoSrc(video)} controls className="max-h-72 w-full rounded bg-black" /><Button size="sm" variant="ghost" className="mt-1" onClick={() => setVideo('')}><X />{tr('social.remove_video')}</Button></div>}
         <div className="flex flex-wrap gap-2">
           {canImages && !hasVideo && images.length < pf.imagesMax && <Button size="sm" variant="outline" onClick={() => setPicker('image')}><Plus />{tr('social.pick_assets')}</Button>}
@@ -288,6 +290,7 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
         </div>
       </div>
     </Field>
+    {zoom && <Lightbox src={zoom} onClose={() => setZoom('')} />}
     <AssetPicker open={!!picker} kind={picker || 'image'} max={picker === 'video' ? 1 : pf.imagesMax - images.length} onClose={() => setPicker('')} onPick={(urls) => { if (picker === 'video') setVideo(urls[0] || ''); else setImages((l) => [...l, ...urls.filter((u) => !l.includes(u))].slice(0, pf.imagesMax)); setPicker('') }} />
     {pf.cover && !hasVideo && !images.length && <Field label={tr('social.f_cover')} hint={tr('social.cover_hint')}><input className={inputCls} value={cover} onChange={(e) => setCover(e.target.value)} /></Field>}
     {ch.type === 'bilibili' && <Field label={tr('social.category')}><input className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)} /></Field>}

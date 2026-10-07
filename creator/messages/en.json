@@ -921,6 +921,7 @@
     "eng_search_models": "Models that can search the web:"
   },
   "social": {
+    "view_image": "View larger",
     "drag_sort": "Drag to reorder",
     "f_media": "Images or video",
     "remove_video": "Remove video",

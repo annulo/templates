@@ -921,6 +921,7 @@
     "eng_search_models": "能联网搜索的模型："
   },
   "social": {
+    "view_image": "看大图",
     "drag_sort": "拖动调整顺序",
     "f_media": "配图或视频",
     "remove_video": "去掉视频",
