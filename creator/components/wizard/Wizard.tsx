@@ -71,7 +71,8 @@ export default function Wizard({ ctx, onExit, initialStep }: { ctx: Ctx; onExit:
       <footer className="shrink-0 border-t border-border px-5 py-4">
         <div className="mx-auto flex w-full max-w-xl flex-wrap items-center justify-between gap-3">
           <Button variant="ghost" disabled={busy || stepBusy || index === 0} onClick={() => setPicked(steps[index - 1]?.key ?? null)}><ArrowLeft />{tr('wizard.back')}</Button>
-          {step?.key === 'profile' ? <Button type="submit" form="creator-profile" feedback={false} disabled={busy || stepBusy}>{stepBusy && <Loader2 className="size-4 animate-spin" />}{tr('onboarding.next')}</Button> : step && !step.done && <Button variant="ghost" disabled={busy} onClick={skip}>{tr('today.skip')}</Button>}
+          {/* 定位那一屏「下一步」是保存表单；别的步骤没做完能跳过，做完了（比如加完账号回来）往下走，最后一步做完就进总览 */}
+          {step?.key === 'profile' ? <Button type="submit" form="creator-profile" feedback={false} disabled={busy || stepBusy}>{stepBusy && <Loader2 className="size-4 animate-spin" />}{tr('onboarding.next')}</Button> : step && !step.done ? <Button variant="ghost" disabled={busy} onClick={skip}>{tr('today.skip')}</Button> : step && (index < steps.length - 1 ? <Button disabled={busy} onClick={() => setPicked(steps[index + 1].key)}>{tr('onboarding.next')}</Button> : <Button disabled={busy} onClick={finish}>{tr('wizard.overview')}</Button>)}
         </div>
       </footer>
       {siteLoading && <div role="status" aria-live="polite" className="absolute inset-0 z-50 flex items-center justify-center bg-background px-6 text-center">

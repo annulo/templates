@@ -22,7 +22,7 @@ export default function Overview({ ctx }: { ctx: Ctx }) {
   const health = usePlatformHealth(ctx.rev)
   const [data, setData] = useState<{ posts: SocialPost[]; articles: Article[]; topics: Topic[] } | null>(null)
   const [error, setError] = useState('')
-  // 最新一期周报
+  // 最新一期每周总结
   const [report, setReport] = useState<Report | null>(null)
   useEffect(() => {
     dbList('reports')
@@ -75,7 +75,7 @@ export default function Overview({ ctx }: { ctx: Ctx }) {
         </div>
         <Metric label={tr('overview.pending_review')} value={data ? pending.length : null} className="pl-3 pb-3 @min-[640px]/overview:border-r @min-[640px]/overview:px-4 @min-[640px]/overview:pb-0" onClick={openPending} />
         <Metric label={tr('overview.connected_social')} value={connected.length} suffix={tr('overview.signed_in')} className="border-t border-r pt-3 pr-3 @min-[640px]/overview:border-t-0 @min-[640px]/overview:px-4 @min-[640px]/overview:pt-0" onClick={() => ctx.go('social')} />
-        <Metric label={tr('overview.publishing_errors')} value={publishingProblems.length} warning={publishingProblems.length > 0} className="border-t pl-3 pt-3 @min-[640px]/overview:border-t-0 @min-[640px]/overview:pl-4 @min-[640px]/overview:pt-0" onClick={() => ctx.go('social', { filter: 'failed' })} />
+        <Metric label={tr('overview.publishing_errors')} value={publishingProblems.length} warning={publishingProblems.length > 0} className="border-t pl-3 pt-3 @min-[640px]/overview:border-t-0 @min-[640px]/overview:pl-4 @min-[640px]/overview:pt-0" onClick={() => ctx.go('channels', publishingProblems.length === 1 ? { channel: publishingProblems[0].id } : {})} />
       </section>
 
       {ctx.setupOpen && <Checklist ctx={ctx} mode="setup" />}

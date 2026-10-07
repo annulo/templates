@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-// 够用的小 Markdown 渲染：标题、段落、列表、表格、引用、分隔线，行内的加粗、代码、链接。
+// 够用的小 Markdown 渲染：标题、段落、列表、表格、引用、分隔线、单独一行的图片，行内的加粗、代码、链接。
 // 直接生成 React 元素，不拼 HTML（正文是助手写的，不信任里面的标签）。
 
 function inline(text: string, key = ''): ReactNode[] {
@@ -27,6 +27,8 @@ function inline(text: string, key = ''): ReactNode[] {
 }
 
 const cells = (line: string) => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim())
+// 单独一行的图片：![说明](https://…)，显示成整宽的截图，说明写在下面
+const IMAGE_LINE = /^\s*!\[([^\]]*)\]\((https:\/\/[^)\s]+)\)\s*$/
 const isRule = (line: string) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line)
 
 export default function Markdown({ text, className }: { text: string; className?: string }) {
@@ -45,6 +47,19 @@ export default function Markdown({ text, className }: { text: string; className?
       const level = h[1].length
       const cls = level <= 2 ? 'mt-5 text-sm font-semibold first:mt-0' : 'mt-4 text-[13px] font-semibold first:mt-0'
       blocks.push(<div key={k} className={cls}>{inline(h[2], k)}</div>)
+      i++
+      continue
+    }
+    const img = IMAGE_LINE.exec(line)
+    if (img) {
+      blocks.push(
+        <figure key={k} className="my-5">
+          <a href={img[2]} target="_blank" rel="noreferrer">
+            <img src={img[2]} alt={img[1]} loading="lazy" className="w-full rounded-xl border border-border shadow-sm" />
+          </a>
+          {img[1] && <figcaption className="mt-2 text-center text-xs text-muted-foreground">{img[1]}</figcaption>}
+        </figure>,
+      )
       i++
       continue
     }
@@ -112,7 +127,7 @@ export default function Markdown({ text, className }: { text: string; className?
     }
     // 段落：连续的普通行合成一段
     const p: string[] = []
-    while (i < lines.length && lines[i].trim() && !/^(#{1,4})\s|^\s*[-*]\s|^\s*\d+[.)]\s|^\s*>/.test(lines[i]) && !(lines[i].includes('|') && isRule(lines[i + 1] ?? ''))) p.push(lines[i++])
+    while (i < lines.length && lines[i].trim() && !/^(#{1,4})\s|^\s*[-*]\s|^\s*\d+[.)]\s|^\s*>/.test(lines[i]) && !IMAGE_LINE.test(lines[i]) && !(lines[i].includes('|') && isRule(lines[i + 1] ?? ''))) p.push(lines[i++])
     if (!p.length) {
       // 兜底：不认识的行也要前进，避免死循环
       p.push(lines[i++])

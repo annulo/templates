@@ -52,7 +52,7 @@ export function context(input: { topic_id?: string }, ctx: any) {
   const topic = input?.topic_id ? topics.find((t) => t.id === input.topic_id) : null
   if (input?.topic_id && !topic) throw new Error(L(ctx, '没有这个选题：', 'No such topic: ') + input.topic_id)
   const ideas = topic ? [] : topics.filter((t) => t.status === 'idea').map((t) => ({ id: t.id, title: t.title, angle: t.angle ?? '', keywords: t.keywords ?? '' }))
-  if (!topic && !ideas.length) throw new Error(L(ctx, '选题池是空的：先点「出选题」', 'The topic pool is empty: click "Suggest topics" first'))
+  if (!topic && !ideas.length) throw new Error(L(ctx, '选题池是空的：先点「出一批选题」', 'The topic pool is empty: click "Suggest topics" first'))
   const written: any[] = ctx.db.query('articles', { limit: 200 }).list
   return {
     project: projectBrief(project),

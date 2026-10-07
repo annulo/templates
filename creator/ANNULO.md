@@ -14,6 +14,8 @@
 | 渠道、social_accounts | 账号 |
 | 项目资料、profile | 我的定位 |
 | 运营周报 | 每周总结 |
+| 素材库、素材 | 资料库、资料 |
+| 渠道版本 | 媒体版本（各账号的版本） |
 
 本机函数、任务、表名这些是你自己用的，不要出现在给用户看的话里。
 
@@ -29,7 +31,7 @@
 | 内容中心 `content`（选题 → 文章 → 各账号的版本 → 审核 → 发布 / 排期） | `topics`、`articles`、插件的 `social_posts` | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.socialSource` |
 | 发布日历 `calendar`（按天看排期和发布，拖动改排期） | 读 `social_posts`、`articles` | |
 | 我的定位 `company` | `profile` | `profile.get` / `save` |
-| 素材库 `assets` | `assets` | |
+| 资料库 `assets` | `assets` | |
 | 账号 `channels`（添加、登录、移除、自检） | 插件的 `social_accounts` | `channels.remove`、`social/social.login` / `probe` |
 
 新项目先走向导：填定位（`components/wizard/CreatorProfile.tsx`，存 `profile.save`），再添加第一个账号。起步步骤在 `local/_checklist.ts`：定位、添加账号、写第一篇文章、发出第一条帖子。
@@ -51,8 +53,8 @@
 社媒（账号、登录、发布、采集、自检、各平台的写法）是公开的 Annulo 插件 **social**（`plugins/social/`，github.com/annulo/plugins），这个模板接它的地方：
 
 - 页面：`lib/shuttle.ts` 的 `listChannels` 读 `social_accounts`；社媒页、内容页的按钮调 `social/social.*`，写帖子开插件的任务 `social/write-<平台>`，参数 `{ source: { fn: "content.socialSource", id: <文章 id> }, channel_ids }`。
-- 文章内容：`content.socialSource({ id })` 给插件的写作任务用（标题、正文、配图、素材库里的视频、定位）。
-- 视频：`lib/social.ts` 里平台的 `video` 是 `'only'`（YouTube、B 站、抖音）或 `'optional'`；`social_posts.video` 有值就按视频发，可以是素材库的视频地址，或编辑框里「上传本机视频」存在这台电脑上的 `local:<name>`。
+- 文章内容：`content.socialSource({ id })` 给插件的写作任务用（标题、正文、配图、资料库里的视频、定位）。
+- 视频：`lib/social.ts` 里平台的 `video` 是 `'only'`（YouTube、B 站、抖音）或 `'optional'`；`social_posts.video` 有值就按视频发，可以是资料库的视频地址，或编辑框里「上传本机视频」存在这台电脑上的 `local:<name>`。
 - 插件不带页面，要换样子直接改这个项目的页面。平台的脚本坏了改 `plugins/social/local/<平台>.ts`（插件升级时三方合并），用户点「交给助手修」开的是插件任务 `social/fix-platform`。
 - 插件没装时页面顶部提示去 设置 → 项目 → 插件 装上（模板在 `annulo.json` 里声明了它，新建项目自动装）。
 

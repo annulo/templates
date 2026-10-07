@@ -42,7 +42,8 @@ export default function ProjectSettings({ ctx, embedded = false }: { ctx: Ctx; e
   const line = (k: keyof Profile, ph: string) => <input value={(f[k] as string) ?? ''} onChange={set(k)} className={`${inputCls} h-9`} placeholder={tr(ph)} />
   return (
     <div className="space-y-6">
-      <PageHeader title={tr(embedded ? 'company.profile_tab' : 'settings.title')} level={embedded ? 2 : 1} desc={embedded ? undefined : tr('settings.desc')} />
+      {/* 嵌在「我的定位」页里时页面已经有标题，不再重复一个 */}
+      {!embedded && <PageHeader title={tr('settings.title')} desc={tr('settings.desc')} />}
       {error && <Notice tone="error">{error}</Notice>}
       <div className="max-w-3xl space-y-4">
         <Panel title={tr('settings.overview')} className="space-y-4">

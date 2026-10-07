@@ -13,7 +13,7 @@ type Draft = Record<Key, string>
 const split = (value: string) => value.split(/[,，、;；\n]+/).map((part) => part.trim()).filter(Boolean)
 const readerKinds = ['workers', 'students', 'parents', 'founders', 'developers', 'creators', 'small_business'] as const
 
-const CreatorProfile: WizardScreen = ({ ctx, onFinish, onBusyChange }) => {
+const CreatorProfile: WizardScreen = ({ ctx, onDone, onFinish, onBusyChange }) => {
   const [draft, setDraft] = useState<Draft>(() => Object.fromEntries(keys.map((k) => [k, (ctx.profile[k as keyof Profile] as string) ?? ''])) as Draft)
   const [custom, setCustom] = useState('')
   const [busy, setBusy] = useState(false)
@@ -42,8 +42,14 @@ const CreatorProfile: WizardScreen = ({ ctx, onFinish, onBusyChange }) => {
       const patch = Object.fromEntries(keys.filter((key) => touched.current.has(key) || draft[key].trim()).map((key) => [key, key === 'customer_types' ? readers.join('、') : draft[key].trim()]))
       await runLocal('profile.save', patch)
       await runLocal('today.unskip', { key: 'profile' })
-      ctx.reloadProfile()
-      await onFinish()
+      // 向导后面还有没做完的步骤（添加账号）就接着走下一步，都做完了才结束向导
+      const steps = ctx.checklist.data?.wizard?.steps ?? []
+      const rest = steps.slice(steps.findIndex((s) => s.key === 'profile') + 1)
+      if (rest.some((s) => !s.done)) onDone()
+      else {
+        ctx.reloadProfile()
+        await onFinish()
+      }
     } catch (e) { setError((e as Error).message) }
     finally { setBusy(false); onBusyChange?.(false) }
   }

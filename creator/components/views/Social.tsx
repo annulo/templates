@@ -5,7 +5,7 @@ import SocialOverview from '../SocialOverview'
 import WorkspaceTabs from '../WorkspaceTabs'
 import { Badge, Button, Dialog, ErrorDetails, Field, Notice, PageHeader, RangeToggle, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
 import { dbList, dbPatch, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, uploadLocalFile, videoSrc } from '../../lib/shuttle'
-import { SOCIAL, isSocial, type MetricKey, isVideoPost, loggedInElsewhere, platformOf, postTitle, socialTypes, useElsewhere, writeSocial, type SocialPlatform } from '../../lib/social'
+import { SOCIAL, isSocial, type MetricKey, isVideoPost, loggedInElsewhere, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
 import Select from '../Select'
 import AssetPicker from '../AssetPicker'
 import { CHANNEL_TYPES } from '../../lib/channels'
@@ -583,51 +583,6 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
   )
 }
 
-type DirectDraft = { channel_id: string; title: string; body: string; tags: string; category: string; video: string; images: string[]; mode: 'text' | 'images' | 'video' }
-const emptyDirect = (id: string): DirectDraft => ({ channel_id: id, title: '', body: '', tags: '', category: '', video: '', images: [], mode: 'text' })
-
-function DirectPostDialog({ open, onClose, accounts, current, onDone }: { open: boolean; onClose: () => void; accounts: Channel[]; current: string; onDone: () => void }) {
-  const [drafts, setDrafts] = useState<DirectDraft[]>([])
-  const [picking, setPicking] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  useEffect(() => { if (open) { setDrafts(current && accounts.some((a) => a.id === current) ? [emptyDirect(current)] : []); setError('') } }, [open, current])
-  const update = (id: string, patch: Partial<DirectDraft>) => setDrafts((xs) => xs.map((d) => d.channel_id === id ? { ...d, ...patch } : d))
-  const toggle = (id: string) => setDrafts((xs) => xs.some((d) => d.channel_id === id) ? xs.filter((d) => d.channel_id !== id) : [...xs, emptyDirect(id)])
-  const save = async () => {
-    setBusy(true); setError('')
-    try {
-      await runLocal('social/social.createDraftBatch', { drafts: drafts.map((d) => ({ channel_id: d.channel_id, title: d.title, body: d.body, tags: d.tags.split(/[\s,，#]+/).filter(Boolean), category: d.category, video: d.video, images: d.images })) })
-      onDone()
-    } catch (e) { setError((e as Error).message); return false } finally { setBusy(false) }
-  }
-  const picked = drafts.find((d) => d.channel_id === picking)
-  return <Dialog open={open} onClose={onClose} title={tr('social.create_content')} width={680} footer={<><Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>{tr('common.cancel')}</Button><Button successLabel={tr('ui.saved')} size="sm" disabled={busy || !drafts.length} onClick={save}>{busy && <Loader2 className="animate-spin" />}{tr('social.create_n', { n: drafts.length })}</Button></>}>
-    <div className="space-y-4">
-      {error && <Notice tone="error">{error}</Notice>}
-      <p className="text-sm text-muted-foreground">{tr('social.direct_hint')}</p>
-      <div className="flex flex-wrap gap-2">{accounts.map((a) => <label key={a.id} className={cx('flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm', drafts.some((d) => d.channel_id === a.id) ? 'border-primary/50 bg-primary/5' : 'border-border')}><input type="checkbox" className="size-4 accent-[var(--primary)]" checked={drafts.some((d) => d.channel_id === a.id)} onChange={() => toggle(a.id)} />{SOCIAL[a.type]?.label} · {a.name}</label>)}</div>
-      {drafts.map((d) => {
-        const ch = accounts.find((a) => a.id === d.channel_id)!
-        const isBili = ch.type === 'bilibili'
-        const pf = SOCIAL[ch.type]!
-        const tagList = d.tags.split(/[\s,，#]+/).filter(Boolean)
-        const length = pf.len(d.body, tagList)
-        return <section key={d.channel_id} className="space-y-3 rounded-xl border border-border bg-background p-4">
-          <h3 className="text-sm font-semibold">{pf.label} · {ch.name}</h3>
-          {isBili && <Field label={tr('social.f_title')} hint={String([...d.title].length)}><input className={inputCls} value={d.title} onChange={(e) => update(d.channel_id, { title: e.target.value })} /></Field>}
-          <Field label={tr('social.f_body')} hint={`${length} · ${pf.bodyHint}`}><textarea className={cx(inputCls, 'min-h-28 py-2')} value={d.body} onChange={(e) => update(d.channel_id, { body: e.target.value })} /></Field>
-          <Field label={tr('social.f_tags')}><input className={inputCls} value={d.tags} onChange={(e) => update(d.channel_id, { tags: e.target.value })} /></Field>
-          {isBili && <Field label={tr('social.category')}><input className={inputCls} value={d.category} onChange={(e) => update(d.channel_id, { category: e.target.value })} /></Field>}
-          {!isBili && <Segmented<'text' | 'images' | 'video'> value={d.mode} onChange={(v) => update(d.channel_id, { mode: v, video: v === 'video' ? d.video : '', images: v === 'images' ? d.images : [] })} options={[{ value: 'text', label: tr('social.mode_text') }, { value: 'images', label: tr('social.mode_images') }, { value: 'video', label: tr('social.mode_video') }]} />}
-          {(isBili || d.mode === 'video') ? <VideoField video={d.video} onChange={(video) => update(d.channel_id, { video })} /> : d.mode === 'images' ? <div className="flex items-center gap-2"><Button variant="outline" size="sm" onClick={() => setPicking(d.channel_id)}>{tr('social.pick_assets')}</Button>{d.images.length > 0 && <span className="text-xs text-muted-foreground">{d.images.length}/{pf.imagesMax}</span>}</div> : null}
-        </section>
-      })}
-      {picked && <AssetPicker open={!!picking} kind="image" max={SOCIAL[accounts.find((a) => a.id === picked.channel_id)!.type]?.imagesMax ?? 4} onClose={() => setPicking(null)} onPick={(urls) => { update(picked.channel_id, { images: urls, video: '' }); setPicking(null) }} />}
-    </div>
-  </Dialog>
-}
-
 function ScheduleDialog({ open, pf, onClose, onSave }: { open: boolean; pf: SocialPlatform; onClose: () => void; onSave: (iso: string) => Promise<void> }) {
   const [at, setAt] = useState('')
   useEffect(() => {
@@ -657,82 +612,6 @@ function ScheduleDialog({ open, pf, onClose, onSave }: { open: boolean; pf: Soci
       <Field label={tr('social.f_time')} hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })}>
         <input type="datetime-local" className={inputCls} value={at} onChange={(e) => setAt(e.target.value)} />
       </Field>
-    </Dialog>
-  )
-}
-
-function DraftDialog({ open, onClose, accounts, current, articles, onDone }: { open: boolean; onClose: () => void; accounts: Channel[]; current: string; articles: Article[]; onDone: () => void }) {
-  const [article, setArticle] = useState('')
-  const [picked, setPicked] = useState<string[]>([])
-  useEffect(() => {
-    if (!open) return
-    setArticle(articles[0]?.id ?? '')
-    // 默认只勾当前在看的账号；看的是全部就一个都不勾，让用户自己选发到哪
-    setPicked(current ? [current] : accounts.length === 1 ? [accounts[0].id] : [])
-  }, [open])
-  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
-  const [starting, setStarting] = useState(false)
-  const [error, setError] = useState('')
-  // 交给助手写（各平台的写作任务），开了对话就关掉弹窗，页面上显示「正在写」和「看过程」
-  const generate = async () => {
-    setStarting(true)
-    setError('')
-    try {
-      await writeSocial(article, picked, accounts)
-      onDone()
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setStarting(false)
-    }
-  }
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title={tr('social.gen_title')}
-      footer={
-        <>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            {tr('common.cancel')}
-          </Button>
-          {picked.length > 0 && article ? (
-            <Button size="sm" onClick={generate} disabled={starting}>
-              {starting && <Loader2 className="animate-spin" />}
-              {picked.length > 1 ? tr('ui.generate_n', { n: picked.length }) : tr('ui.generate')}
-            </Button>
-          ) : (
-            <Button size="sm" disabled>
-              {tr('ui.generate')}
-            </Button>
-          )}
-        </>
-      }
-    >
-      {articles.length === 0 ? (
-        <Notice>{tr('social.no_articles')}</Notice>
-      ) : (
-        <div className="space-y-4">
-          <Field label={tr('social.f_article')}>
-            <Select title={tr('social.f_article')} value={article} onChange={setArticle} options={articles.map((a) => ({ value: a.id, label: a.title }))} />
-          </Field>
-          <Field label={tr('social.f_accounts')} hint={tr('social.accounts_hint')}>
-            <div className="grid gap-2">
-              {accounts.map((a) => (
-                <label key={a.id} className={cx('flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm', picked.includes(a.id) ? 'border-primary/50 bg-primary/5' : 'border-border')}>
-                  <input type="checkbox" checked={picked.includes(a.id)} onChange={() => toggle(a.id)} className="size-4 accent-[var(--primary)]" />
-                  {a.avatar ? <img src={shuttleImage(a.avatar)} alt="" className="size-6 rounded-full object-cover" /> : <div className="size-6 rounded-full bg-muted" />}
-                  <span className="flex-1">{a.name}</span>
-                  <span className="text-xs text-muted-foreground">{platformOf(a)?.label}</span>
-                  {a.followers != null && <span className="text-xs text-muted-foreground tabular-nums">{tr('social.followers_n', { n: n(a.followers) })}</span>}
-                </label>
-              ))}
-            </div>
-          </Field>
-          <p className="text-xs text-muted-foreground">{tr('social.gen_desc')}</p>
-        </div>
-      )}
-      {error && <div className="mt-3"><Notice tone="error">{error}</Notice></div>}
     </Dialog>
   )
 }

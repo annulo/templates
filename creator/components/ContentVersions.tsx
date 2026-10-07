@@ -152,7 +152,7 @@ function AccountMenu({ disabled, running, task, onSavedTask, pfLabel, noun, onAi
   </div>
 }
 
-/** 添加渠道：勾一个或多个还没有版本的网站和账号。网站版本从初稿复制；社媒账号可以空白新建，也可以一次交给 AI 写 */
+/** 添加账号：勾一个或多个还没有版本的账号，可以空白新建，也可以一次交给 AI 写 */
 function AddChannelsDialog({ open, channels, busy, onClose, onAdd }: { open: boolean; channels: Channel[]; busy: boolean; onClose: () => void; onAdd: (ids: string[], ai: boolean) => void }) {
   const [picked, setPicked] = useState<string[]>([])
   useEffect(() => { if (open) setPicked([]) }, [open])

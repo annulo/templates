@@ -27,7 +27,7 @@ description: 内容生产：出选题、按项目资料写文章、改文章、�
 
 ## 写文章
 
-照任务 `tasks/write-article.md` 做（「写一篇」「写成文章」也是按它开对话交给你）：`content.context` 拿上下文，按「怎么写」写，`content.save` 存成文章。
+照任务 `tasks/write-article.md` 做（「AI 写文章」「写成文章」也是按它开对话交给你）：`content.context` 拿上下文，按「怎么写」写，`content.save` 存成文章。
 
 ## 改文章
 

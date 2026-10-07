@@ -1,5 +1,5 @@
 {
   "task": "weekly-report",
   "every": "7d",
-  "name": "写运营周报"
+  "name": "写每周总结"
 }

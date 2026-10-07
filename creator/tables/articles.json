@@ -26,7 +26,7 @@
       },
       "video": {
         "type": "string",
-        "description": "可选的视频素材公开 https 地址；本机视频须先上传到素材库，网站发布时随文章嵌入"
+        "description": "可选的视频素材公开 https 地址；本机视频须先上传到资料库，网站发布时随文章嵌入"
       },
       "keywords": {
         "type": "string",

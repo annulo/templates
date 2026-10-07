@@ -1,6 +1,6 @@
 {
-  "name": "运营周报",
-  "desc": "每周的运营周报：助手按任务 tasks/weekly-report.md 写（每 7 天定时，或周报页点按钮），数字来自 reports.data",
+  "name": "每周总结",
+  "desc": "每周一期的总结：助手按任务 tasks/weekly-report.md 写（每 7 天定时，或「每周总结」页点按钮），数字来自 reports.data",
   "json_schema": {
     "type": "object",
     "properties": {
@@ -34,7 +34,7 @@
       },
       "chat_id": {
         "type": "string",
-        "description": "写这期周报的对话 id"
+        "description": "写这期总结的对话 id"
       },
       "created_at": {
         "type": "string",
