@@ -326,6 +326,8 @@ function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channe
 function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus }: { p: SocialPost; owner?: Channel; showAccount: boolean; articles: Article[]; onChanged: () => void; focus?: boolean; onUnfocus?: () => void }) {
   const account = showAccount ? owner : undefined
   const pf = platformOf(owner) ?? Object.values(SOCIAL)[0]!
+  // 正在发布：上一次留在表里的报错先不显示，跑完重新读表再说
+  const [publishingNow, setPublishingNow] = useState(false)
   const [previewing, setPreviewingRaw] = useState(false)
   const rowRef = useRef<HTMLDivElement>(null)
   // 从排期日历点过来（?post=<id>）：滚到这一条并打开预览；关掉预览时把参数去掉
@@ -399,7 +401,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
           </div>
         )}
         {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} />}
-        {(p.status === 'failed' || (p.status === 'scheduled' && p.error)) && p.error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{p.error}</div>}
+        {!publishingNow && (p.status === 'failed' || (p.status === 'scheduled' && p.error)) && p.error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{p.error}</div>}
         {p.status === 'publishing' && <div className="text-xs text-muted-foreground">{tr('social.stuck_hint')}</div>}
         {p.status === 'removed' && <div className="text-xs text-muted-foreground">{tr('social.removed_from', { when: p.removed_at ? fmtTime(p.removed_at) : '', p: pf.label })}</div>}
         {p.status === 'rejected' && p.review_note && <div className="text-xs text-muted-foreground">{tr('social.review_note', { note: p.review_note })}</div>}
@@ -428,7 +430,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
           )}
           {(p.status === 'approved' || p.status === 'failed') && (
             <>
-              <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onDone={onChanged}>
+              <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onStart={() => setPublishingNow(true)} onDone={() => { setPublishingNow(false); onChanged() }}>
                 {p.status === 'failed' ? tr('social.republish') : tr('social.publish_now')}
               </RunButton>
               <SchedulePopover size="sm" hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} onSchedule={(at) => patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string })} />
@@ -445,7 +447,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
           )}
           {p.status === 'scheduled' && (
             <>
-              <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onDone={onChanged}>
+              <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onStart={() => setPublishingNow(true)} onDone={() => { setPublishingNow(false); onChanged() }}>
                 {tr('social.publish_now')}
               </RunButton>
               <SchedulePopover size="sm" current={p.scheduled_at} hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} onSchedule={(at) => patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string })} onUnschedule={() => patch({ status: 'approved', scheduled_at: null as unknown as string })} />

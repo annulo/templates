@@ -266,6 +266,8 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
   const [picker, setPicker] = useState<'image' | 'video' | ''>('')
   const [uploading, setUploading] = useState(false)
   const tagList = tags.split(/[\s,，#]+/).filter(Boolean)
+  // 正在发布：上一次留在表里的报错（post.error）先不显示，这次跑完重新读表再按新状态显示
+  const [publishingNow, setPublishingNow] = useState(false)
   const published = post.status === 'published' || post.status === 'publishing'
   // 媒体按平台规则来，不用切「纯文字 / 图文 / 视频」：只发视频的平台只有视频；图文和视频二选一的，放了视频就不能再放图，反过来一样
   const videoOnly = f.video === 'only'
@@ -313,7 +315,7 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
     {f.cover && !hasVideo && !images.length && <Field label={tr('social.f_cover')} hint={tr('social.cover_hint')}><input className={inputCls} value={cover} onChange={(e) => setCover(e.target.value)} /></Field>}
     {f.category && <Field label={tr('social.category')}><input className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)} /></Field>}
     </fieldset>
-    {(error || post.error) && <Notice tone="error">{error || post.error}</Notice>}
+    {(error || (!publishingNow && post.error)) && <Notice tone="error">{error || post.error}</Notice>}
     {post.status === 'publishing' && <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4"><p className="min-w-0 flex-1 text-xs text-muted-foreground">{tr('social.stuck_hint')}</p><Button variant="outline" onClick={() => run('mark-failed', () => dbPatch('social_posts', post.id, { status: 'failed', error: tr('social.stuck_error') }))} disabled={!!busy}>{tr('social.mark_failed')}</Button></div>}
     {!published && <div key={post.status} className="space-y-3 border-t border-border pt-4">
       {/* 这一版走到哪一步、下一步做什么：草稿 → 提交审核 → 通过审核 → 发布或排期 */}
@@ -322,11 +324,11 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
         {(post.status === 'draft' || post.status === 'rejected') && <Button successLabel={tr('ui.submitted')} onClick={submit} disabled={!!busy}><Check />{tr('versions.submit')}</Button>}
         {post.status === 'pending_review' && <Button successLabel={tr('ui.approved')} onClick={() => setStatus('approved')} disabled={!!busy}>{busy === 'approved' ? <Loader2 className="animate-spin" /> : <Check />}{tr('versions.approve')}</Button>}
         {(post.status === 'approved' || post.status === 'failed') && <>
-          <RunButton inline size="default" variant="default" fn="social/social.publish" input={{ post_id: post.id }} icon={Send} onError={setError} onDone={onChanged}>{tr('social.publish_now')}</RunButton>
+          <RunButton inline size="default" variant="default" fn="social/social.publish" input={{ post_id: post.id }} icon={Send} onError={setError} onStart={() => setPublishingNow(true)} onDone={() => { setPublishingNow(false); onChanged() }}>{tr('social.publish_now')}</RunButton>
           <SchedulePopover onSchedule={schedulePost} disabled={!!busy} hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} />
         </>}
         {post.status === 'scheduled' && <>
-          <RunButton inline size="default" variant="default" fn="social/social.publish" input={{ post_id: post.id }} icon={Send} onError={setError} onDone={onChanged}>{tr('social.publish_now')}</RunButton>
+          <RunButton inline size="default" variant="default" fn="social/social.publish" input={{ post_id: post.id }} icon={Send} onError={setError} onStart={() => setPublishingNow(true)} onDone={() => { setPublishingNow(false); onChanged() }}>{tr('social.publish_now')}</RunButton>
           <SchedulePopover current={post.scheduled_at} onSchedule={schedulePost} onUnschedule={() => dbPatch('social_posts', post.id, { status: 'approved', scheduled_at: '' }).then(onChanged)} disabled={!!busy} hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} />
         </>}
         <Button successLabel={tr('ui.saved')} variant="outline" onClick={save} disabled={!!busy}>{busy === 'social-save' && <Loader2 className="animate-spin" />}{tr('common.save')}</Button>

@@ -28,6 +28,7 @@ export default function RunButton({
   className,
   inline = false,
   onError,
+  onStart,
   errorActions,
 }: {
   fn: string
@@ -41,6 +42,8 @@ export default function RunButton({
   inline?: boolean
   /** 出错时的报错（开始跑时会先调一次 onError('') 清掉上一次的） */
   onError?: (message: string) => void
+  /** 开始跑的时候调（比如先藏起上一次留在表里的报错，跑完 onDone 再按新状态显示） */
+  onStart?: () => void
   /** 报错旁边放的处理入口（比如报错说要去某个设置，就给一个打开它的按钮）；返回空就不放 */
   errorActions?: (message: string) => ReactNode
 }) {
@@ -60,6 +63,7 @@ export default function RunButton({
     setDone(false)
     setErr('')
     onError?.('')
+    onStart?.()
     setProg({ message: tr('ui.preparing') })
     let result: unknown
     try {
