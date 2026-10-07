@@ -1367,7 +1367,12 @@
     "metrics": "浏览 {v} · 赞 {l} · 评 {c}",
     "metrics_at": "{when}更新",
     "no_metrics": "还没采集到这条的数据",
-    "view_data": "看账号数据"
+    "view_data": "看账号数据",
+    "rewrite_title": "让 AI 改写「{name}」这一版",
+    "rewrite_label": "这次怎么改",
+    "rewrite_hint": "助手在这一版现在的内容上改（包括你手改过的地方），没提到的地方保持原样。",
+    "rewrite_ph": "比如：标题再抓人一点；开头直接说结论；删掉第三段；多配一张图",
+    "rewrite_submit": "开始改写"
   },
   "health": {
     "broken": "{platform}「{name}」的{op}流程走不通了：平台可能改了页面",

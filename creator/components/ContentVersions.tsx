@@ -11,7 +11,7 @@ import { fmtNum } from '../lib/format'
 import { CHANNEL_TYPES } from '../lib/channels'
 import { useInShuttle } from '../lib/useShuttle'
 import { dbCreate, dbDelete, dbList, dbPatch, openChat, runLocal, shuttleImage, uploadLocalFile, videoSrc, type Article, type Channel, type SocialPost } from '../lib/shuttle'
-import { SOCIAL, SOCIAL_TASKS, fieldsOf, isRich, richImages, richText, writeSocial } from '../lib/social'
+import { SOCIAL, SOCIAL_TASKS, fieldsOf, isRich, richImages, richText, toRich, writeSocial } from '../lib/social'
 import { tr } from '../lib/i18n'
 import type { Ctx } from './views/types'
 
@@ -36,6 +36,14 @@ export default function ContentVersions({ ctx, article, focus, onChanged }: { ct
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [adding, setAdding] = useState(false)
+  // 「AI 改写」先问这次怎么改（任务参数 note），助手在那一版现在的内容上改
+  const [rewriting, setRewriting] = useState<Channel | null>(null)
+  const [rewriteNote, setRewriteNote] = useState('')
+  const rewrite = (ch: Channel) => act(ch.id, async () => {
+    await writeSocial(article.id, [ch.id], accounts, rewriteNote)
+    setRewriting(null)
+    setRewriteNote('')
+  })
   const [publishing, setPublishing] = useState(false)
   const accounts = ctx.channels.filter((ch) => !!SOCIAL[ch.type])
   const load = useCallback(() => {
@@ -110,7 +118,7 @@ export default function ContentVersions({ ctx, article, focus, onChanged }: { ct
             {/* AI 在写这个账号的版本：和别的交给助手的按钮一样，「进行中 · 看过程」打开那段对话 */}
             {run ? <Button variant="outline" size="sm" onClick={() => openChat(run.chat_id)}><Loader2 className="animate-spin" />{tr('task.running')} · {tr('task.view')}</Button> : head && <Badge tone={statusTone(head.status)}>{tr(`meta.social_status.${head.status}`)}</Badge>}
             <AccountMenu disabled={!!busy} running={!!run} task={writer.tasks.find((t) => t.id === pf.task) ?? null} onSavedTask={writer.setTask} pfLabel={pf.label} noun={pf.noun}
-              onAi={() => act(ch.id, () => writeSocial(article.id, [ch.id], accounts))}
+              onAi={() => setRewriting(ch)}
               onBlank={() => act(ch.id, async () => { const p = await blankPost(ch); setSelected(p.id) })} />
           </div>
           {open && <div id={panelId} className="border-t border-border">
@@ -123,6 +131,11 @@ export default function ContentVersions({ ctx, article, focus, onChanged }: { ct
       })}
     </div>
     <AddChannelsDialog open={adding} channels={addable} busy={busy === 'add'} onClose={() => setAdding(false)} onAdd={add} />
+    <Dialog open={!!rewriting} onClose={() => setRewriting(null)} title={tr('versions.rewrite_title', { name: rewriting?.name ?? '' })} footer={<><Button variant="ghost" onClick={() => setRewriting(null)}>{tr('common.cancel')}</Button><Button onClick={() => rewriting && rewrite(rewriting)} disabled={!rewriteNote.trim() || !!busy}>{busy === rewriting?.id ? <Loader2 className="animate-spin" /> : <Sparkles />}{tr('versions.rewrite_submit')}</Button></>}>
+      <Field label={tr('versions.rewrite_label')} hint={tr('versions.rewrite_hint')}>
+        <textarea autoFocus value={rewriteNote} onChange={(e) => setRewriteNote(e.target.value)} rows={5} className={cx(inputCls, 'py-2')} placeholder={tr('versions.rewrite_ph')} />
+      </Field>
+    </Dialog>
     <PublishDialog open={publishing} items={publishable} onClose={() => { setPublishing(false); load(); onChanged() }} />
   </section>
 }
@@ -219,7 +232,8 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
   const rich = f.body === 'rich'
   const [editorKey, setEditorKey] = useState(0)
   const [title, setTitle] = useState(post.title)
-  const [body, setBody] = useState(post.body || '')
+  // 富文本平台的老版本可能是 Markdown 写的：放进编辑器前转成 HTML
+  const [body, setBody] = useState(rich ? toRich(post.body || '') : post.body || '')
   const [tags, setTags] = useState(parse(post.tags).join(' '))
   const [cover, setCover] = useState(post.cover_text || '')
   const [images, setImages] = useState(parse(post.images))
@@ -227,7 +241,7 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
   const [category, setCategory] = useState(post.category || '')
   // 表里这条在别处变了（AI 改完、别的窗口保存）：表单没动过就直接换成新的，动过了提示用户选（和文章页一样）
   const snap = (f: { title: string; body: string; tags: string; cover: string; images: string[]; video: string; category: string }) => JSON.stringify([f.title, f.body, f.tags.split(/[\s,，#]+/).filter(Boolean), f.cover, f.images, f.video, f.category])
-  const fromPost = () => ({ title: post.title, body: post.body || '', tags: parse(post.tags).join(' '), cover: post.cover_text || '', images: parse(post.images), video: post.video || '', category: post.category || '' })
+  const fromPost = () => ({ title: post.title, body: rich ? toRich(post.body || '') : post.body || '', tags: parse(post.tags).join(' '), cover: post.cover_text || '', images: parse(post.images), video: post.video || '', category: post.category || '' })
   const base = useRef(snap(fromPost()))
   const [stale, setStale] = useState(false)
   const loadPost = () => {
@@ -283,7 +297,7 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
     {stale && <Notice><div className="flex flex-wrap items-center gap-2"><span className="min-w-0 flex-1">{tr('versions.stale')}</span><Button size="sm" variant="outline" onClick={loadPost}>{tr('content.stale_load')}</Button></div></Notice>}
     <fieldset disabled={published} className="space-y-4">
     <Field label={f.title === 'publish' ? tr('social.f_title') : tr('social.f_title_x')} hint={String([...title].length)}><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
-    <Field label={tr('social.f_body')} hint={`${pf.len(body, tagList)} · ${pf.bodyHint}`}>{rich ? <div className="rounded-lg border border-border"><RichEditor key={editorKey} value={body} onChange={setBody} /></div> : <textarea className={cx(inputCls, 'min-h-64 py-3 leading-relaxed')} value={body} onChange={(e) => setBody(e.target.value)} />}</Field>
+    <Field group={rich} label={tr('social.f_body')} hint={`${pf.len(body, tagList)} · ${pf.bodyHint}`}>{rich ? <div className="rounded-lg border border-border"><RichEditor key={editorKey} value={body} onChange={setBody} /></div> : <textarea className={cx(inputCls, 'min-h-64 py-3 leading-relaxed')} value={body} onChange={(e) => setBody(e.target.value)} />}</Field>
     <Field label={tr('social.f_tags')} hint={tr('social.tags_hint', { n: f.tags })}><input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} /></Field>
     {(canImages || canVideo) && <Field group label={videoOnly ? tr('social.f_video') : tr('social.f_media')} hint={mediaHint}>
       <div className="space-y-2">

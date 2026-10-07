@@ -1367,7 +1367,12 @@
     "metrics": "{v} views · {l} likes · {c} comments",
     "metrics_at": "updated {when}",
     "no_metrics": "No data collected for this post yet",
-    "view_data": "Account data"
+    "view_data": "Account data",
+    "rewrite_title": "Have AI rewrite the \"{name}\" version",
+    "rewrite_label": "What to change",
+    "rewrite_hint": "The assistant edits this version as it is now (including your own edits) and leaves everything you don’t mention alone.",
+    "rewrite_ph": "For example: a punchier title; lead with the conclusion; drop the third paragraph; add another image",
+    "rewrite_submit": "Rewrite"
   },
   "health": {
     "broken": "{op} for {platform} account \"{name}\" isn't working: the platform may have changed its page",

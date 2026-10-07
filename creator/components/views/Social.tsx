@@ -6,7 +6,7 @@ import WorkspaceTabs from '../WorkspaceTabs'
 import RichEditor from '../RichEditor'
 import { Badge, Button, Dialog, ErrorDetails, Field, Notice, PageHeader, RangeToggle, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
 import { dbList, dbPatch, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, uploadLocalFile, videoSrc } from '../../lib/shuttle'
-import { SOCIAL, isSocial, type MetricKey, fieldsOf, isRich, isVideoPost, loggedInElsewhere, postText, richImages, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
+import { SOCIAL, isSocial, type MetricKey, fieldsOf, isRich, isVideoPost, loggedInElsewhere, postText, richImages, toRich, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
 import Select from '../Select'
 import AssetPicker from '../AssetPicker'
 import { CHANNEL_TYPES } from '../../lib/channels'
@@ -497,8 +497,9 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
 }
 
 function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: SocialPost; pf: SocialPlatform; onClose: () => void; onSave: (d: Partial<SocialPost>) => Promise<void> }) {
+  const bodyOf = (x: SocialPost) => (isRich(pf) ? toRich(x.body) : x.body)
   const [title, setTitle] = useState(p.title)
-  const [body, setBody] = useState(p.body)
+  const [body, setBody] = useState(bodyOf(p))
   const [tags, setTags] = useState(parse<string[]>(p.tags, []).join(' '))
   const [cover, setCover] = useState(p.cover_text ?? '')
   const [images, setImages] = useState<string[]>(parse<string[]>(p.images, []))
@@ -512,7 +513,7 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
     setVideo(p.video ?? '')
     setMode(isVideoPost(pf, p) ? 'video' : 'images')
     setTitle(p.title)
-    setBody(p.body)
+    setBody(bodyOf(p))
     setTags(parse<string[]>(p.tags, []).join(' '))
     setCover(p.cover_text ?? '')
     setImages(parse<string[]>(p.images, []))
@@ -541,7 +542,7 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
         <Field label={fieldsOf(pf).title === 'publish' ? tr('social.f_title') : tr('social.f_title_x')} hint={String(len(title))}>
           <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} />
         </Field>
-        <Field label={tr('social.f_body')} hint={`${bodyLen} · ${pf.bodyHint}`}>
+        <Field group={isRich(pf)} label={tr('social.f_body')} hint={`${bodyLen} · ${pf.bodyHint}`}>
           {isRich(pf) ? <div className="rounded-lg border border-border">{open && <RichEditor value={body} onChange={setBody} />}</div> : <textarea className={cx(inputCls, 'min-h-48 py-2')} value={body} onChange={(e) => setBody(e.target.value)} />}
         </Field>
         <Field label={tr('social.f_tags')} hint={tr('social.tags_hint', { n: pf.tagsMax })}>
@@ -845,7 +846,7 @@ function RichCard({ p, owner, tags }: { p: SocialPost; owner?: Channel; tags: st
           {owner?.avatar ? <img src={shuttleImage(owner.avatar)} alt="" className="size-6 rounded-full object-cover" /> : <div className="size-6 rounded-full bg-neutral-200" />}
           <span className="truncate">{owner?.name}</span>
         </div>
-        <div className="rich-content text-neutral-900 [&_img]:my-2 [&_img]:max-w-full [&_img]:rounded" dangerouslySetInnerHTML={{ __html: p.body }} />
+        <div className="rich-content text-neutral-900 [&_img]:my-2 [&_img]:max-w-full [&_img]:rounded" dangerouslySetInnerHTML={{ __html: toRich(p.body) }} />
         {tags.length > 0 && <div className="flex flex-wrap gap-1.5 pt-1">{tags.map((t) => <span key={t} className="rounded-full bg-[#e8f1fe] px-2.5 py-0.5 text-[12px] text-[#056de8]">{t}</span>)}</div>}
       </div>
     </div>

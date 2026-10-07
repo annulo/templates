@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { runLocal, runTask, type Channel, type ChannelType, type SocialPost } from './shuttle'
 import { tr } from './i18n'
-import { FIELDS, type PostFields } from '../plugins/social/local/_fields'
+import { FIELDS, toRich, type PostFields } from '../plugins/social/local/_fields'
+
+/** 富文本平台的正文：旧的 Markdown 写法转成 HTML（插件的 toRich），编辑器、预览之前过一遍 */
+export { toRich }
 import { CHANNELS } from './edition'
 
 export type MetricKey = 'views' | 'likes' | 'comments' | 'collects' | 'shares'
@@ -227,7 +230,7 @@ export const SOCIAL_TASKS = Object.values(SOCIAL).map((p) => p!.task)
  * 文章的内容由 local/content.ts 的 socialSource 给（插件不读模板的表，任务参数 source 告诉助手跑哪个函数取）。
  * 返回开的对话 id；某个平台开不了（比如正在写同样的）就抛出它的报错。
  */
-export async function writeSocial(articleId: string, channelIds: string[], channels: Channel[]) {
+export async function writeSocial(articleId: string, channelIds: string[], channels: Channel[], note?: string) {
   const groups = new Map<string, string[]>()
   for (const id of channelIds) {
     const task = SOCIAL[channels.find((c) => c.id === id)?.type as ChannelType]?.task
@@ -237,7 +240,7 @@ export async function writeSocial(articleId: string, channelIds: string[], chann
   const errors: string[] = []
   for (const [task, ids] of groups) {
     try {
-      chats.push((await runTask(task, { source: { fn: 'content.socialSource', id: articleId }, channel_ids: ids })).chat_id)
+      chats.push((await runTask(task, { source: { fn: 'content.socialSource', id: articleId }, channel_ids: ids, ...(note?.trim() ? { note: note.trim() } : {}) })).chat_id)
     } catch (e) {
       errors.push((e as Error).message)
     }
