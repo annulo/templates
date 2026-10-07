@@ -203,16 +203,24 @@ export function Dialog({ open, onClose, title, children, footer, width = 480 }: 
   return open ? <DialogInner onClose={onClose} title={title} footer={footer} width={width}>{children}</DialogInner> : null
 }
 
+/**
+ * 弹窗里改过东西（输入框、文本框、富文本编辑器打过字）之后，点外面、按 Esc 都不关，晃一下提示用「取消」或「保存」：
+ * 改了一半手一滑点到外面，改的就全丢了。没改过的照旧点外面就关。
+ */
 function DialogInner({ onClose, title, children, footer, width }: { onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; width: number }) {
   const ref = useRefD<HTMLDialogElement>(null)
+  const edited = useRefD(false)
   useEffectD(() => {
     ref.current?.showModal()
   }, [])
+  const nudge = () => ref.current?.animate?.([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 220 })
   return (
     <dialog
       ref={ref}
+      onInput={() => { edited.current = true }}
+      onCancel={(e) => { if (edited.current) { e.preventDefault(); nudge() } }}
       onClose={(event) => { event.stopPropagation(); onClose() }}
-      onClick={(e) => e.target === ref.current && ref.current?.close()}
+      onClick={(e) => { if (e.target !== ref.current) return; if (edited.current) nudge(); else ref.current?.close() }}
       style={{ width: `min(92vw, ${width}px)` }}
       className="m-auto rounded-xl border border-border bg-popover p-0 text-left text-popover-foreground shadow-xl backdrop:bg-black/50"
     >
