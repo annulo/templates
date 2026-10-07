@@ -7,9 +7,12 @@
     "zh": "给自媒体人：定好定位，按定位出选题、写文章，一篇文章改写成小红书、X、LinkedIn 等各平台的帖子，审核后发布或排期；粉丝和互动自动采集，每周一份总结。",
     "en": "For creators: set your positioning, get ideas and drafts from it, turn one draft into posts for Xiaohongshu, X, LinkedIn and more, publish or schedule after review, with followers and engagement collected and a weekly summary."
   },
-  "min_annulo_api": 33,
+  "min_annulo_api": 34,
   "plugins": {
     "social": "https://github.com/annulo/plugins#social"
+  },
+  "plugins_min": {
+    "social": "0.5.0"
   },
   "assistant": {
     "intro": {

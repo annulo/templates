@@ -313,7 +313,7 @@
       "zhihu": {
         "label": "Zhihu",
         "noun": "article",
-        "body_hint": "Posts a Zhihu column article: title up to 100 chars; the body can use ## headings, lists and bold, and a line with ![](image URL) places an image there; up to 3 topics; no prompts to add WeChat",
+        "body_hint": "A column article with the same rich text as your articles: headings, lists, bold and quotes are kept, and images go right in the text; up to 3 topics; no prompts to add WeChat",
         "login_hint": "A browser window opens; scan the QR code with the Zhihu app or use an SMS code",
         "rate_hint": "At least 30 minutes apart, at most 5 per day",
         "m_views": "Reads",

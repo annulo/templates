@@ -11,7 +11,7 @@ import { fmtNum } from '../lib/format'
 import { CHANNEL_TYPES } from '../lib/channels'
 import { useInShuttle } from '../lib/useShuttle'
 import { dbCreate, dbDelete, dbList, dbPatch, openChat, runLocal, shuttleImage, uploadLocalFile, videoSrc, type Article, type Channel, type SocialPost } from '../lib/shuttle'
-import { SOCIAL, SOCIAL_TASKS, writeSocial } from '../lib/social'
+import { SOCIAL, SOCIAL_TASKS, fieldsOf, isRich, richImages, richText, writeSocial } from '../lib/social'
 import { tr } from '../lib/i18n'
 import type { Ctx } from './views/types'
 
@@ -56,7 +56,7 @@ export default function ContentVersions({ ctx, article, focus, onChanged }: { ct
   const noChannels = !accounts.length
   const blankPost = async (ch: Channel) => {
     const t = new Date().toISOString()
-    return dbCreate('social_posts', { article_id: article.id, channel_id: ch.id, title: article.title, body: '', tags: '[]', images: '[]', status: 'draft', source: 'manual', created_at: t, updated_at: t })
+    return dbCreate('social_posts', { article_id: article.id, channel_id: ch.id, title: article.title, tags: '[]', ...(isRich(SOCIAL[ch.type]) ? { body: article.body ?? '', images: JSON.stringify(richImages(article.body ?? '')) } : { body: '', images: '[]' }), status: 'draft', source: 'manual', created_at: t, updated_at: t })
   }
   const add = (ids: string[], ai: boolean) => act('add', async () => {
     const chs = ctx.channels.filter((c) => ids.includes(c.id))
@@ -214,6 +214,10 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
   const [error, setError] = useState('')
   const run = (key: string, fn: () => Promise<unknown>) => act(key, fn, setError)
   const pf = SOCIAL[ch.type]!
+  // 富文本的平台（知乎）用和文章一样的编辑器，图片在正文里；换成表里的新内容时 editorKey 变了让编辑器重新载入
+  const f = fieldsOf(pf)
+  const rich = f.body === 'rich'
+  const [editorKey, setEditorKey] = useState(0)
   const [title, setTitle] = useState(post.title)
   const [body, setBody] = useState(post.body || '')
   const [tags, setTags] = useState(parse(post.tags).join(' '))
@@ -230,6 +234,7 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
     const f = fromPost()
     setTitle(f.title); setBody(f.body); setTags(f.tags); setCover(f.cover); setImages(f.images); setVideo(f.video); setCategory(f.category)
     base.current = snap(f)
+    setEditorKey((k) => k + 1)
     setStale(false)
   }
   useEffect(() => {
@@ -249,11 +254,11 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
   const tagList = tags.split(/[\s,，#]+/).filter(Boolean)
   const published = post.status === 'published' || post.status === 'publishing'
   // 媒体按平台规则来，不用切「纯文字 / 图文 / 视频」：只发视频的平台只有视频；图文和视频二选一的，放了视频就不能再放图，反过来一样
-  const videoOnly = pf.video === 'only'
-  const canVideo = !!pf.video
-  const canImages = !videoOnly && pf.imagesMax > 0
+  const videoOnly = f.video === 'only'
+  const canVideo = !!f.video
+  const canImages = f.images > 0
   const hasVideo = canVideo && !!video
-  const data = () => ({ title: title.trim() || body.slice(0, 30), body: body.trim(), tags: JSON.stringify(tagList), images: JSON.stringify(hasVideo || !canImages ? [] : images), video: canVideo ? video : '', cover_text: cover.trim(), category: category.trim(), updated_at: new Date().toISOString() })
+  const data = () => ({ title: title.trim() || (rich ? richText(body) : body).slice(0, 30), body: body.trim(), tags: JSON.stringify(tagList), images: JSON.stringify(rich ? richImages(body) : hasVideo || !canImages ? [] : images), video: canVideo ? video : '', cover_text: cover.trim(), category: category.trim(), updated_at: new Date().toISOString() })
   const save = () => run('social-save', async () => { await dbPatch('social_posts', post.id, { ...data(), ...(post.status === 'approved' || post.status === 'scheduled' || post.status === 'failed' ? { status: 'pending_review' as const, scheduled_at: '' } : {}) }); onChanged() })
   const submit = () => run('social-submit', async () => {
     await dbPatch('social_posts', post.id, data())
@@ -277,10 +282,10 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
     {published && <Notice>{tr('versions.published_locked')}</Notice>}
     {stale && <Notice><div className="flex flex-wrap items-center gap-2"><span className="min-w-0 flex-1">{tr('versions.stale')}</span><Button size="sm" variant="outline" onClick={loadPost}>{tr('content.stale_load')}</Button></div></Notice>}
     <fieldset disabled={published} className="space-y-4">
-    <Field label={pf.title ? tr('social.f_title') : tr('social.f_title_x')} hint={String([...title].length)}><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
-    <Field label={tr('social.f_body')} hint={`${pf.len(body, tagList)} · ${pf.bodyHint}`}><textarea className={cx(inputCls, 'min-h-64 py-3 leading-relaxed')} value={body} onChange={(e) => setBody(e.target.value)} /></Field>
-    <Field label={tr('social.f_tags')}><input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} /></Field>
-    <Field group label={videoOnly ? tr('social.f_video') : tr('social.f_media')} hint={mediaHint}>
+    <Field label={f.title === 'publish' ? tr('social.f_title') : tr('social.f_title_x')} hint={String([...title].length)}><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
+    <Field label={tr('social.f_body')} hint={`${pf.len(body, tagList)} · ${pf.bodyHint}`}>{rich ? <div className="rounded-lg border border-border"><RichEditor key={editorKey} value={body} onChange={setBody} /></div> : <textarea className={cx(inputCls, 'min-h-64 py-3 leading-relaxed')} value={body} onChange={(e) => setBody(e.target.value)} />}</Field>
+    <Field label={tr('social.f_tags')} hint={tr('social.tags_hint', { n: f.tags })}><input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} /></Field>
+    {(canImages || canVideo) && <Field group label={videoOnly ? tr('social.f_video') : tr('social.f_media')} hint={mediaHint}>
       <div className="space-y-2">
         {canImages && !hasVideo && !!images.length && <div className="flex flex-wrap gap-2">{images.map((u, i) => <div key={u + i} draggable={!published && images.length > 1} onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = 'move' }} onDragOver={(e) => { if (dragFrom !== null) e.preventDefault() }} onDrop={(e) => { e.preventDefault(); if (dragFrom !== null && dragFrom !== i) moveImage(dragFrom, i); setDragFrom(null) }} onDragEnd={() => setDragFrom(null)} title={images.length > 1 ? tr('social.drag_sort') : undefined} className={cx('relative', images.length > 1 && !published && 'cursor-grab active:cursor-grabbing', dragFrom === i && 'opacity-40')}><button type="button" onClick={() => setZoom(u)} aria-label={tr('social.view_image')} className="block cursor-zoom-in rounded"><img src={u} alt="" draggable={false} className="size-24 rounded border border-border object-cover" /></button><button type="button" aria-label={tr('social.remove_image')} onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-foreground text-background opacity-80 hover:opacity-100"><X className="size-3" /></button></div>)}</div>}
         {hasVideo && <div className="relative"><video src={videoSrc(video)} controls className="max-h-72 w-full rounded bg-black" /><Button size="sm" variant="ghost" className="mt-1" onClick={() => setVideo('')}><X />{tr('social.remove_video')}</Button></div>}
@@ -289,11 +294,11 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
           {canVideo && !hasVideo && !images.length && <><Button size="sm" variant="outline" onClick={() => setPicker('video')}>{tr('social.pick_video')}</Button><label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-border px-3 text-xs hover:bg-accent"><Upload className="size-3.5" />{uploading ? tr('social.uploading_pct', { n: 0 }) : tr('social.upload_local')}<input type="file" accept="video/*" className="hidden" onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = '' }} /></label></>}
         </div>
       </div>
-    </Field>
+    </Field>}
     {zoom && <Lightbox src={zoom} onClose={() => setZoom('')} />}
     <AssetPicker open={!!picker} kind={picker || 'image'} max={picker === 'video' ? 1 : pf.imagesMax - images.length} onClose={() => setPicker('')} onPick={(urls) => { if (picker === 'video') setVideo(urls[0] || ''); else setImages((l) => [...l, ...urls.filter((u) => !l.includes(u))].slice(0, pf.imagesMax)); setPicker('') }} />
-    {pf.cover && !hasVideo && !images.length && <Field label={tr('social.f_cover')} hint={tr('social.cover_hint')}><input className={inputCls} value={cover} onChange={(e) => setCover(e.target.value)} /></Field>}
-    {ch.type === 'bilibili' && <Field label={tr('social.category')}><input className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)} /></Field>}
+    {f.cover && !hasVideo && !images.length && <Field label={tr('social.f_cover')} hint={tr('social.cover_hint')}><input className={inputCls} value={cover} onChange={(e) => setCover(e.target.value)} /></Field>}
+    {f.category && <Field label={tr('social.category')}><input className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)} /></Field>}
     </fieldset>
     {(error || post.error) && <Notice tone="error">{error || post.error}</Notice>}
     {post.status === 'publishing' && <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4"><p className="min-w-0 flex-1 text-xs text-muted-foreground">{tr('social.stuck_hint')}</p><Button variant="outline" onClick={() => run('mark-failed', () => dbPatch('social_posts', post.id, { status: 'failed', error: tr('social.stuck_error') }))} disabled={!!busy}>{tr('social.mark_failed')}</Button></div>}

@@ -138,6 +138,8 @@ export function socialSource(input: { id: string }, ctx: any) {
     title: a.title,
     summary: a.summary ?? '',
     text: $.text().slice(0, 8000),
+    // 正文原样的富文本（HTML）：知乎这类富文本平台照它改写，图片留在原来的位置
+    html: String(a.body ?? '').slice(0, 60000),
     url: /^https?:\/\//.test(a.url ?? '') ? a.url : '',
     // 公开地址，或离线项目传到本机的 /_annulo/uploaded/…（发帖时 b.upload 认它）
     images: $.find('img[src]').map((i: any) => String(i.attrs.src)).filter((u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/)/.test(u)),

@@ -3,9 +3,10 @@ import { AlertCircle, ArrowUpRight, CalendarClock, Check, ChevronDown, ChevronLe
 import RunButton from '../RunButton'
 import SocialOverview from '../SocialOverview'
 import WorkspaceTabs from '../WorkspaceTabs'
+import RichEditor from '../RichEditor'
 import { Badge, Button, Dialog, ErrorDetails, Field, Notice, PageHeader, RangeToggle, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
 import { dbList, dbPatch, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, uploadLocalFile, videoSrc } from '../../lib/shuttle'
-import { SOCIAL, isSocial, type MetricKey, isVideoPost, loggedInElsewhere, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
+import { SOCIAL, isSocial, type MetricKey, fieldsOf, isRich, isVideoPost, loggedInElsewhere, postText, richImages, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
 import Select from '../Select'
 import AssetPicker from '../AssetPicker'
 import { CHANNEL_TYPES } from '../../lib/channels'
@@ -364,6 +365,8 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
           <video src={videoSrc(p.video)} muted preload="metadata" className="aspect-[3/4] w-20 rounded-lg bg-black object-cover" />
         ) : images[0] ? (
           <img src={shuttleImage(images[0])} alt="" className="aspect-[3/4] w-20 rounded-lg object-cover" />
+        ) : isRich(pf) ? (
+          <RichCard p={p} owner={owner} tags={tags} />
         ) : !pf.cover ? (
           <div className="flex aspect-[3/4] w-20 items-center justify-center rounded-lg bg-muted text-muted-foreground" title={pf.label}>
             <PlatformIcon type={owner?.type} size={24} />
@@ -381,7 +384,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
           {p.source === 'platform' && <Badge>{tr('social.posted_on_platform', { p: pf.label })}</Badge>}
           {account && <span className="text-xs text-muted-foreground">{account.name}</span>}
         </div>
-        {p.body && <p className="line-clamp-3 text-sm whitespace-pre-line text-muted-foreground">{p.body}</p>}
+        {p.body && <p className="line-clamp-3 text-sm whitespace-pre-line text-muted-foreground">{postText(pf, p.body)}</p>}
         {tags.length > 0 && <div className="flex flex-wrap gap-1.5 text-xs text-primary-text">{tags.map((t) => <span key={t}>#{t}</span>)}</div>}
 
         {p.status === 'published' && (
@@ -528,18 +531,18 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
           <Button variant="ghost" size="sm" onClick={onClose}>
             {tr('common.cancel')}
           </Button>
-          <Button size="sm" onClick={() => onSave({ title: title.trim(), body: body.trim(), cover_text: cover.trim(), tags: JSON.stringify(tagList), images: JSON.stringify(images), ...(pf.video ? { video: isVideo ? video : '' } : {}) })} disabled={isVideo && !video}>
+          <Button size="sm" onClick={() => onSave({ title: title.trim(), body: body.trim(), cover_text: cover.trim(), tags: JSON.stringify(tagList), images: JSON.stringify(isRich(pf) ? richImages(body) : images), ...(pf.video ? { video: isVideo ? video : '' } : {}) })} disabled={isVideo && !video}>
             {tr('social.save_review')}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
-        <Field label={pf.title ? tr('social.f_title') : tr('social.f_title_x')} hint={String(len(title))}>
+        <Field label={fieldsOf(pf).title === 'publish' ? tr('social.f_title') : tr('social.f_title_x')} hint={String(len(title))}>
           <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} />
         </Field>
         <Field label={tr('social.f_body')} hint={`${bodyLen} · ${pf.bodyHint}`}>
-          <textarea className={cx(inputCls, 'min-h-48 py-2')} value={body} onChange={(e) => setBody(e.target.value)} />
+          {isRich(pf) ? <div className="rounded-lg border border-border">{open && <RichEditor value={body} onChange={setBody} />}</div> : <textarea className={cx(inputCls, 'min-h-48 py-2')} value={body} onChange={(e) => setBody(e.target.value)} />}
         </Field>
         <Field label={tr('social.f_tags')} hint={tr('social.tags_hint', { n: pf.tagsMax })}>
           <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} />
@@ -548,7 +551,7 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
           <Segmented<'images' | 'video'> value={mode} onChange={setMode} options={[{ value: 'images', label: tr('social.mode_images') }, { value: 'video', label: tr('social.mode_video') }]} />
         )}
         {isVideo && <VideoField video={video} onChange={setVideo} />}
-        {!isVideo && <div className="grid gap-2">
+        {!isVideo && fieldsOf(pf).images > 0 && <div className="grid gap-2">
           <div className="flex items-center justify-between">
             <span className="text-sm leading-none font-medium">{tr('social.f_images')}</span>
             <Button type="button" variant="outline" size="sm" onClick={() => setPicking(true)} disabled={images.length >= pf.imagesMax}>
@@ -827,6 +830,23 @@ function VideoCard({ p, owner, tags }: { p: SocialPost; owner?: Channel; tags: s
         </div>
         <div className="max-h-40 overflow-y-auto rounded-lg bg-neutral-100 p-2 text-[13px] leading-relaxed whitespace-pre-line">{p.body}</div>
         {tags.length > 0 && <div className="text-[12px] text-neutral-500">{tags.join(', ')}</div>}
+      </div>
+    </div>
+  )
+}
+
+/** 富文本平台（知乎文章）的预览：标题、作者、排好版的正文（图片在正文里）、话题 */
+function RichCard({ p, owner, tags }: { p: SocialPost; owner?: Channel; tags: string[] }) {
+  return (
+    <div className="mx-auto w-[420px] max-w-full shrink-0 self-start overflow-hidden rounded-2xl border border-neutral-200 bg-white text-neutral-900 shadow-lg">
+      <div className="max-h-[560px] space-y-3 overflow-y-auto p-5">
+        <div className="text-[20px] leading-snug font-semibold">{p.title}</div>
+        <div className="flex items-center gap-2 text-[13px] text-neutral-600">
+          {owner?.avatar ? <img src={shuttleImage(owner.avatar)} alt="" className="size-6 rounded-full object-cover" /> : <div className="size-6 rounded-full bg-neutral-200" />}
+          <span className="truncate">{owner?.name}</span>
+        </div>
+        <div className="rich-content text-neutral-900 [&_img]:my-2 [&_img]:max-w-full [&_img]:rounded" dangerouslySetInnerHTML={{ __html: p.body }} />
+        {tags.length > 0 && <div className="flex flex-wrap gap-1.5 pt-1">{tags.map((t) => <span key={t} className="rounded-full bg-[#e8f1fe] px-2.5 py-0.5 text-[12px] text-[#056de8]">{t}</span>)}</div>}
       </div>
     </div>
   )

@@ -1,22 +1,14 @@
 import { useEffect, useState } from 'react'
 import { runLocal, runTask, type Channel, type ChannelType, type SocialPost } from './shuttle'
 import { tr } from './i18n'
+import { FIELDS, type PostFields } from '../plugins/social/local/_fields'
 import { CHANNELS } from './edition'
-
-/** 字数：小红书一个字符算 1；X 中日韩文字和 emoji 算 2、链接算 23（和 local/_x_spec.ts 一致） */
-const plainLen = (s: string) => [...(s ?? '')].length
-function xLen(s: string) {
-  let n = 0
-  for (const ch of String(s ?? '').replace(/https?:\/\/[^\s]+/g, 'x'.repeat(23))) {
-    const cp = ch.codePointAt(0) ?? 0
-    n += cp <= 4351 || (cp >= 8192 && cp <= 8205) || (cp >= 8208 && cp <= 8223) || (cp >= 8242 && cp <= 8247) ? 1 : 2
-  }
-  return n
-}
 
 export type MetricKey = 'views' | 'likes' | 'comments' | 'collects' | 'shares'
 
 export type SocialPlatform = {
+  /** 这个平台的帖子有哪些字段（社媒插件的字段表，见 fieldsOf） */
+  fields: PostFields
   label: string
   /** 一篇内容叫什么：笔记 / 推文 */
   noun: string
@@ -43,7 +35,45 @@ export type SocialPlatform = {
   probe?: boolean
   /** 视频：only 只发视频（YouTube、B 站、抖音），optional 图文和视频二选一（social_posts.video 有值就按视频发）；不写就是不能发视频 */
   video?: 'only' | 'optional'
+  /**
+   * 正文格式，照这个平台发帖框本来认什么：
+   * text 纯文字（X、LinkedIn、小红书…发帖框不认小标题、加粗），配图是单独的一组，顺序就是轮播顺序；
+   * rich 富文本（知乎文章这类图文平台）：和文章用同一个编辑器（小标题、列表、加粗、引用、链接），图片插在正文里。不写是 text
+   */
+  body?: 'text' | 'rich'
+  /** 有「分区」字段（B 站投稿要选） */
+  category?: boolean
 }
+
+export type { PostFields }
+
+/** 一条帖子在这个平台上有哪些字段（社媒插件 local/_fields.ts 的表，插件的校验也读它）：编辑框、预览照它显示，不在页面里按平台名写死 */
+export const fieldsOf = (pf: SocialPlatform): PostFields => pf.fields
+
+/** 平台的字段和限制从社媒插件的字段表取（规格只有一份，插件改了这里跟着变）；模板这边只管显示用的文字 */
+function fromPlugin(type: string) {
+  const f = FIELDS[type]
+  return { fields: f, title: f.title === 'publish', titleMax: f.titleMax, bodyMax: f.bodyMax, tagsMax: f.tags, imagesMax: f.images, len: f.len, cover: f.cover, video: f.video, body: f.body, category: f.category }
+}
+
+/** 正文是富文本的平台（编辑器、预览、配图都跟着变） */
+export const isRich = (pf?: SocialPlatform) => pf?.body === 'rich'
+
+/** 富文本正文的纯文字：列表里的摘要、字数 */
+export function richText(html: string) {
+  return String(html ?? '')
+    .replace(/<(br|\/p|\/h\d|\/li|\/blockquote|\/pre)[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/** 富文本正文里的图片（按出现顺序）：存进 social_posts.images，列表缩略图和插件发布都读它 */
+export const richImages = (html: string) => [...String(html ?? '').matchAll(/<img\b[^>]*?\ssrc\s*=\s*["']([^"']+)["']/gi)].map((m) => m[1].replace(/&amp;/g, '&'))
+
+/** 列表、卡片上显示的正文文字 */
+export const postText = (pf: SocialPlatform | undefined, body: string) => (isRich(pf) ? richText(body) : body)
 
 /** 这条按视频发（平台只发视频，或者这条带了视频） */
 export const isVideoPost = (pf: SocialPlatform | undefined, p: { video?: string }) => pf?.video === 'only' || (pf?.video === 'optional' && !!p.video)
@@ -53,19 +83,12 @@ const metric = (p: string, key: SocialPlatform['metrics'][number]['key']) => ({ 
 
 const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
   xiaohongshu: {
+    ...fromPlugin('xiaohongshu'),
     get label() { return tr('meta.platform.xiaohongshu.label') },
     get noun() { return tr('meta.platform.xiaohongshu.noun') },
     task: 'social/write-xiaohongshu',
-    video: 'optional',
     profileUrl: (ch) => (ch.platform_uid ? `https://www.xiaohongshu.com/user/profile/${ch.platform_uid}` : ''),
-    title: true,
-    titleMax: 20,
-    bodyMax: 1000,
-    tagsMax: 10,
-    imagesMax: 18,
-    len: (body) => plainLen(body),
     get bodyHint() { return tr('meta.platform.xiaohongshu.body_hint') },
-    cover: true,
     metrics: [
       metric('xiaohongshu', 'views'),
       metric('xiaohongshu', 'likes'),
@@ -77,20 +100,13 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     get rateHint() { return tr('meta.platform.xiaohongshu.rate_hint') },
   },
   linkedin: {
+    ...fromPlugin('linkedin'),
     label: 'LinkedIn',
     get noun() { return tr('meta.platform.linkedin.noun') },
     task: 'social/write-linkedin',
-    video: 'optional',
     probe: true,
     profileUrl: (ch) => (ch.handle ? `https://www.linkedin.com/in/${encodeURIComponent(ch.handle)}/` : ''),
-    title: false,
-    titleMax: 30,
-    bodyMax: 3000,
-    tagsMax: 5,
-    imagesMax: 9,
-    len: (body, tags) => [...[body.trim(), tags.map((t) => '#' + t).join(' ')].filter(Boolean).join('\n\n')].length,
     get bodyHint() { return tr('meta.platform.linkedin.body_hint') },
-    cover: false,
     metrics: [
       metric('linkedin', 'views'),
       metric('linkedin', 'likes'),
@@ -101,139 +117,86 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     get rateHint() { return tr('meta.platform.linkedin.rate_hint') },
   },
   facebook: {
+    ...fromPlugin('facebook'),
     label: 'Facebook',
     get noun() { return tr('meta.platform.facebook.noun') },
     task: 'social/write-facebook',
-    video: 'optional',
     probe: true,
     // 个人主页 facebook.com/<handle 或 profile.php?id=uid>；公司主页 facebook.com/<page id>
     profileUrl: (ch) => (ch.handle ? `https://www.facebook.com/${ch.handle}` : ch.platform_uid ? `https://www.facebook.com/profile.php?id=${ch.platform_uid}` : ''),
-    title: false,
-    titleMax: 30,
-    bodyMax: 5000,
-    tagsMax: 5,
-    imagesMax: 10,
-    len: (body, tags) => [...[body.trim(), tags.map((t) => '#' + t).join(' ')].filter(Boolean).join('\n\n')].length,
     get bodyHint() { return tr('meta.platform.facebook.body_hint') },
-    cover: false,
     metrics: [metric('facebook', 'views'), metric('facebook', 'likes'), metric('facebook', 'comments'), metric('facebook', 'shares')],
     get loginHint() { return tr('meta.platform.facebook.login_hint') },
     get rateHint() { return tr('meta.platform.facebook.rate_hint') },
   },
   instagram: {
+    ...fromPlugin('instagram'),
     label: 'Instagram',
     get noun() { return tr('meta.platform.instagram.noun') },
     task: 'social/write-instagram',
-    video: 'optional',
     probe: true,
     profileUrl: (ch) => (ch.handle ? `https://www.instagram.com/${ch.handle}/` : ''),
-    title: false,
-    titleMax: 30,
-    bodyMax: 2200,
-    tagsMax: 30,
-    imagesMax: 10,
-    len: (body, tags) => [...[body.trim(), tags.map((t) => '#' + t).join(' ')].filter(Boolean).join('\n\n')].length,
     get bodyHint() { return tr('meta.platform.instagram.body_hint') },
-    // Instagram 必须有图：文章没图时发布前用 cover_text 生成文字封面（和小红书一样）
-    cover: true,
     metrics: [metric('instagram', 'views'), metric('instagram', 'likes'), metric('instagram', 'comments'), metric('instagram', 'collects')],
     get loginHint() { return tr('meta.platform.instagram.login_hint') },
     get rateHint() { return tr('meta.platform.instagram.rate_hint') },
   },
   youtube: {
+    ...fromPlugin('youtube'),
     label: 'YouTube',
     get noun() { return tr('meta.platform.youtube.noun') },
     task: 'social/write-youtube',
-    video: 'only',
     probe: true,
     profileUrl: (ch) => (ch.handle ? `https://www.youtube.com/${ch.handle.startsWith('@') ? ch.handle : '@' + ch.handle}` : ch.platform_uid ? `https://www.youtube.com/channel/${ch.platform_uid}` : ''),
-    // YouTube 的标题会发出去（视频标题），正文是视频描述；视频从素材库选
-    title: true,
-    titleMax: 100,
-    bodyMax: 5000,
-    tagsMax: 15,
-    imagesMax: 0,
-    len: (body) => [...body].length,
     get bodyHint() { return tr('meta.platform.youtube.body_hint') },
-    cover: false,
     metrics: [metric('youtube', 'views'), metric('youtube', 'likes'), metric('youtube', 'comments')],
     get loginHint() { return tr('meta.platform.youtube.login_hint') },
     get rateHint() { return tr('meta.platform.youtube.rate_hint') },
   },
   bilibili: {
+    ...fromPlugin('bilibili'),
     label: 'B 站',
     get noun() { return tr('meta.platform.bilibili.noun') },
     task: 'social/write-bilibili',
-    video: 'only',
     probe: true,
     profileUrl: (ch) => (ch.platform_uid ? `https://space.bilibili.com/${ch.platform_uid}` : ''),
-    // 标题会发出去（视频标题），正文是简介；视频从素材库选或者上传本机视频（和 local/_bilibili_spec.ts 一致）
-    title: true,
-    titleMax: 80,
-    bodyMax: 2000,
-    tagsMax: 10,
-    imagesMax: 0,
-    len: (body) => [...body].length,
     get bodyHint() { return tr('meta.platform.bilibili.body_hint') },
-    cover: false,
     metrics: [metric('bilibili', 'views'), metric('bilibili', 'likes'), metric('bilibili', 'comments'), metric('bilibili', 'collects'), metric('bilibili', 'shares')],
     get loginHint() { return tr('meta.platform.bilibili.login_hint') },
     get rateHint() { return tr('meta.platform.bilibili.rate_hint') },
   },
   zhihu: {
+    ...fromPlugin('zhihu'),
     get label() { return tr('meta.platform.zhihu.label') },
     get noun() { return tr('meta.platform.zhihu.noun') },
     task: 'social/write-zhihu',
     probe: true,
     profileUrl: (ch) => (ch.handle ? `https://www.zhihu.com/people/${ch.handle}` : ''),
-    // 知乎专栏文章：标题会发出去，正文是 Markdown 常用写法，单独一行的 ![](地址) 是插在那里的图（和 local/_zhihu_spec.ts 一致）
-    title: true,
-    titleMax: 100,
-    bodyMax: 20000,
-    tagsMax: 3,
-    imagesMax: 20,
-    len: (body) => plainLen(body),
     get bodyHint() { return tr('meta.platform.zhihu.body_hint') },
-    cover: false,
     metrics: [metric('zhihu', 'views'), metric('zhihu', 'likes'), metric('zhihu', 'comments'), metric('zhihu', 'collects')],
     get loginHint() { return tr('meta.platform.zhihu.login_hint') },
     get rateHint() { return tr('meta.platform.zhihu.rate_hint') },
   },
   douyin: {
+    ...fromPlugin('douyin'),
     get label() { return tr('meta.platform.douyin.label') },
     get noun() { return tr('meta.platform.douyin.noun') },
     task: 'social/write-douyin',
-    video: 'only',
     probe: true,
     profileUrl: (ch) => (ch.platform_uid ? `https://www.douyin.com/user/${ch.platform_uid}` : ''),
-    // 标题会发出去（作品标题），正文是作品简介，话题接在简介后面；视频从素材库选或者上传本机视频（和 local/_douyin_spec.ts 一致）
-    title: true,
-    titleMax: 30,
-    bodyMax: 1000,
-    tagsMax: 5,
-    imagesMax: 0,
-    len: (body, tags) => [...[body.trim(), tags.map((t) => '#' + t).join(' ')].filter(Boolean).join('\n')].length,
     get bodyHint() { return tr('meta.platform.douyin.body_hint') },
-    cover: false,
     metrics: [metric('douyin', 'views'), metric('douyin', 'likes'), metric('douyin', 'comments'), metric('douyin', 'collects'), metric('douyin', 'shares')],
     get loginHint() { return tr('meta.platform.douyin.login_hint') },
     get rateHint() { return tr('meta.platform.douyin.rate_hint') },
   },
   x: {
+    ...fromPlugin('x'),
     label: 'X',
     task: 'social/write-x',
-    video: 'optional',
     probe: true,
     profileUrl: (ch) => (ch.handle ? `https://x.com/${ch.handle}` : ''),
     get noun() { return tr('meta.platform.x.noun') },
-    title: false,
-    titleMax: 20,
-    bodyMax: 280,
-    tagsMax: 3,
-    imagesMax: 4,
-    len: (body, tags) => xLen([body.trim(), tags.map((t) => '#' + t).join(' ')].filter(Boolean).join('\n\n')),
     get bodyHint() { return tr('meta.platform.x.body_hint') },
-    cover: false,
     metrics: [
       metric('x', 'views'),
       metric('x', 'likes'),
@@ -254,7 +217,7 @@ export const platformOf = (c?: Pick<Channel, 'type'>) => (c ? SOCIAL[c.type] : u
 export const socialTypes = Object.keys(SOCIAL) as ChannelType[]
 
 /** 后台列表里显示的标题：X 的 title 是运营自己看的，没有就取正文开头 */
-export const postTitle = (p: SocialPost) => p.title || [...(p.body ?? '')].slice(0, 30).join('')
+export const postTitle = (p: SocialPost) => p.title || [...(/^\s*</.test(p.body ?? '') ? richText(p.body) : p.body ?? '')].slice(0, 30).join('')
 
 /** 各平台写作任务的 id */
 export const SOCIAL_TASKS = Object.values(SOCIAL).map((p) => p!.task)
