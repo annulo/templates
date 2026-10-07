@@ -156,7 +156,8 @@
     "brand": {
       "xiaohongshu": "Xiaohongshu",
       "douyin": "Douyin",
-      "wechat": "WeChat"
+      "wechat": "WeChat",
+      "zhihu": "Zhihu"
     },
     "channel_types": {
       "creght_site": {
@@ -202,6 +203,10 @@
       "bilibili": {
         "label": "Bilibili",
         "hint": "A browser window opens; scan the QR code with the Bilibili app"
+      },
+      "zhihu": {
+        "label": "Zhihu",
+        "hint": "A browser window opens; scan the QR code with the Zhihu app or use an SMS code"
       }
     },
     "asset_kinds": {
@@ -304,6 +309,17 @@
         "m_comments": "Comments",
         "m_shares": "Shares",
         "m_collects": "Favorites"
+      },
+      "zhihu": {
+        "label": "Zhihu",
+        "noun": "article",
+        "body_hint": "Posts a Zhihu column article: title up to 100 chars; the body can use ## headings, lists and bold, and a line with ![](image URL) places an image there; up to 3 topics; no prompts to add WeChat",
+        "login_hint": "A browser window opens; scan the QR code with the Zhihu app or use an SMS code",
+        "rate_hint": "At least 30 minutes apart, at most 5 per day",
+        "m_views": "Reads",
+        "m_likes": "Upvotes",
+        "m_comments": "Comments",
+        "m_collects": "Saves"
       },
       "douyin": {
         "label": "Douyin",

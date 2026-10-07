@@ -23,7 +23,7 @@ export const NAV: NavGroup[] = [
 ]
 
 /** 能添加的账号：只有社媒（社媒插件支持的平台） */
-export const CHANNELS: ChannelType[] = ['x', 'linkedin', 'facebook', 'instagram', 'youtube', 'xiaohongshu', 'douyin', 'bilibili']
+export const CHANNELS: ChannelType[] = ['x', 'linkedin', 'facebook', 'instagram', 'youtube', 'xiaohongshu', 'douyin', 'bilibili', 'zhihu']
 
 import { lazy } from 'react'
 import type { WizardScreen } from '../components/wizard/types'

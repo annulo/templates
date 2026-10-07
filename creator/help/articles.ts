@@ -44,7 +44,7 @@ export const quickstart: Article = {
 
 ## 3. 连上社媒账号
 
-左侧下方「账号 → 添加账号」，选平台：X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站。会弹出一个浏览器窗口，在里面登录（抖音、B 站用 App 扫码）。登录状态只存在这台电脑上。见「账号」一篇。
+左侧下方「账号 → 添加账号」，选平台：X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站、知乎。会弹出一个浏览器窗口，在里面登录（抖音、B 站、知乎用 App 扫码）。登录状态只存在这台电脑上。见「账号」一篇。
 
 ## 4. 写第一篇、发第一条
 
@@ -93,7 +93,7 @@ Progress comes from your data; nothing to tick by hand. Click a step to see what
 
 ## 3. Connect a social account
 
-"Accounts → Add account" at the bottom of the sidebar, then pick a platform: X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili. A browser window opens; log in there (Douyin and Bilibili use a QR code in their app). The login stays on this computer. See "Accounts".
+"Accounts → Add account" at the bottom of the sidebar, then pick a platform: X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili, Zhihu. A browser window opens; log in there (Douyin, Bilibili and Zhihu use a QR code in their app). The login stays on this computer. See "Accounts".
 
 ## 4. Write your first piece, publish your first post
 
@@ -170,7 +170,7 @@ Workspace → Weekly summary in the sidebar. Every 7 days a schedule hands the s
 export const social: Article = {
   id: 'social',
   title: { zh: '社交媒体', en: 'Social media' },
-  summary: { zh: 'X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站：看账号状态、粉丝和互动，采集数据，自检。', en: 'X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili: account status, followers and engagement, collecting stats, self-tests.' },
+  summary: { zh: 'X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站、知乎：看账号状态、粉丝和互动，采集数据，自检。', en: 'X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili, Zhihu: account status, followers and engagement, collecting stats, self-tests.' },
   body: {
     zh: `社交媒体页看账号和数据。帖子的编辑、审核、发布在「内容中心」的「媒体版本」里做（见「内容中心」一篇），排期在「发布日历」里看。
 
@@ -188,6 +188,7 @@ export const social: Article = {
 | 小红书 | 笔记，图或视频；没配图时用封面大字生成文字封面 | 2 小时 | 3 篇 |
 | 抖音 | 视频，发布后要等抖音审核 | 30 分钟 | 10 条 |
 | B 站 | 视频，投稿后要等 B 站审核 | 30 分钟 | 10 条 |
+| 知乎 | 专栏文章，正文里可以插图，最多 3 个话题 | 30 分钟 | 5 篇 |
 
 到点的排期碰上频率限制会自动往后顺延。社媒功能由社媒插件提供，新建项目时已经装好；页面顶部提示没装插件时，到 Annulo 的「设置 → 项目 → 插件」里装上 social。
 
@@ -244,6 +245,7 @@ Add accounts under "Accounts → Add account". A browser window opens; log in th
 | Xiaohongshu | Notes, images or video; without images, a text cover is made from the cover text | 2 hours | 3 |
 | Douyin | Videos; Douyin reviews each one after posting | 30 minutes | 10 |
 | Bilibili | Videos; Bilibili reviews each upload | 30 minutes | 10 |
+| Zhihu | Column articles with images in the text, up to 3 topics | 30 minutes | 5 |
 
 Scheduled posts that hit these limits are pushed back automatically. Social features come from the social plugin, installed with every new project. If a notice at the top says it's missing, install social in Annulo's Settings → Projects → Plugins.
 
@@ -498,7 +500,7 @@ export const channels: Article = {
 
 ## 添加
 
-「添加账号」，选平台：X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站。点「登录…」会弹出一个浏览器窗口，在里面登录（抖音、B 站用 App 扫码），登录好了账号就加上了。
+「添加账号」，选平台：X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站、知乎。点「登录…」会弹出一个浏览器窗口，在里面登录（抖音、B 站、知乎用 App 扫码），登录好了账号就加上了。
 - 登录状态只存在这台电脑上，不上传；
 - LinkedIn 先支持个人账号；Facebook 个人主页和你管理的公司主页都能加。
 
@@ -524,7 +526,7 @@ Each account has a small card at the top with its platform and status (Connected
 
 ## Adding
 
-"Add account", then pick a platform: X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili. Click "Log in to …" and a browser window opens; log in there (Douyin and Bilibili use a QR code in their app), and the account is added.
+"Add account", then pick a platform: X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili, Zhihu. Click "Log in to …" and a browser window opens; log in there (Douyin, Bilibili and Zhihu use a QR code in their app), and the account is added.
 - The login stays on this computer and isn't uploaded;
 - LinkedIn supports personal profiles for now; on Facebook you can add your profile and the Pages you manage.
 

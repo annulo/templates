@@ -8,7 +8,7 @@ import { uploadAsset } from 'talizen/assets'
 export { ShuttleUnavailable, MemberLoginRequired, memberLoginURL, isNeedsShuttle, shuttleMissing, inShuttle, fnManifest, computerStatus, watchComputer, assistantOnline, type FnManifest, type ComputerStatus } from './remote'
 
 /** 渠道类型。creght_site、wordpress 是网站；其余是社媒。 */
-export type ChannelType = 'creght_site' | 'wordpress' | 'xiaohongshu' | 'douyin' | 'x' | 'wechat_mp' | 'linkedin' | 'facebook' | 'instagram' | 'youtube' | 'bilibili'
+export type ChannelType = 'creght_site' | 'wordpress' | 'xiaohongshu' | 'douyin' | 'x' | 'wechat_mp' | 'linkedin' | 'facebook' | 'instagram' | 'youtube' | 'bilibili' | 'zhihu'
 
 export type Channel = {
   id: string
@@ -85,7 +85,7 @@ async function api<T>(path: string, init?: { method?: string; body?: unknown }):
 
 
 /** 社媒平台：账号在社媒插件的 social_accounts 表里（github.com/annulo/plugins 的 social），网站在 channels 表里 */
-export const SOCIAL_TYPES: ChannelType[] = ['xiaohongshu', 'douyin', 'x', 'linkedin', 'facebook', 'instagram', 'youtube', 'bilibili']
+export const SOCIAL_TYPES: ChannelType[] = ['xiaohongshu', 'douyin', 'x', 'linkedin', 'facebook', 'instagram', 'youtube', 'bilibili', 'zhihu']
 
 /**
  * 已添加的账号：社媒插件的 social_accounts 表（自媒体工作台没有网站，外贸模板这里还合并了 channels 表里的网站）。
