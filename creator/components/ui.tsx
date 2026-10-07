@@ -274,6 +274,19 @@ export const fmtTime = (iso?: string) => {
   return fmtMonthDay(d)
 }
 
+/** 离将来某个时间还有多久：{ rel: 「2 小时 15 分钟」, at: 「10月7日 17:00」, due: 已经到点了 }；时间不对返回 null */
+export function fmtUntil(iso?: string): { rel: string; at: string; due: boolean } | null {
+  const d = new Date(iso ?? '')
+  if (!iso || isNaN(d.getTime())) return null
+  const pad = (x: number) => String(x).padStart(2, '0')
+  const at = `${fmtMonthDay(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  const mins = Math.ceil((d.getTime() - Date.now()) / 60000)
+  if (mins <= 0) return { rel: '', at, due: true }
+  const day = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60
+  const rel = day ? tr('common.in_day', { d: day, h }) : h ? tr('common.in_hour', { h, m }) : tr('common.in_min', { n: m })
+  return { rel, at, due: false }
+}
+
 /** 「9月24日」/「Sep 24」 */
 export const fmtMonthDay = (d: Date) =>
   isEn() ? d.toLocaleDateString(numLocale(), { month: 'short', day: 'numeric' }) : tr('common.month_day', { m: d.getMonth() + 1, d: d.getDate() })

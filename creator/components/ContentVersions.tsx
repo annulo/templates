@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Check, ChevronDown, Clock3, FileText, Loader2, MoreHorizontal, Plus, Send, SlidersHorizontal, Sparkles, Trash2, Upload, X } from 'lucide-react'
+import { ArrowUpRight, Check, ChevronDown, FileText, Loader2, MoreHorizontal, Plus, Send, SlidersHorizontal, Sparkles, Trash2, Upload, X } from 'lucide-react'
 import AssetPicker from './AssetPicker'
 import Lightbox from './Lightbox'
 import Select from './Select'
 import RichEditor from './RichEditor'
 import RunButton from './RunButton'
+import SchedulePopover, { ScheduledLine } from './SchedulePopover'
 import { TaskRequirements, useTaskRuns } from './Task'
 import { Badge, Button, Dialog, Field, Notice, cx, fmtTime, inputCls } from './ui'
 import { fmtNum } from '../lib/format'
@@ -262,7 +263,6 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
   const [dragFrom, setDragFrom] = useState<number | null>(null)
   const [zoom, setZoom] = useState('')
   const moveImage = (from: number, to: number) => setImages((l) => { const n = [...l]; const [x] = n.splice(from, 1); n.splice(to, 0, x); return n })
-  const [schedule, setSchedule] = useState('')
   const [picker, setPicker] = useState<'image' | 'video' | ''>('')
   const [uploading, setUploading] = useState(false)
   const tagList = tags.split(/[\s,，#]+/).filter(Boolean)
@@ -281,9 +281,8 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
     await dbPatch('social_posts', post.id, { status: 'pending_review' })
   })
   const setStatus = (status: SocialPost['status']) => run(status, () => dbPatch('social_posts', post.id, { status }))
-  const schedulePost = () => run('social-schedule', async () => {
-    if (!schedule || Date.parse(schedule) <= Date.now()) throw new Error(tr('versions.future_time'))
-    await dbPatch('social_posts', post.id, { status: 'scheduled', scheduled_at: new Date(schedule).toISOString() })
+  const schedulePost = (iso: string) => run('social-schedule', async () => {
+    await dbPatch('social_posts', post.id, { status: 'scheduled', scheduled_at: iso })
   })
   const upload = async (file?: File) => { if (!file) return; setUploading(true); try { const r = await uploadLocalFile(file); setVideo(r.ref) } finally { setUploading(false) } }
   const mediaHint = videoOnly ? tr('social.media_video_only') : canVideo && canImages ? tr('social.media_either', { n: pf.imagesMax }) : canImages ? tr('social.media_images', { n: pf.imagesMax }) : ''
@@ -318,16 +317,18 @@ function SocialVersion({ post, ch, act, busy, onChanged, onOpenData }: { post: S
     {post.status === 'publishing' && <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4"><p className="min-w-0 flex-1 text-xs text-muted-foreground">{tr('social.stuck_hint')}</p><Button variant="outline" onClick={() => run('mark-failed', () => dbPatch('social_posts', post.id, { status: 'failed', error: tr('social.stuck_error') }))} disabled={!!busy}>{tr('social.mark_failed')}</Button></div>}
     {!published && <div key={post.status} className="space-y-3 border-t border-border pt-4">
       {/* 这一版走到哪一步、下一步做什么：草稿 → 提交审核 → 通过审核 → 发布或排期 */}
-      <p className="text-xs text-muted-foreground">{tr(`versions.step_${post.status}`)}</p>
+      {post.status === 'scheduled' ? <ScheduledLine at={post.scheduled_at} /> : <p className="text-xs text-muted-foreground">{tr(`versions.step_${post.status}`)}</p>}
       <div className="flex flex-wrap items-center gap-2">
         {(post.status === 'draft' || post.status === 'rejected') && <Button successLabel={tr('ui.submitted')} onClick={submit} disabled={!!busy}><Check />{tr('versions.submit')}</Button>}
         {post.status === 'pending_review' && <Button successLabel={tr('ui.approved')} onClick={() => setStatus('approved')} disabled={!!busy}>{busy === 'approved' ? <Loader2 className="animate-spin" /> : <Check />}{tr('versions.approve')}</Button>}
         {(post.status === 'approved' || post.status === 'failed') && <>
           <RunButton inline size="default" variant="default" fn="social/social.publish" input={{ post_id: post.id }} icon={Send} onError={setError} onDone={onChanged}>{tr('social.publish_now')}</RunButton>
-          <input type="datetime-local" aria-label={tr('social.schedule')} className={cx(inputCls, 'w-48')} value={schedule} onChange={(e) => setSchedule(e.target.value)} />
-          <Button successLabel={tr('ui.scheduled')} variant="outline" onClick={schedulePost} disabled={!!busy}><Clock3 />{tr('social.schedule')}</Button>
+          <SchedulePopover onSchedule={schedulePost} disabled={!!busy} hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} />
         </>}
-        {post.status === 'scheduled' && <Button successLabel={tr('ui.approved')} variant="outline" onClick={() => setStatus('approved')} disabled={!!busy}>{tr('versions.unschedule')}</Button>}
+        {post.status === 'scheduled' && <>
+          <RunButton inline size="default" variant="default" fn="social/social.publish" input={{ post_id: post.id }} icon={Send} onError={setError} onDone={onChanged}>{tr('social.publish_now')}</RunButton>
+          <SchedulePopover current={post.scheduled_at} onSchedule={schedulePost} onUnschedule={() => dbPatch('social_posts', post.id, { status: 'approved', scheduled_at: '' }).then(onChanged)} disabled={!!busy} hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} />
+        </>}
         <Button successLabel={tr('ui.saved')} variant="outline" onClick={save} disabled={!!busy}>{busy === 'social-save' && <Loader2 className="animate-spin" />}{tr('common.save')}</Button>
         {deletable(post) && <Button fn="social/social.purge" variant="ghost" className="ml-auto text-muted-foreground" onClick={() => run('purge', () => runLocal('social/social.purge', { post_id: post.id }))} disabled={!!busy}><Trash2 />{tr('versions.delete_version')}</Button>}
       </div>

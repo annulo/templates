@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { runLocal, runTask, type Channel, type ChannelType, type SocialPost } from './shuttle'
-import { tr } from './i18n'
-import { FIELDS, toRich, type PostFields } from '../plugins/social/local/_fields'
+import { isEn, tr } from './i18n'
+import { FIELDS, rateText, toRich, type PostFields } from '../plugins/social/local/_fields'
 
 /** 富文本平台的正文：旧的 Markdown 写法转成 HTML（插件的 toRich），编辑器、预览之前过一遍 */
 export { toRich }
@@ -56,7 +56,7 @@ export const fieldsOf = (pf: SocialPlatform): PostFields => pf.fields
 /** 平台的字段和限制从社媒插件的字段表取（规格只有一份，插件改了这里跟着变）；模板这边只管显示用的文字 */
 function fromPlugin(type: string) {
   const f = FIELDS[type]
-  return { fields: f, title: f.title === 'publish', titleMax: f.titleMax, bodyMax: f.bodyMax, tagsMax: f.tags, imagesMax: f.images, len: f.len, cover: f.cover, video: f.video, body: f.body, category: f.category }
+  return { fields: f, title: f.title === 'publish', titleMax: f.titleMax, bodyMax: f.bodyMax, tagsMax: f.tags, imagesMax: f.images, len: f.len, cover: f.cover, video: f.video, body: f.body, category: f.category, rateHint: '' /* 下面按插件的 rateText 换成 getter */ }
 }
 
 /** 正文是富文本的平台（编辑器、预览、配图都跟着变） */
@@ -100,7 +100,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
       metric('xiaohongshu', 'shares'),
     ],
     get loginHint() { return tr('meta.platform.xiaohongshu.login_hint') },
-    get rateHint() { return tr('meta.platform.xiaohongshu.rate_hint') },
   },
   linkedin: {
     ...fromPlugin('linkedin'),
@@ -117,7 +116,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
       metric('linkedin', 'shares'),
     ],
     get loginHint() { return tr('meta.platform.linkedin.login_hint') },
-    get rateHint() { return tr('meta.platform.linkedin.rate_hint') },
   },
   facebook: {
     ...fromPlugin('facebook'),
@@ -130,7 +128,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     get bodyHint() { return tr('meta.platform.facebook.body_hint') },
     metrics: [metric('facebook', 'views'), metric('facebook', 'likes'), metric('facebook', 'comments'), metric('facebook', 'shares')],
     get loginHint() { return tr('meta.platform.facebook.login_hint') },
-    get rateHint() { return tr('meta.platform.facebook.rate_hint') },
   },
   instagram: {
     ...fromPlugin('instagram'),
@@ -142,7 +139,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     get bodyHint() { return tr('meta.platform.instagram.body_hint') },
     metrics: [metric('instagram', 'views'), metric('instagram', 'likes'), metric('instagram', 'comments'), metric('instagram', 'collects')],
     get loginHint() { return tr('meta.platform.instagram.login_hint') },
-    get rateHint() { return tr('meta.platform.instagram.rate_hint') },
   },
   youtube: {
     ...fromPlugin('youtube'),
@@ -154,7 +150,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     get bodyHint() { return tr('meta.platform.youtube.body_hint') },
     metrics: [metric('youtube', 'views'), metric('youtube', 'likes'), metric('youtube', 'comments')],
     get loginHint() { return tr('meta.platform.youtube.login_hint') },
-    get rateHint() { return tr('meta.platform.youtube.rate_hint') },
   },
   bilibili: {
     ...fromPlugin('bilibili'),
@@ -166,7 +161,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     get bodyHint() { return tr('meta.platform.bilibili.body_hint') },
     metrics: [metric('bilibili', 'views'), metric('bilibili', 'likes'), metric('bilibili', 'comments'), metric('bilibili', 'collects'), metric('bilibili', 'shares')],
     get loginHint() { return tr('meta.platform.bilibili.login_hint') },
-    get rateHint() { return tr('meta.platform.bilibili.rate_hint') },
   },
   zhihu: {
     ...fromPlugin('zhihu'),
@@ -178,7 +172,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     get bodyHint() { return tr('meta.platform.zhihu.body_hint') },
     metrics: [metric('zhihu', 'views'), metric('zhihu', 'likes'), metric('zhihu', 'comments'), metric('zhihu', 'collects')],
     get loginHint() { return tr('meta.platform.zhihu.login_hint') },
-    get rateHint() { return tr('meta.platform.zhihu.rate_hint') },
   },
   douyin: {
     ...fromPlugin('douyin'),
@@ -190,7 +183,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     get bodyHint() { return tr('meta.platform.douyin.body_hint') },
     metrics: [metric('douyin', 'views'), metric('douyin', 'likes'), metric('douyin', 'comments'), metric('douyin', 'collects'), metric('douyin', 'shares')],
     get loginHint() { return tr('meta.platform.douyin.login_hint') },
-    get rateHint() { return tr('meta.platform.douyin.rate_hint') },
   },
   x: {
     ...fromPlugin('x'),
@@ -208,8 +200,16 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
       metric('x', 'collects'),
     ],
     get loginHint() { return tr('meta.platform.x.login_hint') },
-    get rateHint() { return tr('meta.platform.x.rate_hint') },
   },
+}
+
+// 发布频率的建议（只是建议，发布时不拦）从社媒插件来：数字和文字都在插件的字段表里，平台规则变了改插件；
+// 要等平台审核这类和频率无关的说明还留在模板的 messages（meta.platform.<平台>.review_note）
+const REVIEW_NOTE = new Set(['bilibili', 'douyin'])
+for (const [type, pf] of Object.entries(ALL_SOCIAL)) {
+  Object.defineProperty(pf, 'rateHint', {
+    get: () => [rateText(FIELDS[type], isEn()), REVIEW_NOTE.has(type) ? tr(`meta.platform.${type}.review_note`) : ''].filter(Boolean).join(' '),
+  })
 }
 
 /** 这个行业模板启用的社媒平台（lib/edition.ts 的 CHANNELS） */

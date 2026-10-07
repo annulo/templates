@@ -33,7 +33,10 @@
     "copied": "Copied",
     "open": "Open",
     "none": "None",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "in_min": "{n} min",
+    "in_hour": "{h} h {m} min",
+    "in_day": "{d} d {h} h"
   },
   "nav": {
     "content_detail": "Content detail",
@@ -231,7 +234,6 @@
         "noun": "note",
         "body_hint": "No external links, no prompts to add WeChat",
         "login_hint": "A browser window opens; sign in to the Creator Center there (SMS code or QR)",
-        "rate_hint": "At least 2 hours apart, at most 3 per day",
         "m_views": "Views",
         "m_likes": "Likes",
         "m_collects": "Saves",
@@ -243,7 +245,6 @@
         "noun": "post",
         "body_hint": "Hashtags go at the end; CJK characters and emoji count as 2, links as 23",
         "login_hint": "A browser window opens; sign in to X there",
-        "rate_hint": "No minimum gap between posts; at most 10 in 24 hours",
         "m_views": "Views",
         "m_likes": "Likes",
         "m_comments": "Replies",
@@ -255,7 +256,6 @@
         "noun": "post",
         "body_hint": "Hashtags go at the end; the first ~210 characters show before \"see more\"",
         "login_hint": "A browser window opens; log in to LinkedIn there",
-        "rate_hint": "At least 60 minutes apart, at most 5 a day",
         "m_views": "Impressions",
         "m_likes": "Reactions",
         "m_comments": "Comments",
@@ -267,7 +267,6 @@
         "noun": "post",
         "body_hint": "The first two lines matter most; hashtags go at the end",
         "login_hint": "A browser window opens; sign in to Facebook there",
-        "rate_hint": "At least 30 minutes apart, at most 10 per day",
         "m_views": "Views",
         "m_likes": "Likes",
         "m_comments": "Comments",
@@ -279,7 +278,6 @@
         "noun": "post",
         "body_hint": "Needs an image; the first 125 characters show, hashtags go at the end",
         "login_hint": "A browser window opens; sign in to Instagram there",
-        "rate_hint": "At least 60 minutes apart, at most 5 per day",
         "m_views": "Views",
         "m_likes": "Likes",
         "m_comments": "Comments",
@@ -291,7 +289,6 @@
         "noun": "video",
         "body_hint": "The title is the video title; the body is the description (first two lines matter most); pick the video from the library or upload one from this computer",
         "login_hint": "A browser window opens; sign in to YouTube there",
-        "rate_hint": "At least 60 minutes apart, at most 3 per day",
         "m_views": "Views",
         "m_likes": "Likes",
         "m_comments": "Comments",
@@ -303,19 +300,18 @@
         "noun": "video",
         "body_hint": "The title is the video title (up to 80 chars); the body is the description, the first two lines matter most; pick a video from the library or upload one from this computer",
         "login_hint": "A browser window opens; scan the QR code with the Bilibili app",
-        "rate_hint": "At least 30 minutes apart, at most 10 per day; Bilibili reviews each upload",
         "m_views": "Views",
         "m_likes": "Likes",
         "m_comments": "Comments",
         "m_shares": "Shares",
-        "m_collects": "Favorites"
+        "m_collects": "Favorites",
+        "review_note": "Bilibili reviews each upload."
       },
       "zhihu": {
         "label": "Zhihu",
         "noun": "article",
         "body_hint": "A column article with the same rich text as your articles: headings, lists, bold and quotes are kept, and images go right in the text; up to 3 topics; no prompts to add WeChat",
         "login_hint": "A browser window opens; scan the QR code with the Zhihu app or use an SMS code",
-        "rate_hint": "At least 30 minutes apart, at most 5 per day",
         "m_views": "Reads",
         "m_likes": "Upvotes",
         "m_comments": "Comments",
@@ -326,12 +322,12 @@
         "noun": "video",
         "body_hint": "The title is the video title (up to 30 chars); the body is the description, with hashtags appended (up to 1000 chars in total); pick a video from the library or upload one from this computer",
         "login_hint": "A browser window opens; scan the QR code with the Douyin app to log in to the creator center",
-        "rate_hint": "At least 30 minutes apart, at most 10 per day; Douyin reviews each video",
         "m_views": "Views",
         "m_likes": "Likes",
         "m_comments": "Comments",
         "m_shares": "Shares",
-        "m_collects": "Favorites"
+        "m_collects": "Favorites",
+        "review_note": "Douyin reviews each video."
       }
     },
     "err": {
@@ -1020,7 +1016,7 @@
     "cover_hint": "Without images, a text cover is generated from this before posting",
     "schedule_title": "Schedule post",
     "f_time": "Publish time",
-    "time_hint": "Annulo must be open at that time; if the computer is off, it posts the next time Annulo opens. {p}: {rate}; it's pushed back automatically if spacing requires.",
+    "time_hint": "Annulo must be open at that time; if the computer is off, it posts the next time Annulo opens. {rate}",
     "preview_title": "Preview {noun}",
     "xhs_account": "Xiaohongshu account",
     "follow": "Follow",
@@ -1372,7 +1368,12 @@
     "rewrite_label": "What to change",
     "rewrite_hint": "The assistant edits this version as it is now (including your own edits) and leaves everything you don’t mention alone.",
     "rewrite_ph": "For example: a punchier title; lead with the conclusion; drop the third paragraph; add another image",
-    "rewrite_submit": "Rewrite"
+    "rewrite_submit": "Rewrite",
+    "schedule_confirm": "Schedule",
+    "scheduled_in": "Scheduled: publishes in {rel} ({at}). Unschedule it (in the schedule button) to edit.",
+    "scheduled_due": "Scheduled time passed ({at}): it goes out within a few minutes while Annulo is open, or click Publish now.",
+    "scheduled_btn": "Scheduled {at}",
+    "reschedule_confirm": "Move to this time"
   },
   "health": {
     "broken": "{op} for {platform} account \"{name}\" isn't working: the platform may have changed its page",

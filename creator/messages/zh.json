@@ -33,7 +33,10 @@
     "copied": "已复制",
     "open": "打开",
     "none": "没有",
-    "unknown": "未知"
+    "unknown": "未知",
+    "in_min": "{n} 分钟",
+    "in_hour": "{h} 小时 {m} 分钟",
+    "in_day": "{d} 天 {h} 小时"
   },
   "nav": {
     "content_detail": "内容详情",
@@ -231,7 +234,6 @@
         "noun": "笔记",
         "body_hint": "不要放站外链接、不要引导加微信",
         "login_hint": "弹出一个浏览器窗口，在里面登录创作者中心（手机验证码或扫码）",
-        "rate_hint": "两篇之间至少隔 2 小时、一天最多 3 篇",
         "m_views": "阅读",
         "m_likes": "点赞",
         "m_collects": "收藏",
@@ -243,7 +245,6 @@
         "noun": "推文",
         "body_hint": "话题会接在正文最后；中文和 emoji 算 2 个字，链接算 23",
         "login_hint": "弹出一个浏览器窗口，在里面登录 X",
-        "rate_hint": "两条之间不限间隔、24 小时内最多 10 条",
         "m_views": "浏览",
         "m_likes": "点赞",
         "m_comments": "回复",
@@ -255,7 +256,6 @@
         "noun": "帖子",
         "body_hint": "话题接在正文最后；前 210 个字符会直接显示，后面折叠在「查看更多」里",
         "login_hint": "弹出一个浏览器窗口，在里面登录 LinkedIn",
-        "rate_hint": "两条之间至少隔 60 分钟、一天最多 5 条",
         "m_views": "展示",
         "m_likes": "赞",
         "m_comments": "评论",
@@ -267,7 +267,6 @@
         "noun": "帖子",
         "body_hint": "开头两行最显眼；话题接在正文最后",
         "login_hint": "弹出一个浏览器窗口，在里面登录 Facebook",
-        "rate_hint": "两条之间至少隔 30 分钟、一天最多 10 条",
         "m_views": "展示",
         "m_likes": "赞",
         "m_comments": "评论",
@@ -279,7 +278,6 @@
         "noun": "帖子",
         "body_hint": "必须配图；正文前 125 个字符直接显示，话题接在最后",
         "login_hint": "弹出一个浏览器窗口，在里面登录 Instagram",
-        "rate_hint": "两条之间至少隔 60 分钟、一天最多 5 条",
         "m_views": "展示",
         "m_likes": "赞",
         "m_comments": "评论",
@@ -291,7 +289,6 @@
         "noun": "视频",
         "body_hint": "标题是视频标题；正文是视频描述，前两行最显眼；视频从资料库选或者上传本机视频",
         "login_hint": "弹出一个浏览器窗口，在里面登录 YouTube",
-        "rate_hint": "两个之间至少隔 60 分钟、一天最多 3 个",
         "m_views": "播放",
         "m_likes": "赞",
         "m_comments": "评论",
@@ -303,19 +300,18 @@
         "noun": "视频",
         "body_hint": "标题是视频标题（80 字内）；正文是简介，开头两行最显眼；视频从资料库选或者上传本机视频",
         "login_hint": "弹出一个浏览器窗口，用哔哩哔哩 App 扫码登录",
-        "rate_hint": "两条之间至少隔 30 分钟、一天最多 10 条；投稿后要等 B 站审核",
         "m_views": "播放",
         "m_likes": "点赞",
         "m_comments": "评论",
         "m_shares": "分享",
-        "m_collects": "收藏"
+        "m_collects": "收藏",
+        "review_note": "投稿后要等 B 站审核。"
       },
       "zhihu": {
         "label": "知乎",
         "noun": "文章",
         "body_hint": "专栏文章，和文章一样的富文本：小标题、列表、加粗、引用都会保留，图片直接插在正文里；话题最多 3 个；不要引导加微信",
         "login_hint": "弹出一个浏览器窗口，用知乎 App 扫码或手机验证码登录",
-        "rate_hint": "两篇之间至少隔 30 分钟、一天最多 5 篇",
         "m_views": "阅读",
         "m_likes": "赞同",
         "m_comments": "评论",
@@ -326,12 +322,12 @@
         "noun": "视频",
         "body_hint": "标题是作品标题（30 字内）；正文是作品简介，话题接在简介后面（连同话题 1000 字内）；视频从资料库选或者上传本机视频",
         "login_hint": "弹出一个浏览器窗口，用抖音 App 扫码登录创作者中心",
-        "rate_hint": "两条之间至少隔 30 分钟、一天最多 10 条；发布后要等抖音审核",
         "m_views": "播放",
         "m_likes": "点赞",
         "m_comments": "评论",
         "m_shares": "分享",
-        "m_collects": "收藏"
+        "m_collects": "收藏",
+        "review_note": "发布后要等抖音审核。"
       }
     },
     "err": {
@@ -557,7 +553,7 @@
     "range": "{m1}月{d1}日 – {m2}月{d2}日",
     "month": "{y}年{m}月",
     "no_past": "不能排到过去的时间。",
-    "moved": "「{title}」排到 {m}月{d}日 {hm}。到点由 Annulo 发布，不够平台的间隔会自动往后顺延。",
+    "moved": "「{title}」排到 {m}月{d}日 {hm}。到点由 Annulo 发布。",
     "drag_hint": "拖到别的日子改排期",
     "title": "发布日历",
     "desc": "各账号的排期和已发布的帖子按天排开。已排期、已通过的可以拖到别的日子改时间；点一条打开它。",
@@ -1020,7 +1016,7 @@
     "cover_hint": "没有配图时，发布前用它生成一张文字封面",
     "schedule_title": "排期发布",
     "f_time": "发布时间",
-    "time_hint": "到点时 Annulo 要开着，电脑关机就等下次打开再发。{p}{rate}，不够间隔会自动往后顺延。",
+    "time_hint": "到点时 Annulo 要开着，电脑关机就等下次打开再发。{rate}",
     "preview_title": "预览{noun}",
     "xhs_account": "小红书账号",
     "follow": "关注",
@@ -1372,7 +1368,12 @@
     "rewrite_label": "这次怎么改",
     "rewrite_hint": "助手在这一版现在的内容上改（包括你手改过的地方），没提到的地方保持原样。",
     "rewrite_ph": "比如：标题再抓人一点；开头直接说结论；删掉第三段；多配一张图",
-    "rewrite_submit": "开始改写"
+    "rewrite_submit": "开始改写",
+    "schedule_confirm": "确定排期",
+    "scheduled_in": "已排期：{rel}后（{at}）自动发布。要改内容先在排期里取消。",
+    "scheduled_due": "已到排期时间（{at}）：Annulo 开着时几分钟内会发出去，也可以点「立即发布」。",
+    "scheduled_btn": "已排期 {at}",
+    "reschedule_confirm": "改到这个时间"
   },
   "health": {
     "broken": "{platform}「{name}」的{op}流程走不通了：平台可能改了页面",

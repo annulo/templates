@@ -1,9 +1,10 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, ArrowUpRight, CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, HardDrive, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
+import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, HardDrive, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import RunButton from '../RunButton'
 import SocialOverview from '../SocialOverview'
 import WorkspaceTabs from '../WorkspaceTabs'
 import RichEditor from '../RichEditor'
+import SchedulePopover, { ScheduledLine } from '../SchedulePopover'
 import { Badge, Button, Dialog, ErrorDetails, Field, Notice, PageHeader, RangeToggle, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
 import { dbList, dbPatch, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, uploadLocalFile, videoSrc } from '../../lib/shuttle'
 import { SOCIAL, isSocial, type MetricKey, fieldsOf, isRich, isVideoPost, loggedInElsewhere, postText, richImages, toRich, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
@@ -338,7 +339,6 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
     if (!v && focus) onUnfocus?.()
   }
   const [editing, setEditing] = useState(false)
-  const [scheduling, setScheduling] = useState(false)
   const [purging, setPurging] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -398,7 +398,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
             {p.metrics_at && <span>{tr('social.metrics_at', { when: fmtTime(p.metrics_at) })}</span>}
           </div>
         )}
-        {p.status === 'scheduled' && p.scheduled_at && <div className="text-xs text-muted-foreground">{tr('social.scheduled_at', { when: fmtTime(p.scheduled_at) })}</div>}
+        {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} />}
         {(p.status === 'failed' || (p.status === 'scheduled' && p.error)) && p.error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{p.error}</div>}
         {p.status === 'publishing' && <div className="text-xs text-muted-foreground">{tr('social.stuck_hint')}</div>}
         {p.status === 'removed' && <div className="text-xs text-muted-foreground">{tr('social.removed_from', { when: p.removed_at ? fmtTime(p.removed_at) : '', p: pf.label })}</div>}
@@ -431,10 +431,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
               <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onDone={onChanged}>
                 {p.status === 'failed' ? tr('social.republish') : tr('social.publish_now')}
               </RunButton>
-              <Button size="sm" variant="outline" onClick={() => setScheduling(true)}>
-                <CalendarClock />
-                {tr('social.schedule')}
-              </Button>
+              <SchedulePopover size="sm" hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} onSchedule={(at) => patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string })} />
               <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
                 <Pencil />
                 {tr('social.edit')}
@@ -447,9 +444,12 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
             </Button>
           )}
           {p.status === 'scheduled' && (
-            <Button size="sm" variant="ghost" onClick={() => patch({ status: 'approved', scheduled_at: null as unknown as string })} disabled={busy}>
-              {tr('social.unschedule')}
-            </Button>
+            <>
+              <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onDone={onChanged}>
+                {tr('social.publish_now')}
+              </RunButton>
+              <SchedulePopover size="sm" current={p.scheduled_at} hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} onSchedule={(at) => patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string })} onUnschedule={() => patch({ status: 'approved', scheduled_at: null as unknown as string })} />
+            </>
           )}
           {(p.status === 'removed' || p.status === 'rejected') &&
             (purging ? (
@@ -491,7 +491,6 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
         onEdit={() => { setPreviewing(false); setEditing(true) }}
       />
       <EditDialog open={editing} p={p} pf={pf} onClose={() => setEditing(false)} onSave={async (d) => { await patch({ ...d, status: 'pending_review' }); setEditing(false) }} />
-      <ScheduleDialog open={scheduling} pf={pf} onClose={() => setScheduling(false)} onSave={async (at) => { await patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string }); setScheduling(false) }} />
     </div>
   )
 }
@@ -583,39 +582,6 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
           </Field>
         )}
       </div>
-    </Dialog>
-  )
-}
-
-function ScheduleDialog({ open, pf, onClose, onSave }: { open: boolean; pf: SocialPlatform; onClose: () => void; onSave: (iso: string) => Promise<void> }) {
-  const [at, setAt] = useState('')
-  useEffect(() => {
-    if (!open) return
-    const d = new Date(Date.now() + 3600_000)
-    d.setMinutes(0, 0, 0)
-    const pad = (x: number) => String(x).padStart(2, '0')
-    setAt(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`)
-  }, [open])
-  const ts = Date.parse(at)
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title={tr('social.schedule_title')}
-      footer={
-        <>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            {tr('common.cancel')}
-          </Button>
-          <Button size="sm" disabled={!ts || ts < Date.now()} onClick={() => onSave(new Date(ts).toISOString())}>
-            {tr('social.schedule')}
-          </Button>
-        </>
-      }
-    >
-      <Field label={tr('social.f_time')} hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })}>
-        <input type="datetime-local" className={inputCls} value={at} onChange={(e) => setAt(e.target.value)} />
-      </Field>
     </Dialog>
   )
 }

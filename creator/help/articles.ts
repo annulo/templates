@@ -178,7 +178,7 @@ export const social: Article = {
 
 在「账号 → 添加账号」加账号，会弹出一个浏览器窗口，在里面登录。登录状态只存在这台电脑上，换电脑要重新登录。
 
-| 平台 | 发什么 | 两条之间至少隔 | 每天最多 |
+| 平台 | 发什么 | 建议间隔 | 建议每天最多 |
 |---|---|---|---|
 | X | 推文，最多 4 张图或 1 个视频 | 不限 | 10 条（24 小时内） |
 | LinkedIn | 个人账号的帖子，图或视频 | 60 分钟 | 5 条 |
@@ -190,7 +190,7 @@ export const social: Article = {
 | B 站 | 视频，投稿后要等 B 站审核 | 30 分钟 | 10 条 |
 | 知乎 | 专栏文章，正文里可以插图，最多 3 个话题 | 30 分钟 | 5 篇 |
 
-到点的排期碰上频率限制会自动往后顺延。社媒功能由社媒插件提供，新建项目时已经装好；页面顶部提示没装插件时，到 Annulo 的「设置 → 项目 → 插件」里装上 social。
+间隔和条数只是建议，超了照样发；发得太密平台可能限流。社媒功能由社媒插件提供，新建项目时已经装好；页面顶部提示没装插件时，到 Annulo 的「设置 → 项目 → 插件」里装上 social。
 
 ## 账号概览
 
@@ -235,7 +235,7 @@ export const social: Article = {
 
 Add accounts under "Accounts → Add account". A browser window opens; log in there. The login stays on this computer; a new computer needs a new login.
 
-| Platform | What it posts | Minimum gap | Per day |
+| Platform | What it posts | Suggested gap | Suggested daily max |
 |---|---|---|---|
 | X | Posts, up to 4 images or 1 video | None | 10 (in 24 hours) |
 | LinkedIn | Posts on your personal profile, images or video | 60 minutes | 5 |
@@ -247,7 +247,7 @@ Add accounts under "Accounts → Add account". A browser window opens; log in th
 | Bilibili | Videos; Bilibili reviews each upload | 30 minutes | 10 |
 | Zhihu | Column articles with images in the text, up to 3 topics | 30 minutes | 5 |
 
-Scheduled posts that hit these limits are pushed back automatically. Social features come from the social plugin, installed with every new project. If a notice at the top says it's missing, install social in Annulo's Settings → Projects → Plugins.
+The spacing and daily counts are only suggestions; posts still go out if you exceed them, but posting too often can get throttled. Social features come from the social plugin, installed with every new project. If a notice at the top says it's missing, install social in Annulo's Settings → Projects → Plugins.
 
 ## Accounts
 
@@ -419,7 +419,7 @@ export const calendar: Article = {
 - 点一条打开它在内容中心里的版本；
 - 已排期、已通过的帖子可以拖到别的日子，时间不变；不能拖到过去；
 - 上面列着审核通过、还没排期的帖子，拖到某一天就排上（默认 10:00）；
-- 到点由 Annulo 发布，不够平台要求的间隔会自动往后顺延。
+- 到点由 Annulo 发布。
 
 ## 资料库
 
