@@ -16,8 +16,10 @@ export const TYPE_META: Record<ArticleType, { icon: LucideIcon; label: string; d
   video: { icon: Video, get label() { return tr('article.t_video') }, get desc() { return tr('article.t_video_desc') } },
 }
 
-/** 这个模板启用的平台里，支持这种类型的（按社媒插件的字段表算，local/_types.ts） */
+/** 这个模板启用的社媒平台里，支持这种类型的（按社媒插件的字段表算，local/_types.ts） */
 export const typePlatforms = (t: ArticleType) => platformsFor(t, CHANNELS) as ChannelType[]
+/** 网站（creght 站点、WordPress）：只发长文 */
+export const siteTypes = (t: ArticleType) => (t === 'article' ? CHANNELS.filter((c) => c === 'creght_site' || c === 'wordpress') : [])
 
 /** 平台小图标一排，悬停看名字 */
 export function PlatformIcons({ types, size = 13, className }: { types: ChannelType[]; size?: number; className?: string }) {
@@ -40,7 +42,7 @@ export function TypePicker({ value, onChange, exclude }: { value: ArticleType; o
         className={cx('flex cursor-pointer flex-col items-start gap-1.5 rounded-lg border p-3 text-left transition-colors', on ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/30' : 'border-border hover:bg-accent/50')}>
         <span className="flex items-center gap-1.5 text-sm font-medium"><m.icon className="size-4" />{m.label}{exclude === t && <span className="text-[11px] font-normal text-muted-foreground">{tr('article.same_type')}</span>}</span>
         <span className="text-xs leading-relaxed text-muted-foreground">{m.desc}</span>
-        <PlatformIcons types={typePlatforms(t)} className="mt-auto pt-1" />
+        <PlatformIcons types={[...siteTypes(t), ...typePlatforms(t)]} className="mt-auto pt-1" />
       </button>
     })}
   </div>

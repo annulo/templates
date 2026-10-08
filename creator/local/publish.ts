@@ -9,11 +9,21 @@ import { check } from '../plugins/social/local/social'
 //       通过的是 approved（给了 scheduled_at 就是 scheduled，到点由插件的定时任务发），没通过的不留记录、把问题带回去。
 //       返回 { ready: [{ channel_id, post_id }], problems: [{ channel_id, problems }] }。
 //       页面接着对 ready 的逐条调 social/social.publish（排期的不用）。
+//       有网站的模板（外贸）：网站（channels 表里的 creght 站点、WordPress）只收长文、不能排期，要先配好发布脚本（publish_status = ready）；
+//       ready 里网站那条带 publisher，页面调 <publisher>.publish({ article_id })，发布记录在 publications（local/_publish.ts）。
 //
 // 文章本身就是要发的内容，不再有「各账号的版本」：帖子是发布记录，文章改了不影响已经发出去的。
 // 同一个账号还有这篇没发出去的记录（失败、排期、老的待审版本）就改它，不另起一条。
 
-type Ready = { channel_id: string; post_id: string }
+type Ready = { channel_id: string; post_id?: string; publisher?: string }
+
+const SITE_TYPES = ['creght_site', 'wordpress']
+/** 网站渠道（channels 表）；没有网站的模板（自媒体）没有这张表，读不到就当不是网站 */
+function siteOf(ctx: any, id: string) {
+  try { return ctx.db.get('channels', id) } catch { return null }
+}
+/** 以前网站版本能单独改标题、正文…：发布脚本有就用它的（publishTo 里「空则继承文章」）。现在文章就是要发的内容，发之前清掉 */
+const OVERRIDES = { title: '', summary: '', body: '', video: '', keywords: '' }
 
 export function prepare(input: { article_id: string; channel_ids: string[]; scheduled_at?: string }, ctx: any) {
   const a = ctx.db.get('articles', input?.article_id)
@@ -27,6 +37,16 @@ export function prepare(input: { article_id: string; channel_ids: string[]; sche
   const ready: Ready[] = []
   const problems: { channel_id: string; problems: string[] }[] = []
   for (const id of ids) {
+    const site = siteOf(ctx, id)
+    if (site && SITE_TYPES.includes(site.type)) {
+      if (t !== 'article') { problems.push({ channel_id: id, problems: [L(ctx, '网站只发长文，先改写成长文', 'Websites take long-form articles only; rewrite it first')] }); continue }
+      if (at) { problems.push({ channel_id: id, problems: [L(ctx, '网站不能排期，选「立即发布」', "Websites can't be scheduled; publish now instead")] }); continue }
+      if (site.publish_status !== 'ready' || !site.publisher) { problems.push({ channel_id: id, problems: [L(ctx, '这个网站还没配好发布方式', "This website's publishing isn't set up yet")] }); continue }
+      const pub = ctx.db.query('publications', { where: { article_id: a.id, channel_id: id }, limit: 1 }).list[0]
+      if (pub && Object.keys(OVERRIDES).some((k) => pub[k])) ctx.db.update('publications', pub.id, { ...OVERRIDES, updated_at: new Date().toISOString() })
+      ready.push({ channel_id: id, publisher: site.publisher })
+      continue
+    }
     const ch = ctx.db.get('social_accounts', id)
     if (!ch) { problems.push({ channel_id: id, problems: [L(ctx, '没有这个账号', 'No such account')] }); continue }
     if (!ok.includes(ch.type)) { problems.push({ channel_id: id, problems: [L(ctx, '这个平台不支持这种类型的文章，先改写成它支持的类型', "This platform doesn't take this type; rewrite it into a type it supports first")] }); continue }

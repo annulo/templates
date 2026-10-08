@@ -12,6 +12,7 @@ description: 内容生产：出选题、按项目资料写文章（长文、图�
 - `articles`：文章，一篇一种类型（`type`：`article` 长文、`post` 图文笔记、`video` 视频；空的按长文看），字段见 ANNULO.md「文章类型」。`status` 只有 `draft` 和 `published`，老数据里的 `pending_review`、`rejected` 当 `draft`。`source_id` 是改写自哪篇。
 - `rewrite_presets`：用户存的改写预设（`type` + `prompt`）。
 - `social_posts`（社媒插件的表）：发布记录，一篇文章发到一个账号一条，`article_id` 指回文章，有状态、排期、链接和互动数据。内容是发布时从文章复制的。
+- 模板有网站渠道的：长文还能发到网站，在 `publish.prepare` 里和社媒账号一起选，记录在 `publications`（见 SHUTTLE.md「内容架构」和 websites skill）。
 
 ## 一篇文章，直接发
 
@@ -52,6 +53,6 @@ annulo run publish.prepare --input '{"article_id":"<id>","channel_ids":["<账号
 
 ## 发布状态
 
-`articles.status` 不表示有没有发出去：查 `article_id` 等于文章 id 的 `social_posts` 的 `status`、`post_url`；至少一条 published，列表和详情就显示已发布。
+`articles.status` 不表示有没有发出去：查 `article_id` 等于文章 id 的 `social_posts`（有网站的模板还有 `publications`）的 `status`、`post_url` / `url`；至少一条 published，列表和详情就显示已发布。
 不要因文章是 draft 就判断从没发过，也不要因此自动重发。社媒的发布、排期细节按 `plugins/social/PLUGIN.md` 和插件的 skill 做。
 公众号还没接入：用户要发时按公众号的格式写好给用户，说明目前要自己发。

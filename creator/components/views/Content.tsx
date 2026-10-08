@@ -8,7 +8,7 @@ import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
 import { TaskButton, TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { CHANNEL_TYPES } from '../../lib/channels'
-import { dbCreate, dbDelete, dbList, dbPatch, type Article, type ArticleStatus, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
+import { dbCreate, dbDelete, dbList, dbPatch, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
 import type { Ctx } from './types'
 import { numLocale, tr } from '../../lib/i18n'
 
@@ -35,7 +35,7 @@ const REVISE_TASK = 'revise-article'
 /** 任务 id（tasks/suggest-topics.md）：「出一批选题」，GEO 页「写成选题」也是它 */
 export const TOPICS_TASK = 'suggest-topics'
 type Writer = ReturnType<typeof useTask>
-type WriteInput = { topic_id?: string; subject?: string }
+type WriteInput = { topic_id?: string; subject?: string; channel_id?: string }
 
 /** 内容：文章（一篇一种类型，直接发到支持它的账号）和选题池 */
 export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
@@ -43,6 +43,8 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
   const [articles, setArticles] = useState<Article[] | null>(null)
   const [topics, setTopics] = useState<Topic[] | null>(null)
   const [posts, setPosts] = useState<SocialPost[]>([])
+  // 网站的发布记录（publications）：一篇文章在一个网站上一行
+  const [pubs, setPubs] = useState<Publication[]>([])
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
   // 社媒工作区的创建按钮进入同一套内容编辑流程；打开新建表单，不自动保存。
@@ -58,9 +60,10 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
   const [reqOpen, setReqOpen] = useState(false)
 
   const load = useCallback(() => {
-    Promise.all([dbList('articles'), dbList('topics'), dbList('social_posts').catch(() => [])])
-      .then(([a, t, p]) => {
+    Promise.all([dbList('articles'), dbList('topics'), dbList('social_posts').catch(() => []), dbList('publications').catch(() => [])])
+      .then(([a, t, p, pb]) => {
         setPosts(p.filter((x) => !!x.article_id))
+        setPubs(pb)
         setArticles(a)
         setTopics(t)
       })
@@ -75,12 +78,13 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
   useEffect(() => {
     if (ctx.rev) load()
   }, [ctx.rev])
-  // 每篇发到了哪些账号（只算发出去的）：列表里显示成标签，也决定「已发布」
+  // 每篇发到了哪些网站和账号（只算发出去的）：列表里显示成标签，也决定「已发布」
   const publishedTo = useMemo(() => {
-    const to: Record<string, SocialPost[]> = {}
+    const to: Record<string, { id: string; channel_id: string }[]> = {}
+    for (const p of pubs) if (p.status === 'published') (to[p.article_id] ??= []).push({ id: p.channel_id, channel_id: p.channel_id })
     for (const p of posts) if (p.status === 'published') (to[p.article_id!] ??= []).push(p)
     return to
-  }, [posts])
+  }, [posts, pubs])
   const statusOf = (a: Article): ArticleStatus => (publishedTo[a.id]?.length || a.status === 'published' ? 'published' : 'draft')
 
   const writer = useTask(WRITE_TASK, load)
@@ -100,7 +104,7 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
   const openArticle = params.article ? articles?.find((a) => a.id === params.article) : undefined
   const writerBusy = !writer.shuttle || !writer.task || writer.starting || !!writer.task.running.length
 
-  if (openArticle) return <ArticleDetail key={openArticle.id} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
+  if (openArticle) return <ArticleDetail key={openArticle.id} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
 
   return (
     <div className="space-y-6">
@@ -199,7 +203,7 @@ function NewArticleDialog({ open, onClose, onDone, onAi, aiDisabled }: { open: b
   </Dialog>
 }
 
-function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, writer, onWrite }: { ctx: Ctx; publishedTo: Record<string, SocialPost[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; writer: Writer; onWrite: () => void }) {
+function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, writer, onWrite }: { ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; writer: Writer; onWrite: () => void }) {
   const [query, setQuery] = useState('')
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
@@ -271,7 +275,7 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
   )
 }
 
-function ArticleDetail({ ctx, a, all, posts, focus, displayStatus, open, onBack, onChanged }: { ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
+function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged }: { ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
   const type = typeOf(a)
   const [moreOpen, setMoreOpen] = useState(false)
   // 菜单往哪边展开：宽屏时按钮在一行最右边，往左；手机上按钮换到下一行的左边，往左会伸出屏幕，改往右。按打开时按钮的实际位置算
@@ -438,7 +442,7 @@ function ArticleDetail({ ctx, a, all, posts, focus, displayStatus, open, onBack,
                 <button type="button" role="menuitem" disabled={locked} className={cx(item, 'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10 disabled:cursor-default disabled:opacity-50')} onClick={() => {
                   if (!confirmDel) { setConfirmDel(true); return }
                   void run('del', async () => {
-                    if (posts.some((p) => p.status === 'published' || p.status === 'publishing' || p.status === 'scheduled')) throw new Error(tr('article.delete_published'))
+                    if (posts.some((p) => p.status === 'published' || p.status === 'publishing' || p.status === 'scheduled') || pubs.some((p) => p.status === 'published')) throw new Error(tr('article.delete_published'))
                     await dbDelete('articles', a.id); onBack()
                   })
                 }}><Trash2 className="size-4" />{confirmDel ? tr('content.del_confirm') : tr('content.del')}</button>
@@ -487,9 +491,9 @@ function ArticleDetail({ ctx, a, all, posts, focus, displayStatus, open, onBack,
         <footer className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4"><ArticleTime label={tr('content.created')} value={a.created_at} /><ArticleTime label={tr('content.updated')} value={a.updated_at || a.created_at} /></footer>
       </article>
 
-      <PublishRecords ctx={ctx} posts={posts} focus={focus} onChanged={onChanged} onPublish={openPublish} />
+      <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} />
 
-      <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
+      <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
       <RewriteDialog open={rewritingOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setRewritingOpen(false)} onStart={startRewrite} />
       <TaskRequirements task={reviser.task} onSaved={reviser.setTask} title={tr('content.revise_req_title')} hint={tr('content.revise_req_hint')} open={requirementsOpen} onOpenChange={(o) => { setRequirementsOpen(o); if (!o) moreRef.current?.querySelector('button')?.focus() }} />
       <Dialog
@@ -522,7 +526,9 @@ function ArticleTime({ label, value }: { label: string; value?: string }) {
   return <span className="text-xs leading-relaxed text-muted-foreground">{label} <time dateTime={value} title={date.toLocaleString(numLocale())}>{date.toLocaleString(numLocale(), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></span>
 }
 
-function Topics({ ctx, list, onChanged, writer, suggester, onWrite }: { ctx: Ctx; list: Topic[] | null; onChanged: () => void; writer: Writer; suggester: Writer; onWrite: (input: { topic_id?: string }) => void }) {
+function Topics({ ctx, list, onChanged, writer, suggester, onWrite }: { ctx: Ctx; list: Topic[] | null; onChanged: () => void; writer: Writer; suggester: Writer; onWrite: (input: { topic_id?: string; channel_id?: string }) => void }) {
+  // 长文参照这个网站的写法（content.context 的 channel_id）
+  const site = ctx.channels.find((c) => c.type === 'creght_site')
   const [adding, setAdding] = useState(false)
   const [briefTopic, setBriefTopic] = useState<Topic | null>(null)
   const [title, setTitle] = useState('')
@@ -599,7 +605,7 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite }: { ctx: Ctx
                       <Loader className="size-3 animate-spin" /> {TOPIC_STATUS.writing.label}
                     </Badge>
                   ) : (
-                    <Button variant="outline" size="sm" onClick={() => onWrite({ topic_id: t.id })} disabled={!writer.shuttle || !writer.task || writer.starting}>
+                    <Button variant="outline" size="sm" onClick={() => onWrite({ topic_id: t.id, channel_id: site?.id })} disabled={!writer.shuttle || !writer.task || writer.starting}>
                       <Sparkles /> {tr('content.write_article')}
                     </Button>
                   ))}
@@ -635,7 +641,7 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite }: { ctx: Ctx
         </div>
       )}
 
-      {briefTopic && <WritingBriefDialog ctx={ctx} topic={briefTopic} onClose={() => setBriefTopic(null)} onChanged={onChanged} onWrite={() => onWrite({ topic_id: briefTopic.id })} />}
+      {briefTopic && <WritingBriefDialog ctx={ctx} topic={briefTopic} onClose={() => setBriefTopic(null)} onChanged={onChanged} onWrite={() => onWrite({ topic_id: briefTopic.id, channel_id: site?.id })} />}
       <Dialog
         open={adding}
         onClose={() => setAdding(false)}
