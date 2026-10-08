@@ -54,6 +54,8 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
   const [writingInput, setWritingInput] = useState<WriteInput | null>(null)
   const [writingType, setWritingType] = useState<ArticleType>('article')
   const [writingRequirements, setWritingRequirements] = useState('')
+  // 「写作要求」在页头的「更多」里
+  const [reqOpen, setReqOpen] = useState(false)
 
   const load = useCallback(() => {
     Promise.all([dbList('articles'), dbList('topics'), dbList('social_posts').catch(() => [])])
@@ -109,6 +111,7 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
           <>
             <Button size="sm" onClick={() => { setParam('tab', 'articles'); setCreating(true) }}><Plus />{tr('content.new_article')}</Button>
             <Button variant="outline" size="sm" disabled={writerBusy} onClick={() => openWriter()}><Sparkles />{tr('content.write_one')}</Button>
+            <HeaderMore items={[{ label: tr('content.req_btn'), icon: SlidersHorizontal, onClick: () => setReqOpen(true), hidden: !writer.task }]} />
           </>
         }
       />
@@ -134,6 +137,7 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
       ) : (
         <Topics ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
       )}
+      <TaskRequirements task={writer.task} onSaved={writer.setTask} title={tr('content.req_title')} hint={tr('content.req_hint')} open={reqOpen} onOpenChange={setReqOpen} />
       <NewArticleDialog open={creating} onClose={() => setCreating(false)} onDone={(id) => { setCreating(false); load(); setParam('article', id) }}
         aiDisabled={writerBusy}
         // 交给 AI：打开写作要求弹窗（类型、主题已经带上），确认后开写作任务
@@ -148,6 +152,27 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
       </Dialog>
     </div>
   )
+}
+
+/** 页头的「更多」：不常用的设置（写作要求…）收在这里，点外面、按 Esc 收起 */
+function HeaderMore({ items }: { items: { label: string; icon: typeof SlidersHorizontal; onClick: () => void; hidden?: boolean }[] }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', close); document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc) }
+  }, [open])
+  const shown = items.filter((i) => !i.hidden)
+  if (!shown.length) return null
+  return <div ref={ref} className="relative">
+    <Button variant="ghost" size="sm" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>{tr('content.more_actions')}<ChevronDown className="size-3.5" /></Button>
+    {open && <div role="menu" className="absolute top-full right-0 z-40 mt-2 w-48 rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl">
+      {shown.map((i) => <button key={i.label} type="button" role="menuitem" onClick={() => { setOpen(false); i.onClick() }} className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left outline-none hover:bg-accent focus-visible:bg-accent"><i.icon className="size-4" />{i.label}</button>)}
+    </div>}
+  </div>
 }
 
 /** 新建文章：先选类型（字段、能发的平台跟着变），再写标题或主题；自己写就建一篇空的，或者交给 AI 写 */
@@ -195,7 +220,6 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
             {writer.starting ? <Loader className="animate-spin" /> : <Sparkles />}
             {tr('content.write_one')}
           </Button>
-          <TaskRequirements task={writer.task} onSaved={writer.setTask} title={tr('content.req_title')} hint={tr('content.req_hint')} label={tr('content.req_btn')} />
         </div>
       </div>
     )
@@ -210,7 +234,6 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
         )}
         <span className="mx-1 h-4 border-l border-border" />
         {ARTICLE_TYPES.map((t) => !counts['t:' + t] ? null : <button key={t} onClick={() => setType(type === t ? '' : t)} className={chip(type === t)}>{(() => { const I = TYPE_META[t].icon; return <I className="size-3" /> })()}{TYPE_META[t].label}<span className="tabular-nums opacity-70">{counts['t:' + t]}</span></button>)}
-        <div className="ml-auto"><TaskRequirements task={writer.task} onSaved={writer.setTask} title={tr('content.req_title')} hint={tr('content.req_hint')} label={tr('content.req_btn')} /></div>
       </div>
       <div className="overflow-hidden rounded-xl border border-border bg-background">
         {shown.map((a) => {

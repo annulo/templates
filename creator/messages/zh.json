@@ -731,7 +731,7 @@
     "no_articles": "还没有文章。点「AI 写文章」让助手按定位挑一个选题写；也可以「新建文章」自己写。",
     "write_one": "AI 写文章",
     "one_time_requirements": "本次写作要求",
-    "one_time_requirements_hint": "已填入当前默认写作要求（按类型分节，助手只看选中类型那一节）。这里的修改只用于这篇；长期要求在文章列表点「写作要求」修改。",
+    "one_time_requirements_hint": "已填入当前默认写作要求（按类型分节，助手只看选中类型那一节）。这里的修改只用于这篇；长期要求在页面右上角「更多 → 写作要求」里改。",
     "start_writing": "开始写",
     "new_article": "新建文章",
     "new_summary": "摘要",

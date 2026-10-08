@@ -327,7 +327,7 @@ export const content: Article = {
 - 「AI 写文章」：先选类型，下面是「本次写作要求」，已经填好默认写法（按类型分节），这次可以改，改的只用于这一篇；点「开始写」，助手从选题里挑一个最值得写的；
 - 选题上「写成文章」：写这个选题，同样先选类型。
 
-交给助手写的，页面上显示「助手正在写…」，一般几分钟，点「看过程」能看它每一步。写好的文章是「草稿」，在「文章」页签里。长期的写法在「写作要求」里改。
+交给助手写的，页面上显示「助手正在写…」，一般几分钟，点「看过程」能看它每一步。写好的文章是「草稿」，在「文章」页签里。长期的写法在页面右上角「更多 → 写作要求」里改。
 助手只用「我的定位」里写了的个人经历，不编数据和案例；资料库里有对得上的图会配上。
 
 ## 编辑文章
@@ -396,7 +396,7 @@ Three ways to start:
 - "Write with AI": pick a type; below it, "Requirements for this article" is filled with your default instructions (one section per type). Changes here apply to this article only. Click "Start writing" and the assistant picks the most worthwhile topic;
 - "Write article" on a topic: writes that topic, again after picking a type.
 
-While the assistant writes, the page shows "The assistant is writing…", usually for a few minutes; "View progress" shows each step. The result is a "Draft" under Articles. Change the long-term instructions under "Writing instructions".
+While the assistant writes, the page shows "The assistant is writing…", usually for a few minutes; "View progress" shows each step. The result is a "Draft" under Articles. Change the long-term instructions under "More → Writing instructions" at the top right.
 The assistant only uses personal stories you wrote in My profile and doesn't make up data or cases; matching images from the Library are added.
 
 ## Editing an article
