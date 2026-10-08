@@ -1621,7 +1621,7 @@
     "rewrite_ph_video": "比如：写成 1 分钟口播视频的标题和简介",
     "presets": "改写预设",
     "presets_hint": "常用的改写要求。点一个，类型和要求都填好。",
-    "presets_empty": "还没有预设：在下面选好类型、写好要求后点「存为预设」，下次点一下就填好。",
+    "presets_empty": "还没有预设：选好类型、写好要求后点「存为预设」，或者在「管理预设」里新建。",
     "preset_use": "用这个预设",
     "preset_edit": "修改预设",
     "preset_delete": "删除预设",
@@ -1631,6 +1631,9 @@
     "rewriting": "AI 正在改写成{type}",
     "rewriting_desc": "写好会另存一篇，出现在下面「改写出的文章」和文章列表里；点「看过程」能看它在做什么。",
     "from_source": "改写自",
-    "derived": "改写出的文章"
+    "derived": "改写出的文章",
+    "presets_manage": "管理预设",
+    "presets_none": "还没有预设。",
+    "preset_new": "新建预设"
   }
 }

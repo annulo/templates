@@ -341,7 +341,7 @@ export const content: Article = {
 
 文章页点「改写」：选改成哪种类型，写这次的要求，助手另写一篇新的，原文不动。新文章在列表里，详情里写着「改写自」哪篇；原文下面列着「改写出的文章」。
 
-**改写预设**：常用的要求存起来，下次点一下就填好。比如经常把长文改成 X 的推文，就在「改写成图文笔记」下写「简短，200 字以内，开头一句话抓人」，点「存为预设」。预设按类型分开，能改、能删。
+**改写预设**：常用的要求存起来，下次点一下就填好。比如经常把长文改成 X 的推文，就在「改写成图文笔记」下写「简短，200 字以内，开头一句话抓人」，点「存为预设」。点一下预设，类型和要求都填好；改、删、新建在改写弹窗的「管理预设」里。
 
 ## 发布
 
@@ -410,7 +410,7 @@ Open one:
 
 Click "Rewrite" on an article: pick the type to rewrite into, write what you want, and the assistant writes a new article; the original stays as it is. The new one is in the list and says which article it was "Rewritten from"; the original lists its "Rewritten articles".
 
-**Rewrite presets**: save instructions you use often and fill them in with one click. If you often turn articles into posts for X, write "Short, under 200 words, open with a hook" under "Rewrite into Image post" and click "Save as preset". Presets are kept per type and can be edited or deleted.
+**Rewrite presets**: save instructions you use often and fill them in with one click. If you often turn articles into posts for X, write "Short, under 200 words, open with a hook" under "Rewrite into Image post" and click "Save as preset". Clicking a preset fills in both the type and the instructions; edit, delete or add presets under "Manage presets" in the rewrite dialog.
 
 ## Publishing
 

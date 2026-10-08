@@ -1621,7 +1621,7 @@
     "rewrite_ph_video": "e.g. Title and description for a 1-minute talking-head video",
     "presets": "Rewrite presets",
     "presets_hint": "Instructions you use often. Click one to fill in both the type and the instructions.",
-    "presets_empty": "No presets yet: pick a type and write the instructions below, then click \"Save as preset\".",
+    "presets_empty": "No presets yet: pick a type, write the instructions and click \"Save as preset\", or add one under \"Manage presets\".",
     "preset_use": "Use this preset",
     "preset_edit": "Edit preset",
     "preset_delete": "Delete preset",
@@ -1631,6 +1631,9 @@
     "rewriting": "AI is rewriting into {type}",
     "rewriting_desc": "The result is saved as a new article under \"Rewritten articles\" below and in the list; click \"View\" to follow along.",
     "from_source": "Rewritten from",
-    "derived": "Rewritten articles"
+    "derived": "Rewritten articles",
+    "presets_manage": "Manage presets",
+    "presets_none": "No presets yet.",
+    "preset_new": "New preset"
   }
 }
