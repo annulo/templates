@@ -316,7 +316,7 @@ export const content: Article = {
 - 点选题标题或「编辑选题」，能补内容角度、关键词、读者是谁、读者想知道什么、大纲、写作语言、发到哪些平台、结尾想让读者做什么、还缺的素材，然后「保存并写成文章」；
 - 「写成文章」交给助手写这一个；
 - 不想写的点「×」（放弃这个选题），放弃的在下面「已写成 / 已放弃的选题」里能「恢复」；
-- 「选题要求」：助手出选题时照这份要求做，比如只出某类主题、一次出几个。
+- 点「出一批选题」先弹窗，可以写这一批的额外要求，比如只出某类主题、一次出几个，只用于这一批；不填就照默认的要求出。
 
 ![内容中心 · 选题](https://fsu.creght.com/site/2103669300995821568/1791356478101__creator_help_content_topics.png)
 
@@ -385,7 +385,7 @@ The "Topics" tab:
 - Click a topic title or "Edit topic" to add the angle, keywords, who it's for, what readers want to know, outline, language, platforms, what readers should do at the end and missing material, then "Save and draft";
 - "Write article" hands that topic to the assistant;
 - Click "×" (Drop this topic) for ones you won't write; dropped ones are under "written / dropped topics" below, where you can "Restore" them;
-- "Topic instructions": what the assistant follows when suggesting topics, like only certain kinds or how many at a time.
+- "Suggest topics" first opens a dialog where you can add requirements for this batch only, like only certain kinds or how many at a time; leave it empty to follow the defaults.
 
 ![Content center · Topics](https://fsu.creght.com/site/2103669300995821568/1791356478101__creator_help_content_topics.png)
 
@@ -596,7 +596,7 @@ export const assistant: Article = {
 ## 按钮和助手
 
 后台很多按钮是直接执行的（采集、自检、发布），不经过助手。
-要 AI 读东西、想东西的按钮（出一批选题、AI 写文章、AI 修改、改写、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；按钮变成「进行中 · 看过程」，点它打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」「选题要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
+要 AI 读东西、想东西的按钮（出一批选题、AI 写文章、AI 修改、改写、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；按钮变成「进行中 · 看过程」，点它打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
 
 ## 不会替你做的
 
@@ -639,7 +639,7 @@ Annulo「设置 → 项目」里的「给助手的说明」：写你对这个项
 ## Buttons and the assistant
 
 Many buttons run directly (collecting, self-tests, publishing) without the assistant.
-Buttons that need AI to read or think (Suggest topics, Write with AI, Ask AI to revise, Rewrite, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. The button turns into "In progress · View progress"; click it to open that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions", "Topic instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
+Buttons that need AI to read or think (Suggest topics, Write with AI, Ask AI to revise, Rewrite, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. The button turns into "In progress · View progress"; click it to open that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
 
 ## What it won't do for you
 

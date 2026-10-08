@@ -6,9 +6,9 @@ import { ARTICLE_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleTy
 import { PublishDialog, PublishRecords } from '../ArticlePublish'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls, toast, type Tone } from '../ui'
-import { TaskButton, TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
+import { TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { CHANNEL_TYPES } from '../../lib/channels'
-import { dbCreate, dbDelete, dbList, dbPatch, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
+import { dbCreate, dbDelete, dbList, dbPatch, openChat, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
 import type { Ctx } from './types'
 import { numLocale, tr } from '../../lib/i18n'
 
@@ -118,8 +118,8 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
     const id = await writer.run({ ...writingInput, type: writingType, writing_requirements: writingRequirements.trim() })
     if (id) { setWritingInput(null); setCreating(false) }
   }
-  // 出选题的「AI 要求」按钮放在选题页的「出一批选题」旁边
-  const suggester = useTask(TOPICS_TASK)
+  // 出选题：选题页点「出一批选题」先弹窗写这次的要求
+  const suggester = useTask(TOPICS_TASK, load)
   const topicTitle = (id?: string) => topics?.find((t) => t.id === id)?.title
   const openArticle = params.article ? articles?.find((a) => a.id === params.article) : undefined
   const writerBusy = !writer.shuttle || !writer.task || writer.starting || !!writer.task.running.length
@@ -570,6 +570,14 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite }: { ctx: Ctx
   const [angle, setAngle] = useState('')
   const [error, setError] = useState('')
   const [showDone, setShowDone] = useState(false)
+  // 出选题弹窗里的要求；null 是没打开。GEO 页「写成选题」带 channel_id，不算在这里
+  const [topicReq, setTopicReq] = useState<string | null>(null)
+  const suggesting = suggester.task?.running.find((r) => !r.input?.channel_id)
+  const startTopics = async () => {
+    const req = topicReq?.trim()
+    const id = await suggester.run(req ? { topic_requirements: req } : {})
+    if (id) { setTopicReq(null); openChat(id) }
+  }
 
   const add = async () => {
     try {
@@ -600,17 +608,28 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite }: { ctx: Ctx
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <TaskButton task={TOPICS_TASK} match={(r) => !r.input?.channel_id} onFinished={onChanged} icon={Sparkles}>
-          {tr('content.gen_topics')}
-        </TaskButton>
+        {suggesting ? (
+          <Button variant="outline" size="sm" onClick={() => openChat(suggesting.chat_id)}>
+            <Loader className="animate-spin" /> {tr('task.running')} · {tr('task.view')}
+          </Button>
+        ) : (
+          <Button size="sm" disabled={!suggester.shuttle || !suggester.task || suggester.starting} onClick={() => setTopicReq('')}>
+            <Sparkles /> {tr('content.gen_topics')}
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
           <Plus /> {tr('content.add_manual')}
         </Button>
-        <div className="ml-auto flex flex-wrap gap-1">
-          <TaskRequirements task={suggester.task} onSaved={suggester.setTask} title={tr('content.topics_req_title')} hint={tr('content.topics_req_hint')} label={tr('content.topics_req_btn')} />
-        </div>
       </div>
       {error && <Notice tone="error">{error}</Notice>}
+      {/* 出一批选题：先弹窗写这一批的额外要求，默认写法当 placeholder 给用户看；不填就照默认出 */}
+      <Dialog open={topicReq !== null} onClose={() => setTopicReq(null)} title={tr('content.gen_topics')} width={640} footer={<><Button variant="ghost" onClick={() => setTopicReq(null)}>{tr('common.cancel')}</Button><Button onClick={startTopics} disabled={suggester.starting}>{suggester.starting ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.start_topics')}</Button></>}>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">{tr('content.topics_one_time_hint')}</p>
+          <Field label={tr('content.topics_one_time')}><textarea autoFocus value={topicReq ?? ''} placeholder={suggester.task?.prompt ?? ''} onChange={(e) => setTopicReq(e.target.value)} rows={10} className={cx(inputCls, 'py-2 leading-relaxed')} /></Field>
+          {suggester.error && <Notice tone="error">{suggester.error}</Notice>}
+        </div>
+      </Dialog>
 
       {active.length === 0 ? (
         <Notice>{tr('content.topics_empty')}</Notice>

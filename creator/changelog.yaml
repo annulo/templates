@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.11.1
+  zh: 「出一批选题」点了先弹窗，可以写这一批的额外要求（只出某类主题、出几个…），不填就照默认要求出；选题页右边的「选题要求」按钮去掉了。
+  en: "\"Suggest topics\" now opens a dialog first where you can add requirements for this batch (which kinds of topics, how many\u2026); leave it empty to follow the defaults. The separate \"Topic instructions\" button on the Topics tab is gone."
 - version: 0.11.0
   zh: 排期的帖子到点发的是文章那时的内容：排期之后改了文章也不用取消重排；排期改由 Annulo 准时发（到点一分钟内）。需要 Annulo 新版本。
   en: "Scheduled posts go out with the article as it is at that moment, so you can keep editing after scheduling; Annulo now publishes them right on time (within a minute). Needs the latest Annulo."
