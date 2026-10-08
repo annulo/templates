@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Bookmark, Check, Loader2, Pencil, Sparkles, Trash2, X } from 'lucide-react'
-import { TYPE_META, TypePicker, typeOf, type ArticleType } from './ArticleTypes'
+import { TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleType } from './ArticleTypes'
 import { Button, Dialog, Field, Notice, cx, inputCls } from './ui'
 import { tr } from '../lib/i18n'
 import { dbCreate, dbDelete, dbList, dbPatch, type Article, type RewritePreset } from '../lib/shuttle'
@@ -23,8 +23,10 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
   const load = () => dbList('rewrite_presets').then((l) => setPresets(l.sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? ''))))).catch((e) => { setPresets([]); setErr((e as Error).message) })
   useEffect(() => { if (open) { setType(from === 'article' ? 'post' : 'article'); setNote(''); setEditing(null); setMsg(''); setErr(''); void load() } }, [open])
 
-  const mine = (presets ?? []).filter((p) => p.type === type)
-  const saved = mine.some((p) => p.prompt.trim() === note.trim())
+  // 当前选中的预设：要求还是它的原文、类型也没换。改了要求或类型就不算选中了
+  const picked = (presets ?? []).find((p) => p.type === type && p.prompt.trim() === note.trim())
+  const saved = !!picked
+  const usePreset = (p: RewritePreset) => { setType(p.type); setNote(p.prompt); setEditing(null); setMsg('') }
   const run = async (f: () => Promise<unknown>, done?: string) => {
     setErr(''); setMsg('')
     try { await f(); await load(); if (done) setMsg(done) } catch (e) { setErr((e as Error).message) }
@@ -38,20 +40,25 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
   </>}>
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">{tr('article.rewrite_hint', { title: article.title })}</p>
-      <Field group label={tr('article.rewrite_to')}><TypePicker value={type} onChange={(t) => { if (mine.some((p) => p.prompt.trim() === note.trim())) setNote(''); setType(t); setEditing(null) }} exclude={from} /></Field>
-      <Field group label={tr('article.presets')} hint={tr('article.presets_hint', { type: TYPE_META[type].label })}>
-        {presets === null ? <span className="text-xs text-muted-foreground">…</span> : !mine.length ? <span className="text-xs text-muted-foreground">{tr('article.presets_empty')}</span>
-          : <div className="space-y-1.5">{mine.map((p) => editing?.id === p.id
+      {/* 先挑预设：点一下类型和要求都填好；没有合适的再自己选类型、写要求 */}
+      <Field group label={tr('article.presets')} hint={tr('article.presets_hint')}>
+        {presets === null ? <span className="text-xs text-muted-foreground">…</span> : !presets.length ? <span className="text-xs text-muted-foreground">{tr('article.presets_empty')}</span>
+          : <div className="max-h-56 space-y-1.5 overflow-y-auto">{presets.map((p) => editing?.id === p.id
             ? <div key={p.id} className="space-y-2 rounded-lg border border-primary/40 p-2">
               <textarea autoFocus rows={3} value={editing.prompt} onChange={(e) => setEditing({ ...editing, prompt: e.target.value })} className={cx(inputCls, 'py-2')} />
               <div className="flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={() => setEditing(null)}><X />{tr('common.cancel')}</Button><Button size="sm" disabled={!editing.prompt.trim()} onClick={updatePreset}><Check />{tr('common.save')}</Button></div>
             </div>
-            : <div key={p.id} className={cx('group flex items-start gap-2 rounded-lg border px-3 py-2', note.trim() === p.prompt.trim() ? 'border-primary/50 bg-primary/5' : 'border-border')}>
-              <button type="button" onClick={() => setNote(p.prompt)} className="min-w-0 flex-1 cursor-pointer text-left text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] hover:text-primary-text" title={tr('article.preset_use')}>{p.prompt}</button>
+            : <div key={p.id} className={cx('group flex items-start gap-2 rounded-lg border px-3 py-2', picked?.id === p.id ? 'border-primary/50 bg-primary/5' : 'border-border hover:bg-accent/50')}>
+              <button type="button" onClick={() => usePreset(p)} className="flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-left" title={tr('article.preset_use')}>
+                <TypeBadge type={p.type} className="mt-0.5" />
+                <span className="min-w-0 flex-1 text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">{p.prompt}</span>
+                {picked?.id === p.id && <Check className="mt-0.5 size-4 shrink-0 text-primary-text" />}
+              </button>
               <button type="button" onClick={() => setEditing({ id: p.id, prompt: p.prompt })} aria-label={tr('article.preset_edit')} title={tr('article.preset_edit')} className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><Pencil className="size-3.5" /></button>
               <button type="button" onClick={() => run(() => dbDelete('rewrite_presets', p.id))} aria-label={tr('article.preset_delete')} title={tr('article.preset_delete')} className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3.5" /></button>
             </div>)}</div>}
       </Field>
+      <Field group label={tr('article.rewrite_to')}><TypePicker value={type} onChange={(t) => { if (picked) setNote(''); setType(t); setEditing(null) }} exclude={from} /></Field>
       <Field label={tr('article.rewrite_note')} hint={tr('article.rewrite_note_hint')}>
         <textarea value={note} onChange={(e) => { setNote(e.target.value); setMsg('') }} rows={4} className={cx(inputCls, 'py-2')} placeholder={tr(`article.rewrite_ph_${type}`)} />
       </Field>
