@@ -282,6 +282,9 @@ export function TaskRequirements({ task, onSaved, title, hint, label, open: cont
                   <RotateCcw /> {tr('task.reset')}
                 </Button>
               )}
+              <Button variant="ghost" onClick={close}>
+                {tr('common.close')}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => {

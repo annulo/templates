@@ -322,10 +322,9 @@ export const content: Article = {
 
 ## 写文章
 
-三种开头：
-- 「新建文章」：先选类型，再写标题或主题；「保存」建一篇空的自己写，「让 AI 写」交给 AI；
-- 「AI 写文章」：先选类型，下面是「本次写作要求」，已经填好默认写法（按类型分节），这次可以改，改的只用于这一篇；点「开始写」，助手从选题里挑一个最值得写的；
-- 选题上「写成文章」：写这个选题，同样先选类型。
+两种开头：
+- 「新建文章」：先选类型，在「这篇想写什么」里写主题、要点或一段草稿，然后二选一：「自己写」建一篇草稿打开编辑（第一行当标题，后面的放进正文）；「让 AI 写」交给助手，怎么写照「写作要求」，什么都不填时助手从选题里挑一个最值得写的；
+- 选题上「写成文章」：写这个选题，同样先选类型，可以补充要点或草稿。
 
 交给助手写的，页面上显示「助手正在写…」，一般几分钟，点「看过程」能看它每一步。写好的文章是「草稿」，在「文章」页签里。长期的写法在页面右上角「更多 → 写作要求」里改。
 助手只用「我的定位」里写了的个人经历，不编数据和案例；资料库里有对得上的图会配上。
@@ -391,10 +390,9 @@ The "Topics" tab:
 
 ## Writing
 
-Three ways to start:
-- "New article": pick a type, then a title or topic; "Save" creates an empty one to write yourself, "Let AI write it" hands it to AI;
-- "Write with AI": pick a type; below it, "Requirements for this article" is filled with your default instructions (one section per type). Changes here apply to this article only. Click "Start writing" and the assistant picks the most worthwhile topic;
-- "Write article" on a topic: writes that topic, again after picking a type.
+Two ways to start:
+- "New article": pick a type and put a subject, points or a rough draft in "What to write", then either "Write it myself" (creates a draft and opens it; the first line becomes the title, the rest goes into the body) or "Let AI write it" (the assistant writes it following your writing instructions; with nothing filled in, it picks the most worthwhile topic);
+- "Write article" on a topic: writes that topic, again after picking a type; you can add points or a draft.
 
 While the assistant writes, the page shows "The assistant is writing…", usually for a few minutes; "View progress" shows each step. The result is a "Draft" under Articles. Change the long-term instructions under "More → Writing instructions" at the top right.
 The assistant only uses personal stories you wrote in My profile and doesn't make up data or cases; matching images from the Library are added.
@@ -596,7 +594,7 @@ export const assistant: Article = {
 ## 按钮和助手
 
 后台很多按钮是直接执行的（采集、自检、发布），不经过助手。
-要 AI 读东西、想东西的按钮（出一批选题、AI 写文章、AI 修改、改写、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；按钮变成「进行中 · 看过程」，点它打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
+要 AI 读东西、想东西的按钮（出一批选题、新建文章里的让 AI 写、AI 修改、改写、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；按钮变成「进行中 · 看过程」，点它打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
 
 ## 不会替你做的
 
@@ -639,7 +637,7 @@ Annulo「设置 → 项目」里的「给助手的说明」：写你对这个项
 ## Buttons and the assistant
 
 Many buttons run directly (collecting, self-tests, publishing) without the assistant.
-Buttons that need AI to read or think (Suggest topics, Write with AI, Ask AI to revise, Rewrite, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. The button turns into "In progress · View progress"; click it to open that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
+Buttons that need AI to read or think (Suggest topics, Let AI write it, Ask AI to revise, Rewrite, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. The button turns into "In progress · View progress"; click it to open that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
 
 ## What it won't do for you
 

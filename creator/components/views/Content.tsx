@@ -60,16 +60,10 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
   // 网站的发布记录（publications）：一篇文章在一个网站上一行
   const [pubs, setPubs] = useState<Publication[]>([])
   const [error, setError] = useState('')
-  const [creating, setCreating] = useState(false)
-  // 社媒工作区的创建按钮进入同一套内容编辑流程；打开新建表单，不自动保存。
-  useEffect(() => {
-    if (params.new !== '1') return
-    setCreating(true)
-    setParam('new', '')
-  }, [params.new])
   const [writingInput, setWritingInput] = useState<WriteInput | null>(null)
   const [writingType, setWritingType] = useState<ArticleType>('article')
-  const [writingRequirements, setWritingRequirements] = useState('')
+  const [writingNotes, setWritingNotes] = useState('')
+  const [savingSelf, setSavingSelf] = useState(false)
   // 「写作要求」在页头的「更多」里
   const [reqOpen, setReqOpen] = useState(false)
 
@@ -109,19 +103,42 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
 
   const writer = useTask(WRITE_TASK, load)
   const openWriter = (input: WriteInput = {}, type: ArticleType = 'article') => {
-    setWritingRequirements(writer.task?.prompt ?? '')
+    setWritingNotes('')
     setWritingType(type)
     setWritingInput(input)
   }
   const startWriting = async () => {
-    if (!writingInput || !writingRequirements.trim()) return
-    const id = await writer.run({ ...writingInput, type: writingType, writing_requirements: writingRequirements.trim() })
-    if (id) { setWritingInput(null); setCreating(false) }
+    if (!writingInput) return
+    const req = writingNotes.trim()
+    const id = await writer.run({ ...writingInput, type: writingType, ...(req ? { notes: req } : {}) })
+    if (id) setWritingInput(null)
   }
+  // 自己写：建一篇草稿打开编辑；填的第一行当标题，后面的放进正文
+  const writeSelf = async () => {
+    const [first = '', ...rest] = writingNotes.trim().split('\n')
+    const text = rest.join('\n').trim()
+    const body = writingType === 'article' ? text.split(/\n{2,}/).filter(Boolean).map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('') : text
+    setSavingSelf(true)
+    try {
+      const t = new Date().toISOString()
+      const row = await dbCreate('articles', { type: writingType, title: (first.trim() || writingInput?.subject || '').slice(0, 200), summary: '', body, tags: '[]', status: 'draft', created_at: t, updated_at: t })
+      setWritingInput(null)
+      load()
+      setParam('tab', 'articles')
+      setParam('article', row.id)
+    } catch (e) { toast((e as Error).message, 'error') } finally { setSavingSelf(false) }
+  }
+  // 社媒工作区的创建按钮也打开新建文章
+  useEffect(() => {
+    if (params.new !== '1') return
+    openWriter()
+    setParam('new', '')
+  }, [params.new])
   // 出选题：选题页点「出一批选题」先弹窗写这次的要求
   const suggester = useTask(TOPICS_TASK, load)
   const topicTitle = (id?: string) => topics?.find((t) => t.id === id)?.title
   const openArticle = params.article ? articles?.find((a) => a.id === params.article) : undefined
+  const writingTitle = topicTitle(writingInput?.topic_id) || writingInput?.subject
   const writerBusy = !writer.shuttle || !writer.task || writer.starting || !!writer.task.running.length
 
   if (openArticle) return <ArticleDetail key={openArticle.id} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
@@ -133,8 +150,7 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
         desc={tr('content.desc')}
         actions={
           <>
-            <Button size="sm" onClick={() => { setParam('tab', 'articles'); setCreating(true) }}><Plus />{tr('content.new_article')}</Button>
-            <Button variant="outline" size="sm" disabled={writerBusy} onClick={() => openWriter()}><Sparkles />{tr('content.write_one')}</Button>
+            <Button size="sm" onClick={() => openWriter()}><Plus />{tr('content.new_article')}</Button>
             <HeaderMore items={[{ label: tr('content.req_btn'), icon: SlidersHorizontal, onClick: () => setReqOpen(true), hidden: !writer.task }]} />
           </>
         }
@@ -157,26 +173,25 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
       />
       <TaskFailed task={writer.task} />
       {tab === 'articles' ? (
-        <Articles ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} writer={writer} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
+        <Articles ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
       ) : (
         <Topics ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
       )}
       <TaskRequirements task={writer.task} onSaved={writer.setTask} title={tr('content.req_title')} hint={tr('content.req_hint')} open={reqOpen} onOpenChange={setReqOpen} />
-      <NewArticleDialog open={creating} onClose={() => setCreating(false)} onDone={(id) => { setCreating(false); load(); setParam('article', id) }}
-        aiDisabled={writerBusy}
-        // 交给 AI：打开写作要求弹窗（类型、主题已经带上），确认后开写作任务
-        onAi={(type, subject) => { setCreating(false); openWriter({ subject }, type) }} />
-      <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingInput?.subject ? `${tr('content.write_one')} · ${writingInput.subject}` : tr('content.write_one')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button><Button onClick={startWriting} disabled={!writingRequirements.trim() || writer.starting}>{writer.starting ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.start_writing')}</Button></>}>
+      <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingTitle ? `${tr('content.new_article')} · ${writingTitle}` : tr('content.new_article')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button>{!writingInput?.topic_id && <Button variant="outline" onClick={writeSelf} disabled={savingSelf || writer.starting}>{savingSelf ? <Loader className="animate-spin" /> : <Pencil />}{tr('content.write_self')}</Button>}<Button onClick={startWriting} disabled={writerBusy || savingSelf}>{writer.starting ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.ai_write_this')}</Button></>}>
         <div className="space-y-4">
           <Field group label={tr('article.type')}><TypePicker value={writingType} onChange={setWritingType} /></Field>
-          <p className="text-sm text-muted-foreground">{tr('content.one_time_requirements_hint')}</p>
-          <Field label={tr('content.one_time_requirements')}><textarea value={writingRequirements} onChange={(e) => setWritingRequirements(e.target.value)} rows={12} className={cx(inputCls, 'py-2 leading-relaxed')} /></Field>
+          {/* 这里写这篇写什么（主题、要点、草稿）；怎么写照「写作要求」，每篇都用 */}
+          <Field label={tr('content.write_notes')}><textarea autoFocus value={writingNotes} placeholder={tr(writingInput?.topic_id ? 'content.write_notes_ph_topic' : 'content.write_notes_ph')} onChange={(e) => setWritingNotes(e.target.value)} rows={8} className={cx(inputCls, 'py-2 leading-relaxed')} /></Field>
+          <p className="text-xs text-muted-foreground">{tr('content.write_notes_hint')}{writer.task && <button type="button" onClick={() => setReqOpen(true)} className="ml-1 cursor-pointer text-primary-text hover:underline">{tr('content.req_btn')}</button>}</p>
           {writer.error && <Notice tone="error">{writer.error}</Notice>}
         </div>
       </Dialog>
     </div>
   )
 }
+
+const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /** 页头的「更多」：不常用的设置（写作要求…）收在这里，点外面、按 Esc 收起 */
 function HeaderMore({ items }: { items: { label: string; icon: typeof SlidersHorizontal; onClick: () => void; hidden?: boolean }[] }) {
@@ -199,31 +214,7 @@ function HeaderMore({ items }: { items: { label: string; icon: typeof SlidersHor
   </div>
 }
 
-/** 新建文章：先选类型（字段、能发的平台跟着变），再写标题或主题；自己写就建一篇空的，或者交给 AI 写 */
-function NewArticleDialog({ open, onClose, onDone, onAi, aiDisabled }: { open: boolean; onClose: () => void; onDone: (id: string) => void; onAi: (type: ArticleType, subject: string) => void; aiDisabled: boolean }) {
-  const [type, setType] = useState<ArticleType>('article')
-  const [title, setTitle] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  useEffect(() => { if (open) { setTitle(''); setError(''); setType('article') } }, [open])
-  const save = async () => {
-    setSaving(true); setError('')
-    try {
-      const t = new Date().toISOString()
-      const row = await dbCreate('articles', { type, title: title.trim(), summary: '', body: '', tags: '[]', status: 'draft', created_at: t, updated_at: t })
-      onDone(row.id)
-    } catch (e) { setError((e as Error).message); return false } finally { setSaving(false) }
-  }
-  return <Dialog open={open} onClose={onClose} title={tr('versions.new_source')} width={640} footer={<><Button variant="ghost" size="sm" onClick={onClose}>{tr('common.cancel')}</Button><Button needsShuttle variant="outline" size="sm" disabled={saving || aiDisabled || !title.trim()} onClick={() => onAi(type, title.trim())}><Sparkles />{tr('content.ai_write_this')}</Button><Button successLabel={tr('ui.saved')} size="sm" disabled={saving || !title.trim()} onClick={save}>{saving && <Loader className="animate-spin" />}{tr('common.save')}</Button></>}>
-    <div className="space-y-4">
-      {error && <Notice tone="error">{error}</Notice>}
-      <Field group label={tr('article.type')} hint={tr('article.type_hint')}><TypePicker value={type} onChange={setType} /></Field>
-      <Field label={tr('content.new_topic_label')} hint={tr('versions.new_hint')}><input autoFocus className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && title.trim()) void save() }} /></Field>
-    </div>
-  </Dialog>
-}
-
-function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, writer, onWrite, onDelete }: { onDelete: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; writer: Writer; onWrite: () => void }) {
+function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, onWrite, onDelete }: { onDelete: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; onWrite: () => void }) {
   const [query, setQuery] = useState('')
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
@@ -240,9 +231,8 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
       <div className="rounded-lg border border-dashed border-border bg-muted/40 px-4 py-10 text-center">
         <p className="text-sm text-muted-foreground">{tr('content.no_articles')}</p>
         <div className="mt-4 flex items-center justify-center gap-2">
-          <Button size="sm" onClick={onWrite} disabled={!writer.shuttle || !writer.task || writer.starting || !!writer.task.running.length}>
-            {writer.starting ? <Loader className="animate-spin" /> : <Sparkles />}
-            {tr('content.write_one')}
+          <Button size="sm" onClick={onWrite}>
+            <Plus /> {tr('content.new_article')}
           </Button>
         </div>
       </div>
@@ -513,11 +503,12 @@ function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, o
             <ArticleEditor type={type} draft={draft} setDraft={setDraft} editorKey={editorKey} />
           </div>
         ) : (
-          <>
+          // 看的时候加一圈边框，内边距和编辑器的正文一样（px-5 py-4），切到修改时正文不跳；改的时候不要这圈
+          <div className="rounded-lg border border-border px-5 py-4">
             <h1 className="text-2xl leading-snug font-semibold tracking-tight text-balance">{a.title}</h1>
             <div className="mt-2"><ArticleTime label={tr('content.updated')} value={a.updated_at || a.created_at} /></div>
             <ArticleView a={a} />
-          </>
+          </div>
         )}
         {(source || derived.length > 0) && <div className="mt-6 space-y-1.5 border-t border-border pt-4 text-sm">
           {source && <p className="text-muted-foreground">{tr('article.from_source')}<button type="button" onClick={() => open(source.id)} className="ml-1 cursor-pointer text-primary-text hover:underline">{source.title}</button></p>}

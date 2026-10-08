@@ -3,7 +3,7 @@ name: 写文章
 description: 按选题或用户给的主题写一篇文章（长文、图文笔记或视频，参数 type 定）：content.context 拿上下文，按要求写，content.save 存成文章（之后在内容中心一键发到支持这种类型的账号）
 ---
 
-参数：`type` 是文章类型（`article` 长文、`post` 图文笔记、`video` 视频，没有就是 `article`）；`topic_id` 是要写的选题；`subject` 是用户直接给的主题（新建文章时写的标题或主题）。`topic_id`、`subject` 都没有就从选题池里挑一个。
+参数：`type` 是文章类型（`article` 长文、`post` 图文笔记、`video` 视频，没有就是 `article`）；`topic_id` 是要写的选题；`subject` 是用户直接给的主题（新建文章时写的标题或主题）。`notes` 是用户在弹窗里写的这篇想写什么（主题、要点、素材或一段草稿），有就以它为这篇的内容依据：给了草稿就在草稿上改写成文，给了要点就都覆盖到。`topic_id`、`subject`、`notes` 都没有才从选题池里挑一个。
 
 ## 1. 拿上下文
 
@@ -20,7 +20,7 @@ annulo run content.context --input '{"type":"<type>","topic_id":"<参数里的�
 
 ## 2. 怎么写
 
-若参数里有 `writing_requirements`，它就是用户在这次弹窗里确认的完整写作要求，本次以它为准，不再把写法文件作为额外要求叠加。没有这个参数时，照用户改过的 `user/prompts/write-article.md` 写；没有用户版就用默认的 `prompts/write-article.md`，只看和这次类型对应的那一节。弹窗里的临时要求不保存成默认写法；用户明确要以后每次都这样写，才更新 `user/prompts/write-article.md`。
+照用户改过的 `user/prompts/write-article.md` 写；没有用户版就用默认的 `prompts/write-article.md`，只看和这次类型对应的那一节。写法每篇都照，`notes` 只说写什么、不改写法。弹窗里写的不保存成默认写法；用户明确要以后每次都这样写，才更新 `user/prompts/write-article.md`。
 
 ## 3. 规则
 

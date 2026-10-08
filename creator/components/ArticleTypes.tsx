@@ -32,10 +32,10 @@ export function TypeBadge({ type, className }: { type: ArticleType; className?: 
   return <span className={cx('inline-flex h-5 shrink-0 items-center gap-1 rounded border border-border px-1.5 text-[11px] text-muted-foreground', className)}><m.icon className="size-3" />{m.label}</span>
 }
 
-/** 选类型：三张卡片，每张写清楚有哪些字段、能发到哪些平台 */
+/** 选类型：三张卡片，每张写清楚有哪些字段、能发到哪些平台；长文排最后 */
 export function TypePicker({ value, onChange, exclude }: { value: ArticleType; onChange: (t: ArticleType) => void; exclude?: ArticleType }) {
   return <div role="radiogroup" className="grid gap-2 sm:grid-cols-3">
-    {ARTICLE_TYPES.map((t) => {
+    {[...ARTICLE_TYPES.filter((t) => t !== 'article'), ...ARTICLE_TYPES.filter((t) => t === 'article')].map((t) => {
       const m = TYPE_META[t]
       const on = value === t
       return <button key={t} type="button" role="radio" aria-checked={on} onClick={() => onChange(t)}

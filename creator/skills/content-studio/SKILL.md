@@ -34,7 +34,7 @@ annulo run publish.prepare --input '{"article_id":"<id>","channel_ids":["<账号
 
 ## 写文章
 
-照任务 `tasks/write-article.md` 做（「AI 写文章」「写成文章」也是按它开对话交给你，参数 `type` 是文章类型）：`content.context` 拿上下文，按「怎么写」写，`content.save` 存成文章。
+照任务 `tasks/write-article.md` 做（「新建文章 → 让 AI 写」「写成文章」也是按它开对话交给你，参数 `type` 是文章类型）：`content.context` 拿上下文，按「怎么写」写，`content.save` 存成文章。
 
 ## 改写成别的类型
 

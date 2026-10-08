@@ -112,6 +112,7 @@ function ImagesField({ images, max, hint, onChange }: { images: string[]; max: n
 }
 
 /** 阅读视图 */
+/** 图文笔记、视频的正文字号和长文正文（BodyPreview 里 15px / 1.75）一样 */
 export function ArticleView({ a }: { a: Article }) {
   const t = typeOf(a)
   const tags = tagsOf(a)
@@ -125,14 +126,14 @@ export function ArticleView({ a }: { a: Article }) {
   </>
   if (t === 'video') return <div className="mt-5 space-y-4 border-t border-border pt-4">
     {a.video ? <video src={videoSrc(a.video)} controls className="max-h-[60vh] w-full rounded-lg bg-black" /> : <p className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">{tr('article.no_video')}</p>}
-    {a.body ? <p className="text-sm leading-relaxed whitespace-pre-wrap">{a.body}</p> : <p className="text-sm text-muted-foreground">{tr('article.no_desc')}</p>}
+    {a.body ? <p className="text-[15px] leading-[1.75] whitespace-pre-wrap">{a.body}</p> : <p className="text-sm text-muted-foreground">{tr('article.no_desc')}</p>}
     {a.category && <p className="text-xs text-muted-foreground">{tr('social.category')}：{a.category}</p>}
     {tagLine}
   </div>
   return <div className="mt-5 space-y-4 border-t border-border pt-4">
-    {images.length ? <div className="flex flex-wrap gap-2">{images.map((u, i) => <button key={u + i} type="button" onClick={() => setZoom(u)} className="relative cursor-zoom-in"><img src={u} alt="" loading="lazy" className="size-32 rounded-lg border border-border object-cover" />{i === 0 && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">{tr('article.cover')}</span>}</button>)}</div>
-      : a.cover_text ? <div className="w-32 overflow-hidden rounded-lg border border-border"><TextCover text={a.cover_text} className="w-full" /></div> : <p className="text-xs text-muted-foreground">{tr('article.no_images')}</p>}
-    {a.body ? <p className="text-sm leading-relaxed whitespace-pre-wrap">{a.body}</p> : <p className="text-sm text-muted-foreground">{tr('content.no_body')}</p>}
+    {images.length ? <div className="flex flex-wrap gap-2">{images.map((u, i) => <button key={u + i} type="button" onClick={() => setZoom(u)} className="relative cursor-zoom-in"><img src={u} alt="" loading="lazy" className="size-40 rounded-lg border border-border object-cover" />{i === 0 && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">{tr('article.cover')}</span>}</button>)}</div>
+      : a.cover_text ? <div className="w-40 overflow-hidden rounded-lg border border-border"><TextCover text={a.cover_text} className="w-full" /></div> : <p className="text-xs text-muted-foreground">{tr('article.no_images')}</p>}
+    {a.body ? <p className="text-[15px] leading-[1.75] whitespace-pre-wrap">{a.body}</p> : <p className="text-sm text-muted-foreground">{tr('content.no_body')}</p>}
     {tagLine}
     {zoom && <Lightbox src={zoom} onClose={() => setZoom('')} />}
   </div>
@@ -149,7 +150,7 @@ export function BodyPreview({ html }: { html: string }) {
     return () => observer.disconnect()
   }, [])
   const doc = `<!doctype html><meta charset="utf-8"><style>
-  html{color-scheme:${dark ? 'dark' : 'light'}} body{margin:0;padding:4px 2px;font:15px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:${dark ? '#e7e7e7' : '#1f1f1f'};background:${dark ? '#0a0a0a' : '#ffffff'}}
+  html{color-scheme:${dark ? 'dark' : 'light'}} body{margin:0;padding:4px 0;font:15px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:${dark ? '#e7e7e7' : '#1f1f1f'};background:transparent}
   h1,h2,h3{line-height:1.35;margin:1.4em 0 .5em} h2{font-size:1.25em} h3{font-size:1.08em}
   p{margin:.7em 0} a{color:${dark ? '#8fb6ff' : '#2455d6'}} img{max-width:100%;border-radius:8px}
   ul,ol{padding-left:1.4em} blockquote{margin:1em 0;padding-left:1em;border-left:3px solid ${dark ? '#444' : '#ddd'};color:${dark ? '#aaa' : '#666'}}
@@ -173,7 +174,7 @@ export function BodyPreview({ html }: { html: string }) {
         bodyObserver.current = new ResizeObserver(measure)
         bodyObserver.current.observe(body)
       }}
-      className="w-full border-0 bg-background"
+      className="w-full border-0 bg-transparent"
       style={{ height: h, colorScheme: dark ? 'dark' : 'light' }}
     />
   )

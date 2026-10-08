@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.11.2
+  zh: 内容中心只留一个「新建文章」：选类型，在「这篇想写什么」里写主题、要点或草稿，然后「自己写」或「让 AI 写」（写法每篇都照写作要求）；选类型时长文排在最后。文章页查看时正文加了边框，和编辑时对齐；图文笔记、视频的正文字号和长文一样，配图缩略图更大。「AI 要求」弹窗加了「关闭」按钮。
+  en: "Content now has a single \"New article\": pick a type, put a subject, points or a draft in \"What to write\", then \"Write it myself\" or \"Let AI write it\" (writing instructions always apply); long-form is listed last among the types. The article page frames the body and lines it up with the editor; image posts and videos use the same text size as long-form, with bigger image thumbnails. The \"AI instructions\" dialog has a Close button."
 - version: 0.11.1
   zh: 「出一批选题」点了先弹窗，可以写这一批的额外要求（只出某类主题、出几个…），不填就照默认要求出；选题页右边的「选题要求」按钮去掉了。
   en: "\"Suggest topics\" now opens a dialog first where you can add requirements for this batch (which kinds of topics, how many\u2026); leave it empty to follow the defaults. The separate \"Topic instructions\" button on the Topics tab is gone."
