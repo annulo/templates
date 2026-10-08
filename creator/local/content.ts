@@ -155,7 +155,7 @@ export function save(input: SaveInput, ctx: any) {
   const f = pick({ ...input, title: input?.title ?? '', body: input?.body ?? '' }, t)
   checkFields({ ...f, images: input.images === undefined ? undefined : parseList(f.images) }, t, ctx)
   const now = new Date().toISOString()
-  const article = ctx.db.insert('articles', { ...f, type: t, ...(topic ? { topic_id: topic.id } : {}), ...(source ? { source_id: source.id } : {}), status: 'draft', created_at: now, updated_at: now })
+  const article = ctx.db.insert('articles', { ...f, type: t, ...(topic ? { topic_id: topic.id } : {}), ...(source ? { source_id: source.id } : {}), status: 'draft', unread: true, created_at: now, updated_at: now })
   if (topic && !source) ctx.db.update('topics', topic.id, { status: 'done', article_id: article.id })
   return { article_id: article.id, type: t, title: f.title }
 }

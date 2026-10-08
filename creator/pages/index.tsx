@@ -23,7 +23,6 @@ import { useT } from '../lib/i18n'
 import { useInShuttle } from '../lib/useShuttle'
 import { NAV } from '../lib/edition'
 import { useChecklist } from '../lib/useChecklist'
-import { unpublished } from '../local/_types'
 
 // 左侧导航分组由行业文件 lib/edition.ts 定义；紧凑单行，辅助说明放在 title 中。
 // 还没填项目资料时的占位（放在模块里：引用不变，项目设置的表单不会被重渲染冲掉）
@@ -157,18 +156,18 @@ export default function Index() {
 
   const checklist = useChecklist(rev)
 
-  // 左侧「内容中心」后面的数量：写好了还没发的文章，和总览「待发布」同一口径。
-  // 助手改了数据（rev）、页面里改了文章或发布记录（db:changed）、切回窗口时重拉
+  // 左侧「内容中心」后面的数量：新文章（AI 写好、改写好，还没打开看过的，articles.unread），打开一篇就少一个。
+  // 助手改了数据（rev）、页面里改了文章（db:changed）、切回窗口时重拉
   const [pendingReview, setPendingReview] = useState(0)
   const loadPendingReview = useCallback(() => {
-    Promise.all([dbList('articles'), dbList('social_posts').catch(() => [])])
-      .then(([articles, posts]) => setPendingReview(unpublished(articles, posts).length))
+    dbList('articles')
+      .then((articles) => setPendingReview(articles.filter((a) => a.unread).length))
       .catch(() => setPendingReview(0))
   }, [])
   useEffect(() => {
     if (!routeReady || needLogin) return
     loadPendingReview()
-    const onChanged = (e: Event) => { const t = (e as CustomEvent<{ table?: string }>).detail?.table; if (t === 'social_posts' || t === 'articles') loadPendingReview() }
+    const onChanged = (e: Event) => { const t = (e as CustomEvent<{ table?: string }>).detail?.table; if (t === 'articles') loadPendingReview() }
     window.addEventListener('db:changed', onChanged)
     window.addEventListener('focus', loadPendingReview)
     return () => {
@@ -253,7 +252,7 @@ export default function Index() {
                 {g.items.map((n) => <button type="button" key={n.view} onClick={(e) => goFrom(e, n.view)} disabled={!ctx} aria-current={n.view === navView ? 'page' : undefined} title={t(n.view + '_sub')} className={navClass(n.view === navView)}>
                   <n.icon className="size-4 shrink-0" strokeWidth={1.8} />
                   <span className="truncate">{t(n.view)}</span>
-                  {n.view === 'content' && pendingReview > 0 && <span title={t('pending_badge', { n: pendingReview })} aria-label={t('pending_badge', { n: pendingReview })} className="ml-auto shrink-0 rounded-full bg-amber-500/15 px-1.5 text-xs leading-5 font-medium tabular-nums text-amber-700 dark:text-amber-400">{pendingReview > 99 ? '99+' : pendingReview}</span>}
+                  {n.view === 'content' && pendingReview > 0 && <span title={t('pending_badge', { n: pendingReview })} aria-label={t('pending_badge', { n: pendingReview })} className="ml-auto shrink-0 rounded-full bg-primary/15 px-1.5 text-xs leading-5 font-medium tabular-nums text-primary-text">{pendingReview > 99 ? '99+' : pendingReview}</span>}
                 </button>)}
               </div>
             </div>

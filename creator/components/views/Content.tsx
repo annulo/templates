@@ -225,9 +225,9 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
           const t = typeOf(a)
           const sub = t === 'article' ? a.summary : a.body
           return (
-          <div key={a.id} role="button" tabIndex={0} onClick={() => open(a.id)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(a.id) } }} className="group flex w-full cursor-pointer items-start gap-4 border-b border-border px-4 py-4 text-left last:border-b-0 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+          <div key={a.id} role="button" tabIndex={0} onClick={() => open(a.id)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(a.id) } }} className={cx('group flex w-full cursor-pointer items-start gap-4 border-b border-border px-4 py-4 text-left last:border-b-0 hover:bg-accent/50', a.unread && 'bg-primary/5 shadow-[inset_3px_0_0_var(--color-primary)]', 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring')}>
             <div className="min-w-0 flex-1">
-              <div className="line-clamp-2 text-sm font-medium leading-relaxed [overflow-wrap:anywhere] group-hover:text-primary-text">{a.title || tr('versions.untitled')}</div>
+              <div className="line-clamp-2 text-sm font-medium leading-relaxed [overflow-wrap:anywhere] group-hover:text-primary-text">{a.unread && <span className="mr-1.5 inline-flex h-5 items-center rounded bg-primary px-1.5 align-[1px] text-[11px] font-semibold text-primary-foreground">{tr('article.new_badge')}</span>}{a.title || tr('versions.untitled')}</div>
               {sub && <div className="mt-1 line-clamp-1 text-xs leading-relaxed text-muted-foreground">{sub}</div>}
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
                 <TypeBadge type={t} />
@@ -319,6 +319,8 @@ function ArticleDetail({ ctx, a, all, posts, focus, displayStatus, open, onBack,
     setStale(false)
     setEditorKey((k) => k + 1)
   }
+  // 打开了就不再是新文章（左侧的数字跟着少一个）。只改这个字段，不动 updated_at
+  useEffect(() => { if (a.unread) void dbPatch('articles', a.id, { unread: false }).then(onChanged).catch(() => {}) }, [a.id])
   // 空文章（刚新建的）直接进编辑
   useEffect(() => { if (!a.body && !a.video && !draftOf(a).images.length) { loadDraft(fromRow()); setEditing(true) } }, [a.id])
   useEffect(() => {

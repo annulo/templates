@@ -99,6 +99,10 @@
       "evidence_snapshot": {
         "type": "string",
         "description": "生成时简报、选中产品事实与调研依据快照 JSON，不随来源更新"
+      },
+      "unread": {
+        "type": "boolean",
+        "description": "新文章：AI 写好、改写好（content.save）时为 true，用户在页面上打开这篇就清掉。左侧「内容中心」的数字数它"
       }
     },
     "required": [

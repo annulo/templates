@@ -49,6 +49,7 @@
 | `video` 视频 | `title`、`body`（简介）、`video`、`category`（B 站分区）、`tags` | YouTube、抖音、B 站，以及能发视频的图文平台 |
 
 要发到不支持这种类型的平台，就「改写」成它支持的类型：任务 `rewrite-article`（参数 `article_id`、`type`、`note`）另存一篇新的，`source_id` 指回原文。
+`content.save` 存的文章带 `unread: true`（新文章），用户打开就清掉；左侧「内容中心」的数字数它，列表里新文章单独标出来。
 用户常用的改写要求存在 `rewrite_presets`（`type` + `prompt`），在改写弹窗里点一下就填好。
 
 ## 定位怎么用

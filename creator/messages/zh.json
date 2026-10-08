@@ -61,7 +61,7 @@
     "overview_sub": "一步一步带你做",
     "reports_sub": "这周怎么样、下周做什么",
     "content_sub": "选题和审核",
-    "pending_badge": "{n} 篇文章写好了还没发",
+    "pending_badge": "{n} 篇新文章",
     "calendar_sub": "哪天发什么",
     "assets_sub": "图片、视频和文案",
     "social_sub": "账号状态、粉丝和互动数据",
@@ -1637,6 +1637,7 @@
     "preset_new": "新建预设",
     "rewritten": "已改写成{type}：「{title}」",
     "open_rewritten": "打开新文章",
-    "dismiss": "知道了"
+    "dismiss": "知道了",
+    "new_badge": "新"
   }
 }

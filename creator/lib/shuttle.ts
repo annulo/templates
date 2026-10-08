@@ -282,6 +282,8 @@ export type Article = {
   category?: string
   /** 改写自哪篇文章 */
   source_id?: string
+  /** 新文章：AI 写好还没打开看过 */
+  unread?: boolean
   status: ArticleStatus
   evidence_id?: string
   evidence_snapshot?: string
