@@ -323,7 +323,7 @@ export const content: Article = {
 ## 写文章
 
 三种开头：
-- 「新建文章」：先选类型，再写标题或主题；「保存草稿」建一篇空的自己写，「让 AI 写」交给 AI；
+- 「新建文章」：先选类型，再写标题或主题；「保存」建一篇空的自己写，「让 AI 写」交给 AI；
 - 「AI 写文章」：先选类型，下面是「本次写作要求」，已经填好默认写法（按类型分节），这次可以改，改的只用于这一篇；点「开始写」，助手从选题里挑一个最值得写的；
 - 选题上「写成文章」：写这个选题，同样先选类型。
 
@@ -392,7 +392,7 @@ The "Topics" tab:
 ## Writing
 
 Three ways to start:
-- "New article": pick a type, then a title or topic; "Save draft" creates an empty one to write yourself, "Let AI write it" hands it to AI;
+- "New article": pick a type, then a title or topic; "Save" creates an empty one to write yourself, "Let AI write it" hands it to AI;
 - "Write with AI": pick a type; below it, "Requirements for this article" is filled with your default instructions (one section per type). Changes here apply to this article only. Click "Start writing" and the assistant picks the most worthwhile topic;
 - "Write article" on a topic: writes that topic, again after picking a type.
 

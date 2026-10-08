@@ -1357,7 +1357,7 @@
     "unschedule": "取消排期",
     "go_content": "去内容管理",
     "new_source": "新建文章",
-    "new_hint": "自己写就点「保存草稿」，建一篇空的；「让 AI 写」把类型和主题交给 AI 写。",
+    "new_hint": "自己写就点「保存」，建一篇空的；「让 AI 写」把类型和主题交给 AI 写。",
     "delete_with_versions": "这篇文章已有媒体版本。请先处理各版本，不能直接删除文章。",
     "published_locked": "已发布版本保留原稿和互动数据；要发新内容，请新建版本。",
     "delete_version": "删除版本",

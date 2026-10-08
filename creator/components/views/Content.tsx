@@ -165,7 +165,7 @@ function NewArticleDialog({ open, onClose, onDone, onAi, aiDisabled }: { open: b
       onDone(row.id)
     } catch (e) { setError((e as Error).message); return false } finally { setSaving(false) }
   }
-  return <Dialog open={open} onClose={onClose} title={tr('versions.new_source')} width={640} footer={<><Button variant="ghost" size="sm" onClick={onClose}>{tr('common.cancel')}</Button><Button successLabel={tr('ui.saved')} variant="outline" size="sm" disabled={saving || !title.trim()} onClick={save}>{saving && <Loader className="animate-spin" />}{tr('content.save_draft')}</Button><Button needsShuttle size="sm" disabled={saving || aiDisabled || !title.trim()} onClick={() => onAi(type, title.trim())}><Sparkles />{tr('content.ai_write_this')}</Button></>}>
+  return <Dialog open={open} onClose={onClose} title={tr('versions.new_source')} width={640} footer={<><Button variant="ghost" size="sm" onClick={onClose}>{tr('common.cancel')}</Button><Button needsShuttle variant="outline" size="sm" disabled={saving || aiDisabled || !title.trim()} onClick={() => onAi(type, title.trim())}><Sparkles />{tr('content.ai_write_this')}</Button><Button successLabel={tr('ui.saved')} size="sm" disabled={saving || !title.trim()} onClick={save}>{saving && <Loader className="animate-spin" />}{tr('common.save')}</Button></>}>
     <div className="space-y-4">
       {error && <Notice tone="error">{error}</Notice>}
       <Field group label={tr('article.type')} hint={tr('article.type_hint')}><TypePicker value={type} onChange={setType} /></Field>

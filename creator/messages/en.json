@@ -1357,7 +1357,7 @@
     "unschedule": "Cancel schedule",
     "go_content": "Manage content",
     "new_source": "New article",
-    "new_hint": "\"Save draft\" creates an empty article to write yourself; \"Let AI write\" hands the type and topic to AI.",
+    "new_hint": "\"Save\" creates an empty article to write yourself; \"Let AI write it\" hands the type and topic to AI.",
     "delete_with_versions": "This article already has media versions. Handle them before deleting the article.",
     "published_locked": "Published versions keep their original content and metrics. Create a new version for new content.",
     "delete_version": "Delete version",
