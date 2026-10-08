@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowUpRight, BarChart3, Plus, RefreshCw, Trash2, UserRound } from 'lucide-react'
 import AddChannelDialog from '../AddChannelDialog'
 import RunButton from '../RunButton'
@@ -28,6 +28,15 @@ const DOT: Record<Tone, string> = { ok: 'bg-emerald-500', warn: 'bg-amber-500', 
 /** 账号：只管连接（添加、移除、登录、自检），不放数据 */
 export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; current: string; setCurrent: (id: string) => void }) {
   const [adding, setAdding] = useState(false)
+  // 添加前已有的账号：列表重新读回来后选中多出来的那个（对话框只告诉我们加了哪种，一次勾好几个时选第一个）
+  const before = useRef<Set<string> | null>(null)
+  useEffect(() => {
+    if (!before.current) return
+    const added = ctx.channels.find((c) => !before.current!.has(c.id))
+    if (!added) return
+    before.current = null
+    setCurrent(added.id)
+  }, [ctx.channels])
   const [confirm, setConfirm] = useState(false)
   const removeBtn = <Button fn="channels.remove" variant="ghost" size="sm" onClick={() => setConfirm(true)} disabled={confirm} className="text-muted-foreground"><Trash2 />{tr('channels.remove')}</Button>
   const [error, setError] = useState('')
@@ -63,7 +72,7 @@ export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; curre
         title={tr('channels.title')}
         desc={tr('channels.desc')}
         actions={
-          <Button onClick={() => setAdding(true)} disabled={ctx.offline} title={ctx.offline ? tr('channels.add_offline') : undefined}>
+          <Button onClick={() => { before.current = null; setAdding(true) }} disabled={ctx.offline} title={ctx.offline ? tr('channels.add_offline') : undefined}>
             <Plus /> {tr('channels.add')}
           </Button>
         }
@@ -117,6 +126,7 @@ export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; curre
         <AddChannelDialog
           onClose={() => setAdding(false)}
           onAdded={() => {
+            before.current = new Set(ctx.channels.map((c) => c.id))
             setAdding(false)
             ctx.reloadChannels()
           }}
@@ -135,7 +145,7 @@ function AccountConnection({ ch, actions, other, health, posts, onOpenPost, onDo
     <div className="space-y-3 rounded-xl border border-border bg-background p-4">
       <div className="flex flex-wrap items-center gap-3">
         {ch.avatar ? <img src={shuttleImage(ch.avatar)} alt="" className="size-10 rounded-full object-cover" /> : <div className="size-10 rounded-full bg-muted" />}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-40 flex-1">
           <div className="truncate text-sm font-semibold">{ch.name}</div>
           <div className="mt-0.5 text-xs text-muted-foreground">
             {other ? tr('social.elsewhere_hint', { name: other }) : expired ? tr('channels.expired_hint') : ch.login_status === 'ok' ? tr('social.logged_in') : tr('social.not_connected')}

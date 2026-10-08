@@ -296,7 +296,7 @@ function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channe
     <div className={cx('min-w-0 rounded-xl border bg-background p-4 transition-colors', selected ? 'border-primary/60 ring-1 ring-primary/30' : 'border-border')}>
       <button type="button" onClick={onSelect} aria-pressed={selected} title={selected ? tr('social.show_all') : tr('social.only_this')} className="flex w-full cursor-pointer items-center gap-3 text-left">
         {ch.avatar ? <img src={shuttleImage(ch.avatar)} alt="" className="size-10 rounded-full object-cover" /> : <div className="size-10 rounded-full bg-muted" />}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-40 flex-1">
           <div className="truncate text-sm font-semibold">{ch.name}</div>
           <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <PlatformName type={ch.type} name={platformOf(ch)?.label ?? ''} />
