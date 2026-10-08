@@ -1,0 +1,40 @@
+# 升级说明，新的在最上面：每条一个 version 加各语言一段（zh、en……，可以再加别的语言）。
+# Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
+# Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
+
+- version: 0.9.1
+  zh: 升级说明有了中英文：英文界面的升级卡片显示英文（需要 Annulo 下一个版本）。
+  en: Upgrade notes now come in Chinese and English; the upgrade card follows your interface language (needs the next Annulo release).
+- version: 0.9.0
+  zh: 文章列表能直接删除，删完顶部提示。发布放到后台排队：右下角和发布记录里看每个账号进行到哪一步，能打开浏览器看、随时停止；自检、立即采集、登录也能打开看、停止。发布记录里点账号直接去「数据表现」。打开看需要 Annulo 2026.10.8-1 或更新。
+  en: Delete articles right from the list, with a confirmation at the top. Publishing runs in the background — see each account's progress in the bottom-right corner and in the publishing records, open the browser to watch, or stop at any time; self-test, collect now and sign-in can be watched and stopped too. Click an account in the publishing records to jump to Performance. Watching needs Annulo 2026.10.8-1 or later.
+- version: 0.8.0
+  zh: 去掉媒体版本。文章分长文、图文笔记、视频三种类型，新建时先选；一键发布到支持这种类型的账号，可以多选、可以排期，每个账号一条发布记录。新增「改写」：改写成别的类型的新文章，常用要求存成改写预设。左侧内容中心的数字改成新文章数。
+  en: Media versions are gone. Articles now come in three types — long-form, image post and video — chosen when you create one; publish in one click to every account that supports the type, pick several or schedule, with one publishing record per account. New "Rewrite" turns an article into a new one of another type, with your usual instructions saved as presets. The Content badge now counts new articles.
+- version: 0.7.1
+  zh: 左侧「内容中心」后面显示待审核的版本数，和总览的「待审核版本」一致；审核、修改后马上更新。
+  en: The Content item in the sidebar shows how many versions await review, matching Overview; it updates right after you review or edit.
+- version: 0.7.0
+  zh: 知乎版本和文章一样是富文本：小标题、列表、加粗、引用、图片都在正文里，新建时直接拷一份文章正文。每个平台只显示自己有的字段（比如知乎没有单独的配图）。「AI 改写」先问这次怎么改。排期改成点了弹出的小气泡，已排期的显示时间和倒计时，也能直接立即发布；发布频率只是建议。弹窗里改过东西，点外面不会关掉。需要 Annulo 2026.10.7-2 或更新，升级时会先把社媒插件升到 v0.5.1。
+  en: Zhihu versions are rich text like articles — headings, lists, bold, quotes and images live in the body, copied from the article when created. Each platform shows only its own fields. "AI rewrite" asks how to change it first. Scheduling opens a small popover; scheduled items show the time and a countdown and can be published right away; posting frequency is only a suggestion. Dialogs with unsaved changes no longer close on an outside click. Needs Annulo 2026.10.7-2 or later; upgrading first moves the Social plugin to v0.5.1.
+- version: 0.6.0
+  zh: 自媒体工作台：支持知乎。添加知乎账号，一篇内容可以改写成知乎专栏文章（小标题、列表、正文配图、最多 3 个话题），审核后发布或排期，采集阅读、赞同、评论、收藏。要先在 设置 → 项目 → 插件 里把社媒插件升到 v0.4.0
+  en: "Creator workspace: Zhihu support. Add a Zhihu account, rewrite a piece into a Zhihu column article (headings, lists, inline images, up to 3 topics), review, then publish or schedule; views, upvotes, comments and saves are collected. Upgrade the Social plugin to v0.4.0 in Settings → Project → Plugins first."
+- version: 0.5.3
+  zh: 自媒体工作台：帮助手册按现在的界面重写，配了截图；页面标题和左侧导航统一（发布日历、每周总结、资料库、媒体版本）；起步向导填完定位后接着连社媒账号；B 站、抖音、YouTube 的发布频率提示和插件一致
+  en: "Creator workspace: the help guide is rewritten for the current UI with screenshots; page titles match the sidebar; the setup guide moves on to connecting social accounts after positioning; posting-frequency hints for Bilibili, Douyin and YouTube match the plugin."
+- version: 0.5.2
+  zh: 自媒体工作台：点社媒帖子的配图打开大图，不会再误删第一张图；文章页的视频一栏同样修好。从 0.3.0 / 0.4.0 升级需要 Annulo 2026.10.7-1 或更新。
+  en: "Creator workspace: clicking a post image opens it large instead of deleting the first image; the article video field is fixed the same way. Upgrading from 0.3.0 / 0.4.0 needs Annulo 2026.10.7-1 or later."
+- version: 0.5.1
+  zh: 自媒体工作台：媒体版本写作中能点「进行中 · 看过程」看对话；AI 改完版本后页面自动换成新内容；配图能拖动排序；文章里本机上传的图能配进社媒帖子；选中文字的格式条不再被工具条挡住。
+  en: "Creator workspace: watch the chat while a media version is being written; the page refreshes after AI edits; drag to reorder images; locally uploaded article images can go into social posts; the selection format bar is no longer hidden by the toolbar."
+- version: 0.5.0
+  zh: 自媒体工作台换成新版：定位、选题和文章，富文本编辑，一篇文章改写成各平台的媒体版本后审核、发布或排期，资料库、发布日历、每周总结。和 0.4.0 结构不同，老项目升级合并不上，建议新建项目。需要 Annulo 2026.10.6-7 或更新。
+  en: "A new Creator workspace: positioning, topics and articles with rich-text editing; turn an article into per-platform versions, review, publish or schedule; library, publishing calendar and weekly summary. The structure differs from 0.4.0, so old projects won't merge — create a new project. Needs Annulo 2026.10.6-7 or later."
+- version: 0.4.0
+  zh: 自媒体工作台：助手能把本机的图传进项目，配进稿件和社媒帖子；需要 Annulo 2026.10.6-7 或更新。
+  en: "Creator workspace: the assistant can bring local images into the project for drafts and social posts. Needs Annulo 2026.10.6-7 or later."
+- version: 0.3.0
+  zh: 新增模板「自媒体工作台」：按定位出选题、写稿改稿，一篇稿件改写成各社媒平台的帖子，审核后发布或排期。
+  en: "New template Creator workspace: topics from your positioning, drafting and revising, turning one draft into posts for each social platform, then review and publish or schedule."

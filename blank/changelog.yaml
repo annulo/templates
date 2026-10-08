@@ -1,0 +1,12 @@
+# 升级说明，新的在最上面：每条一个 version 加各语言一段（zh、en……）。没写的版本是空白模板没有改动。
+# Upgrade notes, newest first. Versions not listed had no changes to the blank template.
+
+- version: 0.2.1
+  zh: 示例换成：每天早上 9 点，检查几个网站的 SSL 证书到期时间
+  en: "New example: every day at 9 am, check when a few websites' SSL certificates expire"
+- version: 0.2.0
+  zh: 界面组件：下拉、删除确认、弹窗、日期选择用 components/ui/（照 shadcn/ui），不再用浏览器自带的
+  en: "UI components: selects, delete confirmations, dialogs and date pickers use components/ui/ (based on shadcn/ui) instead of the browser's built-ins"
+- version: 0.1.0
+  zh: 空白模板：一个首页、一张示例表、一个本机函数
+  en: "Blank template: a home page, a sample table and one local function"
