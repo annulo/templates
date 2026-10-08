@@ -43,4 +43,4 @@ annulo run content.update --input @/tmp/article-update.json
 ```
 
 能改的字段：`title`、`summary`、`body`、`tags`（数组），图文笔记还有 `images`（数组）、`cover_text`，视频还有 `video`、`category`。
-存完回复用户：改了哪几处（一两句），请在内容详情里看一眼。
+存完回复用户：改了哪几处（一两句），最后给出这篇的链接 `[打开「标题」](/?view=content&article=<article_id>)`。

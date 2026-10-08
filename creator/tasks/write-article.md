@@ -54,4 +54,4 @@ JSON
 annulo run content.save --input @/tmp/article.json
 ```
 
-content.save 报错（比如长文正文是 Markdown、太短，笔记正文带了 HTML）就按报错改了再存。存完回复用户：标题、一句话讲了什么、配了几张图（视频类型说有没有配上视频），请在「内容中心」里看，满意了点「发布」选账号发出去。
+content.save 报错（比如长文正文是 Markdown、太短，笔记正文带了 HTML）就按报错改了再存。存完回复用户：标题、一句话讲了什么、配了几张图（视频类型说有没有配上视频），最后给出新文章的链接 `[打开「标题」](/?view=content&article=<content.save 返回的 article_id>)`，满意了在文章页点「发布」选账号发出去。

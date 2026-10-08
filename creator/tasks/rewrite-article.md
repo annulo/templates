@@ -51,4 +51,4 @@ JSON
 annulo run content.save --input @/tmp/rewrite.json
 ```
 
-content.save 报错就按报错改了再存。存完回复用户：改写成了什么、多长、配了几张图，请在「内容中心」里看（新文章已经在列表里，详情里能看到改写自哪篇）。
+content.save 报错就按报错改了再存。存完回复用户：改写成了什么、多长、配了几张图，最后给出新文章的链接 `[打开「标题」](/?view=content&article=<content.save 返回的 article_id>)`。
