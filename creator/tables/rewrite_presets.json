@@ -1,0 +1,27 @@
+{
+  "name": "改写预设",
+  "desc": "改写文章时常用的要求：改成哪种类型、怎么改。用户在「改写」弹窗里存和挑",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "type": {
+        "type": "string",
+        "description": "改写成的文章类型：article / post / video"
+      },
+      "prompt": {
+        "type": "string",
+        "description": "改写要求，比如「简短，200 字以内，开头一句话抓人」"
+      },
+      "created_at": {
+        "type": "string"
+      },
+      "updated_at": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "type",
+      "prompt"
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { runLocal, runTask, type Channel, type ChannelType, type SocialPost } from './shuttle'
+import { runLocal, type Channel, type ChannelType, type SocialPost } from './shuttle'
 import { isEn, tr } from './i18n'
 import { FIELDS, rateText, toRich, type PostFields } from '../plugins/social/local/_fields'
 
@@ -221,33 +221,6 @@ export const socialTypes = Object.keys(SOCIAL) as ChannelType[]
 
 /** 后台列表里显示的标题：X 的 title 是运营自己看的，没有就取正文开头 */
 export const postTitle = (p: SocialPost) => p.title || [...(/^\s*</.test(p.body ?? '') ? richText(p.body) : p.body ?? '')].slice(0, 30).join('')
-
-/** 各平台写作任务的 id */
-export const SOCIAL_TASKS = Object.values(SOCIAL).map((p) => p!.task)
-
-/**
- * 把一篇文章改写成勾选账号上的内容：按平台分组，每个平台开一段对话交给助手（社媒插件的任务 social/write-<平台>），过程看得见。
- * 文章的内容由 local/content.ts 的 socialSource 给（插件不读模板的表，任务参数 source 告诉助手跑哪个函数取）。
- * 返回开的对话 id；某个平台开不了（比如正在写同样的）就抛出它的报错。
- */
-export async function writeSocial(articleId: string, channelIds: string[], channels: Channel[], note?: string) {
-  const groups = new Map<string, string[]>()
-  for (const id of channelIds) {
-    const task = SOCIAL[channels.find((c) => c.id === id)?.type as ChannelType]?.task
-    if (task) groups.set(task, [...(groups.get(task) ?? []), id])
-  }
-  const chats: string[] = []
-  const errors: string[] = []
-  for (const [task, ids] of groups) {
-    try {
-      chats.push((await runTask(task, { source: { fn: 'content.socialSource', id: articleId }, channel_ids: ids, ...(note?.trim() ? { note: note.trim() } : {}) })).chat_id)
-    } catch (e) {
-      errors.push((e as Error).message)
-    }
-  }
-  if (errors.length) throw new Error(errors.join('；'))
-  return chats
-}
 
 /** 登录态不在这里的账号：{ [channel_id]: 那台电脑的名字 } */
 export type Elsewhere = Record<string, string>

@@ -14,7 +14,7 @@ function query(ctx: TalizenFuncContext, table: string, opts: any) {
 // 只给这个 creght 项目的成员读（ctx.member.require()，没登录 401 member_login_required，页面带去 /auth/member/login）。
 // 只开放运营用的这几张表。
 
-const TABLES = ['profile', 'topics', 'articles', 'assets', 'reports', 'checklist', 'social_posts', 'social_accounts', 'social_daily', 'social_post_daily', 'social_health']
+const TABLES = ['profile', 'topics', 'articles', 'assets', 'reports', 'checklist', 'rewrite_presets', 'social_posts', 'social_accounts', 'social_daily', 'social_post_daily', 'social_health']
 
 export function list(input: { table?: string; limit?: number }, ctx: TalizenFuncContext) {
   ctx.member.require()

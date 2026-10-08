@@ -4,8 +4,8 @@
     "en": "Creator studio"
   },
   "description": {
-    "zh": "给自媒体人：定好定位，按定位出选题、写文章，一篇文章改写成小红书、X、LinkedIn 等各平台的帖子，审核后发布或排期；粉丝和互动自动采集，每周一份总结。",
-    "en": "For creators: set your positioning, get ideas and drafts from it, turn one draft into posts for Xiaohongshu, X, LinkedIn and more, publish or schedule after review, with followers and engagement collected and a weekly summary."
+    "zh": "给自媒体人：定好定位，按定位出选题、写文章（长文、图文笔记、视频），一键发到小红书、X、LinkedIn、知乎等支持这种类型的平台或排期，也能改写成别的类型；粉丝和互动自动采集，每周一份总结。",
+    "en": "For creators: set your positioning, get ideas and write from it (long-form, image posts, videos), publish each piece to Xiaohongshu, X, LinkedIn, Zhihu and other platforms that take its type, or schedule it, and rewrite it into another type, with followers and engagement collected and a weekly summary."
   },
   "min_annulo_api": 34,
   "plugins": {
@@ -16,8 +16,8 @@
   },
   "assistant": {
     "intro": {
-      "zh": "出选题、写文章、改写成各平台的帖子、写每周总结，交给我。发出去之前都会先给你审核。",
-      "en": "Ideas, drafts, posts for each platform and the weekly summary: leave them to me. Nothing goes out before you review it."
+      "zh": "出选题、写文章、改写成别的类型、写每周总结，交给我。发不发、发到哪些账号由你定。",
+      "en": "Ideas, drafts, rewrites into other types and the weekly summary: leave them to me. You decide what gets published and where."
     },
     "suggestions": {
       "zh": [

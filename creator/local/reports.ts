@@ -9,6 +9,7 @@
 
 import { L } from './_i18n'
 import { stats as channelStats } from './channels'
+import { unpublished } from './_types'
 
 type Report = { id: string; period_start: string; period_end: string; title?: string; summary?: string; highlights?: string; suggestions?: string; created_at?: string }
 
@@ -51,7 +52,8 @@ export async function data(input: { days?: number }, ctx: any) {
     articles: articles.map((a) => ({ title: a.title, url: a.url })),
     social_posts: posts.length,
     social_by_channel: Object.entries(posts.reduce((m: Record<string, number>, p) => ((m[chName[p.channel_id] ?? p.channel_id] = (m[chName[p.channel_id] ?? p.channel_id] ?? 0) + 1), m), {})).map(([channel, n]) => ({ channel, n })),
-    pending_review: all(ctx, 'articles').filter((a) => a.status === 'pending_review').length + all(ctx, 'social_posts').filter((p) => p.status === 'pending_review').length,
+    // 写好了还没发的文章
+    unpublished: unpublished(all(ctx, 'articles'), all(ctx, 'social_posts')).length,
   }
 
   // 上一期周报：和它比

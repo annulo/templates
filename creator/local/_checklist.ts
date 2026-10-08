@@ -35,7 +35,7 @@ export function setupSteps(ctx: any, { all }: Helpers): Item[] {
     {
       key: 'first-post',
       title: L(ctx, '发出第一条帖子', 'Publish your first post'),
-      why: L(ctx, '在内容详情里给账号生成一版，审核后发布或排期。', 'In the content detail, generate a version for an account, review it, then publish or schedule.'),
+      why: L(ctx, '打开一篇文章点「发布」，勾选要发的账号，马上发或者排期。', 'Open a piece, click "Publish", pick the accounts, and post now or schedule it.'),
       minutes: 3, done: posts.some((p: any) => p.status === 'published' || p.status === 'scheduled'),
       action: { kind: 'go', view: 'content', params: { tab: 'articles' } }, action_label: L(ctx, '去发布', 'Publish'),
     },

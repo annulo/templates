@@ -23,6 +23,7 @@ import { useT } from '../lib/i18n'
 import { useInShuttle } from '../lib/useShuttle'
 import { NAV } from '../lib/edition'
 import { useChecklist } from '../lib/useChecklist'
+import { unpublished } from '../local/_types'
 
 // 左侧导航分组由行业文件 lib/edition.ts 定义；紧凑单行，辅助说明放在 title 中。
 // 还没填项目资料时的占位（放在模块里：引用不变，项目设置的表单不会被重渲染冲掉）
@@ -156,18 +157,18 @@ export default function Index() {
 
   const checklist = useChecklist(rev)
 
-  // 左侧「内容中心」后面的待审数量：和总览「待审核版本」同一口径（各渠道待审核的版本）。
-  // 助手改了数据（rev）、页面里改了版本表（db:changed）、切回窗口时重拉
+  // 左侧「内容中心」后面的数量：写好了还没发的文章，和总览「待发布」同一口径。
+  // 助手改了数据（rev）、页面里改了文章或发布记录（db:changed）、切回窗口时重拉
   const [pendingReview, setPendingReview] = useState(0)
   const loadPendingReview = useCallback(() => {
-    dbList('social_posts')
-      .then((posts) => setPendingReview(posts.filter((p) => p.status === 'pending_review' && !!p.article_id).length))
+    Promise.all([dbList('articles'), dbList('social_posts').catch(() => [])])
+      .then(([articles, posts]) => setPendingReview(unpublished(articles, posts).length))
       .catch(() => setPendingReview(0))
   }, [])
   useEffect(() => {
     if (!routeReady || needLogin) return
     loadPendingReview()
-    const onChanged = (e: Event) => { if ((e as CustomEvent<{ table?: string }>).detail?.table === 'social_posts') loadPendingReview() }
+    const onChanged = (e: Event) => { const t = (e as CustomEvent<{ table?: string }>).detail?.table; if (t === 'social_posts' || t === 'articles') loadPendingReview() }
     window.addEventListener('db:changed', onChanged)
     window.addEventListener('focus', loadPendingReview)
     return () => {

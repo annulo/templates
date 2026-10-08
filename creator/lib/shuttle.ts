@@ -262,8 +262,11 @@ export type Topic = {
 }
 
 export type ArticleStatus = 'draft' | 'pending_review' | 'published' | 'rejected'
+/** 文章类型：article 长文（富文本，图在正文里）、post 图文笔记（纯文字 + 一组配图）、video 视频。空的是老数据，按 article 看（lib/articleTypes.ts） */
+export type ArticleType = 'article' | 'post' | 'video'
 export type Article = {
   id: string
+  type?: ArticleType
   channel_id?: string
   topic_id?: string
   title: string
@@ -271,6 +274,14 @@ export type Article = {
   body?: string
   video?: string
   keywords?: string
+  /** 话题，JSON 数组字符串，不带 # */
+  tags?: string
+  /** 图文笔记的配图，JSON 数组字符串 */
+  images?: string
+  cover_text?: string
+  category?: string
+  /** 改写自哪篇文章 */
+  source_id?: string
   status: ArticleStatus
   evidence_id?: string
   evidence_snapshot?: string
@@ -280,6 +291,9 @@ export type Article = {
   updated_at?: string
   published_at?: string
 }
+
+/** 改写预设（rewrite_presets 表）：改成哪种类型 + 改写要求 */
+export type RewritePreset = { id: string; type: ArticleType; prompt: string; created_at?: string; updated_at?: string }
 
 /** 产品目录（products 表） */
 export type Product = {
@@ -574,6 +588,7 @@ type Tables = {
   profile: Profile
   topics: Topic
   articles: Article
+  rewrite_presets: RewritePreset
   social_accounts: Channel
   social_health: PlatformHealth
 }

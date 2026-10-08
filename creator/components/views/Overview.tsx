@@ -15,6 +15,8 @@ import { TaskButton } from '../Task'
 import { TOPICS_TASK } from './Content'
 import { brokenOf, FIX_TASK, usePlatformHealth } from '../PlatformHealth'
 import { loggedInElsewhere, useElsewhere } from '../../lib/social'
+import { unpublished } from '../../local/_types'
+import { TYPE_META, typeOf } from '../ArticleTypes'
 
 /** 总览：各账号的粉丝、待你处理的事、最近的动作 */
 export default function Overview({ ctx }: { ctx: Ctx }) {
@@ -40,9 +42,9 @@ export default function Overview({ ctx }: { ctx: Ctx }) {
       .catch((e) => setError(e.message))
   }, [ctx.rev])
 
-  // 待审核的是各渠道的版本（初稿本身不审核），最新的在前；点了打开那篇内容的那个版本
-  const pending = (data?.posts.filter((p) => p.status === 'pending_review' && !!p.article_id) ?? []).sort((a, b) => String(b.updated_at ?? '').localeCompare(String(a.updated_at ?? '')))
-  const openPending = () => pending[0] ? ctx.go('content', { article: pending[0].article_id!, version: pending[0].id }) : ctx.go('content', { tab: 'articles' })
+  // 写好了还没发的文章，最近改的在前；点了打开那篇
+  const pending = data ? unpublished(data.articles, data.posts) : []
+  const openPending = () => pending[0] ? ctx.go('content', { article: pending[0].id }) : ctx.go('content', { tab: 'articles' })
   const ideas = data?.topics.filter((t) => t.status === 'idea') ?? []
 
   const social = ctx.channels
@@ -142,7 +144,7 @@ export default function Overview({ ctx }: { ctx: Ctx }) {
           count={data ? pending.length : null}
           empty={tr('overview.pending_empty')}
           onOpen={openPending}
-          items={pending.slice(0, 3).map((p) => ({ id: p.id, text: p.title || tr('versions.untitled'), meta: `${ctx.channels.find((c) => c.id === p.channel_id)?.name ?? ''} · ${fmtTime(p.updated_at)}` }))}
+          items={pending.slice(0, 3).map((p) => ({ id: p.id, text: p.title || tr('versions.untitled'), meta: `${TYPE_META[typeOf(p)].label} · ${fmtTime(p.updated_at || p.created_at)}` }))}
         />
         <Todo
           icon={Lightbulb}
@@ -169,7 +171,7 @@ function Metric({ label, value, suffix, warning, className, onClick }: { label: 
   </button>
 }
 
-function TodayWork({ ctx, pending, broken, health }: { ctx: Ctx; pending: SocialPost[]; broken: Channel[]; health: PlatformHealth[] }) {
+function TodayWork({ ctx, pending, broken, health }: { ctx: Ctx; pending: Article[]; broken: Channel[]; health: PlatformHealth[] }) {
   const shuttle = useInShuttle()
   const { data, error, setData, setError, load } = ctx.checklist
   // 在别的页面处理完（审核、回询盘…）回到总览，今日工作要跟着变：进来时、窗口重新拿到焦点时重拉一次，标题旁也能手动刷新
@@ -202,7 +204,7 @@ function TodayWork({ ctx, pending, broken, health }: { ctx: Ctx; pending: Social
           <div className="min-w-0">
             {item.key === 'd_posts' && <div className="mb-0.5 text-xs text-muted-foreground">{tr('overview.content_review')}</div>}
             <div title={item.key === 'd_posts' && pending[0] ? pending[0].title : item.title} className="truncate text-sm leading-relaxed font-medium">{item.key === 'd_posts' && pending[0] ? pending[0].title : item.title}</div>
-            <p className="mt-0.5 truncate text-xs leading-relaxed text-muted-foreground" title={item.why}>{item.key === 'd_posts' && pending[0] ? `${ctx.channels.find((c) => c.id === pending[0].channel_id)?.name ?? ''} · ${tr('overview.awaiting_review')} · ${fmtTime(pending[0].updated_at)}${pending.length > 1 ? ' · ' + tr('overview.review_more', { n: pending.length - 1 }) : ''}` : item.why}</p>
+            <p className="mt-0.5 truncate text-xs leading-relaxed text-muted-foreground" title={item.why}>{item.key === 'd_posts' && pending[0] ? `${TYPE_META[typeOf(pending[0])].label} · ${tr('overview.awaiting_review')} · ${fmtTime(pending[0].updated_at || pending[0].created_at)}${pending.length > 1 ? ' · ' + tr('overview.review_more', { n: pending.length - 1 }) : ''}` : item.why}</p>
           </div>
           <div className={actionClass}><ChecklistItemAction compact ctx={ctx} it={item} onDone={ctx.checklist.load} onChat={() => {}} /><button type="button" onClick={() => dismiss(item)} aria-label={tr('today.dismiss')} title={tr('today.dismiss')} className="cursor-pointer rounded-md p-1 text-muted-foreground/50 hover:bg-accent hover:text-foreground"><X className="size-3.5" /></button></div>
         </div>)}

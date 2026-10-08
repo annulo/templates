@@ -36,7 +36,7 @@ export const quickstart: Article = {
 | 填写你的定位 | 填了「主要写什么」和「写给谁」 |
 | 连上一个社媒账号 | 「账号」里有一个账号 |
 | 写第一篇内容 | 有一篇文章，存成草稿就算 |
-| 发出第一条帖子 | 有一个版本已发布或已排期 |
+| 发出第一条帖子 | 有一篇文章发到了账号上或排了期 |
 
 做没做完是按数据判断的，不用手动打勾。点一项展开说明和去做的按钮；用不上的点「先跳过」，跳过的能「恢复」。
 
@@ -50,8 +50,8 @@ export const quickstart: Article = {
 
 1. 「内容中心 → 选题」点「出一批选题」，助手按你的定位出一批；
 2. 挑一个点「写成文章」，写好的在「文章」里，是草稿；也可以「新建文章」自己写；
-3. 打开文章，切到「媒体版本」，「添加账号」选要发的账号，「AI 写 N 个社媒版本」让助手按各平台的写法分别写；
-4. 每个版本「通过审核」后「立即发布」，或者选时间「排期」。
+3. 打开文章看一眼，要发到别的平台就「改写」成它支持的类型（比如长文改成图文笔记发小红书、X）；
+4. 点「发布」，勾选要发的账号，「立即发布」或者选时间「定时发布」。
 
 详见「内容中心」一篇。
 
@@ -85,7 +85,7 @@ At the bottom of the sidebar, "Getting started" shows your progress (like 1/4). 
 | Describe your account | "What you write about" and "Who you write for" are filled in |
 | Connect a social account | There's an account under Accounts |
 | Write your first piece | There's an article; a saved draft counts |
-| Publish your first post | A version is published or scheduled |
+| Publish your first post | An article is posted to an account or scheduled |
 
 Progress comes from your data; nothing to tick by hand. Click a step to see what to do and a button to do it. Click "Skip for now" for steps you don't need; skipped ones can be restored ("Restore").
 
@@ -99,8 +99,8 @@ Progress comes from your data; nothing to tick by hand. Click a step to see what
 
 1. In Content center → Topics, click "Suggest topics"; the assistant suggests a batch from your profile;
 2. Pick one and click "Write article". The draft shows up under Articles. Or click "New article" and write it yourself;
-3. Open the article, switch to "Media versions", click "Add accounts", pick where to post, and "AI writes N social versions" writes one for each platform;
-4. "Approve" each version, then "Publish now" or pick a time and "Schedule".
+3. Open the article and give it a look; to post on other platforms, "Rewrite" it into a type they take (e.g. a long-form article into an image post for Xiaohongshu and X);
+4. Click "Publish", tick the accounts, then "Publish now" or "Schedule".
 
 See "Content center" for details.
 
@@ -122,11 +122,11 @@ export const overview: Article = {
 
 左侧「工作台 → 运营总览」，从上到下：
 
-- **四个数字**：粉丝（全部账号最近一次采集的合计，旁边是近 30 天发布了几条）、待审核版本、已连接社媒（登录着的账号数）、发布异常（发布或自检出了问题的账号数，点它去「账号」页处理）。点哪个就去对应的地方；
-- **今日工作**：现在该处理的事：社媒内容等你审核（「去审核」）、社媒发布流程需要修复（「交给助手修」）、这周的总结还没写（「现在写」）。不想看的点「×」忽略，数量变多了会再出现；
+- **四个数字**：粉丝（全部账号最近一次采集的合计，旁边是近 30 天发布了几条）、待发布文章（写好了还没发的）、已连接社媒（登录着的账号数）、发布异常（发布或自检出了问题的账号数，点它去「账号」页处理）。点哪个就去对应的地方；
+- **今日工作**：现在该处理的事：写好了还没发的文章（「去发布」）、社媒发布流程需要修复（「交给助手修」）、这周的总结还没写（「现在写」）。不想看的点「×」忽略，数量变多了会再出现；
 - **每周总结**：最新一期每周总结的标题和结论，「查看每周总结」打开全文（右上角的「查看每周总结」也一样）；
 - **账号**：每个账号的平台、数据采集时间、发布自检状态（正常、尚未自检、发布异常、登录已失效）。点账号名去「账号」，「管理账号」也去那里；
-- **更多运营数据**（点开）：待审核的版本、选题（选题是空的时候能直接「出一批选题」）。
+- **更多运营数据**（点开）：待发布的文章、选题（选题是空的时候能直接「出一批选题」）。
 
 ![运营总览：四个数字、今日工作、每周总结](https://fsu.creght.com/site/2103669300995821568/1791357359359__creator_help_overview_v2.png)
 
@@ -146,10 +146,10 @@ export const overview: Article = {
 Workspace → Operations overview in the sidebar, from top to bottom:
 
 - **Four numbers**: Followers (the total across accounts from the latest collection, plus how many posts went out in the last 30 days), Versions to review, Social accounts (signed in), Publishing issues (accounts whose publishing or self-test failed; click it to handle them on the Accounts page). Click one to go there;
-- **Today's work**: what needs you now: social posts to review ("Review"), social publishing that needs repair ("Have the assistant fix it"), this week's summary not written yet ("Write now"). Click "×" to dismiss one; it comes back if the number grows;
+- **Today's work**: what needs you now: articles ready to publish ("Publish"), social publishing that needs repair ("Have the assistant fix it"), this week's summary not written yet ("Write now"). Click "×" to dismiss one; it comes back if the number grows;
 - **Weekly summary**: the title and summary of the newest weekly summary; "View weekly summary" opens it (so does "View weekly summary" at the top right);
 - **Accounts**: each account's platform, data collection time and publishing check (Healthy, Not checked, Publishing issue, Login expired). Click a name to go to Accounts; "Manage accounts" goes there too;
-- **More operations data** (click to expand): versions to review, and topics (when there are none, "Suggest topics" is right there).
+- **More operations data** (click to expand): articles ready to publish, and topics (when there are none, "Suggest topics" is right there).
 
 ![Operations overview: four numbers, today's work, latest weekly summary](https://fsu.creght.com/site/2103669300995821568/1791357359359__creator_help_overview_v2.png)
 
@@ -172,7 +172,7 @@ export const social: Article = {
   title: { zh: '社交媒体', en: 'Social media' },
   summary: { zh: 'X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站、知乎：看账号状态、粉丝和互动，采集数据，自检。', en: 'X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili, Zhihu: account status, followers and engagement, collecting stats, self-tests.' },
   body: {
-    zh: `社交媒体页看账号和数据。帖子的编辑、审核、发布在「内容中心」的「媒体版本」里做（见「内容中心」一篇），排期在「发布日历」里看。
+    zh: `社交媒体页看账号和数据。文章的编辑、发布在「内容中心」里做（见「内容中心」一篇），排期在「发布日历」里看。
 
 ## 支持哪些平台
 
@@ -210,7 +210,7 @@ export const social: Article = {
 
 - 账号卡片：登录状态、粉丝、上次采集时间，「打开主页」「立即采集」，以及上次自检的结果；
 - 这段时间发布了几条、新增粉丝和互动，每天的变化图（要采集过两天以上才画得出来）；
-- 「帖子」列表：每条的各项数据，点表头按那一列排；可以只看这段时间发的，也可以看全部。点标题打开这条在内容中心里的版本。
+- 「帖子」列表：每条的各项数据，点表头按那一列排；可以只看这段时间发的，也可以看全部。点标题打开它出自的文章和发布记录。
 
 ![社交媒体 · 数据表现：一个账号的粉丝和帖子数据](https://fsu.creght.com/site/2103669300995821568/1791356481632__creator_help_social_data.png)
 
@@ -229,7 +229,7 @@ export const social: Article = {
 ## 登录在别的电脑
 
 账号是在另一台电脑上登录的，会显示「登录在别的电脑」，发布、采集由那台电脑做。要改在这台电脑做，点「在这台电脑登录」。`,
-    en: `The Social media page is for accounts and numbers. Posts are edited, reviewed and published in Content center under "Media versions" (see "Content center"); scheduled posts show in the Publishing calendar.
+    en: `The Social media page is for accounts and numbers. Articles are edited and published in Content center (see "Content center"); scheduled posts show in the Publishing calendar.
 
 ## Supported platforms
 
@@ -267,7 +267,7 @@ The second tab, "Performance". Pick an account and a period at the top (last 7 /
 
 - Account card: login status, followers, last collection, "Profile" and "Collect now", and the last self-test result;
 - Posts published in the period, new followers and engagement, and a daily chart (it needs at least two days of collection);
-- "Posts" list: each post's numbers; click a column header to sort by it. Show only posts from the period, or all. Click a title to open its version in Content center.
+- "Posts" list: each post's numbers; click a column header to sort by it. Show only posts from the period, or all. Click a title to open its article and publishing record in Content center.
 
 ![Social media · Performance: one account's followers and posts](https://fsu.creght.com/site/2103669300995821568/1791356481632__creator_help_social_data.png)
 
@@ -291,10 +291,22 @@ An account signed in on another computer shows "Logged in on another computer"; 
 
 export const content: Article = {
   id: 'content',
-  title: { zh: '内容中心：选题、文章、媒体版本', en: 'Content center: topics, articles, media versions' },
-  summary: { zh: '出选题、让 AI 写文章，再给每个社媒账号各出一个版本，审核后发布或排期。', en: 'Get topics, have AI write articles, then make a version for each social account, review it and publish or schedule.' },
+  title: { zh: '内容中心：选题、文章、发布', en: 'Content center: topics, articles, publishing' },
+  summary: { zh: '出选题、写文章（长文、图文笔记、视频），一键发到支持这种类型的账号；要发到别的平台就改写成它支持的类型。', en: 'Get topics, write articles (long-form, image posts, videos), publish each one to the accounts that take its type, and rewrite it into another type for other platforms.' },
   body: {
-    zh: `左侧「内容与发布 → 内容中心」，两个页签：「文章」和「选题」。一篇文章是底稿；要发到哪个社媒账号，就给它加一个「媒体版本」，每个版本单独编辑、审核、发布。
+    zh: `左侧「内容与发布 → 内容中心」，两个页签：「文章」和「选题」。文章就是要发出去的内容，写好了直接发到账号上。
+
+## 文章类型
+
+每篇文章有一个类型，新建时先选。各平台的发帖框不一样，归成三种：
+
+| 类型 | 写什么 | 能发到 |
+|---|---|---|
+| 长文 | 标题、摘要、富文本正文（小标题、列表，图片插在正文里） | 知乎 |
+| 图文笔记 | 标题、纯文字正文、一组配图（第一张是封面） | 小红书、X、LinkedIn、Facebook、Instagram |
+| 视频 | 标题、简介、一个视频 | YouTube、抖音、B 站，以及能发视频的图文平台 |
+
+一篇长文想发到小红书、X，就「改写」成图文笔记（见下面）。
 
 ## 选题
 
@@ -311,44 +323,59 @@ export const content: Article = {
 ## 写文章
 
 三种开头：
-- 「AI 写文章」：先弹出「本次写作要求」，已经填好默认的写法，这次可以改，改的只用于这一篇；点「开始写」，助手从选题里挑一个最值得写的写成文章；
-- 选题上「写成文章」：写这个选题；
-- 「新建文章」：写一个标题或主题，「让 AI 写」直接交给 AI，「保存草稿」先建一篇空的自己写。
+- 「新建文章」：先选类型，再写标题或主题；「保存草稿」建一篇空的自己写，「让 AI 写」交给 AI；
+- 「AI 写文章」：先选类型，下面是「本次写作要求」，已经填好默认写法（按类型分节），这次可以改，改的只用于这一篇；点「开始写」，助手从选题里挑一个最值得写的；
+- 选题上「写成文章」：写这个选题，同样先选类型。
 
 交给助手写的，页面上显示「助手正在写…」，一般几分钟，点「看过程」能看它每一步。写好的文章是「草稿」，在「文章」页签里。长期的写法在「写作要求」里改。
-助手写文章只用「我的定位」里写了的个人经历，不编数据和案例；资料库里有对得上的图会配进正文。
+助手只用「我的定位」里写了的个人经历，不编数据和案例；资料库里有对得上的图会配上。
 
 ## 编辑文章
 
-点开一篇，「文章」页签是底稿：
-- 「修改」：改标题、摘要、正文，正文里能插小标题、列表、图片（「上传图片」「从资料库选」，也能直接粘贴、拖进来，输入 / 选要插入的块）。「视频（可选）」给 YouTube、抖音、B 站这些视频平台用；
-- 「让 AI 改」：写清楚哪里要改，「交给 AI 改」，它在当前内容上只改你说到的部分；「更多 → 改写要求」是它每次改都要遵守的写法；
-- 「更多 → 删除这篇」：已经有媒体版本的不能直接删，先处理各版本。
+点开一篇：
+- 「修改」：按类型改。长文改标题、摘要、正文（能插小标题、列表、图片，也能直接粘贴、拖进图片，输入 / 选要插入的块）；图文笔记改正文和配图（「从资料库选」，拖动调整顺序，没配图时填「封面大字」生成文字封面）；视频选资料库的视频或「上传本机视频」（只存在这台电脑上，最多 8 GB，90 天后清理），再写简介。三种都有话题；
+- 「让 AI 改」：写清楚哪里要改，它在当前内容上只改你说到的部分，类型不变；「更多 → 改写要求」是它每次改都要遵守的写法；
+- 「更多 → 删除这篇」：已经发出去或排了期的不能直接删。
 
-![文章编辑页](https://fsu.creght.com/site/2103669300995821568/1791356477362__creator_help_content_article.png)
+## 改写
 
-## 媒体版本
+文章页点「改写」：选改成哪种类型，写这次的要求，助手另写一篇新的，原文不动。新文章在列表里，详情里写着「改写自」哪篇；原文下面列着「改写出的文章」。
 
-文章页上的「媒体版本」页签：一篇文章，各账号分别编辑和发布。改文章不会覆盖已经存下的版本。
+**改写预设**：常用的要求存起来，下次点一下就填好。比如经常把长文改成 X 的推文，就在「改写成图文笔记」下写「简短，200 字以内，开头一句话抓人」，点「存为预设」。预设按类型分开，能改、能删。
 
-![媒体版本：各账号的版本和审核状态](https://fsu.creght.com/site/2103669300995821568/1791356478974__creator_help_content_versions.png)
+## 发布
 
-- **添加账号**：勾选要发的账号，可以多选。可以「空白新建」，也可以「AI 写 N 个社媒版本」，助手按每个账号的平台和定位各写一版，写好是「待审核」；
-- **每个版本**：草稿 → 提交审核 → 通过审核 → 立即发布或排期。
-  - 「提交审核」前会按平台规则检查字数、话题、配图，不合规的改完才能提交；
-  - 「通过审核」后可以「立即发布」，或者选一个时间点「排期」，到点由 Annulo 发（Annulo 要开着）；排期的要改内容先「取消排期」。已通过、已排期的版本改了再「保存」，会回到待审核；
-  - 配图「从资料库选」，能拖动调整顺序；视频「从资料库选视频」或「上传本机视频」（本机视频只存在这台电脑上，最多 8 GB，90 天后清理）。小红书、Instagram 没配图时，用「封面大字」生成一张文字封面；
-  - 没发出去的版本能「删除版本」；
-- 账号那一行右边的「⋯」：「AI 改写」再写一版、「空白新建一版」、这个平台的「AI 要求」（各平台的写法分开改）；
-- **批量发布**：把审核通过的版本一次发出去，结果逐条显示；
-- 发出去的版本不能再改，显示最近一次采集的浏览、点赞、评论，「看账号数据」去社交媒体页，「查看已发布内容」打开平台上的帖子。
+文章页点「发布」：
+- 列出所有社媒账号，支持这篇类型的能勾（可以多选）；不支持的灰掉，写着原因，可以先改写；登录过期、登录在别的电脑上的也会写明；
+- 超出平台字数上限的、这个账号已经发过一次的，会提示；
+- 选「立即发布」或「定时发布」。立即发布逐个发、逐个显示结果；定时的到点由 Annulo 发（Annulo 要开着）。
 
-**没通过审核的版本不会发出去**，助手也不会替你点通过。
+发出去的是文章当时的内容，之后再改文章，不影响已经发出去的。
+
+## 发布记录
+
+文章页下面的「发布记录」：这篇发到了哪些账号，每个一条，显示状态、时间、平台上的链接、最近一次采集的浏览、点赞、评论。
+- 发布失败的写着原因，改好后「重新发布」（重发会先去平台上找，已经发出去的不会重复发）；
+- 排了期的能改时间、「立即发布」或取消排期；
+- 没发出去的能「删除记录」；
+- 「看账号数据」去社交媒体页。
 
 ## 文章列表
 
-「文章」页签能搜标题、摘要，按「草稿」「已发布」筛。发出去的文章后面列着发到了哪些账号，点一个打开那个版本。`,
-    en: `Content & publishing → Content center in the sidebar, with two tabs: "Articles" and "Topics". An article is the master draft; for each social account you want to post to, add a media version, then edit, review and publish it on its own.
+「文章」页签能搜标题和内容，按「草稿」「已发布」和类型筛。发出去的文章后面列着发到了哪些账号，点一个打开那篇的发布记录。`,
+    en: `Content & publishing → Content center in the sidebar, with two tabs: "Articles" and "Topics". An article is what you post: once it's written, publish it to your accounts.
+
+## Article types
+
+Each article has a type, chosen when you create it. Platforms' post forms differ, so there are three:
+
+| Type | What you write | Goes to |
+|---|---|---|
+| Long-form | Title, summary, rich text (headings, lists, images in the text) | Zhihu |
+| Image post | Title, plain text, a set of images (the first is the cover) | Xiaohongshu, X, LinkedIn, Facebook, Instagram |
+| Video | Title, description, one video | YouTube, Douyin, Bilibili, and image platforms that take video |
+
+To post a long-form article to Xiaohongshu or X, "Rewrite" it into an image post (below).
 
 ## Topics
 
@@ -365,43 +392,46 @@ The "Topics" tab:
 ## Writing
 
 Three ways to start:
-- "Write with AI": first "Requirements for this article" opens, filled with your default instructions. Changes here apply to this article only. Click "Start writing" and the assistant picks the most worthwhile topic and writes it;
-- "Write article" on a topic: writes that topic;
-- "New article": enter a title or topic; "Let AI write it" hands it to AI, "Save draft" creates an empty one for you to write.
+- "New article": pick a type, then a title or topic; "Save draft" creates an empty one to write yourself, "Let AI write it" hands it to AI;
+- "Write with AI": pick a type; below it, "Requirements for this article" is filled with your default instructions (one section per type). Changes here apply to this article only. Click "Start writing" and the assistant picks the most worthwhile topic;
+- "Write article" on a topic: writes that topic, again after picking a type.
 
 While the assistant writes, the page shows "The assistant is writing…", usually for a few minutes; "View progress" shows each step. The result is a "Draft" under Articles. Change the long-term instructions under "Writing instructions".
-The assistant only uses personal stories you wrote in My profile and doesn't make up data or cases; matching images from the Library go into the body.
+The assistant only uses personal stories you wrote in My profile and doesn't make up data or cases; matching images from the Library are added.
 
 ## Editing an article
 
-Open one; the "Article" tab is the master draft:
-- "Edit": change the title, summary and body. The body takes headings, lists and images ("Upload image", "From library", or paste and drop; type / to insert a block). "Video (optional)" is for video platforms like YouTube, Douyin and Bilibili;
-- "Ask AI to revise": say what to change and click "Send to AI"; it edits the current version and touches only what you mention. "More → Revision instructions" is what it follows every time;
-- "More → Delete": an article with media versions can't be deleted until you handle the versions.
+Open one:
+- "Edit": fields depend on the type. Long-form: title, summary and body (headings, lists, images; paste or drop images, type / to insert a block). Image post: text and images ("Pick from library", drag to reorder; without images, "Cover text" becomes a text cover). Video: pick a library video or "Upload from this computer" (stays on this computer, up to 8 GB, cleaned up after 90 days), then the description. All three have hashtags;
+- "Ask AI to revise": say what to change; it edits the current content, touches only what you mention, and keeps the type. "More → Revision instructions" is what it follows every time;
+- "More → Delete": articles that have been posted or scheduled can't be deleted.
 
-![Editing an article](https://fsu.creght.com/site/2103669300995821568/1791356477362__creator_help_content_article.png)
+## Rewrite
 
-## Media versions
+Click "Rewrite" on an article: pick the type to rewrite into, write what you want, and the assistant writes a new article; the original stays as it is. The new one is in the list and says which article it was "Rewritten from"; the original lists its "Rewritten articles".
 
-The "Media versions" tab on an article: one article, a separate version for each account. Editing the article doesn't overwrite saved versions.
+**Rewrite presets**: save instructions you use often and fill them in with one click. If you often turn articles into posts for X, write "Short, under 200 words, open with a hook" under "Rewrite into Image post" and click "Save as preset". Presets are kept per type and can be edited or deleted.
 
-![Media versions: per-account versions and review status](https://fsu.creght.com/site/2103669300995821568/1791356478974__creator_help_content_versions.png)
+## Publishing
 
-- **Add accounts**: tick the accounts for this piece; several is fine. Start "Blank", or "AI writes N social versions": the assistant writes one per account for its platform and positioning, and they arrive "In review";
-- **Each version**: draft → submit for review → approve → publish or schedule.
-  - "Submit for review" first checks the platform's rules for length, hashtags and images; fix any problems before submitting;
-  - After "Approve", "Publish now", or pick a time and "Schedule"; Annulo posts it on time (Annulo must be open). To edit a scheduled one, "Cancel schedule" first. Saving changes to an approved or scheduled version sends it back to review;
-  - Images: "Pick from library", drag to reorder. Video: "Pick a video from the library" or "Upload from this computer" (local videos stay on this computer, up to 8 GB, cleaned up after 90 days). On Xiaohongshu and Instagram without images, "Cover text" becomes a text cover;
-  - Versions that haven't gone out can be removed with "Delete version";
-- The "⋯" on an account's row: "Rewrite with AI" for another version, "New blank version", and that platform's "AI instructions" (each platform's style is edited separately);
-- **Publish in bulk**: sends all approved versions at once and shows each result;
-- Published versions can't be edited. They show views, likes and comments from the latest collection; "Account data" goes to Social media, "View published content" opens the post on the platform.
+Click "Publish" on an article:
+- All social accounts are listed; the ones that take this article's type can be ticked (several is fine). Others are greyed out with the reason, and you can rewrite first. Expired logins and logins on another computer are noted too;
+- You're warned when the text is over a platform's limit, or when the article already went to that account;
+- Choose "Publish now" or "Schedule". Publish now posts one by one and shows each result; scheduled ones are posted on time by Annulo (Annulo must be open).
 
-**Nothing goes out without your approval**, and the assistant won't approve for you.
+What goes out is the article as it is at that moment; editing it later doesn't change what's already posted.
+
+## Publishing records
+
+"Publishing" below the article: one row per account it went to, with status, time, the link on the platform, and views, likes and comments from the latest collection.
+- Failed posts show the reason; fix it and "Publish again" (a retry first looks for the post on the platform, so one that already went out isn't posted twice);
+- Scheduled ones can be moved, published now, or unscheduled;
+- Ones that didn't go out can be removed with "Delete record";
+- "Account data" goes to Social media.
 
 ## Article list
 
-On the "Articles" tab, search titles and summaries, and filter by "Draft" or "Published". Published articles list the accounts they went to; click one to open that version.`,
+On the "Articles" tab, search titles and text, and filter by "Draft", "Published" and type. Published articles list the accounts they went to; click one to open that article's record.`,
   },
 }
 
@@ -416,7 +446,7 @@ export const calendar: Article = {
 
 ![发布日历：月视图](https://fsu.creght.com/site/2103669300995821568/1791357359958__creator_help_calendar_v2.png)
 
-- 点一条打开它在内容中心里的版本；
+- 点一条打开它出自的文章；
 - 已排期、已通过的帖子可以拖到别的日子，时间不变；不能拖到过去；
 - 上面列着审核通过、还没排期的帖子，拖到某一天就排上（默认 10:00）；
 - 到点由 Annulo 发布。
@@ -438,7 +468,7 @@ Content & publishing → Publishing calendar in the sidebar, by "Week" or "Month
 
 ![Publishing calendar: month view](https://fsu.creght.com/site/2103669300995821568/1791357359958__creator_help_calendar_v2.png)
 
-- Click an item to open its version in Content center;
+- Click an item to open its article in Content center;
 - Drag a scheduled or approved post to another day; the time stays the same. You can't drag into the past;
 - Approved posts that aren't scheduled yet are listed at the top; drag one onto a day to schedule it (10:00 by default);
 - Annulo publishes on time and pushes a post back if the platform's spacing rules require.
@@ -566,7 +596,7 @@ export const assistant: Article = {
 ## 按钮和助手
 
 后台很多按钮是直接执行的（采集、自检、发布），不经过助手。
-要 AI 读东西、想东西的按钮（出一批选题、AI 写文章、让 AI 改、AI 写社媒版本、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；按钮变成「进行中 · 看过程」，点它打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」「选题要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
+要 AI 读东西、想东西的按钮（出一批选题、AI 写文章、让 AI 改、改写、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；按钮变成「进行中 · 看过程」，点它打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」「选题要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
 
 ## 不会替你做的
 
@@ -592,7 +622,7 @@ Annulo「设置 → 项目」里的「给助手的说明」：写你对这个项
 ## 在手机上用
 
 连了 creght 的在线项目，可以在手机或别的电脑上打开后台（地址在 Annulo「设置 → 远程访问」里），用 creght 账号登录：
-- 数据都能看，文章、版本也能改；
+- 数据都能看，文章也能改；
 - 发布、采集、交给 AI 的按钮要转到你的电脑上跑：电脑上的 Annulo 要开着、打开着这个项目，并且在「设置 → 远程访问」里打开「允许远程调用这台电脑」。页面顶部会显示电脑在不在线；
 - 手机上没有右侧的助手，左侧多一个「助手」：发一句话交给电脑上的助手做，过程和结果在这里看。`,
     en: `The assistant on the right of Annulo sees this project's data, accounts and back-office code, and it can act on them.
@@ -609,7 +639,7 @@ Annulo「设置 → 项目」里的「给助手的说明」：写你对这个项
 ## Buttons and the assistant
 
 Many buttons run directly (collecting, self-tests, publishing) without the assistant.
-Buttons that need AI to read or think (Suggest topics, Write with AI, Ask AI to revise, AI-written social versions, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. The button turns into "In progress · View progress"; click it to open that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions", "Topic instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
+Buttons that need AI to read or think (Suggest topics, Write with AI, Ask AI to revise, Rewrite, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. The button turns into "In progress · View progress"; click it to open that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions", "Topic instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
 
 ## What it won't do for you
 
@@ -635,7 +665,7 @@ Some schedules hand a job to the assistant, like writing the weekly summary. Eac
 ## Using it from your phone
 
 For an online project (connected to creght), you can open the back office on a phone or another computer (the address is in Annulo's Settings → Remote access) and sign in with your creght account:
-- You can see all the data and edit articles and versions;
+- You can see all the data and edit articles;
 - Publishing, collecting and AI buttons run on your computer: Annulo must be running there with this project open, and "Allow remote use of this computer" turned on in Settings → Remote access. The top of the page shows whether the computer is online;
 - There's no assistant panel on the phone; "Assistant" appears in the sidebar instead. Send it a message and the assistant on your computer does the work; follow the progress and result there.`,
   },
@@ -655,7 +685,7 @@ export const settings: Article = {
 - **本机 Agent**：这台电脑上装好的 Claude Code / Codex；
 - **creght 平台的模型**：连了 creght 才有，按 AI 积分计费。
 
-出选题、写文章、改文章、写社媒版本、写每周总结，都用这里选的模型。
+出选题、写文章、改文章、改写、写每周总结，都用这里选的模型。
 
 ## 密钥
 
@@ -697,7 +727,7 @@ Settings → Models offers three kinds, and you can switch anytime at the bottom
 - **Local agent**: Claude Code / Codex installed on this computer;
 - **creght platform models**: available when creght is connected, billed in AI credits.
 
-Suggesting topics, writing and revising articles, writing social versions and the weekly summary all use the model chosen here.
+Suggesting topics, writing, revising and rewriting articles, and the weekly summary all use the model chosen here.
 
 ## Keys
 
@@ -750,7 +780,7 @@ X 登录后一直跳验证的，可以让助手看一下（X 可能识别了自�
 
 ## 发布失败
 
-- 看版本上的报错，改好后重新发布。重新发布前会先去平台上找这一条，已经发出去的不会重发；
+- 看文章「发布记录」里的报错，改好后重新发布。重新发布前会先去平台上找这一条，已经发出去的不会重发；
 - 一直显示「发布中」：点「标记为发布失败」再重新发；
 - 报「页面可能改了」，或者运营总览出现「社媒发布流程需要修复」：平台改版了，点「交给助手修」，改完点「重新自检」；
 - X 报「内容重复」：X 不让发和之前一样的内容，改一下正文再发；
@@ -786,7 +816,7 @@ If X keeps asking for verification after you log in, ask the assistant to take a
 
 ## Posting failed
 
-- Read the error on the version, fix it and publish again. A retry first looks for the post on the platform, so one that already went out isn't posted twice;
+- Read the error in the article's publishing record, fix it and publish again. A retry first looks for the post on the platform, so one that already went out isn't posted twice;
 - Stuck on "Publishing": click "Mark as failed", then publish again;
 - "The page may have changed", or "Social publishing needs repair" on the overview: the platform changed. Click "Have the assistant fix it", then "Test again";
 - X says "duplicate content": X won't accept the same text twice; tweak it and post again;

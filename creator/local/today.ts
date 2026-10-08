@@ -11,6 +11,7 @@
 
 import { L } from './_i18n'
 import { setupSteps } from './_checklist'
+import { unpublished } from './_types'
 
 // 手机上打开后台（不在 Shuttle 里）时这几个也能用：annulo push 会把它们打包成站点 Func，只能用 ctx.db、ctx.mcp('creght', …)、ctx.locale
 export const cloud = ['list', 'skip', 'unskip', 'dismiss', 'openWizard', 'closeWizard']
@@ -66,16 +67,16 @@ function dailyItems(ctx: any): Item[] {
   const out: Item[] = []
   const add = (it: Omit<Item, 'done'>) => it.count !== 0 && out.push({ ...it, done: false })
 
-  // 待审核的是各渠道版本（文章不审核）：点了打开最新那一版所在的内容和版本
-  const pendingPosts = all(ctx, 'social_posts').filter((p) => p.status === 'pending_review' && p.article_id).sort((x, y) => String(y.updated_at ?? '').localeCompare(String(x.updated_at ?? '')))
-  const posts = pendingPosts.length
+  // 写好了还没发的文章：点了打开最近改的那篇，在文章页点「发布」
+  const waiting = unpublished(all(ctx, 'articles'), all(ctx, 'social_posts'))
+  const n = waiting.length
   add({
     key: 'd_posts',
-    count: posts,
-    title: L(ctx, `${posts} 条社媒内容等你审核`, `${posts} social posts to review`),
-    why: L(ctx, '审核通过后可以马上发，也可以排期。', 'Approve to post now or schedule.'),
-    action: { kind: 'go', view: 'content', params: pendingPosts[0] ? { article: pendingPosts[0].article_id, version: pendingPosts[0].id } : { tab: 'articles' } },
-    action_label: L(ctx, '去审核', 'Review'),
+    count: n,
+    title: L(ctx, `${n} 篇文章写好了还没发`, `${n} pieces ready to publish`),
+    why: L(ctx, '看一眼没问题就发到账号上，也可以排期。', 'Give it a look, then publish to your accounts or schedule it.'),
+    action: { kind: 'go', view: 'content', params: waiting[0] ? { article: waiting[0].id } : { tab: 'articles' } },
+    action_label: L(ctx, '去发布', 'Publish'),
   })
 
   // 每周总结：有过总结、最近一期超过 7 天

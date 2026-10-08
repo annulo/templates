@@ -1,12 +1,16 @@
 {
   "name": "文章",
-  "desc": "为渠道写的文章，审核通过后发布到独立站 CMS",
+  "desc": "文章：一篇一种类型（长文 / 图文笔记 / 视频），一键发布到支持这种类型的社媒账号；可以改写成另一种类型的新文章",
   "json_schema": {
     "type": "object",
     "properties": {
+      "type": {
+        "type": "string",
+        "description": "文章类型：article 长文（富文本，图片插在正文里：知乎这类）、post 图文笔记（纯文字正文 + 一组配图：小红书、X、LinkedIn、Facebook、Instagram）、video 视频（标题 + 简介 + 一个视频：YouTube、抖音、B 站，以及能发视频的图文平台）。空的是老数据，按 article 看"
+      },
       "channel_id": {
         "type": "string",
-        "description": "写的时候面向哪个网站（参照它的写法）；实际发到哪些网站看 publications"
+        "description": "旧字段，不再使用"
       },
       "topic_id": {
         "type": "string",
@@ -22,19 +26,39 @@
       },
       "body": {
         "type": "string",
-        "description": "正文 HTML（发布时各网站的发布脚本按需要转换）"
+        "description": "正文：长文是 HTML（图片插在正文里）；图文笔记、视频是纯文字（视频是简介）"
       },
       "video": {
         "type": "string",
-        "description": "可选的视频素材公开 https 地址；本机视频须先上传到资料库，网站发布时随文章嵌入"
+        "description": "视频：资料库里的视频地址，或这台电脑上传的 local:<name>（视频类型必填；图文笔记不用）"
       },
       "keywords": {
         "type": "string",
-        "description": "关键词，逗号分隔"
+        "description": "旧字段：关键词，逗号分隔（现在用 tags）"
+      },
+      "tags": {
+        "type": "string",
+        "description": "话题 / 标签，JSON 数组字符串，不带 #；发布时带到各平台"
+      },
+      "images": {
+        "type": "string",
+        "description": "图文笔记的配图，JSON 数组字符串（顺序就是轮播顺序，第一张是封面）；长文的图在正文里，不用这个"
+      },
+      "cover_text": {
+        "type": "string",
+        "description": "图文笔记没有配图时，封面图上的大字（小红书、Instagram 用它生成文字封面）"
+      },
+      "category": {
+        "type": "string",
+        "description": "视频的分区（B 站投稿要选）"
+      },
+      "source_id": {
+        "type": "string",
+        "description": "改写自哪篇文章（articles 的 id）"
       },
       "status": {
         "type": "string",
-        "description": "draft / published（初稿不审核，审核按渠道版本走；老数据的 pending_review、rejected 按 draft 看）"
+        "description": "draft / published：至少一个账号发出去了就是 published（老数据的 pending_review、rejected 按 draft 看）"
       },
       "review_note": {
         "type": "string",

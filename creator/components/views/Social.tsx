@@ -1,12 +1,13 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, HardDrive, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
+import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import RunButton from '../RunButton'
+import VideoField from '../VideoField'
 import SocialOverview from '../SocialOverview'
 import WorkspaceTabs from '../WorkspaceTabs'
 import RichEditor from '../RichEditor'
 import SchedulePopover, { ScheduledLine } from '../SchedulePopover'
 import { Badge, Button, Dialog, ErrorDetails, Field, Notice, PageHeader, RangeToggle, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
-import { dbList, dbPatch, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, uploadLocalFile, videoSrc } from '../../lib/shuttle'
+import { dbList, dbPatch, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, videoSrc } from '../../lib/shuttle'
 import { SOCIAL, isSocial, type MetricKey, fieldsOf, isRich, isVideoPost, loggedInElsewhere, postText, richImages, toRich, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
 import Select from '../Select'
 import AssetPicker from '../AssetPicker'
@@ -589,7 +590,7 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
 }
 
 /** 发布时没配图用的文字封面，和社媒插件 plugins/social/local/xhs.ts 的 textCard 同一个样式（1080×1440 等比缩小） */
-function TextCover({ text, className }: { text: string; className?: string }) {
+export function TextCover({ text, className }: { text: string; className?: string }) {
   return (
     <div className={cx('flex aspect-[3/4] items-center justify-center bg-[#f6efe6] p-[11%] text-center font-bold text-[#2f2620]', className)} style={{ lineHeight: 1.35, containerType: 'inline-size' }}>
       <span style={{ fontSize: '9.6cqw' }}>{text}</span>
@@ -740,52 +741,6 @@ function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReje
  * 视频：从素材库选（云端地址，换台电脑也能用），或者上传本机视频（只存在这台电脑上，不传云端，最多 8 GB；
  * 存的是 local:<name>，发布时本机函数的 b.upload 直接从这台电脑传给平台）
  */
-function VideoField({ video, onChange }: { video: string; onChange: (v: string) => void }) {
-  const [picking, setPicking] = useState(false)
-  const [progress, setProgress] = useState<number | null>(null)
-  const [err, setErr] = useState('')
-  const fileRef = useRef<HTMLInputElement>(null)
-  const upload = async (f?: File) => {
-    if (!f) return
-    setErr('')
-    setProgress(0)
-    try {
-      const r = await uploadLocalFile(f, setProgress)
-      onChange(r.ref)
-    } catch (e) {
-      setErr((e as Error).message)
-    } finally {
-      setProgress(null)
-    }
-  }
-  const busy = progress != null
-  return (
-    <div className="grid gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm leading-none font-medium">
-          {tr('social.f_video')}
-          {video.startsWith('local:') && <span className="ml-2 text-xs font-normal text-muted-foreground">{tr('social.local_file')}</span>}
-        </span>
-        <div className="flex gap-1">
-          <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={(e) => { upload(e.target.files?.[0]); e.target.value = '' }} />
-          <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={busy}>
-            {busy ? <Loader2 className="animate-spin" /> : <HardDrive />}
-            {busy ? tr('social.uploading_pct', { n: Math.round((progress ?? 0) * 100) }) : tr('social.upload_local')}
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => setPicking(true)} disabled={busy}>
-            <Plus />
-            {video ? tr('social.change_video') : tr('social.pick_video')}
-          </Button>
-        </div>
-      </div>
-      {video ? <video src={videoSrc(video)} controls className="max-h-48 w-full rounded-md border border-border bg-black" /> : <span className="text-xs text-muted-foreground">{tr('social.no_video')}</span>}
-      {err && <Notice tone="error">{err}</Notice>}
-      <span className="text-xs leading-relaxed text-muted-foreground">{tr('social.local_hint')}</span>
-      <AssetPicker open={picking} kind="video" max={1} onClose={() => setPicking(false)} onPick={(urls) => { if (urls[0]) onChange(urls[0]); setPicking(false) }} />
-    </div>
-  )
-}
-
 /** 视频的预览（YouTube、B 站，和带视频的小红书、X…）：视频、标题、账号、描述和标签 */
 function VideoCard({ p, owner, tags }: { p: SocialPost; owner?: Channel; tags: string[] }) {
   return (
