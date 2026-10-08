@@ -42,7 +42,7 @@ annulo run publish.prepare --input '{"article_id":"<id>","channel_ids":["<账号
 
 ## 改文章
 
-用户可以在文章页手动改，也可以点「让 AI 改」写一句要求，交给你按任务 `tasks/revise-article.md` 改（在表里当前的内容上改，手动改过的地方保留），改完 `content.update` 存。
+用户可以在文章页手动改，也可以点「AI 修改」写一句要求，交给你按任务 `tasks/revise-article.md` 改（在表里当前的内容上改，手动改过的地方保留），改完 `content.update` 存。
 用户在对话里让你改某篇，也照这个任务做。
 
 ## 写法归用户

@@ -30,7 +30,7 @@ type Tab = 'articles' | 'topics'
 
 /** 任务 id（tasks/write-article.md）：「写一篇」「写成文章」交给助手按它写，过程看得见 */
 const WRITE_TASK = 'write-article'
-/** 任务 id（tasks/revise-article.md）：文章页「让 AI 改」 */
+/** 任务 id（tasks/revise-article.md）：文章页「AI 修改」 */
 const REVISE_TASK = 'revise-article'
 /** 任务 id（tasks/suggest-topics.md）：「出一批选题」，GEO 页「写成选题」也是它 */
 export const TOPICS_TASK = 'suggest-topics'
@@ -294,7 +294,7 @@ function ArticleDetail({ ctx, a, all, posts, focus, displayStatus, open, onBack,
   const [publishing, setPublishing] = useState(false)
   const [rewritingOpen, setRewritingOpen] = useState(false)
   const st = ARTICLE_STATUS[displayStatus]
-  // 让 AI 改：交给助手按任务 tasks/revise-article.md 改，它读的是表里现在的内容（包括手动改过的）
+  // AI 修改：交给助手按任务 tasks/revise-article.md 改，它读的是表里现在的内容（包括手动改过的）
   const reviser = useTask(REVISE_TASK, onChanged)
   const revising = (reviser.task?.running ?? []).filter((r) => r.input?.article_id === a.id)
   // 改写：交给助手按任务 tasks/rewrite-article.md 另写一篇（原文不动），写好的出现在「改写出的文章」里
@@ -310,7 +310,7 @@ function ArticleDetail({ ctx, a, all, posts, focus, displayStatus, open, onBack,
     ? derived.filter((d) => (Date.parse(d.created_at || '') || 0) >= Date.parse(lastRewrite.started_at) - 60_000).sort((x, y) => (Date.parse(y.created_at || '') || 0) - (Date.parse(x.created_at || '') || 0))[0]
     : undefined
   const markSeen = () => { const next = [...seen, doneKey].slice(-50); setSeen(next); try { localStorage.setItem('creator.rewrite-seen', JSON.stringify(next)) } catch {} }
-  // 改文章只写表，手机上（不在 Annulo 里）也能改；让 AI 改、发布这些按钮自己会在 Annulo 外灰掉
+  // 改文章只写表，手机上（不在 Annulo 里）也能改；AI 修改、发布这些按钮自己会在 Annulo 外灰掉
   const locked = !!busy || revising.length > 0
   const fromRow = () => draftOf(a)
   const loadDraft = (d: ArticleDraft) => {
