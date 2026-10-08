@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } fro
 import { Copy, FileText, Pencil, Plus, Search, Trash2, Upload, Video } from 'lucide-react'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls } from '../ui'
 import { dbCreate, dbDelete, dbList, dbPatch, shuttleImage, type Asset, type AssetKind } from '../../lib/shuttle'
+import { usePasteFiles } from '../../lib/usePasteFiles'
 import { ACCEPT_UPLOAD, ASSET_KINDS, assetTags, filterAssets, kindOfUrl, nameOfUrl, splitTags, uploadAssets, type UploadItem } from '../../lib/assets'
 import UploadProgress from '../UploadProgress'
 import Lightbox from '../Lightbox'
@@ -58,6 +59,8 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
       load()
     }
   }
+  // 在页面上粘贴截图、复制的图片就上传（同拖进来）
+  usePasteFiles(!uploading, upload, /^(image|video)\//)
   // 把文件拖到页面上任意位置就上传
   const onDragOver = (e: DragEvent) => {
     if (!e.dataTransfer.types.includes('Files')) return

@@ -4,6 +4,7 @@ import { Button, Dialog, Notice, Skeleton, cx, inputCls } from './ui'
 import { dbList, shuttleImage, type Asset, type AssetKind } from '../lib/shuttle'
 import { assetTags, filterAssets, uploadAssets, type UploadItem } from '../lib/assets'
 import UploadProgress from './UploadProgress'
+import { usePasteFiles } from '../lib/usePasteFiles'
 import { tr } from '../lib/i18n'
 
 /** 从素材库选图片（或视频）：多选，确定后把地址交给 onPick。也能当场上传，传完直接选中 */
@@ -49,6 +50,8 @@ export default function AssetPicker({ open, kind = 'image', max, onClose, onPick
       setUploading(false)
     }
   }
+  // 打开时能直接粘贴截图、复制的图片：上传进资料库并选上（同上传按钮）
+  usePasteFiles(open && kind === 'image' && !uploading, upload)
 
   return (
     <Dialog

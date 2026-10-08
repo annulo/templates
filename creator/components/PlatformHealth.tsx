@@ -41,8 +41,12 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
       {broken.map(({ a, r }) => {
         const post = r.op === 'publish' || r.op === 'remove' ? r.post_id || posts?.find((p) => p.channel_id === a.id && p.status === 'failed' && p.error === r.error)?.id : ''
         return (
-        <div key={a.id} className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm sm:flex-row sm:items-center">
-          <div className="min-w-0 flex-1">
+        // 上下布局：说明在上（报错常常很长），操作在下面一行，关闭在右上角
+        <div key={a.id} className="relative rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 pr-10 text-sm">
+          <Button size="sm" variant="ghost" className="absolute top-1.5 right-1.5" title={tr('common.close')} aria-label={tr('common.close')} onClick={() => dbPatch('social_health', r.id, { dismissed_at: new Date().toISOString() }).then(onChanged)}>
+            <X />
+          </Button>
+          <div className="min-w-0">
             <div className="flex items-center gap-1.5 font-medium text-destructive">
               {(() => {
                 // 带上平台：同名账号可能在好几个平台都有
@@ -59,7 +63,10 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
               {tr('health.when', { when: fmtTime(r.checked_at ?? ''), n: r.fails ?? 1 })}
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-1">
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            <TaskButton task={FIX_TASK} input={{ channel_id: a.id }} match={(run) => run.input?.channel_id === a.id} icon={Wrench} onFinished={onChanged}>
+              {tr('health.fix')}
+            </TaskButton>
             <RunButton inline watch fn="social/social.probe" input={{ channel_id: a.id }} icon={Stethoscope} variant="outline" onDone={onChanged}>
               {tr('health.probe_again')}
             </RunButton>
@@ -69,12 +76,6 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
                 {tr('health.view_post')}
               </Button>
             )}
-            <TaskButton task={FIX_TASK} input={{ channel_id: a.id }} match={(run) => run.input?.channel_id === a.id} icon={Wrench} onFinished={onChanged}>
-              {tr('health.fix')}
-            </TaskButton>
-            <Button size="sm" variant="ghost" title={tr('common.close')} aria-label={tr('common.close')} onClick={() => dbPatch('social_health', r.id, { dismissed_at: new Date().toISOString() }).then(onChanged)}>
-              <X />
-            </Button>
           </div>
         </div>
         )

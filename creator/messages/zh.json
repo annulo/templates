@@ -80,6 +80,7 @@
     "pub_show_wait": "这一步还没打开浏览器，过一会儿再点",
     "pub_show_old": "这一版 Annulo 还不能调出发布窗口：先更新 Annulo",
     "open_account_data": "去「数据表现」看这个账号：打开主页、重新采集",
+    "paste_hint": "也可以直接粘贴图片",
     "t_article_desc": "标题 + 富文本正文，小标题、列表、图片插在正文里。",
     "pub_hint": "勾选要发的账号（可以多选）。文章原样发出去；发出去以后再改文章，不影响已经发出去的。",
     "pub_rewrite_hint": "灰掉的账号不发{type}，可以先改写成它支持的类型。",
@@ -142,6 +143,13 @@
     "generate": "生成",
     "generate_n": "生成 {n} 篇",
     "writing": "写作中"
+  },
+  "choose_accounts": {
+    "desc": "这个 Facebook 账号管理着下面这些主页。勾选要在这个项目里运营的（可以只勾一个主页，别的项目再登录时勾别的）。",
+    "personal": "个人主页",
+    "page": "公共主页",
+    "added": "已添加",
+    "add": "添加所选（{n}）"
   },
   "common": {
     "just_now": "刚刚",

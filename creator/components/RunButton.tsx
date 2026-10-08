@@ -118,12 +118,16 @@ export default function RunButton({
     )
   }
   return (
-    <span className="inline-flex max-w-full min-w-0 flex-col items-center gap-1.5">
-      <Button feedback={false} variant={variant} size={size} className={className} disabled={!ok || !!prog} title={ok ? (prog?.message ?? undefined) : tr('ui.run_offline')} onClick={start}>
-        {prog ? <Loader2 className="animate-spin" /> : done ? <Check /> : <Icon />}
-        {prog ? (prog.total ? `${prog.done ?? 0}/${prog.total}` : tr('ui.running')) : done ? tr('ui.done') : children}
-      </Button>
-      {prog?.message && <span className="inline-flex max-w-sm items-center gap-1 text-center text-xs text-balance text-muted-foreground">{prog.message}{watching}</span>}
+    // 按钮和「打开看 / 停止」一行，进度说明在下面左对齐（之前说明居中折行、看停按钮跟在文字后面，弹窗里看着散）
+    <span className="inline-flex max-w-full min-w-0 flex-col items-start gap-1.5">
+      <span className="inline-flex max-w-full min-w-0 items-center gap-1">
+        <Button feedback={false} variant={variant} size={size} className={className} disabled={!ok || !!prog} title={ok ? (prog?.message ?? undefined) : tr('ui.run_offline')} onClick={start}>
+          {prog ? <Loader2 className="animate-spin" /> : done ? <Check /> : <Icon />}
+          {prog ? (prog.total ? `${prog.done ?? 0}/${prog.total}` : tr('ui.running')) : done ? tr('ui.done') : children}
+        </Button>
+        {watching}
+      </span>
+      {prog?.message && <span className="max-w-sm text-xs leading-relaxed text-muted-foreground">{prog.message}</span>}
       {err && (
         <span className="w-64 min-w-0 max-w-full"><ErrorDetails message={err} actions={settingsLink} /></span>
       )}

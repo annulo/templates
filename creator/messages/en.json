@@ -80,6 +80,7 @@
     "pub_show_wait": "The browser isn't open at this step yet; try again in a moment",
     "pub_show_old": "This Annulo can't show the publishing window yet: update Annulo first",
     "open_account_data": "Open this account in Performance: open its profile, collect again",
+    "paste_hint": "or paste an image",
     "t_article_desc": "Title + rich text with headings, lists and images in the text.",
     "pub_hint": "Pick the accounts to post to (any number). The article goes out as it is; editing it later doesn't change what's already posted.",
     "pub_rewrite_hint": "Greyed-out accounts don't take this type ({type}); rewrite it into a type they do.",
@@ -142,6 +143,13 @@
     "generate": "Generate",
     "generate_n": "Generate {n}",
     "writing": "Writing"
+  },
+  "choose_accounts": {
+    "desc": "This Facebook account manages the Pages below. Pick the ones to run in this project (you can pick just one Page and pick others when you sign in from another project).",
+    "personal": "Personal profile",
+    "page": "Page",
+    "added": "Added",
+    "add": "Add selected ({n})"
   },
   "common": {
     "just_now": "just now",

@@ -12,7 +12,7 @@
     "social": "https://github.com/annulo/plugins#social"
   },
   "plugins_min": {
-    "social": "0.5.1"
+    "social": "0.6.0"
   },
   "assistant": {
     "intro": {

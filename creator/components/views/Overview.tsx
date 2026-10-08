@@ -4,7 +4,7 @@ import { Button, Notice, Panel, Skeleton, cx, fmtTime } from '../ui'
 import { dbList, type SocialPost, type Article, type Topic, runLocal, shuttleImage, type Channel, type PlatformHealth } from '../../lib/shuttle'
 import { CHANNEL_TYPES } from '../../lib/channels'
 import { fmtNum } from '../../lib/format'
-import type { Ctx } from './types'
+import type { Ctx, View } from './types'
 import type { Report } from '../../lib/shuttle'
 import { byPeriod } from './Reports'
 import { tr } from '../../lib/i18n'
@@ -192,6 +192,14 @@ function TodayWork({ ctx, pending, broken, health }: { ctx: Ctx; pending: Articl
   const rowClass = 'grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-center gap-x-2.5 gap-y-2 py-3 @min-[400px]/work:grid-cols-[2rem_minmax(0,1fr)_auto]'
   // 有的行能关掉、有的不能：不能关的也占一个同样大小的空位，各行的按钮右边对齐
   const noDismiss = <span aria-hidden className="size-[22px] shrink-0" />
+  // 每行的文字都能点进对应的地方：文章 → 那篇文章，社媒要修 → 那个账号，其余照这条的动作去的页面（周报 → 每周总结）
+  const linkClass = 'min-w-0 cursor-pointer rounded-md text-left outline-none hover:[&_.row-title]:text-primary-text focus-visible:ring-2 focus-visible:ring-ring'
+  const openItem = (item: ChecklistItem): (() => void) | undefined => {
+    if (item.key === 'd_posts') return () => (pending[0] ? ctx.go('content', { article: pending[0].id }) : ctx.go('content', { tab: 'articles' }))
+    if (item.action.kind === 'go') { const a = item.action; return () => ctx.go(a.view as View, a.params) }
+    if (item.key === 'd_weekly') return () => ctx.go('reports')
+    return undefined
+  }
   const actionClass = 'col-start-2 flex min-w-0 items-center gap-1 justify-self-start @min-[400px]/work:col-start-auto @min-[400px]/work:justify-self-end'
   return <section className="@container/work flex min-w-0 flex-col">
     <div className="mb-2 flex min-w-0 items-center justify-between gap-2"><h2 className="shrink-0 text-lg font-semibold">{tr('overview.today_work')}</h2><div className="flex min-w-0 items-center gap-1">{data && <span className="truncate text-xs text-muted-foreground">{tr('overview.todo_count', { n: daily.length + added })}</span>}{shuttle && <button type="button" onClick={refresh} disabled={refreshing} aria-label={tr('overview.refresh')} title={tr('overview.refresh')} className="cursor-pointer rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50">{refreshing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}</button>}</div></div>
@@ -201,16 +209,16 @@ function TodayWork({ ctx, pending, broken, health }: { ctx: Ctx; pending: Articl
       {!shuttle && !data && !error ? <div className="py-4"><Notice>{tr('today.offline')}</Notice></div> : error && !data ? null : !data ? <div className="space-y-3 py-4"><Skeleton className="h-10" /><Skeleton className="h-10" /></div> : daily.length + added === 0 ? <p className="py-4 text-sm leading-relaxed text-muted-foreground">{tr(data.done === data.total ? 'today.daily_empty' : 'today.daily_empty_setup')}</p> : <div className="divide-y divide-border">
         {daily.map((item) => <div key={item.key} className={rowClass}>
           <span className="flex size-8 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">{item.key === 'd_posts' ? <FileText className="size-4" /> : <MessagesSquare className="size-4" />}</span>
-          <div className="min-w-0">
+          <button type="button" onClick={openItem(item)} disabled={!openItem(item)} className={`${linkClass} disabled:cursor-default`}>
             {item.key === 'd_posts' && <div className="mb-0.5 text-xs text-muted-foreground">{tr('overview.content_review')}</div>}
-            <div title={item.key === 'd_posts' && pending[0] ? pending[0].title : item.title} className="truncate text-sm leading-relaxed font-medium">{item.key === 'd_posts' && pending[0] ? pending[0].title : item.title}</div>
+            <div title={item.key === 'd_posts' && pending[0] ? pending[0].title : item.title} className="row-title truncate text-sm leading-relaxed font-medium">{item.key === 'd_posts' && pending[0] ? pending[0].title : item.title}</div>
             <p className="mt-0.5 truncate text-xs leading-relaxed text-muted-foreground" title={item.why}>{item.key === 'd_posts' && pending[0] ? `${TYPE_META[typeOf(pending[0])].label} · ${tr('overview.awaiting_review')} · ${fmtTime(pending[0].updated_at || pending[0].created_at)}${pending.length > 1 ? ' · ' + tr('overview.review_more', { n: pending.length - 1 }) : ''}` : item.why}</p>
-          </div>
+          </button>
           <div className={actionClass}><ChecklistItemAction compact ctx={ctx} it={item} onDone={ctx.checklist.load} onChat={() => {}} /><button type="button" onClick={() => dismiss(item)} aria-label={tr('today.dismiss')} title={tr('today.dismiss')} className="cursor-pointer rounded-md p-1 text-muted-foreground/50 hover:bg-accent hover:text-foreground"><X className="size-3.5" /></button></div>
         </div>)}
         {broken.map((channel) => { const problem = brokenOf(health, channel.id).find((row) => row.op === 'publish' || row.op === 'probe'); return <div key={channel.id} className={rowClass}>
           <span className="flex size-8 items-center justify-center"><span className="size-2.5 rounded-full bg-amber-500" /></span>
-          <div className="min-w-0"><div className="truncate text-sm leading-relaxed font-medium" title={tr('overview.social_repair')}>{tr('overview.social_repair')}</div><p className="mt-0.5 truncate text-xs leading-relaxed text-muted-foreground" title={`${channel.name} · ${CHANNEL_TYPES[channel.type]?.label}${problem?.error ? ` · ${problem.error}` : ''}`}>{channel.name} · {CHANNEL_TYPES[channel.type]?.label}{problem?.error ? ` · ${problem.error}` : ''}</p></div>
+          <button type="button" onClick={() => ctx.go('channels', { channel: channel.id })} className={linkClass}><div className="row-title truncate text-sm leading-relaxed font-medium" title={tr('overview.social_repair')}>{tr('overview.social_repair')}</div><p className="mt-0.5 truncate text-xs leading-relaxed text-muted-foreground" title={`${channel.name} · ${CHANNEL_TYPES[channel.type]?.label}${problem?.error ? ` · ${problem.error}` : ''}`}>{channel.name} · {CHANNEL_TYPES[channel.type]?.label}{problem?.error ? ` · ${problem.error}` : ''}</p></button>
           <div className={actionClass}><TaskButton task={FIX_TASK} input={{ channel_id: channel.id }} match={(run) => run.input?.channel_id === channel.id} variant="outline" onFinished={ctx.checklist.load}>{tr('overview.fix_social')}</TaskButton>{noDismiss}</div>
         </div>})}
       </div>}

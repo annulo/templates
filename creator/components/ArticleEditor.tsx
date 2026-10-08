@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Loader2, Plus, Upload, X } from 'lucide-react'
 import AssetPicker from './AssetPicker'
+import UploadProgress from './UploadProgress'
 import Lightbox from './Lightbox'
 import RichEditor from './RichEditor'
 import VideoField from './VideoField'
@@ -9,7 +10,9 @@ import { Field, cx, inputCls } from './ui'
 import { typePlatforms } from './ArticleTypes'
 import { CHANNEL_TYPES } from '../lib/channels'
 import { tr } from '../lib/i18n'
-import { videoSrc, type Article } from '../lib/shuttle'
+import { dbList, videoSrc, type Article, type Asset } from '../lib/shuttle'
+import { uploadAssets, type UploadItem } from '../lib/assets'
+import { usePasteFiles } from '../lib/usePasteFiles'
 import { FIELDS } from '../plugins/social/local/_fields'
 import { parseList, tagsOf, typeOf, type ArticleType } from '../local/_types'
 
@@ -60,9 +63,28 @@ export function ArticleEditor({ type, draft, setDraft, editorKey }: { type: Arti
   </div>
 }
 
-/** 图文笔记的配图：从资料库选，拖动排序（第一张是封面），点开看大图 */
+/** 图文笔记的配图：从资料库选、上传本机图片或直接粘贴，拖动排序（第一张是封面），点开看大图 */
 function ImagesField({ images, max, hint, onChange }: { images: string[]; max: number; hint: string; onChange: (l: string[]) => void }) {
   const [picking, setPicking] = useState(false)
+  // 本机图片：上传按钮、直接粘贴（截图、复制的图片），都先进资料库（uploadAssets），再加到配图里
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [uploads, setUploads] = useState<UploadItem[]>([])
+  const [uploading, setUploading] = useState(false)
+  const upload = async (files: File[]) => {
+    const room = max - images.length
+    if (!files.length || room <= 0) return
+    setUploading(true)
+    try {
+      const existing = await dbList('assets').catch(() => [] as Asset[])
+      const urls = (await uploadAssets(files.slice(0, room), existing, setUploads)).flatMap((x) => (x.asset?.url ? [x.asset.url] : []))
+      onChange([...images, ...urls.filter((u) => !images.includes(u))].slice(0, max))
+      setUploads((l) => l.filter((x) => x.status === 'failed'))
+    } finally {
+      setUploading(false)
+    }
+  }
+  // 「从资料库选」弹窗开着时它自己接粘贴，这里不接，免得传两遍
+  usePasteFiles(!picking && !uploading && images.length < max, upload)
   const [dragFrom, setDragFrom] = useState<number | null>(null)
   const [zoom, setZoom] = useState('')
   const move = (from: number, to: number) => { const n = [...images]; const [x] = n.splice(from, 1); n.splice(to, 0, x); onChange(n) }
@@ -76,7 +98,13 @@ function ImagesField({ images, max, hint, onChange }: { images: string[]; max: n
         {i === 0 && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">{tr('article.cover')}</span>}
         <button type="button" aria-label={tr('social.remove_image')} onClick={() => onChange(images.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-foreground text-background opacity-80 hover:opacity-100"><X className="size-3" /></button>
       </div>)}</div>}
-      {images.length < max && <button type="button" onClick={() => setPicking(true)} className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-border px-3 text-xs hover:bg-accent"><Plus className="size-3.5" />{tr('social.pick_assets')}</button>}
+      {images.length < max && <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => setPicking(true)} className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-border px-3 text-xs hover:bg-accent"><Plus className="size-3.5" />{tr('social.pick_assets')}</button>
+        <input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={(e) => { upload([...(e.target.files ?? [])]); e.target.value = '' }} />
+        <button type="button" disabled={uploading} onClick={() => fileRef.current?.click()} className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-border px-3 text-xs hover:bg-accent disabled:cursor-default disabled:opacity-50">{uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}{uploading ? tr('ui.uploading') : tr('ui.upload')}</button>
+        <span className="text-xs text-muted-foreground">{tr('article.paste_hint')}</span>
+      </div>}
+      <UploadProgress items={uploads} />
     </div>
     {zoom && <Lightbox src={zoom} onClose={() => setZoom('')} />}
     <AssetPicker open={picking} kind="image" max={max - images.length} onClose={() => setPicking(false)} onPick={(urls) => { onChange([...images, ...urls.filter((u) => !images.includes(u))].slice(0, max)); setPicking(false) }} />

@@ -5,6 +5,7 @@ import { CHANNEL_TYPES } from '../lib/channels'
 import { CHANNELS } from '../lib/edition'
 import { SOCIAL } from '../lib/social'
 import RunButton from './RunButton'
+import ChooseAccounts, { type Choose } from './ChooseAccounts'
 import { Button, cx } from './ui'
 import { tr } from '../lib/i18n'
 
@@ -12,6 +13,7 @@ import { tr } from '../lib/i18n'
 export default function AddChannelDialog({ onClose, onAdded, allowedTypes = CHANNELS }: { onClose: () => void; onAdded: (key: string) => void; initialUrl?: string; allowedTypes?: ChannelType[] }) {
   const ref = useRef<HTMLDialogElement>(null)
   const [type, setType] = useState<ChannelType | null>(null)
+  const [choose, setChoose] = useState<Choose | null>(null) // 登录后待勾选的账号（ChooseAccounts）
   useEffect(() => {
     ref.current?.showModal()
   }, [])
@@ -25,7 +27,7 @@ export default function AddChannelDialog({ onClose, onAdded, allowedTypes = CHAN
       <div className="flex max-h-[min(80vh,640px)] flex-col">
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
           {type && (
-            <Button variant="ghost" size="icon-sm" onClick={() => setType(null)} aria-label={tr('add_channel.back')} className="-ml-2 text-muted-foreground">
+            <Button variant="ghost" size="icon-sm" onClick={() => (setType(null), setChoose(null))} aria-label={tr('add_channel.back')} className="-ml-2 text-muted-foreground">
               <ArrowLeft />
             </Button>
           )}
@@ -93,9 +95,14 @@ export default function AddChannelDialog({ onClose, onAdded, allowedTypes = CHAN
           // 其余社媒平台（B 站、抖音…）：同样弹浏览器登录。登录都走 social.login（记下是在这台电脑登录的）
           <div className="space-y-3 p-4 text-sm">
             <p className="text-muted-foreground">{tr('add_channel.social_desc', { hint: SOCIAL[type]!.loginHint })}</p>
-            <RunButton watch fn="social/social.login" input={{ type }} onDone={() => onAdded(type)}>
-              {tr('add_channel.social_login', { name: SOCIAL[type]!.label })}
-            </RunButton>
+            {choose ? (
+              <ChooseAccounts choose={choose} onAdded={() => onAdded(type)} />
+            ) : (
+              // 登录后可能要先勾选（Facebook 管理着主页时返回 choose：个人号、每个主页让用户挑），没有就是已经添加好了
+              <RunButton watch fn="social/social.login" input={{ type }} onDone={(r) => { const c = (r as { choose?: Choose } | null)?.choose; if (c) setChoose(c); else onAdded(type) }}>
+                {tr('add_channel.social_login', { name: SOCIAL[type]!.label })}
+              </RunButton>
+            )}
           </div>
         ) : null}
       </div>
