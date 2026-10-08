@@ -25,7 +25,7 @@ description: 内容生产：出选题、按项目资料写文章（长文、图�
 annulo run publish.prepare --input '{"article_id":"<id>","channel_ids":["<账号 id>"]}'
 ```
 
-`problems` 里是没通过平台规格检查的账号（照着改文章再发）；`ready` 里每条再 `annulo run social/social.publish --input '{"post_id":"<post_id>"}'` 发出去（要排期就传 `scheduled_at`，到点自动发，不用再调 publish）。
+`problems` 里是没通过平台规格检查的账号（照着改文章再发）；`ready` 里每条再 `annulo run social/social.publish --input '{"post_id":"<post_id>"}'` 发出去（要排期就传 `scheduled_at`，到点自动发，不用再调 publish；网站也一样，到点由定时任务 `publishing.publishScheduled` 发）。
 没审核过、用户没明确要求，**不要发布**。
 
 ## 出选题

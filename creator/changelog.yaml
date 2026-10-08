@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.11.0
+  zh: 排期的帖子到点发的是文章那时的内容：排期之后改了文章也不用取消重排；排期改由 Annulo 准时发（到点一分钟内）。需要 Annulo 新版本。
+  en: "Scheduled posts go out with the article as it is at that moment, so you can keep editing after scheduling; Annulo now publishes them right on time (within a minute). Needs the latest Annulo."
 - version: 0.10.2
   zh: 社媒平台的图标换成彩色的品牌 logo。改写成新文章时「改写要求」可以不填，不填就按目标类型的常规写法改；管理预设的编辑框里类型和要求都有了标签。
   en: Social platforms now show their full-color brand logos. When rewriting into a new article, instructions are optional — leave them empty to rewrite in the usual style for that type; the preset editor labels the type and instructions.

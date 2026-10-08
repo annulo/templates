@@ -18,7 +18,7 @@ function JobLine({ job }: { job?: PublishJob }) {
 import { CHANNEL_TYPES } from '../lib/channels'
 import { fmtNum } from '../lib/format'
 import { tr } from '../lib/i18n'
-import { dbPatch, isSite, openChat, runLocal, runTask, shuttleImage, type Article, type Channel, type Publication, type SocialPost } from '../lib/shuttle'
+import { dbDelete, dbPatch, isSite, openChat, runLocal, runTask, shuttleImage, type Article, type Channel, type Publication, type SocialPost } from '../lib/shuttle'
 import { SOCIAL, loggedInElsewhere, useElsewhere } from '../lib/social'
 import { FIELDS } from '../plugins/social/local/_fields'
 import { lengthOn, supports } from '../local/_types'
@@ -26,7 +26,8 @@ import type { Ctx } from './views/types'
 
 // 文章的发布：一篇文章就是要发的内容，「发布」里勾选支持这种类型的账号（可以多选），现在发或者定个时间；
 // 每个账号一条发布记录（社媒插件的 social_posts，article_id 指回文章），记录里看发没发出去、链接、互动数据。
-// 有网站的模板（外贸）：网站（creght 站点、WordPress）只发长文、不能排期，跑网站自己的发布脚本 <publisher>.publish，记录在 publications；再发就是更新。
+// 有网站的模板（外贸）：网站（creght 站点、WordPress）只发长文，跑网站自己的发布脚本 <publisher>.publish，记录在 publications；再发就是更新。
+// 网站也能排期：发布记录记上 scheduled_at，到点由定时任务 publishing.publishScheduled 发（发过的是更新）。
 // 没有网站的模板（自媒体）渠道里没有网站、publications 是空的，这些分支都走不到。
 
 /** 让助手给一个网站配置（或修）文章发布：任务 setup-publish（有网站的模板才有），开一段对话、在右侧打开 */
@@ -68,9 +69,9 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
   const [error, setError] = useState('')
   useEffect(() => { if (open) { setPicked([]); setResult({}); setError(''); setWhen('now'); setAt(nextHour()) } }, [open])
 
-  // 不能选的原因：平台不支持这种类型、网站没配好发布或选了排期、登录在别的电脑、登录过期
+  // 不能选的原因：平台不支持这种类型、网站没配好发布、登录在别的电脑、登录过期
   const blocked = (ch: Channel) => !takes(ch) ? tr('article.pub_unsupported', { type: TYPE_META[t].label })
-    : isSite(ch) ? (ch.publish_status !== 'ready' || !ch.publisher ? tr('article.pub_site_setup') : when === 'later' ? tr('article.pub_site_no_schedule') : '')
+    : isSite(ch) ? (ch.publish_status !== 'ready' || !ch.publisher ? tr('article.pub_site_setup') : '')
     : loggedInElsewhere(ch, machine) ? tr('social.on_machine', { name: loggedInElsewhere(ch, machine) })
     : ch.login_status === 'expired' ? tr('article.pub_expired') : ''
   const usable = accounts.filter((ch) => !blocked(ch))
@@ -179,13 +180,16 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
             <span className="block truncate text-xs text-muted-foreground">{ch ? CHANNEL_TYPES[ch.type]?.label : ''}{p.published_at ? ` · ${fmtTime(p.published_at)}` : ''}</span>
           </span>
           {p.url && p.status === 'published' && <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text">{tr('content.view_live')}<ArrowUpRight className="size-3" /></a>}
-          <Badge tone={statusTone(p.status)}>{p.status === 'published' ? tr('versions.published') : p.status === 'failed' ? tr('versions.failed') : p.status === 'publishing' ? tr('meta.social_status.publishing') : tr('versions.draft')}</Badge>
+          <Badge tone={statusTone(p.status)}>{p.status === 'published' ? tr('versions.published') : p.status === 'failed' ? tr('versions.failed') : p.status === 'publishing' ? tr('meta.social_status.publishing') : p.status === 'scheduled' ? tr('meta.social_status.scheduled') : tr('versions.draft')}</Badge>
         </div>
+        {p.scheduled_at && p.status !== 'publishing' && <ScheduledLine at={p.scheduled_at} fromArticle />}
         <JobLine job={jobOf(`${p.article_id}:${p.channel_id}`)} />
         {!jobOf(`${p.article_id}:${p.channel_id}`) && p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
         {ch && !jobOf(`${p.article_id}:${p.channel_id}`) && <div className="flex flex-wrap items-center gap-2">
-          {ready ? <Button size="sm" variant="outline" fn={`${ch.publisher}.publish`} disabled={!!busy} onClick={() => resend(ch)}>{busy === 'site' + ch.id ? <Loader2 className="animate-spin" /> : <Send />}{p.status === 'published' ? tr('publish.update') : tr('article.retry')}</Button>
+          {ready ? <Button size="sm" variant="outline" fn={`${ch.publisher}.publish`} disabled={!!busy} onClick={() => resend(ch)}>{busy === 'site' + ch.id ? <Loader2 className="animate-spin" /> : <Send />}{p.status === 'published' ? tr('publish.update') : p.status === 'scheduled' ? tr('social.publish_now') : tr('article.retry')}</Button>
             : <Button size="sm" variant="outline" needsShuttle onClick={() => void setupPublish(ch.id)}>{tr('publish.setup')}</Button>}
+          {/* 排了期的改时间、取消：没发过的取消就删掉这条记录，发过的只清掉排期 */}
+          {p.scheduled_at && ready && <SchedulePopover size="sm" current={p.scheduled_at} onSchedule={(iso) => dbPatch('publications', p.id, { scheduled_at: iso }).then(onChanged)} onUnschedule={() => (p.status === 'scheduled' ? dbDelete('publications', p.id) : dbPatch('publications', p.id, { scheduled_at: '' })).then(onChanged)} />}
           {p.status === 'failed' && ready && <Button size="sm" variant="ghost" needsShuttle onClick={() => void setupPublish(ch.id, p.error)}>{tr('publish.fix')}</Button>}
         </div>}
       </div>
@@ -208,7 +212,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
             {p.post_url && p.status === 'published' && <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text">{tr('content.view_live')}<ArrowUpRight className="size-3" /></a>}
             {jobOf(p.id) ? <Badge tone="primary">{jobOf(p.id)!.state === 'running' ? tr('meta.social_status.publishing') : tr('article.pub_queued')}</Badge> : <Badge tone={statusTone(p.status)}>{tr(`meta.social_status.${p.status}`)}</Badge>}
           </div>
-          {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} />}
+          {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} fromArticle />}
           <JobLine job={jobOf(p.id)} />
           {!jobOf(p.id) && p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
           {p.status !== 'published' && p.status !== 'removed' && !jobOf(p.id) && <div className="flex flex-wrap items-center gap-2">

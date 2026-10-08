@@ -14,8 +14,11 @@ function localInput(iso?: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-/** 已排期的那一行字：「2 小时 15 分钟后（10月7日 17:00）自动发布」，每 30 秒刷新；过了时间还没发出去时说明会补发 */
-export function ScheduledLine({ at, className }: { at?: string; className?: string }) {
+/**
+ * 已排期的那一行字：「2 小时 15 分钟后（10月7日 17:00）自动发布」，每 30 秒刷新；过了时间还没发出去时说明会补发。
+ * fromArticle：出自文章的（社媒帖子有 article_id、网站发布记录），到点按文章那时的内容发，多说一句
+ */
+export function ScheduledLine({ at, className, fromArticle }: { at?: string; className?: string; fromArticle?: boolean }) {
   const [, tick] = useState(0)
   useEffect(() => {
     const t = setInterval(() => tick((x) => x + 1), 30_000)
@@ -23,7 +26,7 @@ export function ScheduledLine({ at, className }: { at?: string; className?: stri
   }, [])
   const u = fmtUntil(at)
   if (!u) return null
-  return <p className={className ?? 'text-xs text-muted-foreground'}>{u.due ? tr('versions.scheduled_due', { at: u.at }) : tr('versions.scheduled_in', { rel: u.rel, at: u.at })}</p>
+  return <p className={className ?? 'text-xs text-muted-foreground'}>{u.due ? tr('versions.scheduled_due', { at: u.at }) : tr('versions.scheduled_in', { rel: u.rel, at: u.at })}{fromArticle && !u.due ? tr('versions.scheduled_latest') : ''}</p>
 }
 
 /**

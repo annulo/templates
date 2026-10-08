@@ -59,7 +59,6 @@
     "open_rewritten": "Open it",
     "dismiss": "Dismiss",
     "new_badge": "New",
-    "pub_site_no_schedule": "Websites can't be scheduled: choose Publish now",
     "pub_site_setup": "This website's article publishing isn't set up yet",
     "pub_site_update": "Published: publishing again updates it on the site",
     "deleted": "Deleted \"{title}\"",
@@ -1469,7 +1468,8 @@
     "rewrite_ph": "For example: a punchier title; lead with the conclusion; drop the third paragraph; add another image",
     "rewrite_submit": "Rewrite",
     "schedule_confirm": "Schedule",
-    "scheduled_in": "Scheduled: publishes in {rel} ({at}). Unschedule it (in the schedule button) to edit.",
+    "scheduled_in": "Scheduled: publishes in {rel} ({at}).",
+    "scheduled_latest": " It goes out with the article as it is then, so you can keep editing.",
     "scheduled_due": "Scheduled time passed ({at}): it goes out within a few minutes while Annulo is open, or click Publish now.",
     "scheduled_btn": "Scheduled {at}",
     "reschedule_confirm": "Move to this time"

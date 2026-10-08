@@ -59,7 +59,6 @@
     "open_rewritten": "打开新文章",
     "dismiss": "知道了",
     "new_badge": "新",
-    "pub_site_no_schedule": "网站不能排期：选「立即发布」",
     "pub_site_setup": "还没配好这个网站的文章发布",
     "pub_site_update": "发过：再发会更新网站上那篇",
     "deleted": "已删除「{title}」",
@@ -1469,7 +1468,8 @@
     "rewrite_ph": "比如：标题再抓人一点；开头直接说结论；删掉第三段；多配一张图",
     "rewrite_submit": "开始改写",
     "schedule_confirm": "确定排期",
-    "scheduled_in": "已排期：{rel}后（{at}）自动发布。要改内容先在排期里取消。",
+    "scheduled_in": "已排期：{rel}后（{at}）自动发布。",
+    "scheduled_latest": "发的是到时候文章的内容，排期后还能改文章。",
     "scheduled_due": "已到排期时间（{at}）：Annulo 开着时几分钟内会发出去，也可以点「立即发布」。",
     "scheduled_btn": "已排期 {at}",
     "reschedule_confirm": "改到这个时间"

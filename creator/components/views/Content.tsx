@@ -44,7 +44,7 @@ type WriteInput = { topic_id?: string; subject?: string; channel_id?: string }
 async function removeArticle(a: Article, posts: SocialPost[], pubs: Publication[]) {
   const mine = posts.filter((p) => p.article_id === a.id)
   const sites = pubs.filter((p) => p.article_id === a.id)
-  if (mine.some((p) => ['published', 'publishing', 'scheduled'].includes(p.status)) || sites.some((p) => p.status === 'published' || p.status === 'publishing')) throw new Error(tr('article.delete_published'))
+  if (mine.some((p) => ['published', 'publishing', 'scheduled'].includes(p.status)) || sites.some((p) => p.status === 'published' || p.status === 'publishing' || !!p.scheduled_at)) throw new Error(tr('article.delete_published'))
   for (const p of mine) await dbDelete('social_posts', p.id)
   for (const p of sites) await dbDelete('publications', p.id)
   await dbDelete('articles', a.id)

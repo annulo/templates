@@ -411,7 +411,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
             {p.metrics_at && <span>{tr('social.metrics_at', { when: fmtTime(p.metrics_at) })}</span>}
           </div>
         )}
-        {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} />}
+        {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} fromArticle={!!p.article_id} />}
         {!publishingNow && (p.status === 'failed' || (p.status === 'scheduled' && p.error)) && p.error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{p.error}</div>}
         {p.status === 'publishing' && <div className="text-xs text-muted-foreground">{tr('social.stuck_hint')}</div>}
         {p.status === 'removed' && <div className="text-xs text-muted-foreground">{tr('social.removed_from', { when: p.removed_at ? fmtTime(p.removed_at) : '', p: pf.label })}</div>}

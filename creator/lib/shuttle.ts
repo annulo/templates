@@ -304,7 +304,7 @@ export type Article = {
 }
 
 /** 网站的发布记录（publications 表，有网站的模板才有）。共用的内容中心（core/）按它显示网站，这个模板没有网站时表不存在、读出来是空的 */
-export type Publication = { id: string; article_id: string; channel_id: string; status: 'draft' | 'publishing' | 'published' | 'failed'; title?: string; summary?: string; body?: string; video?: string; keywords?: string; slug?: string; cms_id?: string; url?: string; error?: string; published_at?: string; updated_at?: string }
+export type Publication = { id: string; article_id: string; channel_id: string; status: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed'; scheduled_at?: string; title?: string; summary?: string; body?: string; video?: string; keywords?: string; slug?: string; cms_id?: string; url?: string; error?: string; published_at?: string; updated_at?: string }
 /** 网站渠道（creght 站点、WordPress）；这个模板没有网站，永远是 false */
 export const isSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress')
 
