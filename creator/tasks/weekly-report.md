@@ -16,7 +16,7 @@ annulo run reports.data --input '{"days":7}'
 
 - `period_start` / `period_end`：这一期的周期（截到今天的近 7 天），存的时候原样用；
 - `channels.social`：每个社媒账号的粉丝、粉丝增量、这一期的浏览 / 点赞 / 评论增量、表现好的几条；`failed` 是读失败的；
-- `content`：这一期发出去的帖子条数（按账号分），还有多少在待审；
+- `content`：这一期发出去的帖子条数（按账号分），还有多少篇写好了还没发（`unpublished`）；
 - `previous_report`：上一期总结的 summary、highlights、suggestions，没有就是 null。
 
 ## 2. 怎么写
