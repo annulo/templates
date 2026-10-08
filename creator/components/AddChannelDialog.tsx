@@ -71,21 +71,21 @@ export default function AddChannelDialog({ onClose, onAdded, allowedTypes = CHAN
           // 对话框里只有这一个按钮，不用 inline：进度（「已经打开浏览器窗口，请在窗口里登录…」）完整写在按钮下面
           <div className="space-y-3 p-4 text-sm">
             <p className="text-muted-foreground">{tr('add_channel.xhs_desc')}</p>
-            <RunButton fn="social/social.login" input={{ type: 'xiaohongshu' }} onDone={() => onAdded('xiaohongshu')}>
+            <RunButton watch fn="social/social.login" input={{ type: 'xiaohongshu' }} onDone={() => onAdded('xiaohongshu')}>
               {tr('add_channel.xhs_login')}
             </RunButton>
           </div>
         ) : type === 'linkedin' ? (
           <div className="space-y-3 p-4 text-sm">
             <p className="text-muted-foreground">{tr('add_channel.linkedin_desc')}</p>
-            <RunButton fn="social/social.login" input={{ type: 'linkedin' }} onDone={() => onAdded('linkedin')}>
+            <RunButton watch fn="social/social.login" input={{ type: 'linkedin' }} onDone={() => onAdded('linkedin')}>
               {tr('add_channel.linkedin_login')}
             </RunButton>
           </div>
         ) : type === 'x' ? (
           <div className="space-y-3 p-4 text-sm">
             <p className="text-muted-foreground">{tr('add_channel.x_desc')}</p>
-            <RunButton fn="social/social.login" input={{ type: 'x' }} onDone={() => onAdded('x')}>
+            <RunButton watch fn="social/social.login" input={{ type: 'x' }} onDone={() => onAdded('x')}>
               {tr('add_channel.x_login')}
             </RunButton>
           </div>
@@ -93,7 +93,7 @@ export default function AddChannelDialog({ onClose, onAdded, allowedTypes = CHAN
           // 其余社媒平台（B 站、抖音…）：同样弹浏览器登录。登录都走 social.login（记下是在这台电脑登录的）
           <div className="space-y-3 p-4 text-sm">
             <p className="text-muted-foreground">{tr('add_channel.social_desc', { hint: SOCIAL[type]!.loginHint })}</p>
-            <RunButton fn="social/social.login" input={{ type }} onDone={() => onAdded(type)}>
+            <RunButton watch fn="social/social.login" input={{ type }} onDone={() => onAdded(type)}>
               {tr('add_channel.social_login', { name: SOCIAL[type]!.label })}
             </RunButton>
           </div>

@@ -150,11 +150,11 @@ function AccountConnection({ ch, actions, other, health, posts, onOpenPost, onDo
           )}
           {/* 登录正常时能直接采集（和社交媒体页的账号卡片一样）；没登录或登录过期先登录 */}
           {!other && !expired && ch.login_status === 'ok' && (
-            <RunButton inline fn="social/social.collect" input={{ channel_id: ch.id }} icon={RefreshCw} variant="ghost" onError={setError} onDone={onDone}>
+            <RunButton inline watch fn="social/social.collect" input={{ channel_id: ch.id }} icon={RefreshCw} variant="ghost" onError={setError} onDone={onDone}>
               {tr('social.collect')}
             </RunButton>
           )}
-          <RunButton inline fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} variant={other || expired ? 'default' : 'ghost'} onError={setError} onDone={onDone}>
+          <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} variant={other || expired ? 'default' : 'ghost'} onError={setError} onDone={onDone}>
             {other ? tr('social.login_here') : tr('social.relogin')}
           </RunButton>
           {actions}

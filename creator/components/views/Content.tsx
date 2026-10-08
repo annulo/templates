@@ -5,7 +5,7 @@ import { ArticleEditor, ArticleView, draftOf, patchOf, sameDraft, type ArticleDr
 import { ARTICLE_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleType } from '../ArticleTypes'
 import { PublishDialog, PublishRecords } from '../ArticlePublish'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
-import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
+import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls, toast, type Tone } from '../ui'
 import { TaskButton, TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { CHANNEL_TYPES } from '../../lib/channels'
 import { dbCreate, dbDelete, dbList, dbPatch, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
@@ -36,6 +36,20 @@ const REVISE_TASK = 'revise-article'
 export const TOPICS_TASK = 'suggest-topics'
 type Writer = ReturnType<typeof useTask>
 type WriteInput = { topic_id?: string; subject?: string; channel_id?: string }
+
+/**
+ * 删掉一篇文章：已经发出去、正在发、排了期的不能删（先在发布记录里处理）；没发出去的发布记录（社媒的、网站的）一起删掉，
+ * 免得留下指向不存在的文章的记录。删完顶部提示一下
+ */
+async function removeArticle(a: Article, posts: SocialPost[], pubs: Publication[]) {
+  const mine = posts.filter((p) => p.article_id === a.id)
+  const sites = pubs.filter((p) => p.article_id === a.id)
+  if (mine.some((p) => ['published', 'publishing', 'scheduled'].includes(p.status)) || sites.some((p) => p.status === 'published' || p.status === 'publishing')) throw new Error(tr('article.delete_published'))
+  for (const p of mine) await dbDelete('social_posts', p.id)
+  for (const p of sites) await dbDelete('publications', p.id)
+  await dbDelete('articles', a.id)
+  toast(tr('article.deleted', { title: a.title || tr('versions.untitled') }))
+}
 
 /** 内容：文章（一篇一种类型，直接发到支持它的账号）和选题池 */
 export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
@@ -78,6 +92,12 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
   useEffect(() => {
     if (ctx.rev) load()
   }, [ctx.rev])
+  // 后台发布（lib/publishQueue）发完一条、页面里改了文章或发布记录：静默重拉，发布记录和「已发布」跟着变
+  useEffect(() => {
+    const f = (e: Event) => { const t = (e as CustomEvent<{ table?: string }>).detail?.table; if (t === 'social_posts' || t === 'publications' || t === 'articles') load() }
+    window.addEventListener('db:changed', f)
+    return () => window.removeEventListener('db:changed', f)
+  }, [load])
   // 每篇发到了哪些网站和账号（只算发出去的）：列表里显示成标签，也决定「已发布」
   const publishedTo = useMemo(() => {
     const to: Record<string, { id: string; channel_id: string }[]> = {}
@@ -137,7 +157,7 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
       />
       <TaskFailed task={writer.task} />
       {tab === 'articles' ? (
-        <Articles ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} writer={writer} onWrite={() => openWriter()} />
+        <Articles ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} writer={writer} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
       ) : (
         <Topics ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
       )}
@@ -203,7 +223,7 @@ function NewArticleDialog({ open, onClose, onDone, onAi, aiDisabled }: { open: b
   </Dialog>
 }
 
-function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, writer, onWrite }: { ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; writer: Writer; onWrite: () => void }) {
+function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, writer, onWrite, onDelete }: { onDelete: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; writer: Writer; onWrite: () => void }) {
   const [query, setQuery] = useState('')
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
@@ -263,7 +283,10 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
               {chips && <div className="mt-2 flex flex-wrap items-center gap-1.5 md:hidden">{chips}</div>}
             </div>
             <div className="flex shrink-0 flex-col items-end justify-between gap-2 self-stretch">
-              <Badge className="mt-0.5" tone={ARTICLE_STATUS[a.status]?.tone}>{ARTICLE_STATUS[a.status]?.label ?? a.status}</Badge>
+              <span className="flex items-center gap-1">
+                <RowDelete onDelete={() => onDelete(a)} />
+                <Badge className="mt-0.5" tone={ARTICLE_STATUS[a.status]?.tone}>{ARTICLE_STATUS[a.status]?.label ?? a.status}</Badge>
+              </span>
               {chips && <span className="hidden max-w-md flex-wrap items-center justify-end gap-1.5 md:flex">{chips}</span>}
             </div>
           </div>
@@ -273,6 +296,18 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
       </div>
     </div>
   )
+}
+
+/** 列表每行的删除：悬停时出现，点一下变成「确认删除」，再点才删；点到别处就取消。删不了的（发出去了）顶部提示原因 */
+function RowDelete({ onDelete }: { onDelete: () => Promise<void> }) {
+  const [confirm, setConfirm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const stop = (e: { stopPropagation: () => void }) => e.stopPropagation()
+  return confirm
+    ? <button type="button" disabled={busy} onClick={async (e) => { stop(e); setBusy(true); try { await onDelete() } finally { setBusy(false); setConfirm(false) } }} onBlur={() => !busy && setConfirm(false)} onKeyDown={stop} autoFocus
+      className="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md bg-destructive px-2 text-xs font-medium text-white hover:bg-destructive/90 disabled:opacity-60">{busy ? <Loader className="size-3 animate-spin" /> : <Trash2 className="size-3" />}{tr('article.delete_confirm')}</button>
+    : <button type="button" onClick={(e) => { stop(e); setConfirm(true) }} onKeyDown={stop} aria-label={tr('content.del')} title={tr('content.del')}
+      className="inline-flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground opacity-100 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"><Trash2 className="size-3.5" /></button>
 }
 
 function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged }: { ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
@@ -442,8 +477,8 @@ function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, o
                 <button type="button" role="menuitem" disabled={locked} className={cx(item, 'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10 disabled:cursor-default disabled:opacity-50')} onClick={() => {
                   if (!confirmDel) { setConfirmDel(true); return }
                   void run('del', async () => {
-                    if (posts.some((p) => p.status === 'published' || p.status === 'publishing' || p.status === 'scheduled') || pubs.some((p) => p.status === 'published')) throw new Error(tr('article.delete_published'))
-                    await dbDelete('articles', a.id); onBack()
+                    await removeArticle(a, posts, pubs)
+                    onBack()
                   })
                 }}><Trash2 className="size-4" />{confirmDel ? tr('content.del_confirm') : tr('content.del')}</button>
               </div>}

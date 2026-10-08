@@ -60,7 +60,7 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap gap-1">
-            <RunButton inline fn="social/social.probe" input={{ channel_id: a.id }} icon={Stethoscope} variant="outline" onDone={onChanged}>
+            <RunButton inline watch fn="social/social.probe" input={{ channel_id: a.id }} icon={Stethoscope} variant="outline" onDone={onChanged}>
               {tr('health.probe_again')}
             </RunButton>
             {post && onOpenPost && (
@@ -146,7 +146,7 @@ export function ProbeLine({ ch, rows, onChanged }: { ch: Channel; rows: Platform
             <span className="text-destructive">{tr('health.failed', { when: fmtTime(p.checked_at ?? ''), step: p.step ?? '' })}</span>
           )}
         </span>
-        <RunButton inline fn="social/social.probe" input={{ channel_id: ch.id }} icon={Stethoscope} variant="ghost" onDone={onChanged}>
+        <RunButton inline watch fn="social/social.probe" input={{ channel_id: ch.id }} icon={Stethoscope} variant="ghost" onDone={onChanged}>
           {tr('health.probe')}
         </RunButton>
       </div>

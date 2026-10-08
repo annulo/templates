@@ -163,11 +163,18 @@ export type LocalEvent = { type: 'progress'; data: LocalProgress } | { type: 'lo
  * 返回函数的返回值，函数抛错时 reject（message 就是函数里 throw 的那句）。
  * 页面关掉函数也会跑完（结果在表里）；不在 Shuttle 里打开时抛 ShuttleUnavailable。
  */
-export async function runLocal<T = unknown>(fn: string, input: unknown, onEvent?: (e: LocalEvent) => void): Promise<T> {
+/**
+ * runLocal 的可选项（Annulo 能力版本 35 起认 browser）：
+ * browser: 'offscreen' 这次打开的浏览器用屏幕外的真窗口（不用无界面的），能用 POST local/runs/<id>/show 调到前台看（后台发布用）；
+ * onStart 拿到这次运行的 id：POST local/runs/<id>/abort 停止（停了这次打开的浏览器也一起关掉）
+ */
+export type RunLocalOptions = { browser?: 'offscreen'; onStart?: (runId: string) => void }
+
+export async function runLocal<T = unknown>(fn: string, input: unknown, onEvent?: (e: LocalEvent) => void, opts?: RunLocalOptions): Promise<T> {
   if (shuttleMissing()) return runCloud<T>(fn, input, new ShuttleUnavailable(tr('meta.err.not_from_shuttle')), onEvent)
   let res: Response
   try {
-    res = await fetch('/_shuttle/api/local/run', { method: 'POST', headers: { 'X-Shuttle': '1', 'content-type': 'application/json' }, body: JSON.stringify({ fn, input }) })
+    res = await fetch('/_shuttle/api/local/run', { method: 'POST', headers: { 'X-Shuttle': '1', 'content-type': 'application/json' }, body: JSON.stringify({ fn, input, ...(opts?.browser ? { browser: opts.browser } : {}) }) })
   } catch {
     markShuttle(false)
     return runCloud<T>(fn, input, new ShuttleUnavailable(tr('meta.err.no_shuttle')), onEvent)
@@ -181,6 +188,8 @@ export async function runLocal<T = unknown>(fn: string, input: unknown, onEvent?
     const body = await res.json().catch(() => ({}))
     throw new Error(body.error || tr('meta.err.req_failed', { status: res.status }))
   }
+  const runId = res.headers.get('x-annulo-run') || res.headers.get('x-shuttle-run')
+  if (runId) opts?.onStart?.(runId)
   const reader = res.body.getReader()
   const dec = new TextDecoder()
   let buf = ''

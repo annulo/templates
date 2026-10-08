@@ -1,9 +1,20 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, ArrowUpRight, Loader2, Send, Trash2 } from 'lucide-react'
-import RunButton from './RunButton'
 import SchedulePopover, { ScheduledLine } from './SchedulePopover'
 import { TYPE_META, typeOf } from './ArticleTypes'
-import { Badge, Button, Dialog, Notice, cx, fmtTime, inputCls } from './ui'
+import { Badge, Button, Dialog, Notice, cx, fmtTime, inputCls, toast } from './ui'
+import { enqueue, reveal, stop, usePublishQueue, type PublishJob } from '../lib/publishQueue'
+import WatchControls from './WatchControls'
+
+/** 后台队列里这条的状态：排队中、发布中（正在做哪一步）；在发的能打开看、停止，排队的能取消 */
+function JobLine({ job }: { job?: PublishJob }) {
+  if (!job || (job.state !== 'queued' && job.state !== 'running')) return null
+  const fail = (e: unknown) => toast((e as Error).message, 'error')
+  return <div className="flex items-center gap-1">
+    <p className="flex min-w-0 items-center gap-1.5 text-xs leading-relaxed text-primary-text">{job.state === 'running' ? <Loader2 className="size-3.5 shrink-0 animate-spin" /> : <span className="size-1.5 shrink-0 rounded-full bg-primary" />}<span className="truncate">{job.state === 'running' ? (job.step || tr('article.pub_running')) : tr('article.pub_queued')}</span></p>
+    <WatchControls onShow={job.state === 'running' ? () => reveal(job.key).catch(fail) : undefined} onStop={() => stop(job.key).catch(fail)} />
+  </div>
+}
 import { CHANNEL_TYPES } from '../lib/channels'
 import { fmtNum } from '../lib/format'
 import { tr } from '../lib/i18n'
@@ -40,7 +51,7 @@ function nextHour() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-type RowState = 'running' | 'ok' | 'scheduled' | string
+type RowState = 'queued' | 'scheduled' | string
 
 /** 发布：勾选账号（只有支持这种类型的能选，别的灰掉、写明原因），现在发或者排期；一条条发，结果逐个显示 */
 export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewrite }: { open: boolean; ctx: Ctx; article: Article; posts: SocialPost[]; pubs: Publication[]; onClose: () => void; onRewrite: () => void }) {
@@ -64,27 +75,27 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
     : ch.login_status === 'expired' ? tr('article.pub_expired') : ''
   const usable = accounts.filter((ch) => !blocked(ch))
   const unsupported = accounts.filter((ch) => !takes(ch))
-  const done = Object.keys(result).length > 0 && !running
   const toggle = (id: string) => setPicked((l) => l.includes(id) ? l.filter((x) => x !== id) : [...l, id])
 
+  // 发布放到后台排队（lib/publishQueue）：这里只做准备（建发布记录、过平台检查），马上关掉弹窗；
+  // 没通过检查的账号留在弹窗里写原因，别的照常进后台。进度在发布记录和右下角看
   const go = async () => {
     setRunning(true); setError('')
     const ts = when === 'later' ? Date.parse(at) : 0
     if (when === 'later' && !(ts > Date.now())) { setError(tr('versions.future_time')); setRunning(false); return }
     try {
-      setResult(Object.fromEntries(picked.map((id) => [id, 'running'])))
       const r = await runLocal<{ ready: { channel_id: string; post_id?: string; publisher?: string }[]; problems: { channel_id: string; problems: string[] }[] }>('publish.prepare', { article_id: article.id, channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}) })
+      const name = (id: string) => accounts.find((c) => c.id === id)?.name ?? ''
+      if (!ts && r.ready.length) enqueue(r.ready.map((p) => ({ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: name(p.channel_id), post_id: p.post_id, publisher: p.publisher })))
+      if (r.ready.length) toast(ts ? tr('article.pub_scheduled_toast', { n: r.ready.length }) : tr('article.pub_started_toast', { n: r.ready.length }))
+      if (!r.problems.length) { onClose(); return }
       const out: Record<string, RowState> = {}
+      for (const p of r.ready) out[p.channel_id] = ts ? 'scheduled' : 'queued'
       for (const p of r.problems) out[p.channel_id] = p.problems.join('；')
-      for (const p of r.ready) out[p.channel_id] = ts ? 'scheduled' : 'running'
-      setResult({ ...out })
-      if (!ts) for (const p of r.ready) {
-        try { await (p.publisher ? runLocal(`${p.publisher}.publish`, { article_id: article.id }) : runLocal('social/social.publish', { post_id: p.post_id })); out[p.channel_id] = 'ok' } catch (e) { out[p.channel_id] = (e as Error).message }
-        setResult({ ...out })
-      }
+      setResult(out)
+      setPicked((l) => l.filter((id) => r.problems.some((p) => p.channel_id === id)))
     } catch (e) {
       setError((e as Error).message)
-      setResult({})
     } finally {
       setRunning(false)
     }
@@ -96,30 +107,30 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
     const sent = isSite(ch) ? pubs.find((p) => p.channel_id === ch.id && p.status === 'published') : posts.filter((p) => p.channel_id === ch.id && p.status === 'published').sort((a, b) => Date.parse(b.published_at || '') - Date.parse(a.published_at || ''))[0]
     const { length, max } = lengthOn(article, ch.type)
     const tooLong = !why && max > 0 && length > max
-    const note = r && !['running', 'ok', 'scheduled'].includes(r) ? <span className="text-destructive">{r}</span>
+    const note = r && !['queued', 'scheduled'].includes(r) ? <span className="text-destructive">{r}</span>
       : why ? why
       : tooLong ? <span className="text-amber-700 dark:text-amber-400">{tr('article.pub_too_long', { n: length, max })}</span>
       : sent ? (isSite(ch) ? tr('article.pub_site_update') : tr('article.pub_sent_before', { when: fmtTime(sent.published_at) }))
       : CHANNEL_TYPES[ch.type]?.label
     return <label key={ch.id} className={cx('flex items-center gap-3 rounded-lg border px-3 py-2', why ? 'cursor-default border-border opacity-60' : picked.includes(ch.id) ? 'cursor-pointer border-primary/50 bg-primary/5' : 'cursor-pointer border-border hover:bg-accent/50')}>
-      <input type="checkbox" disabled={!!why || running || done} checked={picked.includes(ch.id)} onChange={() => toggle(ch.id)} className="size-4 accent-primary" />
+      <input type="checkbox" disabled={!!why || running} checked={picked.includes(ch.id)} onChange={() => toggle(ch.id)} className="size-4 accent-primary" />
       <ChannelAvatar ch={ch} />
       <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{ch.name}</span><span className="block text-xs leading-relaxed text-muted-foreground">{note}</span></span>
       {isSite(ch) && takes(ch) && (ch.publish_status !== 'ready' || !ch.publisher) && <Button size="sm" variant="outline" needsShuttle onClick={(e) => { e.preventDefault(); void setupPublish(ch.id) }}>{tr('publish.setup')}</Button>}
-      {r === 'running' ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : r === 'ok' ? <Badge tone="ok">{tr('versions.published')}</Badge> : r === 'scheduled' ? <Badge tone="primary">{tr('meta.social_status.scheduled')}</Badge> : r ? <Badge tone="bad">{tr('versions.failed')}</Badge> : null}
+      {r === 'queued' ? <Badge tone="primary">{tr('article.pub_queued')}</Badge> : r === 'scheduled' ? <Badge tone="primary">{tr('meta.social_status.scheduled')}</Badge> : r ? <Badge tone="bad">{tr('article.pub_not_passed')}</Badge> : null}
     </label>
   }
 
-  return <Dialog open={open} onClose={() => { if (!running) onClose() }} title={tr('article.pub_title', { type: TYPE_META[t].label })} width={580} footer={done ? <Button size="sm" onClick={onClose}>{tr('common.close')}</Button> : <>
-    <Button variant="ghost" size="sm" disabled={running} onClick={onClose}>{tr('common.cancel')}</Button>
+  return <Dialog open={open} onClose={onClose} title={tr('article.pub_title', { type: TYPE_META[t].label })} width={580} footer={<>
+    <Button variant="ghost" size="sm" onClick={onClose}>{Object.keys(result).length ? tr('common.close') : tr('common.cancel')}</Button>
     <Button fn="publish.prepare" size="sm" disabled={running || !picked.length} onClick={go}>{running ? <Loader2 className="animate-spin" /> : <Send />}{when === 'later' ? tr('article.pub_schedule_go', { n: picked.length }) : tr('article.pub_go', { n: picked.length })}</Button>
   </>}>
     <div className="space-y-4">
       {!accounts.length ? <Notice>{tr('versions.no_channels')}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); ctx.go('channels') }}>{tr('versions.go_add', { name: tr('nav.channels') })}</button></Notice> : <>
         <p className="text-sm text-muted-foreground">{tr('article.pub_hint')}</p>
         <div className="max-h-80 space-y-1 overflow-y-auto">{[...usable, ...accounts.filter((ch) => !usable.includes(ch))].map(row)}</div>
-        {!!unsupported.length && !done && <p className="text-xs leading-relaxed text-muted-foreground">{tr('article.pub_rewrite_hint', { type: TYPE_META[t].label })}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); onRewrite() }}>{tr('article.rewrite')}</button></p>}
-        {!done && <div className="space-y-2 border-t border-border pt-3">
+        {!!unsupported.length && <p className="text-xs leading-relaxed text-muted-foreground">{tr('article.pub_rewrite_hint', { type: TYPE_META[t].label })}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); onRewrite() }}>{tr('article.rewrite')}</button></p>}
+        {<div className="space-y-2 border-t border-border pt-3">
           <div className="flex flex-wrap gap-4 text-sm">
             <label className="inline-flex cursor-pointer items-center gap-2"><input type="radio" name="when" checked={when === 'now'} disabled={running} onChange={() => setWhen('now')} className="accent-primary" />{tr('social.publish_now')}</label>
             <label className="inline-flex cursor-pointer items-center gap-2"><input type="radio" name="when" checked={when === 'later'} disabled={running} onChange={() => setWhen('later')} className="accent-primary" />{tr('article.pub_later')}</label>
@@ -136,16 +147,19 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
 export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, onPublish }: { ctx: Ctx; article: Article; posts: SocialPost[]; pubs: Publication[]; focus?: string; onChanged: () => void; onPublish: () => void }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
+  const queue = usePublishQueue()
+  const jobOf = (key: string) => queue.find((j) => j.key === key && (j.state === 'queued' || j.state === 'running'))
   const act = async (key: string, fn: () => Promise<unknown>) => {
     setBusy(key); setError('')
     try { await fn(); onChanged() } catch (e) { setError((e as Error).message) } finally { setBusy('') }
   }
   useEffect(() => { if (focus) document.getElementById(`pub-${focus}`)?.scrollIntoView({ block: 'center' }) }, [focus, posts.length])
   // 网站再发一次就是更新：先清掉以前网站版本单独改的字段（publish.prepare），再跑网站的发布脚本
+  // 网站再发一次就是更新：先清掉以前网站版本单独改的字段（publish.prepare），再放进后台队列跑网站的发布脚本
   const resend = (ch: Channel) => act('site' + ch.id, async () => {
     const r = await runLocal<{ ready: { channel_id: string; publisher?: string }[]; problems: { problems: string[] }[] }>('publish.prepare', { article_id: article.id, channel_ids: [ch.id] })
     if (r.problems.length) throw new Error(r.problems.flatMap((p) => p.problems).join('；'))
-    await runLocal(`${r.ready[0].publisher}.publish`, { article_id: article.id })
+    enqueue([{ article_id: article.id, article_title: article.title, channel_id: ch.id, channel_name: ch.name, publisher: r.ready[0].publisher }])
   })
   const list = [...posts].sort((a, b) => String(b.published_at || b.scheduled_at || b.updated_at || '').localeCompare(String(a.published_at || a.scheduled_at || a.updated_at || '')))
   return <section className="space-y-3">
@@ -167,8 +181,9 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
           {p.url && p.status === 'published' && <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text">{tr('content.view_live')}<ArrowUpRight className="size-3" /></a>}
           <Badge tone={statusTone(p.status)}>{p.status === 'published' ? tr('versions.published') : p.status === 'failed' ? tr('versions.failed') : p.status === 'publishing' ? tr('meta.social_status.publishing') : tr('versions.draft')}</Badge>
         </div>
-        {p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
-        {ch && <div className="flex flex-wrap items-center gap-2">
+        <JobLine job={jobOf(`${p.article_id}:${p.channel_id}`)} />
+        {!jobOf(`${p.article_id}:${p.channel_id}`) && p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
+        {ch && !jobOf(`${p.article_id}:${p.channel_id}`) && <div className="flex flex-wrap items-center gap-2">
           {ready ? <Button size="sm" variant="outline" fn={`${ch.publisher}.publish`} disabled={!!busy} onClick={() => resend(ch)}>{busy === 'site' + ch.id ? <Loader2 className="animate-spin" /> : <Send />}{p.status === 'published' ? tr('publish.update') : tr('article.retry')}</Button>
             : <Button size="sm" variant="outline" needsShuttle onClick={() => void setupPublish(ch.id)}>{tr('publish.setup')}</Button>}
           {p.status === 'failed' && ready && <Button size="sm" variant="ghost" needsShuttle onClick={() => void setupPublish(ch.id, p.error)}>{tr('publish.fix')}</Button>}
@@ -181,25 +196,27 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
         const legacy = ['draft', 'pending_review', 'rejected'].includes(p.status)
         return <div key={p.id} id={`pub-${p.id}`} className={cx('space-y-2 border-b border-border px-3 py-3 last:border-b-0', focus === p.id && 'bg-primary/5')}>
           <div className="flex min-w-0 items-center gap-3">
-            {ch ? <ChannelAvatar ch={ch} /> : <span className="size-7 shrink-0 rounded-full bg-muted" />}
+            {/* 账号头像和名字点了去「社交媒体 → 数据表现」看这个账号：打开主页、重新采集都在那里 */}
+            {ch ? <button type="button" onClick={() => ctx.go('social', { section: 'data', account: ch.id })} title={tr('article.open_account_data')} className="shrink-0 cursor-pointer rounded-full"><ChannelAvatar ch={ch} /></button> : <span className="size-7 shrink-0 rounded-full bg-muted" />}
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{ch?.name ?? tr('content.removed_channel')}</span>
+              {ch ? <button type="button" onClick={() => ctx.go('social', { section: 'data', account: ch.id })} title={tr('article.open_account_data')} className="block max-w-full cursor-pointer truncate text-left text-sm font-medium hover:text-primary-text hover:underline">{ch.name}</button>
+                : <span className="block truncate text-sm font-medium">{tr('content.removed_channel')}</span>}
               <span className="block truncate text-xs text-muted-foreground">
                 {p.status === 'published' ? <>{fmtTime(p.published_at)}{p.metrics_at ? ` · ${metricsLine(p)}` : ''}</> : p.status === 'removed' ? tr('social.removed_from', { when: fmtTime(p.removed_at), p: ch ? CHANNEL_TYPES[ch.type]?.label : '' }) : legacy ? tr('article.legacy_version') : ch ? CHANNEL_TYPES[ch.type]?.label : ''}
               </span>
             </span>
             {p.post_url && p.status === 'published' && <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text">{tr('content.view_live')}<ArrowUpRight className="size-3" /></a>}
-            <Badge tone={statusTone(p.status)}>{tr(`meta.social_status.${p.status}`)}</Badge>
+            {jobOf(p.id) ? <Badge tone="primary">{jobOf(p.id)!.state === 'running' ? tr('meta.social_status.publishing') : tr('article.pub_queued')}</Badge> : <Badge tone={statusTone(p.status)}>{tr(`meta.social_status.${p.status}`)}</Badge>}
           </div>
           {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} />}
-          {p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
-          {p.status !== 'published' && p.status !== 'removed' && <div className="flex flex-wrap items-center gap-2">
-            {(p.status === 'failed' || p.status === 'approved' || p.status === 'scheduled') && <RunButton inline variant="outline" fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onError={setError} onDone={onChanged}>{p.status === 'failed' ? tr('article.retry') : tr('social.publish_now')}</RunButton>}
+          <JobLine job={jobOf(p.id)} />
+          {!jobOf(p.id) && p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
+          {p.status !== 'published' && p.status !== 'removed' && !jobOf(p.id) && <div className="flex flex-wrap items-center gap-2">
+            {(p.status === 'failed' || p.status === 'approved' || p.status === 'scheduled') && <Button size="sm" variant="outline" fn="social/social.publish" feedback={false} onClick={() => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', post_id: p.id }])}><Send />{p.status === 'failed' ? tr('article.retry') : tr('social.publish_now')}</Button>}
             {p.status === 'scheduled' && <SchedulePopover size="sm" current={p.scheduled_at} onSchedule={(iso) => dbPatch('social_posts', p.id, { status: 'scheduled', scheduled_at: iso }).then(onChanged)} onUnschedule={() => dbPatch('social_posts', p.id, { status: 'approved', scheduled_at: '' }).then(onChanged)} />}
             {p.status === 'publishing' && <Button size="sm" variant="outline" disabled={!!busy} onClick={() => act('stuck' + p.id, () => dbPatch('social_posts', p.id, { status: 'failed', error: tr('social.stuck_error') }))}>{tr('social.mark_failed')}</Button>}
             {p.status !== 'publishing' && <Button fn="social/social.purge" size="sm" variant="ghost" className="ml-auto text-muted-foreground" disabled={!!busy} onClick={() => act('purge' + p.id, () => runLocal('social/social.purge', { post_id: p.id }))}><Trash2 />{tr('article.delete_record')}</Button>}
           </div>}
-          {p.status === 'published' && <button type="button" onClick={() => ctx.go('social', { section: 'data', account: p.channel_id })} className="cursor-pointer text-xs text-primary-text hover:underline">{tr('versions.view_data')}</button>}
         </div>
       })}</div>}
   </section>

@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import RunButton from '../RunButton'
 import VideoField from '../VideoField'
+import { showRun, stopRun } from '../../lib/runs'
 import SocialOverview from '../SocialOverview'
 import WorkspaceTabs from '../WorkspaceTabs'
 import RichEditor from '../RichEditor'
@@ -108,7 +109,7 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const followers = (a: Channel) => a.followers == null ? <span className="text-muted-foreground">{tr('social.not_collected')}</span> : <span className="inline-flex items-baseline gap-1.5"><span className="tabular-nums">{n(a.followers)}</span>{/* 列里是累计粉丝；旁边的箭头是近 30 天的增减，悬停说明 */}{gain[a.id] != null && <span title={tr('social.followers_gain_30_title', { sign: gain[a.id]! > 0 ? '+' : gain[a.id]! < 0 ? '-' : '', n: n(Math.abs(gain[a.id]!)) })} className={cx('text-xs tabular-nums', gain[a.id]! > 0 ? 'text-emerald-600 dark:text-emerald-400' : gain[a.id]! < 0 ? 'text-destructive' : 'text-muted-foreground')}>{gain[a.id]! > 0 ? '↑' : gain[a.id]! < 0 ? '↓' : ''}{n(Math.abs(gain[a.id]!))}</span>}</span>
   const action = (a: Channel) => {
     const link = 'cursor-pointer text-sm font-medium text-primary-text hover:underline'
-    if (other(a) || expired(a)) return <RunButton inline fn="social/social.login" input={{ channel_id: a.id }} icon={UserRound} variant="ghost" onError={setError} onDone={onChanged}>{other(a) ? tr('social.login_here') : tr('social.relogin')}</RunButton>
+    if (other(a) || expired(a)) return <RunButton inline watch fn="social/social.login" input={{ channel_id: a.id }} icon={UserRound} variant="ghost" onError={setError} onDone={onChanged}>{other(a) ? tr('social.login_here') : tr('social.relogin')}</RunButton>
     return <button type="button" className={link} onClick={() => openSection('data', { account: a.id })}>{broken(a) ? tr('social.fix_publish') : tr('social.view_data')}</button>
   }
   const avatar = (a: Channel) => a.avatar ? <img src={shuttleImage(a.avatar)} alt="" loading="lazy" className="size-7 shrink-0 rounded-full object-cover" /> : <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><UserRound className="size-4" /></span>
@@ -196,12 +197,17 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
 function CollectAll({ accounts, oldest, onDone }: { accounts: Channel[]; oldest?: string; onDone: () => void }) {
   const [at, setAt] = useState(-1)
   const [failed, setFailed] = useState<string[]>([])
+  // 正在采集的那个账号这次运行的 id：「打开看」「停止」（浏览器用屏幕外窗口，见 lib/runs.ts）
+  const [runId, setRunId] = useState('')
+  const stopped = useRef(false)
   const run = async () => {
     setFailed([])
+    stopped.current = false
     const bad: string[] = []
-    for (let i = 0; i < accounts.length; i++) {
+    for (let i = 0; i < accounts.length && !stopped.current; i++) {
       setAt(i)
-      try { await runLocal('social/social.collect', { channel_id: accounts[i].id }) } catch (e) { bad.push(`${accounts[i].name}：${(e as Error).message}`) }
+      try { await runLocal('social/social.collect', { channel_id: accounts[i].id }, undefined, { browser: 'offscreen', onStart: setRunId }) } catch (e) { if (!stopped.current) bad.push(`${accounts[i].name}：${(e as Error).message}`) }
+      setRunId('')
     }
     setAt(-1)
     setFailed(bad)
@@ -211,6 +217,10 @@ function CollectAll({ accounts, oldest, onDone }: { accounts: Channel[]; oldest?
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <span>{oldest ? tr('social.data_as_of', { when: fmtTime(oldest) }) : tr('social.never_collected')}</span>
       <Button fn="social/social.collect" variant="ghost" size="sm" disabled={at >= 0} onClick={run}>{at >= 0 ? <Loader2 className="animate-spin" /> : <RefreshCw />}{at >= 0 ? tr('social.collecting_n', { i: at + 1, n: accounts.length }) : tr('social.collect_all')}</Button>
+      {at >= 0 && runId && <>
+        <button type="button" className="cursor-pointer hover:text-foreground hover:underline" onClick={() => showRun(runId).catch((e) => setFailed([(e as Error).message]))}>{tr('ui.watch_show')}</button>
+        <button type="button" className="cursor-pointer hover:text-destructive hover:underline" onClick={() => { stopped.current = true; void stopRun(runId).catch(() => {}) }}>{tr('ui.watch_stop')}</button>
+      </>}
     </div>
     {failed.length > 0 && <ErrorDetails message={failed.join('\n')} />}
   </div>
@@ -304,11 +314,11 @@ function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channe
             </RunButton>
           )}
           {other || expired ? (
-            <RunButton inline fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} onError={setError} onDone={onDone}>
+            <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} onError={setError} onDone={onDone}>
               {other ? tr('social.login_here') : tr('social.relogin')}
             </RunButton>
           ) : (
-            <RunButton inline fn="social/social.collect" input={{ channel_id: ch.id }} icon={RefreshCw} variant="ghost" onError={setError} onDone={onDone}>
+            <RunButton inline watch fn="social/social.collect" input={{ channel_id: ch.id }} icon={RefreshCw} variant="ghost" onError={setError} onDone={onDone}>
               {tr('social.collect')}
             </RunButton>
           )}

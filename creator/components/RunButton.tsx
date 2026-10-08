@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Check, Loader2, Play, type LucideIcon } from 'lucide-react'
 import { openShuttleSettings, runLocal, type LocalProgress } from '../lib/shuttle'
+import { showRun, stopRun } from '../lib/runs'
+import WatchControls from './WatchControls'
 import { Button, ErrorDetails } from './ui'
 import { tr } from '../lib/i18n'
 import { useCanRun } from '../lib/useShuttle'
@@ -30,6 +32,7 @@ export default function RunButton({
   onError,
   onStart,
   errorActions,
+  watch = false,
 }: {
   fn: string
   input: unknown
@@ -46,10 +49,17 @@ export default function RunButton({
   onStart?: () => void
   /** 报错旁边放的处理入口（比如报错说要去某个设置，就给一个打开它的按钮）；返回空就不放 */
   errorActions?: (message: string) => ReactNode
+  /**
+   * 会开浏览器的操作（自检、采集、发布）：浏览器用屏幕外的真窗口，跑的时候按钮旁边有「打开看」（窗口调到前台）和「停止」。
+   * 用户手动点的都要能看能停；定时任务不经过这里，照旧无界面
+   */
+  watch?: boolean
 }) {
   const [prog, setProg] = useState<LocalProgress | null>(null)
   const [err, setErr] = useState('')
   const [done, setDone] = useState(false)
+  // 这次运行的 id（watch 时用来打开看、停止）
+  const [runId, setRunId] = useState('')
   useEffect(() => {
     if (!done) return
     const timer = setTimeout(() => setDone(false), 2000)
@@ -67,13 +77,14 @@ export default function RunButton({
     setProg({ message: tr('ui.preparing') })
     let result: unknown
     try {
-      result = await runLocal(fn, params, (ev) => ev.type === 'progress' && setProg(ev.data))
+      result = await runLocal(fn, params, (ev) => ev.type === 'progress' && setProg(ev.data), watch ? { browser: 'offscreen', onStart: setRunId } : undefined)
       setDone(true)
     } catch (e) {
       setErr((e as Error).message)
       onError?.((e as Error).message)
     } finally {
       setProg(null)
+      setRunId('')
       onDone?.(result)
       // 函数多半改了数据：让页面各处静默重拉（pages/Index.tsx 监听）
       window.postMessage({ type: 'shuttle:refresh' }, window.location.origin)
@@ -87,14 +98,19 @@ export default function RunButton({
       {tr('ui.go_settings')}
     </button>
   ))
+  const fail = (e: unknown) => { const m = (e as Error).message; setErr(m); onError?.(m) }
+  const watching = watch && prog && runId && <WatchControls onShow={() => showRun(runId).catch(fail)} onStop={() => stopRun(runId).catch(fail)} />
   if (inline) {
     const label = prog ? (prog.total ? `${prog.done ?? 0}/${prog.total} ${prog.message ?? ''}` : (prog.message ?? tr('ui.running'))) : null
     return (
       <span className="inline-flex max-w-full min-w-0 w-fit flex-col items-start gap-1.5">
-        <Button feedback={false} variant={variant} size={size} className={className} disabled={!ok || !!prog} title={ok ? (prog?.message ?? undefined) : tr('ui.run_offline')} onClick={start}>
-          {prog ? <Loader2 className="animate-spin" /> : done ? <Check /> : <Icon />}
-          {label ? <span className="max-w-48 truncate">{label}</span> : done ? tr('ui.done') : children}
-        </Button>
+        <span className="inline-flex max-w-full min-w-0 items-center gap-1">
+          <Button feedback={false} variant={variant} size={size} className={className} disabled={!ok || !!prog} title={ok ? (prog?.message ?? undefined) : tr('ui.run_offline')} onClick={start}>
+            {prog ? <Loader2 className="animate-spin" /> : done ? <Check /> : <Icon />}
+            {label ? <span className="max-w-48 truncate">{label}</span> : done ? tr('ui.done') : children}
+          </Button>
+          {watching}
+        </span>
         {err && !onError && (
           <span className="w-64 min-w-0 max-w-full"><ErrorDetails message={err} actions={settingsLink} /></span>
         )}
@@ -107,7 +123,7 @@ export default function RunButton({
         {prog ? <Loader2 className="animate-spin" /> : done ? <Check /> : <Icon />}
         {prog ? (prog.total ? `${prog.done ?? 0}/${prog.total}` : tr('ui.running')) : done ? tr('ui.done') : children}
       </Button>
-      {prog?.message && <span className="max-w-sm text-center text-xs text-balance text-muted-foreground">{prog.message}</span>}
+      {prog?.message && <span className="inline-flex max-w-sm items-center gap-1 text-center text-xs text-balance text-muted-foreground">{prog.message}{watching}</span>}
       {err && (
         <span className="w-64 min-w-0 max-w-full"><ErrorDetails message={err} actions={settingsLink} /></span>
       )}

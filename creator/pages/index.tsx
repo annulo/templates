@@ -23,6 +23,7 @@ import { useT } from '../lib/i18n'
 import { useInShuttle } from '../lib/useShuttle'
 import { NAV } from '../lib/edition'
 import { useChecklist } from '../lib/useChecklist'
+import PublishProgress from '../components/PublishProgress'
 
 // 左侧导航分组由行业文件 lib/edition.ts 定义；紧凑单行，辅助说明放在 title 中。
 // 还没填项目资料时的占位（放在模块里：引用不变，项目设置的表单不会被重渲染冲掉）
@@ -343,6 +344,8 @@ export default function Index() {
           </div>
         </div>
       </section>
+      {/* 后台发布的进度（内容中心「发布」放进后台排队）：切到别的页面也一直在 */}
+      <PublishProgress onOpen={(id) => go('content', { article: id })} />
     </main>
   )
 }

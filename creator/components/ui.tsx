@@ -290,3 +290,29 @@ export function fmtUntil(iso?: string): { rel: string; at: string; due: boolean 
 /** 「9月24日」/「Sep 24」 */
 export const fmtMonthDay = (d: Date) =>
   isEn() ? d.toLocaleDateString(numLocale(), { month: 'short', day: 'numeric' }) : tr('common.month_day', { m: d.getMonth() + 1, d: d.getDate() })
+
+/**
+ * 顶部的轻提示（删除成功这类做完了要告诉用户、又不用用户点的）：页面顶部居中出现，几秒后自动消失。
+ * 直接挂在 document.body 上，哪个页面、组件里都能调，不用在页面里放容器。
+ */
+export function toast(message: string, tone: 'ok' | 'error' = 'ok') {
+  if (typeof document === 'undefined') return
+  let box = document.getElementById('app-toasts')
+  if (!box) {
+    box = document.createElement('div')
+    box.id = 'app-toasts'
+    box.setAttribute('role', 'status')
+    box.setAttribute('aria-live', 'polite')
+    box.className = 'pointer-events-none fixed inset-x-0 top-4 z-[100] flex flex-col items-center gap-2 px-4'
+    document.body.appendChild(box)
+  }
+  const el = document.createElement('div')
+  el.className = cx('pointer-events-auto max-w-md rounded-lg border px-4 py-2.5 text-sm shadow-lg transition-all duration-200 opacity-0 -translate-y-2', tone === 'error' ? 'border-destructive/30 bg-popover text-destructive' : 'border-border bg-popover text-popover-foreground')
+  el.textContent = message
+  box.appendChild(el)
+  requestAnimationFrame(() => el.classList.remove('opacity-0', '-translate-y-2'))
+  setTimeout(() => {
+    el.classList.add('opacity-0', '-translate-y-2')
+    setTimeout(() => el.remove(), 250)
+  }, 2600)
+}
