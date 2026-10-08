@@ -302,6 +302,14 @@ function ArticleDetail({ ctx, a, all, posts, focus, displayStatus, open, onBack,
   const rewriting = (rewriter.task?.running ?? []).filter((r) => r.input?.article_id === a.id)
   const source = a.source_id ? all.find((x) => x.id === a.source_id) : undefined
   const derived = all.filter((x) => x.source_id === a.id)
+  // 刚改写完：上一次改写成功、是这篇的，挑那次之后存的改写出的文章，顶上给一个「打开」。点过「知道了」就不再提示（记在本机）
+  const lastRewrite = !rewriting.length && rewriter.task?.last?.ok && rewriter.task.last.input?.article_id === a.id ? rewriter.task.last : null
+  const doneKey = lastRewrite ? `creator.rewrite-seen:${a.id}:${lastRewrite.started_at}` : ''
+  const [seen, setSeen] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem('creator.rewrite-seen') || '[]') } catch { return [] } })
+  const rewritten = lastRewrite && !seen.includes(doneKey) && Date.now() - Date.parse(lastRewrite.started_at) < 3 * 86400_000
+    ? derived.filter((d) => (Date.parse(d.created_at || '') || 0) >= Date.parse(lastRewrite.started_at) - 60_000).sort((x, y) => (Date.parse(y.created_at || '') || 0) - (Date.parse(x.created_at || '') || 0))[0]
+    : undefined
+  const markSeen = () => { const next = [...seen, doneKey].slice(-50); setSeen(next); try { localStorage.setItem('creator.rewrite-seen', JSON.stringify(next)) } catch {} }
   // 改文章只写表，手机上（不在 Annulo 里）也能改；让 AI 改、发布这些按钮自己会在 Annulo 外灰掉
   const locked = !!busy || revising.length > 0
   const fromRow = () => draftOf(a)
@@ -419,6 +427,12 @@ function ArticleDetail({ ctx, a, all, posts, focus, displayStatus, open, onBack,
       <TaskRunning runs={rewriting} title={(r) => tr('article.rewriting', { type: TYPE_META[(r.input?.type as ArticleType) ?? 'post']?.label ?? '' })} desc={tr('article.rewriting_desc')} />
       {!revising.length && reviser.task?.last && !reviser.task.last.ok && reviser.task.last.input?.article_id === a.id && <TaskFailed task={reviser.task} />}
       {!rewriting.length && rewriter.task?.last && !rewriter.task.last.ok && rewriter.task.last.input?.article_id === a.id && <TaskFailed task={rewriter.task} />}
+      {rewritten && <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+        <Repeat2 className="size-4 shrink-0 text-primary-text" />
+        <span className="min-w-0 flex-1">{tr('article.rewritten', { type: TYPE_META[typeOf(rewritten)].label, title: rewritten.title })}</span>
+        <Button size="sm" onClick={() => { markSeen(); open(rewritten.id) }}>{tr('article.open_rewritten')}</Button>
+        <Button size="icon-sm" variant="ghost" aria-label={tr('article.dismiss')} title={tr('article.dismiss')} onClick={markSeen} className="text-muted-foreground"><X /></Button>
+      </div>}
 
       {/* 和顶上的按钮左右对齐，不居中限宽；顶上那条吸在 -1rem（抵掉滚动区的上内边距），露出来的高度是它的高度减 1rem */}
       <article className="w-full min-w-0" style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}>

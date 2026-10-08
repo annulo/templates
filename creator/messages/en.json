@@ -1634,6 +1634,9 @@
     "derived": "Rewritten articles",
     "presets_manage": "Manage presets",
     "presets_none": "No presets yet.",
-    "preset_new": "New preset"
+    "preset_new": "New preset",
+    "rewritten": "Rewritten into {type}: \"{title}\"",
+    "open_rewritten": "Open it",
+    "dismiss": "Dismiss"
   }
 }

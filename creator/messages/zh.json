@@ -1634,6 +1634,9 @@
     "derived": "改写出的文章",
     "presets_manage": "管理预设",
     "presets_none": "还没有预设。",
-    "preset_new": "新建预设"
+    "preset_new": "新建预设",
+    "rewritten": "已改写成{type}：「{title}」",
+    "open_rewritten": "打开新文章",
+    "dismiss": "知道了"
   }
 }
