@@ -53,7 +53,8 @@ export default function AddChannelDialog({ onClose, onAdded, allowedTypes = CHAN
                           onClick={() => setType(t)}
                           className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border-[1.5px] border-transparent p-2 text-left transition-all enabled:hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <span className={cx('flex size-8 shrink-0 items-center justify-center rounded-xl', m.ready ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
+                          {/* logo 自带品牌色，底色用中性的；还不能添加的整行已经变淡 */}
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground">
                             <m.icon size={14} strokeWidth={2.5} />
                           </span>
                           <span className="min-w-0 flex-1">

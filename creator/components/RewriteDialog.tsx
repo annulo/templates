@@ -40,7 +40,7 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
 
   return <Dialog open={open} onClose={onClose} title={tr('article.rewrite_title')} width={640} footer={<>
     <Button variant="ghost" onClick={onClose}>{tr('common.cancel')}</Button>
-    <Button needsShuttle onClick={() => onStart(type, note.trim())} disabled={starting || !note.trim()}>{starting ? <Loader2 className="animate-spin" /> : <Sparkles />}{tr('article.rewrite_go', { type: TYPE_META[type].label })}</Button>
+    <Button needsShuttle onClick={() => onStart(type, note.trim())} disabled={starting}>{starting ? <Loader2 className="animate-spin" /> : <Sparkles />}{tr('article.rewrite_go', { type: TYPE_META[type].label })}</Button>
   </>}>
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">{tr('article.rewrite_hint', { title: article.title })}</p>
@@ -59,9 +59,9 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
               {on ? <Check className="size-3.5 shrink-0" /> : Icon && <Icon className="size-3.5 shrink-0" />}<span className="max-w-60 truncate">{p.prompt}</span>
             </button>
           })}</div>}
-        <span className="text-xs leading-relaxed text-muted-foreground">{tr('article.presets_hint')}</span>
       </div>
       <Field group label={tr('article.rewrite_to')}><TypePicker value={type} onChange={(t) => { if (picked) setNote(''); setType(t) }} exclude={from} /></Field>
+      {/* 改写要求选填：不填就按目标类型的常规写法改（tasks/rewrite-article.md） */}
       <Field label={tr('article.rewrite_note')} hint={tr('article.rewrite_note_hint')}>
         <textarea value={note} onChange={(e) => { setNote(e.target.value); setMsg('') }} rows={4} className={cx(inputCls, 'py-2')} placeholder={tr(`article.rewrite_ph_${type}`)} />
       </Field>
@@ -94,9 +94,13 @@ function PresetsDialog({ open, presets, onClose, onChanged }: { open: boolean; p
     else await dbCreate('rewrite_presets', { type: editing.type, prompt: editing.prompt.trim(), created_at: t, updated_at: t })
   }).then((ok) => { if (ok) setEditing(null) })
 
-  const form = (d: Draft) => <div className="space-y-2 rounded-lg border border-primary/40 p-3">
-    <Segmented<ArticleType> value={d.type} onChange={(t) => setEditing({ ...d, type: t })} options={ARTICLE_TYPES.map((t) => ({ value: t, label: TYPE_META[t].label }))} />
-    <textarea autoFocus rows={3} value={d.prompt} onChange={(e) => setEditing({ ...d, prompt: e.target.value })} placeholder={tr(`article.rewrite_ph_${d.type}`)} className={cx(inputCls, 'py-2')} />
+  const form = (d: Draft) => <div className="space-y-3 rounded-lg border border-primary/40 p-3">
+    <Field group label={tr('article.rewrite_to')}>
+      <Segmented<ArticleType> value={d.type} onChange={(t) => setEditing({ ...d, type: t })} options={ARTICLE_TYPES.map((t) => ({ value: t, label: TYPE_META[t].label }))} />
+    </Field>
+    <Field label={tr('article.preset_prompt')}>
+      <textarea autoFocus rows={3} value={d.prompt} onChange={(e) => setEditing({ ...d, prompt: e.target.value })} placeholder={tr(`article.rewrite_ph_${d.type}`)} className={cx(inputCls, 'py-2')} />
+    </Field>
     <div className="flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={() => setEditing(null)}>{tr('common.cancel')}</Button><Button size="sm" disabled={busy || !d.prompt.trim()} onClick={save}><Check />{tr('common.save')}</Button></div>
   </div>
 

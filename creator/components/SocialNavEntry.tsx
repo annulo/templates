@@ -18,7 +18,7 @@ export default function SocialNavEntry({ channels, active, disabled, onClick }: 
       <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
         <span className="flex shrink-0 items-center gap-1" aria-label={types.map((type) => CHANNEL_TYPES[type].label).join(', ')}>{types.slice(0, 3).map((type) => {
           const Icon = CHANNEL_TYPES[type].icon
-          return <span key={type} title={CHANNEL_TYPES[type].label} className={cx('inline-flex', type === 'linkedin' ? 'text-[#0a66c2] dark:text-[#65aaff]' : type === 'facebook' ? 'text-[#1877f2] dark:text-[#65aaff]' : type === 'youtube' ? 'text-[#e82727] dark:text-[#ff6b6b]' : 'text-foreground')}><Icon size={13} /></span>
+          return <span key={type} title={CHANNEL_TYPES[type].label} className="inline-flex text-foreground"><Icon size={13} /></span>
         })}</span>
         <span className="truncate">{tr('nav.social_capabilities')}</span>
       </span>
