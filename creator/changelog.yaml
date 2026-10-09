@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.12.0
+  zh: 能从 Notion 导入文章：新建文章时只粘一篇 Notion 页面的链接，点「从 Notion 导入」存成草稿，图片存进资料库；文档改了文章页会提示，「从文档更新」拉回来（要先在 设置 → MCP 连上 Notion）。改写弹窗加了「转换」：不经过 AI，内容不动，只把长文、图文笔记、视频的格式互相换，另存一篇；同类型时是「复制」。文章列表每一行有「⋯」菜单：改写、复制、删除。新建文章默认选第一种类型。需要 Annulo 新版本。
+  en: "Import articles from Notion: when creating an article, paste just a Notion page link and click \"Import from Notion\" to save it as a draft, with images saved to your library; when the document changes the article page says so, and \"Update from document\" pulls it in (connect Notion first in Settings \u2192 MCP). The rewrite dialog adds \"Convert\": no AI, the content stays as is and only the format changes between long-form, image posts and videos, saved as a new article; with the same type it is \"Duplicate\". Each row in the article list has a \"\u22ef\" menu: rewrite, duplicate, delete. New articles default to the first type. Needs the latest Annulo."
 - version: 0.11.2
   zh: 内容中心只留一个「新建文章」：选类型，在「这篇想写什么」里写主题、要点或草稿，然后「自己写」或「让 AI 写」（写法每篇都照写作要求）；选类型时长文排在最后。文章页查看时正文加了边框，和编辑时对齐；图文笔记、视频的正文字号和长文一样，配图缩略图更大。「AI 要求」弹窗加了「关闭」按钮。
   en: "Content now has a single \"New article\": pick a type, put a subject, points or a draft in \"What to write\", then \"Write it myself\" or \"Let AI write it\" (writing instructions always apply); long-form is listed last among the types. The article page frames the body and lines it up with the editor; image posts and videos use the same text size as long-form, with bigger image thumbnails. The \"AI instructions\" dialog has a Close button."

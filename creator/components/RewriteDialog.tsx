@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bookmark, Check, Loader2, Pencil, Plus, Settings2, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowRightLeft, Bookmark, Check, Copy, Loader2, Pencil, Plus, Settings2, Sparkles, Trash2 } from 'lucide-react'
 import { ARTICLE_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleType } from './ArticleTypes'
 import { Button, Dialog, Field, Notice, Segmented, cx, inputCls } from './ui'
 import { tr } from '../lib/i18n'
@@ -14,7 +14,10 @@ const byCreated = (l: RewritePreset[]) => l.sort((a, b) => String(a.created_at ?
  * 改写：选改成哪种类型、写这次的要求，交给助手另写一篇（原文不动）。
  * 常用的要求存成「改写预设」（rewrite_presets 表：类型 + 要求）：这里只挑（点一下类型和要求都填好），改、删、加在「管理预设」弹窗里。
  */
-export default function RewriteDialog({ open, article, starting, error, onClose, onStart }: { open: boolean; article: Article; starting: boolean; error: string; onClose: () => void; onStart: (type: ArticleType, note: string) => void }) {
+/**
+ * 改写成一篇新的：「AI 改写」交给助手按要求重写；「转换」不经过 AI，内容不动、只按类型换格式（onConvert，core/local/convert.ts）
+ */
+export default function RewriteDialog({ open, article, starting, error, onClose, onStart, onConvert }: { open: boolean; article: Article; starting: boolean; error: string; onClose: () => void; onStart: (type: ArticleType, note: string) => void; onConvert: (type: ArticleType) => Promise<void> }) {
   const from = typeOf(article)
   const [type, setType] = useState<ArticleType>(from === 'article' ? 'post' : 'article')
   const [note, setNote] = useState('')
@@ -22,6 +25,11 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
   const [managing, setManaging] = useState(false)
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
+  const [converting, setConverting] = useState(false)
+  const convert = async () => {
+    setConverting(true); setErr('')
+    try { await onConvert(type) } catch (e) { setErr((e as Error).message) } finally { setConverting(false) }
+  }
   const load = () => dbList('rewrite_presets').then((l) => setPresets(byCreated(l))).catch((e) => { setPresets([]); setErr((e as Error).message) })
   useEffect(() => { if (open) { setType(from === 'article' ? 'post' : 'article'); setNote(''); setMsg(''); setErr(''); void load() } }, [open])
 
@@ -40,7 +48,9 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
 
   return <Dialog open={open} onClose={onClose} title={tr('article.rewrite_title')} width={640} footer={<>
     <Button variant="ghost" onClick={onClose}>{tr('common.cancel')}</Button>
-    <Button needsShuttle onClick={() => onStart(type, note.trim())} disabled={starting}>{starting ? <Loader2 className="animate-spin" /> : <Sparkles />}{tr('article.rewrite_go', { type: TYPE_META[type].label })}</Button>
+    {/* 同类型没有可转的，按钮就是「复制」 */}
+    <Button variant="outline" onClick={convert} disabled={converting || starting} title={type === from ? undefined : tr('article.convert_hint')}>{converting ? <Loader2 className="animate-spin" /> : type === from ? <Copy /> : <ArrowRightLeft />}{type === from ? tr('article.copy_go') : tr('article.convert_go')}</Button>
+    <Button needsShuttle onClick={() => onStart(type, note.trim())} disabled={starting || converting}>{starting ? <Loader2 className="animate-spin" /> : <Sparkles />}{tr('article.rewrite_go', { type: TYPE_META[type].label })}</Button>
   </>}>
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">{tr('article.rewrite_hint', { title: article.title })}</p>

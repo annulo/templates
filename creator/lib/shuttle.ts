@@ -293,6 +293,8 @@ export type Article = {
   source_id?: string
   /** 新文章：AI 写好还没打开看过 */
   unread?: boolean
+  // 从外部文档导入的来源（JSON，core/local/docsync.ts）
+  source_doc?: string
   status: ArticleStatus
   evidence_id?: string
   evidence_snapshot?: string

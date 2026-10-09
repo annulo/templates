@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { ArrowLeft, Loader, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, Copy, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { WritingBriefDialog } from '../ContentEvidence'
+import { NotionLogo } from '../BrandIcons'
 import { ArticleEditor, ArticleView, draftOf, patchOf, sameDraft, type ArticleDraft } from '../ArticleEditor'
-import { ARTICLE_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleType } from '../ArticleTypes'
+import { ARTICLE_TYPES, PICKER_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleType } from '../ArticleTypes'
 import { PublishDialog, PublishRecords } from '../ArticlePublish'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls, toast, type Tone } from '../ui'
 import { TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { CHANNEL_TYPES } from '../../lib/channels'
-import { dbCreate, dbDelete, dbList, dbPatch, openChat, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
+import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, runLocal, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
 import type { Ctx } from './types'
 import { numLocale, tr } from '../../lib/i18n'
 
@@ -61,7 +62,7 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
   const [pubs, setPubs] = useState<Publication[]>([])
   const [error, setError] = useState('')
   const [writingInput, setWritingInput] = useState<WriteInput | null>(null)
-  const [writingType, setWritingType] = useState<ArticleType>('article')
+  const [writingType, setWritingType] = useState<ArticleType>(PICKER_TYPES[0])
   const [writingNotes, setWritingNotes] = useState('')
   const [savingSelf, setSavingSelf] = useState(false)
   // 「写作要求」在页头的「更多」里
@@ -102,7 +103,7 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
   const statusOf = (a: Article): ArticleStatus => (publishedTo[a.id]?.length || a.status === 'published' ? 'published' : 'draft')
 
   const writer = useTask(WRITE_TASK, load)
-  const openWriter = (input: WriteInput = {}, type: ArticleType = 'article') => {
+  const openWriter = (input: WriteInput = {}, type: ArticleType = PICKER_TYPES[0]) => {
     setWritingNotes('')
     setWritingType(type)
     setWritingInput(input)
@@ -127,6 +128,34 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
       setParam('tab', 'articles')
       setParam('article', row.id)
     } catch (e) { toast((e as Error).message, 'error') } finally { setSavingSelf(false) }
+  }
+  // 列表上的「更多 → 改写 / 复制」：改写弹窗和文章页的同一个；复制另存一篇草稿，打开它
+  const [rewriting, setRewriting] = useState<Article | null>(null)
+  const listRewriter = useTask(REWRITE_TASK, load)
+  const copyArticle = async (a: Article) => {
+    const r = await runLocal<{ article_id: string }>('convert.copy', { article_id: a.id })
+    load()
+    setParam('article', r.article_id)
+  }
+  // 只粘了一个 Notion 链接：导入那篇文档（docs 插件读，docsync 存成草稿）
+  const docUrl = !writingInput?.topic_id && isDocUrl(writingNotes) ? writingNotes.trim() : ''
+  const [importing, setImporting] = useState(false)
+  // 导入失败：Notion 没连上（或要重新授权）时旁边给「去连接」
+  const [importError, setImportError] = useState<{ message: string; connect: boolean } | null>(null)
+  useEffect(() => setImportError(null), [writingNotes, writingInput])
+  const importDoc = async () => {
+    setImporting(true); setImportError(null)
+    try {
+      const r = await runLocal<{ article_id: string; warnings: string[] }>('docsync.create', { url: docUrl, type: writingType })
+      setWritingInput(null)
+      load()
+      setParam('tab', 'articles')
+      setParam('article', r.article_id)
+      for (const w of r.warnings ?? []) toast(w, 'error')
+    } catch (e) {
+      const src = await runLocal<{ provider: string; connected: boolean }[]>('docs/docs.sources', {}).catch(() => [])
+      setImportError({ message: (e as Error).message, connect: !src.find((x) => x.provider === 'notion')?.connected })
+    } finally { setImporting(false) }
   }
   // 社媒工作区的创建按钮也打开新建文章
   useEffect(() => {
@@ -173,23 +202,69 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
       />
       <TaskFailed task={writer.task} />
       {tab === 'articles' ? (
-        <Articles ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
+        <Articles onRewrite={setRewriting} onCopy={copyArticle} ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
       ) : (
         <Topics ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
       )}
       <TaskRequirements task={writer.task} onSaved={writer.setTask} title={tr('content.req_title')} hint={tr('content.req_hint')} open={reqOpen} onOpenChange={setReqOpen} />
-      <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingTitle ? `${tr('content.new_article')} · ${writingTitle}` : tr('content.new_article')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button>{!writingInput?.topic_id && <Button variant="outline" onClick={writeSelf} disabled={savingSelf || writer.starting}>{savingSelf ? <Loader className="animate-spin" /> : <Pencil />}{tr('content.write_self')}</Button>}<Button onClick={startWriting} disabled={writerBusy || savingSelf}>{writer.starting ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.ai_write_this')}</Button></>}>
+      {rewriting && <RewriteDialog open article={rewriting} starting={listRewriter.starting} error={listRewriter.error} onClose={() => setRewriting(null)}
+        onStart={async (to, note) => { if (await listRewriter.run({ article_id: rewriting.id, type: to, note })) setRewriting(null) }}
+        onConvert={async (to) => { const r = await runLocal<{ article_id: string }>('convert.toType', { article_id: rewriting.id, type: to }); setRewriting(null); load(); setParam('article', r.article_id) }} />}
+      <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingTitle ? `${tr('content.new_article')} · ${writingTitle}` : tr('content.new_article')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button>{!writingInput?.topic_id && !docUrl && <Button variant="outline" onClick={writeSelf} disabled={savingSelf || writer.starting}>{savingSelf ? <Loader className="animate-spin" /> : <Pencil />}{tr('content.write_self')}</Button>}<Button variant={docUrl ? 'outline' : 'default'} onClick={startWriting} disabled={writerBusy || savingSelf || importing}>{writer.starting ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.ai_write_this')}</Button>{docUrl && <Button onClick={importDoc} disabled={importing}>{importing ? <Loader className="animate-spin" /> : <Download />}{tr('content.import_doc')}</Button>}</>}>
         <div className="space-y-4">
           <Field group label={tr('article.type')}><TypePicker value={writingType} onChange={setWritingType} /></Field>
           {/* 这里写这篇写什么（主题、要点、草稿）；怎么写照「写作要求」，每篇都用 */}
           <Field label={tr('content.write_notes')}><textarea autoFocus value={writingNotes} placeholder={tr(writingInput?.topic_id ? 'content.write_notes_ph_topic' : 'content.write_notes_ph')} onChange={(e) => setWritingNotes(e.target.value)} rows={8} className={cx(inputCls, 'py-2 leading-relaxed')} /></Field>
+          {!writingInput?.topic_id && <p className="-mt-2 flex items-center gap-1.5 text-sm text-muted-foreground"><NotionLogo size={16} className="shrink-0" />{tr(docUrl ? 'content.import_doc_hint' : 'content.import_doc_tip')}</p>}
           <p className="text-xs text-muted-foreground">{tr('content.write_notes_hint')}{writer.task && <button type="button" onClick={() => setReqOpen(true)} className="ml-1 cursor-pointer text-primary-text hover:underline">{tr('content.req_btn')}</button>}</p>
+          {importError && <Notice tone="error"><div className="flex flex-wrap items-center gap-2"><span className="min-w-0 flex-1">{importError.message}</span>{importError.connect && <Button size="sm" variant="outline" onClick={() => openShuttleSettings('mcp')}>{tr('content.open_mcp')}</Button>}</div></Notice>}
           {writer.error && <Notice tone="error">{writer.error}</Notice>}
         </div>
       </Dialog>
     </div>
   )
 }
+
+/**
+ * 从文档导入的文章：显示来源和同步时间，「从文档更新」把文档现在的内容拉回来（core/local/docsync.ts）。
+ * 打开时查一次文档的最后编辑时间，比上次同步新就标「文档有更新」；这边改过正文的，覆盖前先问。
+ */
+function DocSource({ a, onChanged }: { a: Article; onChanged: () => void }) {
+  const src = useMemo(() => { try { return JSON.parse(a.source_doc || 'null') as { provider: string; url: string; title?: string; synced_at?: string } | null } catch { return null } }, [a.source_doc])
+  const [updated, setUpdated] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [confirm, setConfirm] = useState(false)
+  useEffect(() => {
+    setUpdated(false)
+    if (!src?.url) return
+    runLocal<{ updated: boolean }>('docsync.status', { article_id: a.id }).then((r) => setUpdated(!!r.updated)).catch(() => {})
+  }, [a.id, src?.synced_at])
+  if (!src?.url) return null
+  const pull = async (force: boolean) => {
+    setBusy(true)
+    try {
+      const r = await runLocal<{ conflict: boolean; warnings?: string[] }>('docsync.pull', { article_id: a.id, force })
+      if (r.conflict) return setConfirm(true)
+      setConfirm(false)
+      setUpdated(false)
+      for (const w of r.warnings ?? []) toast(w, 'error')
+      toast(tr('content.doc_pulled'))
+      onChanged()
+    } catch (e) { toast((e as Error).message, 'error') } finally { setBusy(false) }
+  }
+  return <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+    <span className="min-w-0 truncate">{tr('content.doc_source')}<a href={src.url} target="_blank" rel="noreferrer" className="text-primary-text hover:underline">Notion{src.title ? ` · ${src.title}` : ''}</a></span>
+    {src.synced_at && <span>{tr('content.doc_synced', { time: fmtTime(src.synced_at) })}</span>}
+    {updated && <Badge tone="warn">{tr('content.doc_updated')}</Badge>}
+    <button type="button" disabled={busy} onClick={() => pull(false)} className="inline-flex cursor-pointer items-center gap-1 text-primary-text hover:underline disabled:cursor-default disabled:opacity-50">{busy ? <Loader className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}{tr('content.doc_pull')}</button>
+    <Dialog open={confirm} onClose={() => setConfirm(false)} title={tr('content.doc_pull')} footer={<><Button variant="ghost" onClick={() => setConfirm(false)}>{tr('common.cancel')}</Button><Button onClick={() => pull(true)} disabled={busy}>{busy && <Loader className="animate-spin" />}{tr('content.doc_overwrite')}</Button></>}>
+      <p className="text-sm">{tr('content.doc_conflict')}</p>
+    </Dialog>
+  </div>
+}
+
+/** 粘的是不是一篇外部文档（现在只有 Notion）的链接：整段只有这一个链接 */
+const isDocUrl = (s: string) => /^https?:\/\/(?:[\w-]+\.)*notion\.(?:so|site|com)\/\S+$/i.test(s.trim())
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -214,7 +289,7 @@ function HeaderMore({ items }: { items: { label: string; icon: typeof SlidersHor
   </div>
 }
 
-function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, onWrite, onDelete }: { onDelete: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; onWrite: () => void }) {
+function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, onWrite, onDelete, onRewrite, onCopy }: { onDelete: (a: Article) => Promise<void>; onRewrite: (a: Article) => void; onCopy: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; onWrite: () => void }) {
   const [query, setQuery] = useState('')
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
@@ -274,7 +349,7 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
             </div>
             <div className="flex shrink-0 flex-col items-end justify-between gap-2 self-stretch">
               <span className="flex items-center gap-1">
-                <RowDelete onDelete={() => onDelete(a)} />
+                <RowMore onRewrite={() => onRewrite(a)} onCopy={() => onCopy(a)} onDelete={() => onDelete(a)} />
                 <Badge className="mt-0.5" tone={ARTICLE_STATUS[a.status]?.tone}>{ARTICLE_STATUS[a.status]?.label ?? a.status}</Badge>
               </span>
               {chips && <span className="hidden max-w-md flex-wrap items-center justify-end gap-1.5 md:flex">{chips}</span>}
@@ -289,15 +364,35 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
 }
 
 /** 列表每行的删除：悬停时出现，点一下变成「确认删除」，再点才删；点到别处就取消。删不了的（发出去了）顶部提示原因 */
-function RowDelete({ onDelete }: { onDelete: () => Promise<void> }) {
+/** 列表一行右上角的「更多」：改写、复制、删除（删除点两下确认）。点菜单不会打开这篇 */
+function RowMore({ onRewrite, onCopy, onDelete }: { onRewrite: () => void; onCopy: () => Promise<void>; onDelete: () => Promise<void> }) {
+  const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const stop = (e: { stopPropagation: () => void }) => e.stopPropagation()
-  return confirm
-    ? <button type="button" disabled={busy} onClick={async (e) => { stop(e); setBusy(true); try { await onDelete() } finally { setBusy(false); setConfirm(false) } }} onBlur={() => !busy && setConfirm(false)} onKeyDown={stop} autoFocus
-      className="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md bg-destructive px-2 text-xs font-medium text-white hover:bg-destructive/90 disabled:opacity-60">{busy ? <Loader className="size-3 animate-spin" /> : <Trash2 className="size-3" />}{tr('article.delete_confirm')}</button>
-    : <button type="button" onClick={(e) => { stop(e); setConfirm(true) }} onKeyDown={stop} aria-label={tr('content.del')} title={tr('content.del')}
-      className="inline-flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground opacity-100 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"><Trash2 className="size-3.5" /></button>
+  const [busy, setBusy] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) { setOpen(false); setConfirm(false) } }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); setConfirm(false) } }
+    document.addEventListener('pointerdown', close); document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc) }
+  }, [open])
+  const act = async (key: string, fn: () => Promise<void> | void) => {
+    setBusy(key)
+    try { await fn(); setOpen(false); setConfirm(false) } catch (e) { toast((e as Error).message, 'error') } finally { setBusy('') }
+  }
+  const item = 'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left outline-none hover:bg-accent focus-visible:bg-accent disabled:cursor-default disabled:opacity-60'
+  return <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+    <button type="button" aria-label={tr('content.more_actions')} title={tr('content.more_actions')} aria-haspopup="menu" aria-expanded={open} onClick={() => { setOpen((v) => !v); setConfirm(false) }}
+      className={cx('inline-flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground', open && 'bg-accent text-foreground')}><MoreHorizontal className="size-4" /></button>
+    {open && <div role="menu" className="absolute top-full right-0 z-40 mt-1 w-40 rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl">
+      <button type="button" role="menuitem" className={item} onClick={() => act('rewrite', onRewrite)}><Repeat2 className="size-4" />{tr('content.row_rewrite')}</button>
+      <button type="button" role="menuitem" className={item} disabled={!!busy} onClick={() => act('copy', onCopy)}>{busy === 'copy' ? <Loader className="size-4 animate-spin" /> : <Copy className="size-4" />}{tr('content.row_copy')}</button>
+      {confirm
+        ? <button type="button" role="menuitem" autoFocus disabled={!!busy} onClick={() => act('del', onDelete)} className={cx(item, 'bg-destructive font-medium text-white hover:bg-destructive/90 focus-visible:bg-destructive/90')}>{busy === 'del' ? <Loader className="size-4 animate-spin" /> : <Trash2 className="size-4" />}{tr('article.delete_confirm')}</button>
+        : <button type="button" role="menuitem" onClick={() => setConfirm(true)} className={cx(item, 'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10')}><Trash2 className="size-4" />{tr('content.del')}</button>}
+    </div>}
+  </div>
 }
 
 function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged }: { ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
@@ -426,6 +521,14 @@ function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, o
     const id = await rewriter.run({ article_id: a.id, type: to, note: req })
     if (id) setRewritingOpen(false)
   }
+  // 转换：不经过 AI，按类型换字段格式另存一篇（core/local/convert.ts），好了直接打开新的
+  const convertTo = async (to: ArticleType) => {
+    if (dirty && !(await saveEdit())) return
+    const r = await runLocal<{ article_id: string }>('convert.toType', { article_id: a.id, type: to })
+    setRewritingOpen(false)
+    onChanged()
+    open(r.article_id)
+  }
   // 发布前有没保存的修改：先存，发出去的是保存后的内容
   const openPublish = async () => {
     if (dirty && !(await saveEdit())) return
@@ -507,6 +610,7 @@ function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, o
           <div className="rounded-lg border border-border px-5 py-4">
             <h1 className="text-2xl leading-snug font-semibold tracking-tight text-balance">{a.title}</h1>
             <div className="mt-2"><ArticleTime label={tr('content.updated')} value={a.updated_at || a.created_at} /></div>
+            {a.source_doc && <DocSource a={a} onChanged={onChanged} />}
             <ArticleView a={a} />
           </div>
         )}
@@ -520,7 +624,7 @@ function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, o
       <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} />
 
       <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
-      <RewriteDialog open={rewritingOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setRewritingOpen(false)} onStart={startRewrite} />
+      <RewriteDialog open={rewritingOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setRewritingOpen(false)} onStart={startRewrite} onConvert={convertTo} />
       <TaskRequirements task={reviser.task} onSaved={reviser.setTask} title={tr('content.revise_req_title')} hint={tr('content.revise_req_hint')} open={requirementsOpen} onOpenChange={(o) => { setRequirementsOpen(o); if (!o) moreRef.current?.querySelector('button')?.focus() }} />
       <Dialog
         open={asking}

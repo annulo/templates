@@ -322,9 +322,10 @@ export const content: Article = {
 
 ## 写文章
 
-两种开头：
+三种开头：
 - 「新建文章」：先选类型，在「这篇想写什么」里写主题、要点或一段草稿，然后二选一：「自己写」建一篇草稿打开编辑（第一行当标题，后面的放进正文）；「让 AI 写」交给助手，怎么写照「写作要求」，什么都不填时助手从选题里挑一个最值得写的；
 - 选题上「写成文章」：写这个选题，同样先选类型，可以补充要点或草稿。
+- 在 Notion 里写好的：在「这篇想写什么」里只粘那篇 Notion 页面的链接，点「从 Notion 导入」存成草稿，图片存进资料库（要先在 Annulo 的 设置 → MCP 里连上 Notion）。文章页标题下面写着来源，文档改了会提示「文档有更新」，点「从文档更新」拉回来；这边改过正文的，覆盖前会先问。
 
 交给助手写的，页面上显示「助手正在写…」，一般几分钟，点「看过程」能看它每一步。写好的文章是「草稿」，在「文章」页签里。长期的写法在页面右上角「更多 → 写作要求」里改。
 助手只用「我的定位」里写了的个人经历，不编数据和案例；资料库里有对得上的图会配上。
@@ -338,7 +339,12 @@ export const content: Article = {
 
 ## 改写
 
-文章页点「改写」：选改成哪种类型，写这次的要求，助手另写一篇新的，原文不动。新文章在列表里，详情里写着「改写自」哪篇；原文下面列着「改写出的文章」。
+文章页点「改写」（或者列表里一篇右边的「⋯ → 改写」）：选改成哪种类型，有两种做法，都是另存一篇新的、原文不动：
+
+- 「AI 改写」：写这次的要求，助手按目标类型重写；
+- 「转换」：不经过 AI，内容一个字不改，只换格式：长文的小标题、段落变成一行一行的纯文字，正文里的图做配图；反过来一行变一段，配图接在最后。选了同类型时这个按钮是「复制」。
+
+新文章在列表里，详情里写着「改写自」哪篇；原文下面列着「改写出的文章」。列表里「⋯ → 复制」原样复制一篇草稿。
 
 **改写预设**：常用的要求存起来，下次点一下就填好。比如经常把长文改成 X 的推文，就在「改写成图文笔记」下写「简短，200 字以内，开头一句话抓人」，点「存为预设」。点一下预设，类型和要求都填好；改、删、新建在改写弹窗的「管理预设」里。
 
@@ -390,9 +396,10 @@ The "Topics" tab:
 
 ## Writing
 
-Two ways to start:
+Three ways to start:
 - "New article": pick a type and put a subject, points or a rough draft in "What to write", then either "Write it myself" (creates a draft and opens it; the first line becomes the title, the rest goes into the body) or "Let AI write it" (the assistant writes it following your writing instructions; with nothing filled in, it picks the most worthwhile topic);
 - "Write article" on a topic: writes that topic, again after picking a type; you can add points or a draft.
+- Written in Notion: paste just the Notion page link into "What to write" and click "Import from Notion" to save it as a draft, with images saved to your library (connect Notion first in Annulo, Settings → MCP). The article page shows the source under the title; when the document changes it says "Document changed", and "Update from document" pulls it in, asking first if you edited the body here.
 
 While the assistant writes, the page shows "The assistant is writing…", usually for a few minutes; "View progress" shows each step. The result is a "Draft" under Articles. Change the long-term instructions under "More → Writing instructions" at the top right.
 The assistant only uses personal stories you wrote in My profile and doesn't make up data or cases; matching images from the Library are added.
@@ -406,7 +413,12 @@ Open one:
 
 ## Rewrite
 
-Click "Rewrite" on an article: pick the type to rewrite into, write what you want, and the assistant writes a new article; the original stays as it is. The new one is in the list and says which article it was "Rewritten from"; the original lists its "Rewritten articles".
+Click "Rewrite" on an article (or "⋯ → Rewrite" on its row in the list) and pick the type. Either way you get a new article and the original stays as it is:
+
+- "AI rewrite": write what you want and the assistant rewrites it for that type;
+- "Convert": no AI, the content stays word for word and only the format changes: long-form headings and paragraphs become plain lines and its images become the post images; the other way, each line becomes a paragraph and the images go at the end. With the same type picked, this button is "Duplicate".
+
+The new one is in the list and says which article it was "Rewritten from"; the original lists its "Rewritten articles". "⋯ → Duplicate" in the list copies an article as a new draft.
 
 **Rewrite presets**: save instructions you use often and fill them in with one click. If you often turn articles into posts for X, write "Short, under 200 words, open with a hook" under "Rewrite into Image post" and click "Save as preset". Clicking a preset fills in both the type and the instructions; edit, delete or add presets under "Manage presets" in the rewrite dialog.
 
