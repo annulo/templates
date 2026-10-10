@@ -212,6 +212,8 @@ export const social: Article = {
 - 这段时间发布了几条、新增粉丝和互动，每天的变化图（要采集过两天以上才画得出来）；
 - 「帖子」列表：每条的各项数据，点表头按那一列排；可以只看这段时间发的，也可以看全部。点标题打开它出自的文章和发布记录。
 
+Facebook 公共主页使用官方 API 连接时，近期帖子、数据表现和文章发布记录可点「查看评论」，显示评论及回复的文字和发布时间，支持「刷新评论」与「加载更多评论」。只有 Facebook 返回的可见评论会显示，可能少于评论总数；读取失败会显示具体错误，不会显示成「暂无评论」。评论内容只在查看时读取，不写入项目数据库。
+
 ![社交媒体 · 数据表现：一个账号的粉丝和帖子数据](https://fsu.creght.com/site/2103669300995821568/1791356481632__creator_help_social_data.png)
 
 ## 采集数据
@@ -268,6 +270,9 @@ The second tab, "Performance". Pick an account and a period at the top (last 7 /
 - Account card: login status, followers, last collection, "Profile" and "Collect now", and the last self-test result;
 - Posts published in the period, new followers and engagement, and a daily chart (it needs at least two days of collection);
 - "Posts" list: each post's numbers; click a column header to sort by it. Show only posts from the period, or all. Click a title to open its article and publishing record in Content center.
+
+
+For Facebook Pages connected through the official API, "View comments" is available in Recent posts, Performance and article publishing records. The dialog shows comment and reply text with timestamps, plus "Refresh comments" and "Load more comments". Only comments made available by Facebook appear, which may be fewer than the total count. Read failures show an error instead of an empty state. Comments are fetched on demand and are not saved to the project database.
 
 ![Social media · Performance: one account's followers and posts](https://fsu.creght.com/site/2103669300995821568/1791356481632__creator_help_social_data.png)
 

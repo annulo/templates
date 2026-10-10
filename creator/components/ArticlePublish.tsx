@@ -1,3 +1,7 @@
+import { metricText } from '../lib/apiMetrics'
+import { facebookPublishRecovery } from '../lib/facebookPublishRecovery'
+import FacebookPublishRecovery from './FacebookPublishRecovery'
+import FacebookComments from './FacebookComments'
 import { useEffect, useState } from 'react'
 import { AlertTriangle, ArrowUpRight, Loader2, Send, Trash2 } from 'lucide-react'
 import SchedulePopover, { ScheduledLine } from './SchedulePopover'
@@ -16,7 +20,6 @@ function JobLine({ job }: { job?: PublishJob }) {
   </div>
 }
 import { CHANNEL_TYPES } from '../lib/channels'
-import { fmtNum } from '../lib/format'
 import { tr } from '../lib/i18n'
 import { dbDelete, dbPatch, isSite, openChat, runLocal, runTask, shuttleImage, type Article, type Channel, type Publication, type SocialPost } from '../lib/shuttle'
 import { SOCIAL, loggedInElsewhere, useElsewhere } from '../lib/social'
@@ -37,7 +40,7 @@ async function setupPublish(channelId: string, note?: string) {
 }
 
 const statusTone = (s?: string) => s === 'published' ? 'ok' as const : s === 'failed' ? 'bad' as const : s === 'scheduled' || s === 'publishing' ? 'primary' as const : 'default' as const
-const metricsLine = (p: SocialPost) => tr('versions.metrics', { v: fmtNum(p.views ?? 0), l: fmtNum(p.likes ?? 0), c: fmtNum(p.comments ?? 0) })
+const metricsLine = (p: SocialPost) => tr('versions.metrics', { v: metricText(p, 'views'), l: metricText(p, 'likes'), c: metricText(p, 'comments') })
 
 export function ChannelAvatar({ ch }: { ch: Channel }) {
   const Icon = CHANNEL_TYPES[ch.type]?.icon
@@ -197,6 +200,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
     {!list.length && !pubs.length ? <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">{tr('article.records_empty')}<div className="mt-3"><Button size="sm" feedback={false} onClick={onPublish}><Send />{tr('article.publish')}</Button></div></div>
       : !!list.length && <div className="overflow-hidden rounded-lg border border-border">{list.map((p) => {
         const ch = ctx.channels.find((c) => c.id === p.channel_id)
+        const recovery = facebookPublishRecovery(p, ch)
         const legacy = ['draft', 'pending_review', 'rejected'].includes(p.status)
         return <div key={p.id} id={`pub-${p.id}`} className={cx('space-y-2 border-b border-border px-3 py-3 last:border-b-0', focus === p.id && 'bg-primary/5')}>
           <div className="flex min-w-0 items-center gap-3">
@@ -214,10 +218,12 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
           </div>
           {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} fromArticle />}
           <JobLine job={jobOf(p.id)} />
+          <FacebookComments post={p} channel={ch} />
           {!jobOf(p.id) && p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
+          {!jobOf(p.id) && <FacebookPublishRecovery post={p} channel={ch} disabled={!!busy} onAction={(input) => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', ...input }])} />}
           {p.status !== 'published' && p.status !== 'removed' && !jobOf(p.id) && <div className="flex flex-wrap items-center gap-2">
-            {(p.status === 'failed' || p.status === 'approved' || p.status === 'scheduled') && <Button size="sm" variant="outline" fn="social/social.publish" feedback={false} onClick={() => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', post_id: p.id }])}><Send />{p.status === 'failed' ? tr('article.retry') : tr('social.publish_now')}</Button>}
-            {p.status === 'scheduled' && <SchedulePopover size="sm" current={p.scheduled_at} onSchedule={(iso) => dbPatch('social_posts', p.id, { status: 'scheduled', scheduled_at: iso }).then(onChanged)} onUnschedule={() => dbPatch('social_posts', p.id, { status: 'approved', scheduled_at: '' }).then(onChanged)} />}
+            {!recovery && (p.status === 'failed' || p.status === 'approved' || p.status === 'scheduled') && <Button size="sm" variant="outline" fn="social/social.publish" feedback={false} onClick={() => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', post_id: p.id }])}><Send />{p.status === 'failed' ? tr('article.retry') : tr('social.publish_now')}</Button>}
+            {p.status === 'scheduled' && !recovery && <SchedulePopover size="sm" current={p.scheduled_at} onSchedule={(iso) => dbPatch('social_posts', p.id, { status: 'scheduled', scheduled_at: iso }).then(onChanged)} onUnschedule={() => dbPatch('social_posts', p.id, { status: 'approved', scheduled_at: '' }).then(onChanged)} />}
             {p.status === 'publishing' && <Button size="sm" variant="outline" disabled={!!busy} onClick={() => act('stuck' + p.id, () => dbPatch('social_posts', p.id, { status: 'failed', error: tr('social.stuck_error') }))}>{tr('social.mark_failed')}</Button>}
             {p.status !== 'publishing' && <Button fn="social/social.purge" size="sm" variant="ghost" className="ml-auto text-muted-foreground" disabled={!!busy} onClick={() => act('purge' + p.id, () => runLocal('social/social.purge', { post_id: p.id }))}><Trash2 />{tr('article.delete_record')}</Button>}
           </div>}
