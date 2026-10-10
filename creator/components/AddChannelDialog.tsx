@@ -6,6 +6,7 @@ import { CHANNELS } from '../lib/edition'
 import { SOCIAL } from '../lib/social'
 import RunButton from './RunButton'
 import ChooseAccounts, { type Choose } from './ChooseAccounts'
+import FacebookAccountFlow from './FacebookAccountFlow'
 import { Button, cx } from './ui'
 import { tr } from '../lib/i18n'
 
@@ -92,6 +93,8 @@ export default function AddChannelDialog({ onClose, onAdded, allowedTypes = CHAN
               {tr('add_channel.x_login')}
             </RunButton>
           </div>
+        ) : type === 'facebook' ? (
+          <div className="min-h-0 overflow-y-auto p-4"><FacebookAccountFlow onAdded={() => onAdded('facebook')} /></div>
         ) : SOCIAL[type] ? (
           // 其余社媒平台（B 站、抖音…）：同样弹浏览器登录。登录都走 social.login（记下是在这台电脑登录的）
           <div className="space-y-3 p-4 text-sm">

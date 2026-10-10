@@ -1,6 +1,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import RunButton from '../RunButton'
+import FacebookPublishRecovery from '../FacebookPublishRecovery'
+import { facebookPublishRecovery } from '../../lib/facebookPublishRecovery'
+import { FacebookConnectionButton } from '../FacebookAccountFlow'
 import VideoField from '../VideoField'
 import { showRun, stopRun } from '../../lib/runs'
 import SocialOverview from '../SocialOverview'
@@ -14,6 +17,7 @@ import Select from '../Select'
 import AssetPicker from '../AssetPicker'
 import { CHANNEL_TYPES } from '../../lib/channels'
 import type { Ctx } from './types'
+import { metricText, metricUnavailable } from '../../lib/apiMetrics'
 import { numLocale, tr } from '../../lib/i18n'
 import { brokenOf, ProbeLine, PublishProblems, usePlatformHealth } from '../PlatformHealth'
 
@@ -106,9 +110,10 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const login = (a: Channel) => other(a) ? <Badge>{tr('social.on_machine', { name: loggedInElsewhere(a, machine) })}</Badge> : <Badge tone={a.login_status === 'ok' ? 'ok' : a.login_status === 'expired' ? 'warn' : 'default'}>{tr(a.login_status === 'ok' ? 'social.connected' : a.login_status === 'expired' ? 'social.login_expired' : 'social.not_connected')}</Badge>
   const latest = (a: Channel) => [...owned].filter((p) => p.channel_id === a.id && p.status === 'published' && p.published_at).sort((x, y) => Date.parse(y.published_at!) - Date.parse(x.published_at!))[0]
   const lastPublished = (a: Channel) => broken(a) ? <span className="text-amber-700 dark:text-amber-400">{tr('meta.social_status.failed')}</span> : <span className="text-muted-foreground">{latest(a) ? fmtTime(latest(a)!.published_at) : tr('social.never_published')}</span>
-  const followers = (a: Channel) => a.followers == null ? <span className="text-muted-foreground">{tr('social.not_collected')}</span> : <span className="inline-flex items-baseline gap-1.5"><span className="tabular-nums">{n(a.followers)}</span>{/* 列里是累计粉丝；旁边的箭头是近 30 天的增减，悬停说明 */}{gain[a.id] != null && <span title={tr('social.followers_gain_30_title', { sign: gain[a.id]! > 0 ? '+' : gain[a.id]! < 0 ? '-' : '', n: n(Math.abs(gain[a.id]!)) })} className={cx('text-xs tabular-nums', gain[a.id]! > 0 ? 'text-emerald-600 dark:text-emerald-400' : gain[a.id]! < 0 ? 'text-destructive' : 'text-muted-foreground')}>{gain[a.id]! > 0 ? '↑' : gain[a.id]! < 0 ? '↓' : ''}{n(Math.abs(gain[a.id]!))}</span>}</span>
+  const followers = (a: Channel) => metricUnavailable(a, 'followers') ? <span className="text-muted-foreground">{tr('facebook_connect.metric_unavailable')}</span> : a.followers == null ? <span className="text-muted-foreground">{tr('social.not_collected')}</span> : <span className="inline-flex items-baseline gap-1.5"><span className="tabular-nums">{n(a.followers)}</span>{/* 列里是累计粉丝；旁边的箭头是近 30 天的增减，悬停说明 */}{gain[a.id] != null && <span title={tr('social.followers_gain_30_title', { sign: gain[a.id]! > 0 ? '+' : gain[a.id]! < 0 ? '-' : '', n: n(Math.abs(gain[a.id]!)) })} className={cx('text-xs tabular-nums', gain[a.id]! > 0 ? 'text-emerald-600 dark:text-emerald-400' : gain[a.id]! < 0 ? 'text-destructive' : 'text-muted-foreground')}>{gain[a.id]! > 0 ? '↑' : gain[a.id]! < 0 ? '↓' : ''}{n(Math.abs(gain[a.id]!))}</span>}</span>
   const action = (a: Channel) => {
     const link = 'cursor-pointer text-sm font-medium text-primary-text hover:underline'
+    if (a.type === 'facebook' && (other(a) || expired(a))) return <FacebookConnectionButton channel={a} onDone={onChanged} />
     if (other(a) || expired(a)) return <RunButton inline watch fn="social/social.login" input={{ channel_id: a.id }} icon={UserRound} variant="ghost" onError={setError} onDone={onChanged}>{other(a) ? tr('social.login_here') : tr('social.relogin')}</RunButton>
     return <button type="button" className={link} onClick={() => openSection('data', { account: a.id })}>{broken(a) ? tr('social.fix_publish') : tr('social.view_data')}</button>
   }
@@ -169,7 +174,7 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
                 return <tr key={p.id} className="hover:bg-muted/30">
                   <td className={tableCell}><button type="button" onClick={() => openPost(p)} className="block max-w-80 cursor-pointer truncate text-left font-medium hover:text-primary-text" title={postTitle(p)}>{postTitle(p)}</button><span className="mt-0.5 block text-xs text-muted-foreground">{owner?.name} · {fmtTime(p.published_at)}</span></td>
                   <td className={tableCell}><PlatformName type={owner?.type} name={platformOf(owner)?.label ?? ''} /></td>
-                  <td className={num}>{p.metrics_at ? n(p.views) : '—'}</td><td className={num}>{p.metrics_at ? n(p.likes) : '—'}</td><td className={num}>{p.metrics_at ? n(p.comments) : '—'}</td>
+                  <td className={num}>{metricText(p, 'views')}</td><td className={num}>{metricText(p, 'likes')}</td><td className={num}>{metricText(p, 'comments')}</td>
                   <td className={tableCell}>{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => openPost(p)}>{tr('social.view_content')}</button>}</td>
                 </tr>
               })}</tbody>
@@ -267,7 +272,7 @@ function AllPosts({ ch, days, posts, onOpen }: { ch: Channel; days: number; post
           </tr></thead>
           <tbody className="divide-y divide-border">{rows.slice(0, shown).map((p) => <tr key={p.id} className="hover:bg-muted/30">
             <td className="px-4 py-3 text-sm"><button type="button" onClick={() => onOpen(p)} className="block max-w-96 cursor-pointer truncate text-left font-medium hover:text-primary-text" title={postTitle(p)}>{postTitle(p)}</button><span className="mt-0.5 block text-xs text-muted-foreground">{fmtTime(p.published_at)}</span></td>
-            {metrics.map((m) => <td key={m.key} className="px-4 py-3 text-right text-sm tabular-nums">{p.metrics_at ? n(Number(p[m.key]) || 0) : '—'}</td>)}
+            {metrics.map((m) => <td key={m.key} className="px-4 py-3 text-right text-sm tabular-nums">{metricText(p, m.key)}</td>)}
             <td className="px-4 py-3 text-sm">{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => onOpen(p)}>{tr('social.view_content')}</button>}</td>
           </tr>)}</tbody>
         </table>
@@ -313,7 +318,8 @@ function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channe
               {tr('social.open_profile')}
             </RunButton>
           )}
-          {other || expired ? (
+          {ch.type === 'facebook' && <FacebookConnectionButton channel={ch} onDone={onDone} />}
+          {ch.type === 'facebook' && (other || expired) ? null : other || expired ? (
             <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} onError={setError} onDone={onDone}>
               {other ? tr('social.login_here') : tr('social.relogin')}
             </RunButton>
@@ -339,13 +345,19 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
   const pf = platformOf(owner) ?? Object.values(SOCIAL)[0]!
   // 正在发布：上一次留在表里的报错先不显示，跑完重新读表再说
   const [publishingNow, setPublishingNow] = useState(false)
+  const recovery = facebookPublishRecovery(p, owner)
+  const recover = async (input: import('../../lib/facebookPublishRecovery').FacebookRecoveryInput) => {
+    setPublishingNow(true)
+    try { await runLocal('social/social.publish', input) }
+    finally { setPublishingNow(false); onChanged() }
+  }
   const [previewing, setPreviewingRaw] = useState(false)
   const rowRef = useRef<HTMLDivElement>(null)
-  // 从排期日历点过来（?post=<id>）：滚到这一条并打开预览；关掉预览时把参数去掉
+  // 从排期日历点过来（?post=<id>）：滚到这一条；待确认的发布先显示恢复操作，否则打开预览。
   useEffect(() => {
     if (!focus) return
     rowRef.current?.scrollIntoView({ block: 'center' })
-    setPreviewingRaw(true)
+    if (!recovery) setPreviewingRaw(true)
   }, [focus])
   const setPreviewing = (v: boolean) => {
     setPreviewingRaw(v)
@@ -404,7 +416,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground tabular-nums">
             {pf.metrics.map((m) => (
               <span key={m.key}>
-                {m.label} {n(p[m.key])}
+                {m.label} {metricText(p, m.key)}
               </span>
             ))}
             {p.published_at && <span>{tr('social.published_at', { when: fmtTime(p.published_at) })}</span>}
@@ -413,6 +425,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
         )}
         {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} fromArticle={!!p.article_id} />}
         {!publishingNow && (p.status === 'failed' || (p.status === 'scheduled' && p.error)) && p.error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{p.error}</div>}
+        {recovery && <FacebookPublishRecovery post={p} channel={owner} disabled={publishingNow || busy} onAction={recover} />}
         {p.status === 'publishing' && <div className="text-xs text-muted-foreground">{tr('social.stuck_hint')}</div>}
         {p.status === 'removed' && <div className="text-xs text-muted-foreground">{tr('social.removed_from', { when: p.removed_at ? fmtTime(p.removed_at) : '', p: pf.label })}</div>}
         {p.status === 'rejected' && p.review_note && <div className="text-xs text-muted-foreground">{tr('social.review_note', { note: p.review_note })}</div>}
@@ -439,7 +452,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
               </Button>
             </>
           )}
-          {(p.status === 'approved' || p.status === 'failed') && (
+          {!recovery && (p.status === 'approved' || p.status === 'failed') && (
             <>
               <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onStart={() => setPublishingNow(true)} onDone={() => { setPublishingNow(false); onChanged() }}>
                 {p.status === 'failed' ? tr('social.republish') : tr('social.publish_now')}
@@ -456,7 +469,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
               {tr('social.mark_failed')}
             </Button>
           )}
-          {p.status === 'scheduled' && (
+          {!recovery && p.status === 'scheduled' && (
             <>
               <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onStart={() => setPublishingNow(true)} onDone={() => { setPublishingNow(false); onChanged() }}>
                 {tr('social.publish_now')}

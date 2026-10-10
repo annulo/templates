@@ -7,6 +7,7 @@ import { brokenOf, ProbeLine, PublishProblems, usePlatformHealth } from '../Plat
 import { Button, ErrorDetails, Notice, PageHeader, cx, fmtTime, type Tone } from '../ui'
 import { dbList, removeChannel, shuttleImage, type Channel, type PlatformHealth, type SocialPost } from '../../lib/shuttle'
 import { CHANNEL_TYPES } from '../../lib/channels'
+import { FacebookConnectionButton } from '../FacebookAccountFlow'
 import { isSocial, loggedInElsewhere, platformOf, useElsewhere, type Elsewhere } from '../../lib/social'
 import type { Ctx } from './types'
 import { tr } from '../../lib/i18n'
@@ -164,9 +165,9 @@ function AccountConnection({ ch, actions, other, health, posts, onOpenPost, onDo
               {tr('social.collect')}
             </RunButton>
           )}
-          <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} variant={other || expired ? 'default' : 'ghost'} onError={setError} onDone={onDone}>
+          {ch.type === 'facebook' ? <FacebookConnectionButton channel={ch} onDone={onDone} /> : <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} variant={other || expired ? 'default' : 'ghost'} onError={setError} onDone={onDone}>
             {other ? tr('social.login_here') : tr('social.relogin')}
-          </RunButton>
+          </RunButton>}
           {actions}
         </div>
       </div>

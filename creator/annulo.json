@@ -7,13 +7,13 @@
     "zh": "给自媒体人：定好定位，按定位出选题、写文章（长文、图文笔记、视频），一键发到小红书、X、LinkedIn、知乎等支持这种类型的平台或排期，也能改写成别的类型；粉丝和互动自动采集，每周一份总结。",
     "en": "For creators: set your positioning, get ideas and write from it (long-form, image posts, videos), publish each piece to Xiaohongshu, X, LinkedIn, Zhihu and other platforms that take its type, or schedule it, and rewrite it into another type, with followers and engagement collected and a weekly summary."
   },
-  "min_annulo_api": 38,
+  "min_annulo_api": 39,
   "plugins": {
     "social": "https://github.com/annulo/plugins#social",
     "docs": "https://github.com/annulo/plugins#docs"
   },
   "plugins_min": {
-    "social": "0.7.0",
+    "social": "0.8.2",
     "docs": "0.1.0"
   },
   "assistant": {
