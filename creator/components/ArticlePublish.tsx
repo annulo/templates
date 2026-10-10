@@ -1,6 +1,7 @@
 import { metricText } from '../lib/apiMetrics'
 import { facebookPublishRecovery } from '../lib/facebookPublishRecovery'
 import FacebookPublishRecovery from './FacebookPublishRecovery'
+import FacebookComments from './FacebookComments'
 import { useEffect, useState } from 'react'
 import { AlertTriangle, ArrowUpRight, Loader2, Send, Trash2 } from 'lucide-react'
 import SchedulePopover, { ScheduledLine } from './SchedulePopover'
@@ -217,6 +218,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
           </div>
           {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} fromArticle />}
           <JobLine job={jobOf(p.id)} />
+          <FacebookComments post={p} channel={ch} />
           {!jobOf(p.id) && p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
           {!jobOf(p.id) && <FacebookPublishRecovery post={p} channel={ch} disabled={!!busy} onAction={(input) => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', ...input }])} />}
           {p.status !== 'published' && p.status !== 'removed' && !jobOf(p.id) && <div className="flex flex-wrap items-center gap-2">

@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import RunButton from '../RunButton'
 import FacebookPublishRecovery from '../FacebookPublishRecovery'
+import FacebookComments from '../FacebookComments'
 import { facebookPublishRecovery } from '../../lib/facebookPublishRecovery'
 import { FacebookConnectionButton } from '../FacebookAccountFlow'
 import VideoField from '../VideoField'
@@ -175,7 +176,7 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
                   <td className={tableCell}><button type="button" onClick={() => openPost(p)} className="block max-w-80 cursor-pointer truncate text-left font-medium hover:text-primary-text" title={postTitle(p)}>{postTitle(p)}</button><span className="mt-0.5 block text-xs text-muted-foreground">{owner?.name} · {fmtTime(p.published_at)}</span></td>
                   <td className={tableCell}><PlatformName type={owner?.type} name={platformOf(owner)?.label ?? ''} /></td>
                   <td className={num}>{metricText(p, 'views')}</td><td className={num}>{metricText(p, 'likes')}</td><td className={num}>{metricText(p, 'comments')}</td>
-                  <td className={tableCell}>{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => openPost(p)}>{tr('social.view_content')}</button>}</td>
+                  <td className={tableCell}><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><FacebookComments post={p} channel={owner} />{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => openPost(p)}>{tr('social.view_content')}</button>}</div></td>
                 </tr>
               })}</tbody>
             </table>
@@ -273,7 +274,7 @@ function AllPosts({ ch, days, posts, onOpen }: { ch: Channel; days: number; post
           <tbody className="divide-y divide-border">{rows.slice(0, shown).map((p) => <tr key={p.id} className="hover:bg-muted/30">
             <td className="px-4 py-3 text-sm"><button type="button" onClick={() => onOpen(p)} className="block max-w-96 cursor-pointer truncate text-left font-medium hover:text-primary-text" title={postTitle(p)}>{postTitle(p)}</button><span className="mt-0.5 block text-xs text-muted-foreground">{fmtTime(p.published_at)}</span></td>
             {metrics.map((m) => <td key={m.key} className="px-4 py-3 text-right text-sm tabular-nums">{metricText(p, m.key)}</td>)}
-            <td className="px-4 py-3 text-sm">{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => onOpen(p)}>{tr('social.view_content')}</button>}</td>
+            <td className="px-4 py-3 text-sm"><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><FacebookComments post={p} channel={ch} />{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => onOpen(p)}>{tr('social.view_content')}</button>}</div></td>
           </tr>)}</tbody>
         </table>
       </div>
@@ -425,6 +426,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
         )}
         {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} fromArticle={!!p.article_id} />}
         {!publishingNow && (p.status === 'failed' || (p.status === 'scheduled' && p.error)) && p.error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{p.error}</div>}
+        <FacebookComments post={p} channel={owner} />
         {recovery && <FacebookPublishRecovery post={p} channel={owner} disabled={publishingNow || busy} onAction={recover} />}
         {p.status === 'publishing' && <div className="text-xs text-muted-foreground">{tr('social.stuck_hint')}</div>}
         {p.status === 'removed' && <div className="text-xs text-muted-foreground">{tr('social.removed_from', { when: p.removed_at ? fmtTime(p.removed_at) : '', p: pf.label })}</div>}

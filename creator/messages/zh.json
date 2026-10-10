@@ -1,4 +1,16 @@
 {
+  "facebook_comments": {
+    "view": "查看评论",
+    "title": "Facebook 评论",
+    "refresh": "刷新评论",
+    "more": "加载更多评论",
+    "loading": "正在读取评论…",
+    "empty": "Facebook 暂未返回可查看的评论。",
+    "no_text": "此评论没有文字内容，请到 Facebook 查看。",
+    "hint": "按时间倒序显示评论及回复。Facebook 可返回的评论受可见性限制，可能少于评论总数。",
+    "updated": "更新于 {when}",
+    "loaded": "已显示 {n} 条评论"
+  },
   "facebook_retry": {
     "view_record": "核对发布结果",
     "uncertain": "上次发布结果待确认",

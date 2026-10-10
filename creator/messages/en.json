@@ -1,4 +1,16 @@
 {
+  "facebook_comments": {
+    "view": "View comments",
+    "title": "Facebook comments",
+    "refresh": "Refresh comments",
+    "more": "Load more comments",
+    "loading": "Loading comments…",
+    "empty": "Facebook has not returned any viewable comments.",
+    "no_text": "This comment has no text. View it on Facebook.",
+    "hint": "Comments and replies appear newest first. Visibility restrictions may make the available comments fewer than the total count.",
+    "updated": "Updated {when}",
+    "loaded": "Showing {n} comments"
+  },
   "facebook_retry": {
     "view_record": "Review publishing result",
     "uncertain": "Previous publishing result needs confirmation",
