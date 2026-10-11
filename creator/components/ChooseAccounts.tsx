@@ -21,9 +21,9 @@ export type Choose = {
  * 登录后勾选要添加哪些（Facebook 的个人号和主页、YouTube 的频道、LinkedIn 的个人号和公司主页）：每个一行，只建勾上的（social.addChosen）。默认都不勾：
  * 一个人管几个主页、不同项目各用一个时，在每个项目里只勾自己的那个。这个项目里已经有的标「已添加」，勾上是更新它。
  */
-export default function ChooseAccounts({ choose, onAdded }: { choose: Choose; onAdded: () => void }) {
+export default function ChooseAccounts({ choose, onAdded, initialPageIds = [] }: { choose: Choose; onAdded: () => void; initialPageIds?: string[] }) {
   const [me, setMe] = useState(false)
-  const [pages, setPages] = useState<string[]>([])
+  const [pages, setPages] = useState<string[]>(() => initialPageIds.filter((id) => choose.pages.some((p) => p.id === id)))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const add = async () => {
@@ -44,6 +44,7 @@ export default function ChooseAccounts({ choose, onAdded }: { choose: Choose; on
   return (
     <div className="space-y-3 p-4 text-sm">
       <p className="text-muted-foreground">{choose.desc || tr('choose_accounts.desc')}</p>
+      {!rows.length && <p className="text-muted-foreground">{tr('choose_accounts.empty')}</p>}
       <ul className="space-y-1">
         {rows.map((r) => (
           <li key={r.key}>

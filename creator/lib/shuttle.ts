@@ -40,6 +40,14 @@ export type Channel = {
   browser_profile_id?: string
   browser_machine?: string
   browser_machine_name?: string
+  /** Facebook 公共主页的连接方式和授权账号；不保存 token。 */
+  fb_kind?: 'profile' | 'page'
+  page_id?: string
+  auth_mode?: 'browser' | 'api'
+  api_credential?: 'oauth' | 'page_token'
+  oauth_account?: string
+  /** Facebook API：可读取的指标和采集权限提示，不含凭据。 */
+  facebook_api_metrics?: string
   last_checked_at?: string
   collected_at?: string
   /** 网站：关联的 GA4 属性（properties/123，ga4.link） */
@@ -108,6 +116,11 @@ export const channelStats = (days: number) =>
 export const removeChannel = (id: string) => runLocal<{ ok: boolean }>('channels.remove', { id })
 
 // ---- 请求外部接口 ----
+
+export type OAuthConnection = { key: string; available: boolean; pending: boolean; accounts: { account: string; connected_at: string; needs_reconnect?: boolean; missing_scopes?: string[] }[] }
+/** 连接层只返回账号标识和状态；页面拿不到 User / Page token。 */
+export const listOAuthConnections = () => api<{ list: OAuthConnection[] }>('settings/connections').then((r) => r.list)
+export const startOAuthConnection = (provider: string) => api<{ auth_url: string }>(`settings/connections/${encodeURIComponent(provider)}/connect`, { method: 'POST' })
 
 export type ProxyResponse = {
   ok: boolean
@@ -376,6 +389,8 @@ export type SocialPost = {
   post_id?: string
   post_url?: string
   error?: string
+  /** Facebook API 上次上传及发布尝试的恢复状态，不含凭据。 */
+  facebook_api_state?: string
   /** shuttle：后台写的；platform：采集时发现的、在平台上直接发的 */
   source?: string
   views?: number
@@ -384,6 +399,7 @@ export type SocialPost = {
   collects?: number
   shares?: number
   metrics_at?: string
+  facebook_api_metrics?: string
   created_at?: string
   updated_at?: string
   /** 每天的互动快照 JSON：{ 日期: [浏览, 点赞, 评论, 收藏, 分享] }，最近 120 天 */
@@ -619,7 +635,7 @@ export type PlatformHealth = {
   platform: string
   op: 'probe' | 'publish' | 'remove' | 'collect'
   ok: boolean
-  kind?: '' | 'broken' | 'expired'
+  kind?: '' | 'broken' | 'expired' | 'permission' | 'restricted' | 'network'
   step?: string
   error?: string
   snapshot?: string

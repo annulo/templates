@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { Loader2, MessageSquareText, Pencil, RotateCcw, SlidersHorizontal, X } from 'lucide-react'
 import Markdown from './Markdown'
-import { Button, Dialog, ErrorDetails, Notice, inputCls } from './ui'
+import { Button, Dialog, ErrorDetails, Field, Notice, cx, inputCls } from './ui'
 import { getTask, listTasks, openChat, resetPrompt, runTask, savePrompt, type Task, type TaskRun } from '../lib/shuttle'
 import { tr } from '../lib/i18n'
 import { useAssistant } from '../lib/useShuttle'
@@ -154,6 +154,106 @@ export function TaskButton({
   )
 }
 
+/**
+ * 交给助手、要用户想清楚再跑的按钮（和内容中心「出一批选题」一样）：点了先弹窗，说清这次会做什么，
+ * 写这一次的要求（灰字是这件任务的默认写法，不填就照它做；「改默认要求」改的是以后每次都用的），点「开始」才开一段对话交给助手。
+ * 这次的要求作为参数 reqKey 传给任务，任务文件里要写明怎么用它。在跑时按钮变成「进行中 · 看过程」。
+ */
+export function TaskLaunchButton({
+  task: id,
+  input,
+  reqKey = 'requirements',
+  match = () => true,
+  onFinished,
+  title,
+  desc,
+  reqTitle,
+  reqHint,
+  startLabel,
+  icon: Icon,
+  variant = 'default',
+  size = 'sm',
+  className,
+  children,
+}: {
+  task: string
+  input?: Record<string, unknown>
+  reqKey?: string
+  match?: (r: TaskRun) => boolean
+  onFinished?: () => void
+  /** 弹窗标题、这次会做什么（一两句：交给谁、读什么、结果存到哪） */
+  title: string
+  desc: ReactNode
+  /** 「改默认要求」那个弹窗的标题和说明（TaskRequirements） */
+  reqTitle: string
+  reqHint: string
+  startLabel: string
+  icon?: ComponentType<{ className?: string }>
+  variant?: 'default' | 'outline' | 'ghost'
+  size?: 'default' | 'sm'
+  className?: string
+  children: ReactNode
+}) {
+  const t = useTask(id, onFinished)
+  const [req, setReq] = useState<string | null>(null)
+  const [editDefault, setEditDefault] = useState(false)
+  const run = t.task?.running.find(match)
+  if (run)
+    return (
+      <Button variant="outline" size={size} className={className} onClick={() => openChat(run.chat_id)}>
+        <Loader2 className="animate-spin" /> {tr('task.running')} · {tr('task.view')}
+      </Button>
+    )
+  const start = async () => {
+    const r = req?.trim()
+    const chat = await t.run({ ...input, ...(r ? { [reqKey]: r } : {}) })
+    if (chat) {
+      setReq(null)
+      openChat(chat)
+    }
+  }
+  const hasDefault = !!t.task && !!(t.task.prompt_file || t.task.prompt_has_default)
+  return (
+    <>
+      <Button feedback={false} variant={variant} size={size} className={className} disabled={!t.shuttle || !t.task} onClick={() => setReq('')}>
+        {Icon && <Icon />}
+        {children}
+      </Button>
+      <Dialog
+        open={req !== null}
+        onClose={() => setReq(null)}
+        title={title}
+        width={640}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setReq(null)}>
+              {tr('common.cancel')}
+            </Button>
+            <Button feedback={false} onClick={start} disabled={t.starting}>
+              {t.starting ? <Loader2 className="animate-spin" /> : Icon && <Icon />}
+              {startLabel}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="text-sm leading-relaxed text-muted-foreground">{desc}</div>
+          <Field label={tr('task.this_time')} hint={hasDefault ? tr('task.this_time_hint') : undefined}>
+            <textarea autoFocus value={req ?? ''} placeholder={t.task?.prompt ?? ''} onChange={(e) => setReq(e.target.value)} rows={8} className={cx(inputCls, 'py-2 leading-relaxed')} />
+          </Field>
+          {hasDefault && (
+            <button type="button" onClick={() => setEditDefault(true)} className="cursor-pointer text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+              {tr('task.edit_default')}
+            </button>
+          )}
+          {t.error && <ErrorDetails message={t.error} />}
+        </div>
+      </Dialog>
+      <TaskRequirements task={t.task} onSaved={t.setTask} title={reqTitle} hint={reqHint} open={editDefault} onOpenChange={setEditDefault} editOnly />
+    </>
+  )
+}
+
 /** 正在跑的任务：一行一个，带「看过程」（在右侧打开那段对话） */
 export function TaskRunning({ runs, title, desc }: { runs: TaskRun[]; title: (r: TaskRun) => string; desc?: string }) {
   if (!runs.length) return null
@@ -213,7 +313,8 @@ function TaskFailureNotice({ run }: { run: TaskRun }) {
  * 模板默认的在 prompts/<id>.md，用户改了存到 user/prompts/<id>.md（能恢复默认）；任务文件本身是系统流程，不给看。
  * 没有「怎么写」的任务（系统任务）不显示。
  */
-export function TaskRequirements({ task, onSaved, title, hint, label, open: controlledOpen, onOpenChange }: { task: Task | null; onSaved: (t: Task) => void; title: string; hint: string; label?: string; open?: boolean; onOpenChange?: (open: boolean) => void }) {
+/** editOnly：打开就是编辑框（从「改默认要求」这种明确要改的入口进来），取消、保存后直接关掉，没有只看的那一步 */
+export function TaskRequirements({ task, onSaved, title, hint, label, open: controlledOpen, onOpenChange, editOnly = false }: { task: Task | null; onSaved: (t: Task) => void; title: string; hint: string; label?: string; open?: boolean; onOpenChange?: (open: boolean) => void; editOnly?: boolean }) {
   const [internalOpen, setInternalOpen] = useState(false)
   const open = controlledOpen ?? internalOpen
   const setOpen = onOpenChange ?? setInternalOpen
@@ -221,6 +322,12 @@ export function TaskRequirements({ task, onSaved, title, hint, label, open: cont
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  useEffect(() => {
+    if (!open || !editOnly || !task) return
+    setDraft(task.prompt)
+    setError('')
+    setEditing(true)
+  }, [open, editOnly])
   if (!task || !(task.prompt_file || task.prompt_has_default)) return null
   const text = task.prompt
 
@@ -234,7 +341,8 @@ export function TaskRequirements({ task, onSaved, title, hint, label, open: cont
     setError('')
     try {
       onSaved(await savePrompt(task.id, draft))
-      setEditing(false)
+      if (editOnly) close()
+      else setEditing(false)
     } catch (e) {
       setError((e as Error).message)
       return false
@@ -267,7 +375,7 @@ export function TaskRequirements({ task, onSaved, title, hint, label, open: cont
         footer={
           editing ? (
             <>
-              <Button variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
+              <Button variant="ghost" onClick={() => (editOnly ? close() : setEditing(false))} disabled={saving}>
                 {tr('common.cancel')}
               </Button>
               <Button successLabel={tr('ui.saved')} onClick={save} disabled={saving || !draft.trim()}>

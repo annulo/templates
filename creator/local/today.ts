@@ -34,6 +34,8 @@ export type Item = {
   count?: number
   action: Action
   action_label: string
+  /** 做完以后结果在哪个页面：已完成的行点了去这里；没有就去 go 动作的页面 */
+  page?: { view: string; params?: Record<string, string> }
   /** 「交给助手」：交给助手的任务（tasks/<task>.md，新开一段对话跑）；没有就不显示这个按钮 */
   ask?: { task: string; input?: unknown }
 }

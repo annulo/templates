@@ -7,6 +7,8 @@ import { dbList, dbPatch, type Channel, type PlatformHealth, type SocialPost } f
 import { tr } from '../lib/i18n'
 import { CHANNEL_TYPES } from '../lib/channels'
 import { postTitle } from '../lib/social'
+import { FacebookConnectionButton } from './FacebookAccountFlow'
+import { facebookPublishRecovery } from '../lib/facebookPublishRecovery'
 
 /** 任务 id（社媒插件的 plugins/social/tasks/fix-platform.md）：照着现场改平台文件 */
 export const FIX_TASK = 'social/fix-platform'
@@ -53,7 +55,7 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
                 const Icon = CHANNEL_TYPES[a.type]?.icon
                 return Icon ? <Icon size={14} className="shrink-0" /> : null
               })()}
-              <span>{tr('health.broken', { platform: CHANNEL_TYPES[a.type]?.label ?? a.type, name: a.name, op: tr(`health.op_${r.op}`) })}</span>
+              <span>{a.auth_mode === 'api' && ['permission', 'restricted', 'network'].includes(r.kind ?? '') ? tr('facebook_connect.problem_' + r.kind, { name: a.name }) : tr('health.broken', { platform: CHANNEL_TYPES[a.type]?.label ?? a.type, name: a.name, op: tr(`health.op_${r.op}`) })}</span>
             </div>
             <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
               {r.step && r.step !== r.op ? `${r.step}：` : ''}
@@ -64,9 +66,9 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
             </div>
           </div>
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            <TaskButton task={FIX_TASK} input={{ channel_id: a.id }} match={(run) => run.input?.channel_id === a.id} icon={Wrench} onFinished={onChanged}>
+            {a.auth_mode === 'api' && r.kind === 'permission' ? <FacebookConnectionButton channel={a} onDone={onChanged} /> : a.auth_mode === 'api' && r.kind === 'restricted' ? <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="text-xs text-primary-text underline">{tr('facebook_connect.open_meta')}</a> : r.kind !== 'network' && <TaskButton task={FIX_TASK} input={{ channel_id: a.id }} match={(run) => run.input?.channel_id === a.id} icon={Wrench} onFinished={onChanged}>
               {tr('health.fix')}
-            </TaskButton>
+            </TaskButton>}
             <RunButton inline watch fn="social/social.probe" input={{ channel_id: a.id }} icon={Stethoscope} variant="outline" onDone={onChanged}>
               {tr('health.probe_again')}
             </RunButton>
@@ -105,13 +107,17 @@ export function PublishProblems({ account, rows, posts, onOpenPost, onChanged }:
                   <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.error || tr('health.no_reason')}</div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-1">
-                  <RunButton inline fn="social/social.publish" input={{ post_id: p.id }} icon={Send} variant="outline" onDone={onChanged}>
-                    {tr('health.republish')}
-                  </RunButton>
-                  <Button size="sm" variant="ghost" onClick={() => onOpenPost(p)}>
-                    <ArrowUpRight />
-                    {tr('health.edit_post')}
-                  </Button>
+                  {facebookPublishRecovery(p, account) ? (
+                    <Button size="sm" variant="outline" onClick={() => onOpenPost(p)}><ArrowUpRight />{tr('facebook_retry.view_record')}</Button>
+                  ) : <>
+                    <RunButton inline fn="social/social.publish" input={{ post_id: p.id }} icon={Send} variant="outline" onDone={onChanged}>
+                      {tr('health.republish')}
+                    </RunButton>
+                    <Button size="sm" variant="ghost" onClick={() => onOpenPost(p)}>
+                      <ArrowUpRight />
+                      {tr('health.edit_post')}
+                    </Button>
+                  </>}
                 </div>
               </li>
             ))}
@@ -140,7 +146,7 @@ export function ProbeLine({ ch, rows, onChanged }: { ch: Channel; rows: Platform
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate">
           {!p ? tr('health.never') : p.ok ? (
-            <span className={cx(warn.length ? 'text-amber-600' : 'text-emerald-600')}>{warn.length ? tr('health.ok_warn', { when: fmtTime(p.checked_at ?? ''), n: warn.length }) : tr('health.ok', { when: fmtTime(p.checked_at ?? '') })}</span>
+            <span className={cx(warn.length ? 'text-amber-600' : 'text-emerald-600')}>{ch.auth_mode === 'api' ? tr(warn.length ? 'facebook_connect.probe_limited' : 'facebook_connect.probe_ok') : warn.length ? tr('health.ok_warn', { when: fmtTime(p.checked_at ?? ''), n: warn.length }) : tr('health.ok', { when: fmtTime(p.checked_at ?? '') })}</span>
           ) : p.kind === 'expired' ? (
             tr('health.expired', { when: fmtTime(p.checked_at ?? '') })
           ) : (
@@ -155,8 +161,10 @@ export function ProbeLine({ ch, rows, onChanged }: { ch: Channel; rows: Platform
         <ul className="space-y-1">
           {bad.map((s, i) => (
             <li key={i} className={cx('break-words leading-relaxed', p?.ok ? 'text-amber-600' : 'text-destructive')}>
-              {s.name}
-              {s.error ? `：${s.error}` : ''}
+              {ch.auth_mode === 'api' && s.error ? <details>
+                <summary className="cursor-pointer">{s.name}：{s.error.split('Facebook Graph API:')[0].trim()} <span className="underline">{tr('ui.details')}</span></summary>
+                <p className="mt-1 whitespace-pre-wrap font-mono text-muted-foreground [overflow-wrap:anywhere]">{s.error}</p>
+              </details> : <>{s.name}{s.error ? `：${s.error}` : ''}</>}
             </li>
           ))}
         </ul>

@@ -251,13 +251,14 @@ export function Field({ label, hint, group, children }: { label: ReactNode; hint
 export function PageHeader({ title, desc, actions, level = 1 }: { title: ReactNode; desc?: ReactNode; actions?: ReactNode; level?: 1 | 2 }) {
   const Heading = level === 2 ? 'h2' : 'h1'
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-      <div className="min-w-0 flex-1 space-y-1 md:min-w-64">
-        <Heading className={cx('leading-tight font-semibold tracking-tight [overflow-wrap:anywhere]', level === 2 ? 'text-lg' : 'text-2xl')}>{title}</Heading>
-        {desc && <div className="text-sm leading-relaxed text-muted-foreground">{desc}</div>}
+    <div className="space-y-1">
+      {/* 第一行标题和右边的操作；描述放下面占满整行，不跟操作抢宽度 */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <Heading className={cx('min-w-0 leading-tight font-semibold tracking-tight [overflow-wrap:anywhere] md:min-w-48', level === 2 ? 'text-lg' : 'text-2xl')}>{title}</Heading>
+        {/* 按钮区限制宽度：错误在下一排折叠显示，不能把标题挤成一列 */}
+        {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 md:max-w-[70%] md:justify-end">{actions}</div>}
       </div>
-      {/* 按钮区限制宽度：错误在下一排折叠显示，不能把标题挤成一列 */}
-      {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 md:max-w-[60%] md:justify-end">{actions}</div>}
+      {desc && <div className="text-sm leading-relaxed text-muted-foreground">{desc}</div>}
     </div>
   )
 }
@@ -295,7 +296,7 @@ export const fmtMonthDay = (d: Date) =>
  * 顶部的轻提示（删除成功这类做完了要告诉用户、又不用用户点的）：页面顶部居中出现，几秒后自动消失。
  * 直接挂在 document.body 上，哪个页面、组件里都能调，不用在页面里放容器。
  */
-export function toast(message: string, tone: 'ok' | 'error' = 'ok') {
+export function toast(message: string, tone: 'ok' | 'error' = 'ok', opts?: { action?: { label: string; onClick: () => void }; ms?: number }) {
   if (typeof document === 'undefined') return
   let box = document.getElementById('app-toasts')
   if (!box) {
@@ -308,11 +309,23 @@ export function toast(message: string, tone: 'ok' | 'error' = 'ok') {
   }
   const el = document.createElement('div')
   el.className = cx('pointer-events-auto max-w-md rounded-lg border px-4 py-2.5 text-sm shadow-lg transition-all duration-200 opacity-0 -translate-y-2', tone === 'error' ? 'border-destructive/30 bg-popover text-destructive' : 'border-border bg-popover text-popover-foreground')
-  el.textContent = message
-  box.appendChild(el)
-  requestAnimationFrame(() => el.classList.remove('opacity-0', '-translate-y-2'))
-  setTimeout(() => {
+  const close = () => {
     el.classList.add('opacity-0', '-translate-y-2')
     setTimeout(() => el.remove(), 250)
-  }, 2600)
+  }
+  el.textContent = message
+  // 带操作的提示（跑完了「去看看」）：后面一个按钮，点了做事并关掉；停留久一点
+  if (opts?.action) {
+    const { label, onClick } = opts.action
+    el.classList.add('flex', 'items-center', 'gap-3')
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'shrink-0 cursor-pointer rounded-md px-2 py-1 text-sm font-semibold text-primary-text hover:bg-accent'
+    btn.textContent = label
+    btn.onclick = () => (onClick(), close())
+    el.appendChild(btn)
+  }
+  box.appendChild(el)
+  requestAnimationFrame(() => el.classList.remove('opacity-0', '-translate-y-2'))
+  setTimeout(close, opts?.ms ?? (opts?.action ? 8000 : 2600))
 }

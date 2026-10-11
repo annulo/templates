@@ -97,9 +97,11 @@ export default function Checklist({ ctx, mode = 'all' }: { ctx: Ctx; mode?: 'all
             {data.setup.map((it, i) => {
               const current = it.key === (data.setup.some((x) => x.key === picked && !x.done) ? picked : autoCurrent)
               // 整行都能点：去页面的直接去；跑函数、交给助手的在原地展开，显示按钮
-              const open = () => (it.wizard && it.screen ? ctx.openWizard(it.key) : it.action.kind === 'go' ? ctx.go(it.action.view as View, it.action.params) : setPicked(it.key))
+              // 做完的：去结果所在的页面（page，没有就用 go 动作的页面），比如网站检查做完了点进「网站检查」
+              const page = it.page ?? (it.action.kind === 'go' ? it.action : undefined)
               const editable = it.wizard && !!it.screen
-              const clickable = !current && !it.running && (editable || (!it.done && !it.skipped))
+              const open = () => (editable ? ctx.openWizard(it.key) : it.done && page ? ctx.go(page.view as View, page.params) : it.action.kind === 'go' ? ctx.go(it.action.view as View, it.action.params) : setPicked(it.key))
+              const clickable = !current && !it.running && (editable || (it.done ? !!page : !it.skipped))
               return (
                 <li key={it.key} className={cx('border-b border-border px-4 last:border-b-0', current ? 'bg-primary/[0.04] py-4' : 'py-2.5', clickable && 'cursor-pointer hover:bg-accent/50')} onClick={clickable ? open : undefined}>
                   <div className="flex items-center gap-3">
@@ -123,7 +125,7 @@ export default function Checklist({ ctx, mode = 'all' }: { ctx: Ctx; mode?: 'all
                       </button>
                     )}
                     {clickable && (
-                      <button type="button" onClick={(e) => (e.stopPropagation(), open())} className="cursor-pointer text-muted-foreground hover:text-foreground" aria-label={it.action_label} title={it.action_label}>
+                      <button type="button" onClick={(e) => (e.stopPropagation(), open())} className="cursor-pointer text-muted-foreground hover:text-foreground" aria-label={it.done ? it.title : it.action_label} title={it.done ? it.title : it.action_label}>
                         <ArrowRight className="size-4" />
                       </button>
                     )}
