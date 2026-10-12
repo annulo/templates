@@ -10,10 +10,10 @@ export type OnboardingData = Omit<Onboarding, 'competitors' | 'candidates' | 'au
   profile: Profile; channel: Channel | null
 }
 export type SiteOption = CreghtSite & { preview_url: string }
-export function useOnboarding(rev: number, poll = false) {
+export function useOnboarding(rev: number, poll = false, module = 'onboarding') {
   const [data, setData] = useState<OnboardingData | null>(null)
   const [error, setError] = useState('')
-  const load = useCallback(() => runLocal<OnboardingData>('onboarding.get', {}).then((d) => { setData(d); setError('') }).catch((e: Error) => setError(e.message)), [])
+  const load = useCallback(() => runLocal<OnboardingData>(`${module}.get`, {}).then((d) => { setData(d); setError('') }).catch((e: Error) => setError(e.message)), [module])
   useEffect(() => { load() }, [load, rev])
   useEffect(() => { if (!poll) return; const timer = window.setInterval(load, 4000); return () => clearInterval(timer) }, [poll, load])
   return { data, setData, error, load }

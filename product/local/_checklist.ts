@@ -1,8 +1,12 @@
 import { L } from "./_i18n";
 import { profile } from "./_ai";
+import { onboarding } from "./_onboarding";
 export function setupSteps(ctx: any) {
   const p: any = profile(ctx);
+  const start = onboarding(ctx);
+  const selected = start.channel_id ? ctx.db.get("channels", start.channel_id) : null;
   const has = (t: string) => ctx.db.query(t, { limit: 1 }).list.length > 0;
+  const siteSelected = !!start.website_url || !!selected || (!!p.website_url && !!p.name && has("products"));
   const step = (
     key: string,
     zh: string,
@@ -11,6 +15,8 @@ export function setupSteps(ctx: any) {
     whyEn: string,
     done: boolean,
     view: string,
+    wizard = false,
+    screen = "",
   ) => ({
     key,
     title: L(ctx, zh, en),
@@ -18,16 +24,23 @@ export function setupSteps(ctx: any) {
     done,
     action: { kind: "go", view },
     action_label: L(ctx, "去完成", "Continue"),
+    wizard, screen,
   });
   return [
     step(
-      "product",
-      "整理产品与用户",
-      "Define your product and audience",
-      "填写产品事实、用户场景与来源。",
-      "Record product facts, use cases and their sources.",
-      !!p.name && !!p.customer_types && has("products"),
-      "company",
+      "site", "选择要运营的网站", "Select the website to operate",
+      "输入官网网址，或选择已连接的网站。助手会读取所选网站，预填产品定位、功能与用户场景。",
+      "Enter the website URL or select a connected site. The assistant will read it and draft product facts and user scenarios.",
+      siteSelected, "channels", true, "connect-site",
+    ),
+    step(
+      "company-details",
+      "确认产品与用户",
+      "Review your product and users",
+      "核对网站提取的产品定位、真实功能和用户场景。确认后保存到「产品与用户」。",
+      "Review the product positioning, features and user scenarios found on the site, then confirm to save them.",
+      !!start.details_saved_at || (siteSelected && !!p.name && !!p.business && !!p.customer_types && has("products")),
+      "company", true, "product-details",
     ),
     step(
       "channels",

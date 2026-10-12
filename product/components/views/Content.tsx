@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { ArrowLeft, Copy, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import InspirationLibrary, { InspirationReferences } from '../InspirationLibrary'
 import { WritingBriefDialog } from '../ContentEvidence'
 import { NotionLogo } from '../BrandIcons'
 import { ArticleEditor, ArticleView, draftOf, patchOf, sameDraft, type ArticleDraft } from '../ArticleEditor'
@@ -27,7 +28,7 @@ const TOPIC_STATUS: Record<TopicStatus, { label: string; tone: Tone }> = {
   dropped: lbl('content.t_dropped', 'default'),
 }
 
-type Tab = 'articles' | 'topics'
+type Tab = 'articles' | 'topics' | 'inspiration'
 
 /** 任务 id（tasks/write-article.md）：「写一篇」「写成文章」交给助手按它写，过程看得见 */
 const WRITE_TASK = 'write-article'
@@ -53,8 +54,8 @@ async function removeArticle(a: Article, posts: SocialPost[], pubs: Publication[
 }
 
 /** 内容：文章（一篇一种类型，直接发到支持它的账号）和选题池 */
-export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
-  const tab: Tab = params.tab === 'topics' ? 'topics' : 'articles'
+export default function Content({ ctx, params, setParam, inspiration = false }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; inspiration?: boolean }) {
+  const tab: Tab = inspiration && params.tab === 'inspiration' ? 'inspiration' : params.tab === 'topics' ? 'topics' : 'articles'
   const [articles, setArticles] = useState<Article[] | null>(null)
   const [topics, setTopics] = useState<Topic[] | null>(null)
   const [posts, setPosts] = useState<SocialPost[]>([])
@@ -170,7 +171,7 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
   const writingTitle = topicTitle(writingInput?.topic_id) || writingInput?.subject
   const writerBusy = !writer.shuttle || !writer.task || writer.starting || !!writer.task.running.length
 
-  if (openArticle) return <ArticleDetail key={openArticle.id} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
+  if (openArticle) return <ArticleDetail key={openArticle.id} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
 
   return (
     <div className="space-y-6">
@@ -179,7 +180,7 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
         desc={tr('content.desc')}
         actions={
           <>
-            <Button size="sm" onClick={() => openWriter()}><Plus />{tr('content.new_article')}</Button>
+            {tab !== 'inspiration' && <Button size="sm" onClick={() => openWriter()}><Plus />{tr('content.new_article')}</Button>}
             <HeaderMore items={[{ label: tr('content.req_btn'), icon: SlidersHorizontal, onClick: () => setReqOpen(true), hidden: !writer.task }]} />
           </>
         }
@@ -191,6 +192,7 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
           options={[
             { value: 'articles', label: `${tr('content.tab_articles')}${articles ? ` ${articles.length}` : ''}` },
             { value: 'topics', label: `${tr('content.tab_topics')}${topics ? ` ${topics.filter((t) => t.status === 'idea').length}` : ''}` },
+            ...(inspiration ? [{ value: 'inspiration' as const, label: tr('inspiration.title') }] : []),
           ]}
         />
       </div>
@@ -201,10 +203,10 @@ export default function Content({ ctx, params, setParam }: { ctx: Ctx; params: R
         desc={tr('content.writing_desc')}
       />
       <TaskFailed task={writer.task} />
-      {tab === 'articles' ? (
+      {tab === 'inspiration' ? <InspirationLibrary ctx={ctx} params={params} setParam={setParam} onChanged={load} /> : tab === 'articles' ? (
         <Articles onRewrite={setRewriting} onCopy={copyArticle} ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
       ) : (
-        <Topics ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
+        <Topics inspiration={inspiration} initialTopic={params.topic} onTopicClose={() => setParam('topic', '')} ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
       )}
       <TaskRequirements task={writer.task} onSaved={writer.setTask} title={tr('content.req_title')} hint={tr('content.req_hint')} open={reqOpen} onOpenChange={setReqOpen} />
       {rewriting && <RewriteDialog open article={rewriting} starting={listRewriter.starting} error={listRewriter.error} onClose={() => setRewriting(null)}
@@ -395,7 +397,7 @@ function RowMore({ onRewrite, onCopy, onDelete }: { onRewrite: () => void; onCop
   </div>
 }
 
-function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged }: { ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
+function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false }: { inspiration?: boolean; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
   const type = typeOf(a)
   const [moreOpen, setMoreOpen] = useState(false)
   // 菜单往哪边展开：宽屏时按钮在一行最右边，往左；手机上按钮换到下一行的左边，往左会伸出屏幕，改往右。按打开时按钮的实际位置算
@@ -621,6 +623,7 @@ function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, o
         <footer className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4"><ArticleTime label={tr('content.created')} value={a.created_at} /><ArticleTime label={tr('content.updated')} value={a.updated_at || a.created_at} /></footer>
       </article>
 
+      {inspiration && <InspirationReferences ctx={ctx} targetType="article" targetId={a.id} onChanged={onChanged} />}
       <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} />
 
       <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
@@ -656,11 +659,13 @@ function ArticleTime({ label, value }: { label: string; value?: string }) {
   return <span className="text-xs leading-relaxed text-muted-foreground">{label} <time dateTime={value} title={date.toLocaleString(numLocale())}>{date.toLocaleString(numLocale(), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></span>
 }
 
-function Topics({ ctx, list, onChanged, writer, suggester, onWrite }: { ctx: Ctx; list: Topic[] | null; onChanged: () => void; writer: Writer; suggester: Writer; onWrite: (input: { topic_id?: string; channel_id?: string }) => void }) {
+function Topics({ ctx, list, onChanged, writer, suggester, onWrite, inspiration = false, initialTopic, onTopicClose }: { inspiration?: boolean; initialTopic?: string; onTopicClose?: () => void; ctx: Ctx; list: Topic[] | null; onChanged: () => void; writer: Writer; suggester: Writer; onWrite: (input: { topic_id?: string; channel_id?: string }) => void }) {
   // 长文参照这个网站的写法（content.context 的 channel_id）
   const site = ctx.channels.find((c) => c.type === 'creght_site')
   const [adding, setAdding] = useState(false)
   const [briefTopic, setBriefTopic] = useState<Topic | null>(null)
+  const [referenceTopic, setReferenceTopic] = useState<Topic | null>(null)
+  useEffect(() => { if (initialTopic && list) setBriefTopic(list.find((t) => t.id === initialTopic) || null) }, [initialTopic, list])
   const [title, setTitle] = useState('')
   const [angle, setAngle] = useState('')
   const [error, setError] = useState('')
@@ -748,6 +753,7 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite }: { ctx: Ctx
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
                 <Button variant="ghost" size="sm" onClick={() => setBriefTopic(t)}>{tr('brief.brief')}</Button>
+                {inspiration && <Button variant="ghost" size="sm" onClick={() => setReferenceTopic(t)}>{tr('inspiration.references')}</Button>}
                 {t.status === 'idea' &&
                   (writer.task?.running.some((r) => r.input?.topic_id === t.id) ? (
                     <Badge tone="warn">
@@ -790,7 +796,8 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite }: { ctx: Ctx
         </div>
       )}
 
-      {briefTopic && <WritingBriefDialog ctx={ctx} topic={briefTopic} onClose={() => setBriefTopic(null)} onChanged={onChanged} onWrite={() => onWrite({ topic_id: briefTopic.id, channel_id: site?.id })} />}
+      {referenceTopic && <Dialog open onClose={() => setReferenceTopic(null)} title={`${tr('inspiration.references')} · ${referenceTopic.title}`} width={700}><InspirationReferences ctx={ctx} targetType="topic" targetId={referenceTopic.id} /></Dialog>}
+      {briefTopic && <WritingBriefDialog ctx={ctx} topic={briefTopic} onClose={() => { setBriefTopic(null); onTopicClose?.() }} onChanged={onChanged} onWrite={() => onWrite({ topic_id: briefTopic.id, channel_id: site?.id })} />}
       <Dialog
         open={adding}
         onClose={() => setAdding(false)}

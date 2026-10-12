@@ -314,7 +314,7 @@ export async function context(
   const research = topic ? evidenceFor(ctx, topic) : null;
   const evidence =
     research &&
-    (research.findings.length || research.products.length || topic.brief)
+    (research.findings.length || research.sources.length || research.products.length || topic.brief)
       ? ctx.db.insert("content_references", {
           kind: "generation",
           target_type: "topic",
@@ -528,8 +528,8 @@ export function save(input: SaveInput, ctx: any) {
     input.evidence_id &&
     (!evidence ||
       evidence.kind !== "generation" ||
-      evidence.target_type !== "topic" ||
-      evidence.target_id !== topic?.id)
+      evidence.target_type !== (source ? "article" : "topic") ||
+      evidence.target_id !== (source ? source.id : topic?.id))
   )
     throw new Error(
       L(
@@ -589,6 +589,10 @@ export function revisionContext(input: { article_id: string }, ctx: any) {
   // 保留曾用依据，再加入明确选入本文的新参考。未关联主题的旧稿也可以补依据。
   const research = {
     ...current,
+    sources: [
+      ...(previous?.sources || []),
+      ...current.sources.filter((s: any) => !(previous?.sources || []).some((p: any) => p.source_id === s.source_id)),
+    ],
     findings: [
       ...(previous?.findings || []),
       ...current.findings.filter(
@@ -696,6 +700,14 @@ export function rewriteContext(
   const to = input.type as ArticleType;
   const from = typeOf(a);
   const body = String(a.body ?? "");
+  const previous: any = json(a.evidence_snapshot, {});
+  const current = evidenceFor(ctx, a.topic_id ? ctx.db.get('topics', a.topic_id) : null, a.id);
+  const research = {
+    ...current,
+    sources: [...(previous.sources || []), ...current.sources.filter((s: any) => !(previous.sources || []).some((p: any) => p.source_id === s.source_id))],
+    findings: [...(previous.findings || []), ...current.findings.filter((s: any) => !(previous.findings || []).some((p: any) => p.finding_id === s.finding_id))],
+  };
+  const evidence = ctx.db.insert('content_references', { kind: 'generation', target_type: 'article', target_id: a.id, snapshot: JSON.stringify(research), created_at: research.captured_at });
   return {
     source: {
       id: a.id,
@@ -716,7 +728,8 @@ export function rewriteContext(
     type_note: TYPE_NOTE[to],
     limits: limitsOf(ctx, to),
     project: projectBrief(profile(ctx)),
-    research: json(a.evidence_snapshot, null),
+    research,
+    evidence_id: evidence.id,
     products: productsOf(ctx),
     images: imagesOf(ctx),
     ...(to === "video" ? { videos: videosOf(ctx) } : {}),

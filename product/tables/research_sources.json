@@ -43,6 +43,82 @@
       "created_at": {
         "type": "string",
         "description": "创建时间 ISO8601"
+      },
+      "source_title": {
+        "type": "string",
+        "description": "原内容标题"
+      },
+      "platform": {
+        "type": "string",
+        "description": "xiaohongshu / douyin / x / other"
+      },
+      "format": {
+        "type": "string",
+        "description": "post / article / video / image / thread / other"
+      },
+      "creator_id": {
+        "type": "string",
+        "description": "参考博主记录 ID"
+      },
+      "author_name": {
+        "type": "string",
+        "description": "原作者昵称"
+      },
+      "canonical_url": {
+        "type": "string",
+        "description": "规范来源链接，用于去重"
+      },
+      "summary": {
+        "type": "string",
+        "description": "内容摘要"
+      },
+      "hook": {
+        "type": "string",
+        "description": "标题或开场钩子"
+      },
+      "why_save": {
+        "type": "string",
+        "description": "收藏原因"
+      },
+      "adaptation_idea": {
+        "type": "string",
+        "description": "结合产品的原创转化方向"
+      },
+      "library_status": {
+        "type": "string",
+        "description": "inbox / ready / archived；与读取状态分开"
+      },
+      "priority": {
+        "type": "string",
+        "description": "low / normal / high"
+      },
+      "tags": {
+        "type": "string",
+        "description": "标签 JSON 数组"
+      },
+      "images": {
+        "type": "string",
+        "description": "参考图片 JSON 数组"
+      },
+      "videos": {
+        "type": "string",
+        "description": "参考视频 JSON 数组"
+      },
+      "notes": {
+        "type": "string",
+        "description": "观察备注"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间"
+      },
+      "legacy_key": {
+        "type": "string",
+        "description": "旧库与记录组合标识，用于幂等导入"
+      },
+      "legacy_snapshot": {
+        "type": "string",
+        "description": "旧库原始记录，包括旧任务引用的 JSON"
       }
     },
     "required": [

@@ -1,15 +1,23 @@
 import { L } from "./_i18n";
-import { profile, siteDigest } from "./_ai";
+import { profile, siteBase, siteDigest } from "./_ai";
 import { url } from "./_growth";
 export const cloud = ["save"];
 export const remote = ["context"];
-export async function context(input: { url?: string }, ctx: any) {
+export async function context(input: { url?: string; channel_id?: string }, ctx: any) {
   const p = profile(ctx);
-  const address = url(ctx, input?.url || (p as any).website_url);
+  const channel = input?.channel_id ? ctx.db.get("channels", input.channel_id) : null;
+  if (input?.channel_id && (!channel || !["creght_site", "wordpress"].includes(channel.type)))
+    throw new Error(L(ctx, "所选网站不存在，请重新选择", "The selected website is missing. Select it again."));
+  const address = url(ctx, input?.url || (channel ? await siteBase(channel, ctx) : (p as any).website_url));
+  if (!address)
+    throw new Error(L(ctx, "请先选择网站或填写官网地址", "Select a website or enter its URL first."));
+  const digest = await siteDigest(address.replace(/\/$/, ""), ctx, 6);
+  if (!digest)
+    throw new Error(L(ctx, "读不到所选网站，请检查网址或稍后重试", "The selected website could not be read. Check its URL or try again."));
   return {
     current: p,
     url: address,
-    digest: address ? await siteDigest(address.replace(/\/$/, ""), ctx, 6) : "",
+    digest,
     products: ctx.db.query("products", { limit: 200 }).list,
     use_cases: ctx.db.query("use_cases", { limit: 200 }).list,
   };

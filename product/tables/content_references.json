@@ -6,7 +6,7 @@
     "properties": {
       "kind": {
         "type": "string",
-        "description": "finding / generation"
+        "description": "source / finding / generation"
       },
       "target_type": {
         "type": "string",
@@ -27,6 +27,10 @@
       "created_at": {
         "type": "string",
         "description": "关联时间 ISO8601"
+      },
+      "source_id": {
+        "type": "string",
+        "description": "灵感来源 ID，kind=source 时必填"
       }
     },
     "required": [

@@ -65,3 +65,6 @@
 - version: 0.3.0
   zh: 新增模板「自媒体工作台」：按定位出选题、写稿改稿，一篇稿件改写成各社媒平台的帖子，审核后发布或排期。
   en: "New template Creator workspace: topics from your positioning, drafting and revising, turning one draft into posts for each social platform, then review and publish or schedule."
+- version: 0.14.2
+  zh: 内容中心更新共用组件；复制或转换内容时保留已有参考依据。
+  en: Update shared content center components and preserve existing reference snapshots when copying or converting content.

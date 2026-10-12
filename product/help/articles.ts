@@ -14,8 +14,8 @@ export const ARTICLES: Article[] = [
       en: "Define product facts and audience, connect channels and research opportunities.",
     },
     body: {
-      zh: "在「产品与用户」填写官网、定位、目标用户与增长目标。「从官网整理资料」读取真实产品说明，也可以手动添加产品事实与用户场景。\n\n在「网站和账号」连接要运营的网站和小红书、抖音、X 账号。发布和采集使用电脑上的登录状态。\n\nCreght 可以作为运营对象：从真实官网整理功能、模板与用户场景。模板不默认填入价格、案例或搜索数据。",
-      en: "Fill in your website, positioning, audience and growth goals under Product and audience. Import verified facts from the website or enter them manually.\n\nConnect websites and Xiaohongshu, Douyin and X accounts under Websites and accounts. Publishing and collection use the computer’s login sessions.\n\nCreght can be the product you operate: start from its real website, features, templates and use cases. Prices, case studies and search metrics are not prefilled.",
+      zh: "新项目先选择要运营的网站：输入官网网址，或选择账号下的网站。助手读取所选网站，整理产品定位、真实功能与用户场景，核对后点击「开始运营」保存到「产品与用户」。以后可在「产品与用户 → 从网站整理资料」重新选择或解析网站，也可以手动补充。\n\n在「网站和账号」连接要运营的网站和小红书、抖音、X 账号。发布和采集使用电脑上的登录状态。\n\nCreght 可以作为运营对象：从真实官网整理功能、模板与用户场景。模板不默认填入价格、案例或搜索数据。",
+      en: "Start by entering a website URL or selecting a site in your account. The assistant reads the selected site and prepares product positioning, features and user scenarios. Review and confirm to save them under Product and users. Reopen the flow with Read facts from a website whenever needed.\n\nConnect websites and Xiaohongshu, Douyin and X accounts under Websites and accounts. Publishing and collection use the computer’s login sessions.\n\nCreght can be the product you operate: start from its real website, features, templates and use cases. Prices, case studies and search metrics are not prefilled.",
     },
   },
   {
