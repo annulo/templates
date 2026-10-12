@@ -1,0 +1,8 @@
+{
+  "registries": {
+    "@spell": "https://spell.sh/r/{name}.json",
+    "@fancy": "https://fancycomponents.dev/r/{name}.json",
+    "@react-bits": "https://reactbits.dev/r/{name}.json",
+    "@talizen-sections": "https://unpkg.com/@talizen/talizen-sections/public/r/{name}.json"
+  }
+}

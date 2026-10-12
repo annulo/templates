@@ -1,0 +1,78 @@
+{
+  "name": "文章发布记录",
+  "desc": "一篇文章在一个网站上一行：发布状态、CMS 内容 id、地址。由 local/_publish.ts 的 publishTo 写，页面显示每个网站的发布状态",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "article_id": {
+        "type": "string",
+        "description": "文章 id"
+      },
+      "channel_id": {
+        "type": "string",
+        "description": "网站（channels）id"
+      },
+      "status": {
+        "type": "string",
+        "description": "draft（网站版本草稿）/ scheduled（排了期还没发过，到点由 publishing.publishScheduled 发）/ publishing（发布中）/ published（已发布）/ failed（失败，看 error）"
+      },
+      "scheduled_at": {
+        "type": "string",
+        "description": "排期时间 ISO8601：有值就是排了期，到点由定时任务 publishing.publishScheduled 发（Annulo 的 due，发过的是更新）；开始发时清空"
+      },
+      "title": {
+        "type": "string",
+        "description": "这个网站独立的标题；空则继承文章"
+      },
+      "summary": {
+        "type": "string",
+        "description": "这个网站独立的摘要；空则继承文章"
+      },
+      "body": {
+        "type": "string",
+        "description": "这个网站独立的 HTML 正文；空则继承文章"
+      },
+      "video": {
+        "type": "string",
+        "description": "这个网站独立的视频素材；空则继承文章"
+      },
+      "keywords": {
+        "type": "string",
+        "description": "这个网站独立的关键词；空则继承文章"
+      },
+      "cms_id": {
+        "type": "string",
+        "description": "网站 CMS 里这篇的内容 id（WordPress 是文章 id）：再发就是更新它"
+      },
+      "cms_collection": {
+        "type": "string",
+        "description": "CMS 集合 key（WordPress 可空）"
+      },
+      "slug": {
+        "type": "string",
+        "description": "在这个网站上的 slug"
+      },
+      "url": {
+        "type": "string",
+        "description": "在这个网站上的访问地址"
+      },
+      "error": {
+        "type": "string",
+        "description": "最近一次失败的报错原文"
+      },
+      "published_at": {
+        "type": "string",
+        "description": "第一次发布成功的时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "article_id",
+      "channel_id",
+      "status"
+    ]
+  }
+}

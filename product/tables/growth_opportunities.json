@@ -1,0 +1,113 @@
+{
+  "name": "增长机会",
+  "desc": "增长机会",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "机会名称"
+      },
+      "product_id": {
+        "type": "string",
+        "description": "产品事实 id"
+      },
+      "use_case_id": {
+        "type": "string",
+        "description": "用户场景 id"
+      },
+      "keyword": {
+        "type": "string",
+        "description": "主关键词"
+      },
+      "language": {
+        "type": "string",
+        "description": "语言"
+      },
+      "intent": {
+        "type": "string",
+        "description": "informational / commercial / transactional"
+      },
+      "page_type": {
+        "type": "string",
+        "description": "feature / usecase / template / comparison / tutorial / case / tool"
+      },
+      "target_url": {
+        "type": "string",
+        "description": "已有页面或计划页面 URL"
+      },
+      "audience": {
+        "type": "string",
+        "description": "面向谁"
+      },
+      "problem": {
+        "type": "string",
+        "description": "用户问题"
+      },
+      "evidence": {
+        "type": "string",
+        "description": "需求与竞争的研究结论，区分事实与推断"
+      },
+      "source_url": {
+        "type": "string",
+        "description": "证据或关键词工具来源 URL"
+      },
+      "checked_at": {
+        "type": "string",
+        "description": "核实时间 ISO8601"
+      },
+      "data_source": {
+        "type": "string",
+        "description": "关键词数据来源"
+      },
+      "recommendation": {
+        "type": "string",
+        "description": "建议执行的动作"
+      },
+      "goal": {
+        "type": "string",
+        "description": "转化目标"
+      },
+      "priority": {
+        "type": "string",
+        "description": "high / medium / low"
+      },
+      "status": {
+        "type": "string",
+        "description": "candidate / validated / planned / running / review / done / parked"
+      },
+      "review_at": {
+        "type": "string",
+        "description": "计划复查日期 YYYY-MM-DD"
+      },
+      "result": {
+        "type": "string",
+        "description": "复盘结论"
+      },
+      "effort": {
+        "type": "string",
+        "description": "投入估计"
+      },
+      "search_volume": {
+        "type": "number",
+        "description": "工具的搜索量，未查到时省略"
+      },
+      "difficulty": {
+        "type": "number",
+        "description": "工具的竞争度，未查到时省略"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "title",
+      "product_id"
+    ]
+  }
+}

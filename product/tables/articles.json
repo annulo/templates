@@ -1,0 +1,132 @@
+{
+  "name": "文章",
+  "desc": "文章：一篇一种类型（长文 / 图文笔记 / 视频），一键发布到支持这种类型的网站和社媒账号；可以改写成另一种类型的新文章",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "type": {
+        "type": "string",
+        "description": "文章类型：article 长文（富文本，图片插在正文里：独立站和知乎）、post 图文笔记（纯文字正文 + 一组配图：小红书、X、LinkedIn、Facebook、Instagram）、video 视频（标题 + 简介 + 一个视频：YouTube、抖音、B 站，以及能发视频的图文平台）。空的是老数据，按 article 看"
+      },
+      "channel_id": {
+        "type": "string",
+        "description": "写长文时参照的网站（content.context 的 channel_id）；实际发到哪些网站看 publications"
+      },
+      "topic_id": {
+        "type": "string",
+        "description": "来自哪个选题"
+      },
+      "title": {
+        "type": "string",
+        "description": "标题"
+      },
+      "summary": {
+        "type": "string",
+        "description": "摘要"
+      },
+      "body": {
+        "type": "string",
+        "description": "正文：长文是 HTML（图片插在正文里，网站和知乎发它）；图文笔记、视频是纯文字（视频是简介）"
+      },
+      "video": {
+        "type": "string",
+        "description": "可选的视频素材公开 https 地址；本机视频须先上传到素材库，网站发布时随文章嵌入"
+      },
+      "keywords": {
+        "type": "string",
+        "description": "关键词，逗号分隔"
+      },
+      "tags": {
+        "type": "string",
+        "description": "话题 / 标签，JSON 数组字符串，不带 #；发布时带到各平台"
+      },
+      "images": {
+        "type": "string",
+        "description": "图文笔记的配图，JSON 数组字符串（顺序就是轮播顺序，第一张是封面）；长文的图在正文里，不用这个"
+      },
+      "cover_text": {
+        "type": "string",
+        "description": "图文笔记没有配图时，封面图上的大字（小红书、Instagram 用它生成文字封面）"
+      },
+      "category": {
+        "type": "string",
+        "description": "视频的分区（B 站投稿要选）"
+      },
+      "source_id": {
+        "type": "string",
+        "description": "改写自哪篇文章（articles 的 id）"
+      },
+      "source_doc": {
+        "type": "string",
+        "description": "从外部文档（Notion）导入的来源，JSON：provider、url、title、edited_at（文档最后编辑时间）、synced_at（同步时间）、hash（同步时正文的指纹，用来判断这边改没改过）。不是导入的为空。由 docsync.create / pull 写"
+      },
+      "unread": {
+        "type": "boolean",
+        "description": "新文章：AI 写好、改写好（content.save）时为 true，用户在页面上打开这篇就清掉。左侧「内容中心」的数字数它"
+      },
+      "status": {
+        "type": "string",
+        "description": "draft / published：至少一个网站或账号发出去了就是 published（老数据的 pending_review、rejected 按 draft 看）"
+      },
+      "review_note": {
+        "type": "string",
+        "description": "审核意见"
+      },
+      "cms_collection": {
+        "type": "string",
+        "description": "旧字段（一篇只发一个网站时用）；现在发布记录在 publications"
+      },
+      "cms_id": {
+        "type": "string",
+        "description": "旧字段；现在发布记录在 publications"
+      },
+      "url": {
+        "type": "string",
+        "description": "第一个发布成功的网站上的地址（发社媒时带这个链接）；每个网站的地址在 publications"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      },
+      "published_at": {
+        "type": "string",
+        "description": "发布时间 ISO8601"
+      },
+      "slug": {
+        "type": "string",
+        "description": "文章的 slug（地址里的那段，英文小写短横线）"
+      },
+      "evidence_id": {
+        "type": "string",
+        "description": "写作时读取的不可变依据记录，用于重试去重"
+      },
+      "evidence_snapshot": {
+        "type": "string",
+        "description": "生成时简报、选中产品事实与调研依据快照 JSON，不随来源更新"
+      },
+      "campaign_id": {
+        "type": "string",
+        "description": "关联运营主题 id"
+      },
+      "opportunity_id": {
+        "type": "string",
+        "description": "关联增长机会 id"
+      },
+      "product_id": {
+        "type": "string",
+        "description": "关联产品事实 id"
+      },
+      "target_platform": {
+        "type": "string",
+        "description": "目标平台 website / xiaohongshu / douyin / x"
+      }
+    },
+    "required": [
+      "title"
+    ]
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "name": "渠道",
+  "desc": "这个项目要运营的网站：creght 站点、WordPress。社媒账号在社媒插件的 social_accounts 表；以前加的社媒账号迁移（social_migrate.run）之前还留在这里",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "type": {
+        "type": "string",
+        "description": "渠道类型：creght_site / wordpress / xiaohongshu / douyin / x / wechat_mp / linkedin / facebook / instagram / youtube / bilibili / zhihu"
+      },
+      "name": {
+        "type": "string",
+        "description": "显示名"
+      },
+      "project_id": {
+        "type": "string",
+        "description": "creght_site：站点所在的 creght 项目"
+      },
+      "site_id": {
+        "type": "string",
+        "description": "creght_site：站点 id"
+      },
+      "wp_user": {
+        "type": "string",
+        "description": "wordpress：登录用户名（应用密码存在本机密钥里，不进表）"
+      },
+      "wp_secret": {
+        "type": "string",
+        "description": "wordpress：应用密码的本机密钥名（WP_<域名>_APP_PASSWORD）"
+      },
+      "platform_uid": {
+        "type": "string",
+        "description": "社媒渠道：平台账号 id"
+      },
+      "profile": {
+        "type": "string",
+        "description": "渠道定位：目标读者、语气、不碰的话题（写作时读）"
+      },
+      "login_status": {
+        "type": "string",
+        "description": "社媒渠道：ok / expired / unknown，本地 agent 回写"
+      },
+      "preview_url": {
+        "type": "string",
+        "description": "独立站：访问地址（creght 站点是预览地址，WordPress 是站点地址）"
+      },
+      "gsc_property": {
+        "type": "string",
+        "description": "独立站：对应的 Google Search Console 属性（sc-domain:example.com 或 https://example.com/），gsc.link 配"
+      },
+      "gsc_synced_at": {
+        "type": "string",
+        "description": "独立站：上次同步 GSC 数据的时间 ISO8601"
+      },
+      "gsc_link_disabled": {
+        "type": "boolean",
+        "description": "独立站：用户解除 Search Console 关联后暂停自动匹配及同步，重新关联时恢复"
+      },
+      "cms_config": {
+        "type": "string",
+        "description": "旧的文章发布配置（已不用）：现在每个网站一个发布脚本，见 publisher；重新配置时可以参考"
+      },
+      "leads_cursor": {
+        "type": "string",
+        "description": "询盘同步：读到的最后一条表单提交（created_at 或游标），local/leads.ts 回写"
+      },
+      "leads_synced_at": {
+        "type": "string",
+        "description": "询盘同步：上次同步完成的时间 ISO8601"
+      },
+      "avatar": {
+        "type": "string",
+        "description": "社媒渠道：账号头像"
+      },
+      "handle": {
+        "type": "string",
+        "description": "X：@ 后面的用户名（发推、打开主页用），登录时回写"
+      },
+      "browser_profile": {
+        "type": "string",
+        "description": "社媒渠道：本机浏览器 profile 名（迁移到社媒插件前的旧字段）"
+      },
+      "browser_profile_id": {
+        "type": "string",
+        "description": "社媒渠道：登录态所在的浏览器 profile 的 id（ctx.browser.profile(browser_profile).id）（迁移到社媒插件前的旧字段）"
+      },
+      "browser_machine": {
+        "type": "string",
+        "description": "社媒渠道：在哪台电脑上登录的（ctx.workspace.machine.id）；旧版 Shuttle（没有 ctx.browser.profile）按它认"
+      },
+      "browser_machine_name": {
+        "type": "string",
+        "description": "社媒渠道：登录的那台电脑的名字（给用户看）"
+      },
+      "last_checked_at": {
+        "type": "string",
+        "description": "社媒渠道：上次检查登录的时间"
+      },
+      "followers": {
+        "type": "number",
+        "description": "社媒渠道：粉丝数（采集时回写）"
+      },
+      "collected_at": {
+        "type": "string",
+        "description": "社媒渠道：上次采集帖子数据的时间"
+      },
+      "metric_totals": {
+        "type": "string",
+        "description": "社媒渠道：全部已发布内容的互动合计 JSON {views, likes, comments, collects, shares, posts}（迁移到社媒插件前的旧字段）"
+      },
+      "publisher": {
+        "type": "string",
+        "description": "独立站：文章发布脚本的文件名（pub_<网站 id>，对应 local/pub_<网站 id>.ts），助手按 tasks/setup-publish.md 写"
+      },
+      "publish_status": {
+        "type": "string",
+        "description": "独立站：文章发布设置 ready（配好了、能发）/ broken（要重新配置）/ 空（还没配）；只有 ready 的网站能发文章"
+      },
+      "publish_note": {
+        "type": "string",
+        "description": "独立站：给用户看的发布说明（发到哪个集合、字段怎么对应、文章地址），助手配置时写"
+      },
+      "publish_checked_at": {
+        "type": "string",
+        "description": "独立站：上次配置 / 确认发布设置的时间 ISO8601"
+      },
+      "article_collection": {
+        "type": "string",
+        "description": "creght 站点：文章所在的 CMS 集合 key（配置发布时记下，写文章时读已有文章学写法）"
+      },
+      "fb_kind": {
+        "type": "string",
+        "description": "Facebook：profile 个人主页 / page 公司主页"
+      },
+      "page_id": {
+        "type": "string",
+        "description": "Facebook 公司主页的 id（fb_kind=page）"
+      }
+    },
+    "required": [
+      "type",
+      "name"
+    ]
+  }
+}

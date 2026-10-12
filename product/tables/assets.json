@@ -1,0 +1,40 @@
+{
+  "name": "素材",
+  "desc": "素材库：图片、视频、文字素材。写社媒笔记、文章时从这里选",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "文件的公开地址（图片、视频）；文字素材可以为空"
+      },
+      "kind": {
+        "type": "string",
+        "description": "image / video / text"
+      },
+      "name": {
+        "type": "string",
+        "description": "名称"
+      },
+      "text": {
+        "type": "string",
+        "description": "文字素材的内容（kind 是 text 时）"
+      },
+      "tags": {
+        "type": "string",
+        "description": "标签，JSON 数组字符串"
+      },
+      "source": {
+        "type": "string",
+        "description": "来源：url（从地址添加）/ manual（手写的文字）/ upload（上传）/ agent（助手生成或整理）/ platform（从渠道采集）"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      }
+    },
+    "required": [
+      "kind"
+    ]
+  }
+}

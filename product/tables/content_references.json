@@ -1,0 +1,39 @@
+{
+  "name": "内容参考依据",
+  "desc": "多对多复用结果，保存加入时和生成时的不可变快照",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string",
+        "description": "finding / generation"
+      },
+      "target_type": {
+        "type": "string",
+        "description": "topic / article"
+      },
+      "target_id": {
+        "type": "string",
+        "description": "选题或文章记录"
+      },
+      "finding_id": {
+        "type": "string",
+        "description": "调研结果记录，kind=finding 时必填"
+      },
+      "snapshot": {
+        "type": "string",
+        "description": "关联时的依据快照 JSON"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "关联时间 ISO8601"
+      }
+    },
+    "required": [
+      "kind",
+      "target_type",
+      "target_id",
+      "snapshot"
+    ]
+  }
+}

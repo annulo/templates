@@ -1,0 +1,74 @@
+{
+  "name": "改动复查",
+  "desc": "上线过的改动（体检修复、改标题描述、补内容、新文章），到期自动对比改动前后 14 天的数据",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "kind": {
+        "type": "string",
+        "description": "issue_fix（体检问题修复）/ search_meta（改标题描述）/ search_content（补内容）/ article（新文章）"
+      },
+      "ref_table": {
+        "type": "string",
+        "description": "来源表：site_issues / search_pages / articles"
+      },
+      "ref_id": {
+        "type": "string",
+        "description": "来源记录 id"
+      },
+      "title": {
+        "type": "string",
+        "description": "一句话说改了什么"
+      },
+      "pages": {
+        "type": "string",
+        "description": "涉及的页面，JSON 数组字符串"
+      },
+      "live_at": {
+        "type": "string",
+        "description": "上线时间 ISO8601"
+      },
+      "review_at": {
+        "type": "string",
+        "description": "该复查的时间 ISO8601（上线 + 17 天：GSC 延迟 3 天 + 14 天窗口）"
+      },
+      "status": {
+        "type": "string",
+        "description": "waiting（等数据）/ reviewed（已复查）/ no_data（没有可对比的数据）"
+      },
+      "before": {
+        "type": "string",
+        "description": "改动前 14 天的数据，JSON 字符串：{source, clicks, impressions, ctr, position, pv, start, end}"
+      },
+      "after": {
+        "type": "string",
+        "description": "改动后 14 天（上线 3 天后起）的数据，格式同 before"
+      },
+      "verdict": {
+        "type": "string",
+        "description": "better / flat / worse"
+      },
+      "summary": {
+        "type": "string",
+        "description": "一句话结论"
+      },
+      "reviewed_at": {
+        "type": "string",
+        "description": "复查时间 ISO8601"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      }
+    },
+    "required": [
+      "channel_id",
+      "kind",
+      "ref_id"
+    ]
+  }
+}

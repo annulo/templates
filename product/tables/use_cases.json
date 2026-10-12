@@ -1,0 +1,53 @@
+{
+  "name": "用户场景",
+  "desc": "用户场景",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "场景名称"
+      },
+      "product_id": {
+        "type": "string",
+        "description": "关联的产品事实 id"
+      },
+      "audience": {
+        "type": "string",
+        "description": "目标用户"
+      },
+      "problem": {
+        "type": "string",
+        "description": "用户要完成的任务"
+      },
+      "workflow": {
+        "type": "string",
+        "description": "产品如何帮助完成任务"
+      },
+      "outcome": {
+        "type": "string",
+        "description": "实际成果"
+      },
+      "proof_url": {
+        "type": "string",
+        "description": "真实案例或演示 URL"
+      },
+      "status": {
+        "type": "string",
+        "description": "active / hidden"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "title",
+      "product_id"
+    ]
+  }
+}
