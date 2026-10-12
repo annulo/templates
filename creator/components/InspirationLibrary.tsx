@@ -64,7 +64,6 @@ const blankSource = {
   format: "post",
   library_status: "inbox",
   priority: "normal",
-  collected_at: new Date().toISOString(),
 };
 const blankCreator = {
   nickname: "",
