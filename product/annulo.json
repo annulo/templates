@@ -1,0 +1,41 @@
+{
+  "name": {
+    "zh": "产品运营助手",
+    "en": "Product growth assistant"
+  },
+  "description": {
+    "zh": "围绕产品与用户场景运营网站 SEO、小红书、抖音和 X：研究增长机会、规划页面、制作多平台内容，追踪注册与激活并每周复盘。",
+    "en": "Grow a product through SEO, Xiaohongshu, Douyin and X: research opportunities, plan pages, create content and review acquisition and activation."
+  },
+  "min_annulo_api": 40,
+  "plugins": {
+    "social": "https://github.com/annulo/plugins#social",
+    "docs": "https://github.com/annulo/plugins#docs"
+  },
+  "plugins_min": {
+    "social": "0.8.0",
+    "docs": "0.1.0"
+  },
+  "assistant": {
+    "name": {
+      "zh": "产品运营助手",
+      "en": "Product growth assistant"
+    },
+    "intro": {
+      "zh": "告诉我产品和目标用户，我来研究增长机会、规划 SEO 页面、制作多平台内容并复盘效果。发布与上线由你确认。",
+      "en": "Share your product and audience. I will research growth opportunities, plan SEO pages, create content and review results. You approve publication."
+    },
+    "suggestions": {
+      "zh": [
+        "读取我的产品官网，整理产品与用户场景",
+        "参考 SEO 蓝图研究一批增长机会",
+        "把一个运营主题做成官网、小红书、抖音和 X 内容"
+      ],
+      "en": [
+        "Read my product website and organize its facts and use cases",
+        "Research growth opportunities using the SEO blueprint",
+        "Create website, Xiaohongshu, Douyin and X content for a campaign"
+      ]
+    }
+  }
+}

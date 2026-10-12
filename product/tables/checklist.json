@@ -1,0 +1,29 @@
+{
+  "name": "任务清单状态",
+  "desc": "总览任务清单里用户跳过、忽略的项（today.list 读，today.skip / dismiss 写）",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "key": {
+        "type": "string",
+        "description": "清单项的 key（today.ts 里定义，比如 gsc、d_leads）"
+      },
+      "status": {
+        "type": "string",
+        "description": "skipped（起步任务跳过）/ dismissed（今天要做的忽略）"
+      },
+      "value": {
+        "type": "number",
+        "description": "忽略时的数量：数量变多了会再出现"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "key",
+      "status"
+    ]
+  }
+}

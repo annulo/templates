@@ -1,0 +1,77 @@
+{
+  "name": "运营主题",
+  "desc": "运营主题",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "主题名称"
+      },
+      "product_id": {
+        "type": "string",
+        "description": "产品事实 id"
+      },
+      "use_case_id": {
+        "type": "string",
+        "description": "用户场景 id"
+      },
+      "opportunity_id": {
+        "type": "string",
+        "description": "增长机会 id"
+      },
+      "audience": {
+        "type": "string",
+        "description": "目标用户"
+      },
+      "problem": {
+        "type": "string",
+        "description": "用户问题"
+      },
+      "message": {
+        "type": "string",
+        "description": "核心价值与内容主张"
+      },
+      "goal": {
+        "type": "string",
+        "description": "转化目标"
+      },
+      "cta": {
+        "type": "string",
+        "description": "引导用户采取的动作"
+      },
+      "landing_url": {
+        "type": "string",
+        "description": "承接页面 URL"
+      },
+      "channels": {
+        "type": "string",
+        "description": "网站、小红书、抖音、X 的 JSON 数组"
+      },
+      "status": {
+        "type": "string",
+        "description": "planned / creating / ready / active / review / done"
+      },
+      "review_at": {
+        "type": "string",
+        "description": "复查日期 YYYY-MM-DD"
+      },
+      "conclusion": {
+        "type": "string",
+        "description": "复盘结论"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "title",
+      "product_id"
+    ]
+  }
+}

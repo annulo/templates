@@ -1,0 +1,76 @@
+{
+  "name": "产品事实",
+  "desc": "产品事实",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "产品或功能名称"
+      },
+      "summary": {
+        "type": "string",
+        "description": "解决什么问题"
+      },
+      "audience": {
+        "type": "string",
+        "description": "适用用户"
+      },
+      "features": {
+        "type": "string",
+        "description": "已经支持的功能"
+      },
+      "limitations": {
+        "type": "string",
+        "description": "能力边界与不适合的场景"
+      },
+      "price": {
+        "type": "string",
+        "description": "价格与收费方式，标明来源"
+      },
+      "proof": {
+        "type": "string",
+        "description": "真实案例或可核实证据"
+      },
+      "url": {
+        "type": "string",
+        "description": "产品或功能页面 URL"
+      },
+      "source_url": {
+        "type": "string",
+        "description": "事实来源 URL"
+      },
+      "verified_at": {
+        "type": "string",
+        "description": "核实时间 ISO8601"
+      },
+      "images": {
+        "type": "string",
+        "description": "自有图片 URL 的 JSON 数组"
+      },
+      "keywords": {
+        "type": "string",
+        "description": "关联关键词"
+      },
+      "status": {
+        "type": "string",
+        "description": "active / hidden"
+      },
+      "source": {
+        "type": "string",
+        "description": "manual / site"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "name"
+    ]
+  }
+}

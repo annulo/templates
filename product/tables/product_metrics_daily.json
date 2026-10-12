@@ -1,0 +1,66 @@
+{
+  "name": "产品转化数据",
+  "desc": "产品转化数据",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "date": {
+        "type": "string",
+        "description": "数据日期 YYYY-MM-DD，Asia/Shanghai"
+      },
+      "source": {
+        "type": "string",
+        "description": "来源：organic / xiaohongshu / douyin / x / direct / unknown 等"
+      },
+      "campaign_id": {
+        "type": "string",
+        "description": "运营主题 id，未归因时留空"
+      },
+      "provenance": {
+        "type": "string",
+        "description": "报表、接口或导出文件的来源与口径"
+      },
+      "imported_at": {
+        "type": "string",
+        "description": "导入时间 ISO8601"
+      },
+      "visits": {
+        "type": "number",
+        "description": "访问会话数，缺失时省略"
+      },
+      "signups": {
+        "type": "number",
+        "description": "注册事件次数，缺失时省略"
+      },
+      "activations": {
+        "type": "number",
+        "description": "激活事件次数，缺失时省略"
+      },
+      "payments": {
+        "type": "number",
+        "description": "付费事件次数，缺失时省略"
+      },
+      "visits_rows": {
+        "type": "number",
+        "description": "内部统计：此行是否提供了真实的 visits 数据（0 或 1）"
+      },
+      "signups_rows": {
+        "type": "number",
+        "description": "内部统计：此行是否提供了真实的 signups 数据（0 或 1）"
+      },
+      "activations_rows": {
+        "type": "number",
+        "description": "内部统计：此行是否提供了真实的 activations 数据（0 或 1）"
+      },
+      "payments_rows": {
+        "type": "number",
+        "description": "内部统计：此行是否提供了真实的 payments 数据（0 或 1）"
+      }
+    },
+    "required": [
+      "date",
+      "source",
+      "provenance"
+    ]
+  }
+}

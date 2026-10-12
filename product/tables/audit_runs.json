@@ -1,0 +1,40 @@
+{
+  "name": "体检记录",
+  "desc": "每次站点体检的结果",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "target_url": {
+        "type": "string",
+        "description": "体检的地址"
+      },
+      "pages_checked": {
+        "type": "integer",
+        "description": "检查的页面数"
+      },
+      "score": {
+        "type": "integer",
+        "description": "得分 0-100"
+      },
+      "issues": {
+        "type": "integer",
+        "description": "问题数"
+      },
+      "started_at": {
+        "type": "string",
+        "description": "开始时间 ISO8601"
+      },
+      "finished_at": {
+        "type": "string",
+        "description": "结束时间 ISO8601"
+      }
+    },
+    "required": [
+      "channel_id"
+    ]
+  }
+}

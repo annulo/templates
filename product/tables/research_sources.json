@@ -1,0 +1,53 @@
+{
+  "name": "调研资料",
+  "desc": "同行文章、社媒、竞品、粘贴文本或文本文件，竞品资料不进入自有产品目录",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string",
+        "description": "article / social / product / text / file"
+      },
+      "title": {
+        "type": "string",
+        "description": "资料标题"
+      },
+      "url": {
+        "type": "string",
+        "description": "原文链接"
+      },
+      "content": {
+        "type": "string",
+        "description": "提取的正文或用户提供的原文"
+      },
+      "file_name": {
+        "type": "string",
+        "description": "文本文件名"
+      },
+      "status": {
+        "type": "string",
+        "description": "pending / ready / failed"
+      },
+      "error": {
+        "type": "string",
+        "description": "读取失败原因"
+      },
+      "version": {
+        "type": "number",
+        "description": "正文版本，正文变化时递增"
+      },
+      "collected_at": {
+        "type": "string",
+        "description": "读取时间 ISO8601"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      }
+    },
+    "required": [
+      "kind",
+      "title"
+    ]
+  }
+}

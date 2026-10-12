@@ -1,0 +1,96 @@
+{
+  "name": "产品定位",
+  "desc": "产品定位",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "产品或品牌名称"
+      },
+      "website_url": {
+        "type": "string",
+        "description": "产品官网 URL"
+      },
+      "positioning": {
+        "type": "string",
+        "description": "一句话价值主张"
+      },
+      "business": {
+        "type": "string",
+        "description": "产品解决的问题"
+      },
+      "advantages": {
+        "type": "string",
+        "description": "可核实的差异化优势"
+      },
+      "customer_types": {
+        "type": "string",
+        "description": "目标用户"
+      },
+      "markets": {
+        "type": "string",
+        "description": "市场与语言"
+      },
+      "buyer_concerns": {
+        "type": "string",
+        "description": "用户关心的问题"
+      },
+      "tone": {
+        "type": "string",
+        "description": "内容语气"
+      },
+      "keywords": {
+        "type": "string",
+        "description": "候选关键词"
+      },
+      "brand_terms": {
+        "type": "string",
+        "description": "品牌词"
+      },
+      "activation_event": {
+        "type": "string",
+        "description": "激活事件的定义"
+      },
+      "signup_event": {
+        "type": "string",
+        "description": "注册事件的定义"
+      },
+      "paid_event": {
+        "type": "string",
+        "description": "付费事件的定义"
+      },
+      "goal": {
+        "type": "string",
+        "description": "当前增长目标"
+      },
+      "pricing": {
+        "type": "string",
+        "description": "价格与收费方式及来源"
+      },
+      "competitors": {
+        "type": "string",
+        "description": "竞品与替代方案"
+      },
+      "source_url": {
+        "type": "string",
+        "description": "资料来源 URL"
+      },
+      "verified_at": {
+        "type": "string",
+        "description": "资料核实时间 ISO8601"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "name"
+    ]
+  }
+}

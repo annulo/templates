@@ -1,0 +1,50 @@
+{
+  "name": "运营周报",
+  "desc": "每周的运营周报：助手按任务 tasks/weekly-report.md 写（每 7 天定时，或周报页点按钮），数字来自 reports.data",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "period_start": {
+        "type": "string",
+        "description": "周期开始 YYYY-MM-DD"
+      },
+      "period_end": {
+        "type": "string",
+        "description": "周期结束 YYYY-MM-DD"
+      },
+      "title": {
+        "type": "string",
+        "description": "标题"
+      },
+      "summary": {
+        "type": "string",
+        "description": "一两句话的结论（总览卡片显示）"
+      },
+      "body": {
+        "type": "string",
+        "description": "正文 Markdown"
+      },
+      "highlights": {
+        "type": "string",
+        "description": "关键数字，JSON 数组字符串：[{label, value, delta?}]，数字来自 reports.data"
+      },
+      "suggestions": {
+        "type": "string",
+        "description": "下周建议，JSON 数组字符串：[{title, why, action?, link?}]，link 是 action 点了去哪：{view, params?} 或 {setup: 起步配置那一项的 key}"
+      },
+      "chat_id": {
+        "type": "string",
+        "description": "写这期周报的对话 id"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      }
+    },
+    "required": [
+      "period_start",
+      "period_end",
+      "title"
+    ]
+  }
+}

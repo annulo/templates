@@ -1,0 +1,109 @@
+{
+  "name": "搜索表现",
+  "desc": "独立站每个页面在 Google 搜索里的表现（GSC 最近 28 天和上一个 28 天），gsc.sync 写入",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "page": {
+        "type": "string",
+        "description": "页面完整 URL"
+      },
+      "period_start": {
+        "type": "string",
+        "description": "统计窗口开始日期 YYYY-MM-DD（最近 28 天）"
+      },
+      "period_end": {
+        "type": "string",
+        "description": "统计窗口结束日期 YYYY-MM-DD（GSC 有 2~3 天延迟，取 3 天前）"
+      },
+      "clicks": {
+        "type": "number",
+        "description": "点击"
+      },
+      "impressions": {
+        "type": "number",
+        "description": "曝光"
+      },
+      "ctr": {
+        "type": "number",
+        "description": "点击率 0~1"
+      },
+      "position": {
+        "type": "number",
+        "description": "平均排名"
+      },
+      "prev_clicks": {
+        "type": "number",
+        "description": "上一个 28 天的点击"
+      },
+      "prev_impressions": {
+        "type": "number",
+        "description": "上一个 28 天的曝光"
+      },
+      "prev_ctr": {
+        "type": "number",
+        "description": "上一个 28 天的点击率"
+      },
+      "prev_position": {
+        "type": "number",
+        "description": "上一个 28 天的平均排名"
+      },
+      "nb_clicks": {
+        "type": "number",
+        "description": "非品牌口径的点击：去掉品牌词和 site: 这类搜索指令后的点击"
+      },
+      "nb_impressions": {
+        "type": "number",
+        "description": "非品牌口径的曝光"
+      },
+      "nb_ctr": {
+        "type": "number",
+        "description": "非品牌口径的点击率 0~1"
+      },
+      "nb_position": {
+        "type": "number",
+        "description": "非品牌口径的平均排名：非噪音搜索词按曝光加权，没有就用页面排名"
+      },
+      "noise_impressions": {
+        "type": "number",
+        "description": "品牌词和 site: 查询的曝光（已从非品牌口径里去掉）"
+      },
+      "top_queries": {
+        "type": "string",
+        "description": "主要搜索词（不含品牌词和 site: 查询），JSON 数组字符串：[{query, clicks, impressions, ctr, position}]，按曝光前 10"
+      },
+      "opportunity": {
+        "type": "string",
+        "description": "按非品牌口径算：low_ctr（曝光高、点击率低于同排名期望的一半）/ striking_distance（排名 8~20）/ 空"
+      },
+      "expected_ctr": {
+        "type": "number",
+        "description": "按非品牌口径平均排名的经验期望点击率 0~1"
+      },
+      "suggestion": {
+        "type": "string",
+        "description": "新标题和描述的建议，JSON 字符串：{title, description, reason, current_title, current_description, created_at}，助手按任务 tasks/search-meta.md 写、gsc.saveSuggestion 存"
+      },
+      "expand_brief": {
+        "type": "string",
+        "description": "补内容的要点，JSON 字符串：{gaps, sections: [{heading, what}], faq, internal_links: [{from, anchor}], summary, created_at}，助手按任务 tasks/search-expand.md 写、gsc.saveBrief 存"
+      },
+      "status": {
+        "type": "string",
+        "description": "空 / fixing（助手已改、推到预览待上线）/ live（已上线，进了改站复查）"
+      },
+      "synced_at": {
+        "type": "string",
+        "description": "同步时间 ISO8601"
+      }
+    },
+    "required": [
+      "channel_id",
+      "page"
+    ]
+  }
+}

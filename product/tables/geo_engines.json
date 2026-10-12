@@ -1,0 +1,36 @@
+{
+  "name": "GEO 检测引擎",
+  "desc": "每个 AI 引擎的检测设置：开关、用 Shuttle 里哪个服务商、哪个模型（key 在 Shuttle 的模型设置里，不进表）",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "engine": {
+        "type": "string",
+        "description": "引擎：现在只有 openai（ChatGPT），一个引擎一行"
+      },
+      "enabled": {
+        "type": "boolean",
+        "description": "老字段，现在不用（只有一个引擎）"
+      },
+      "provider": {
+        "type": "string",
+        "description": "用 Shuttle 设置 → 模型 里的哪个服务商（服务商 id，creght 平台是 creght）；空 = 没选（老项目的本机密钥还能用）"
+      },
+      "model": {
+        "type": "string",
+        "description": "用的模型，空 = 默认 gpt-5.5"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "engine"
+    ]
+  }
+}

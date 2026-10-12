@@ -1,0 +1,5 @@
+{
+  "fn": "gsc.sync",
+  "every": "1d",
+  "name": "同步 Google 搜索数据"
+}
