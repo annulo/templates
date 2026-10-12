@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.13.1
+  zh: 起步清单同一时间只读一次，连着刷新不再叠起请求，后台页面不会因此卡住。
+  en: "The setup checklist now loads once at a time, so repeated refreshes no longer stack up requests and stall the back office."
 - version: 0.13.0
   zh: Facebook 账号新增「浏览器方式／官方授权」选择：授权后勾选公共主页，已有主页可重新授权或切换连接方式，保留账号和帖子。官方通道支持文字、单图和多图帖子，视频继续使用浏览器方式。官方 API 采集显示可读指标和权限提示，自检区分发帖授权与数据读取。结果不确定的发布记录可重新核对，显示上次内容，确认未发布后再重试，避免重复发帖。可直接查看 Facebook 评论及回复正文、发布时间，支持刷新和加载更多。需要 Annulo 能力版本 39、social 插件 0.8.2，并启用 Facebook 授权中转；Meta 应用审核前仅供应用角色账号测试。
   en: "Facebook accounts now offer browser login or official authorization. Authorize, select Pages, and reconnect or switch existing Pages while keeping accounts and posts. The official channel supports text, single-image and multi-image posts; use the browser for videos. Collection displays metric availability and permission warnings; self-tests distinguish publishing authorization from data access. Uncertain posts show the previous content, offer a result check, and require confirmation before retrying to prevent duplicates. View Facebook comment and reply text with timestamps, refresh and load more. Requires Annulo API 39, social 0.8.2 and an enabled Facebook OAuth broker. App-role testing only until Meta app review."
