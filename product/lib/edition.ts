@@ -68,3 +68,9 @@ export const CHANNELS: ChannelType[] = [
   "douyin",
   "x",
 ];
+import { lazy } from "react";
+import type { WizardScreen } from "../components/wizard/types";
+export const WIZARD_SCREENS: Record<string, WizardScreen> = {
+  "connect-site": lazy(() => import("../components/wizard/ConnectProductSite")),
+  "product-details": lazy(() => import("../components/wizard/ProductDetails")),
+};
