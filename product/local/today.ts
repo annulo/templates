@@ -113,7 +113,11 @@ export function list(_input: {}, ctx: any) {
     setup_hidden: states.some(
       (s) => s.key === "setup-panel" && s.status === "hidden",
     ),
-    wizard: { steps: [], current: null, closed: true },
+    wizard: {
+      steps: setup.filter((s) => s.wizard),
+      current: setup.find((s) => s.wizard && !s.done && !s.skipped)?.key || null,
+      closed: states.some((s) => s.key === "wizard" && s.status === "dismissed"),
+    },
   };
 }
 export function skip(input: { key: string }, ctx: any) {
@@ -133,8 +137,10 @@ export function setupPanel(input: { open: boolean }, ctx: any) {
   return list({}, ctx);
 }
 export function openWizard(_input: {}, ctx: any) {
+  state(ctx, "wizard", { status: "" });
   return list({}, ctx);
 }
 export function closeWizard(_input: {}, ctx: any) {
+  state(ctx, "wizard", { status: "dismissed" });
   return list({}, ctx);
 }

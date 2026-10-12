@@ -1,3 +1,6 @@
+- version: 0.14.1
+  zh: 产品运营助手新增网站起步向导：先输入官网或选择网站，AI 读取真实内容并预填定位、产品事实和用户场景，核对后保存。重新解析先保留待确认草稿，避免覆盖现有资料；重复整理复用产品与场景。
+  en: Start product onboarding by entering a website or selecting a connected site. AI prepares product positioning, facts and user scenarios for review before saving. Re-analysis keeps existing data until confirmation and repeated imports reuse matching records.
 - version: 0.14.0
   zh: 新增产品运营助手：产品事实与用户场景、SEO 增长机会、官网/小红书/抖音/X 运营主题和内容计划、转化日数据导入与每周复盘，复用网站运营和社媒插件。
   en: Introduce the product growth assistant with product facts and use cases, SEO opportunities, website/Xiaohongshu/Douyin/X campaign plans, daily conversion imports and weekly reviews, reusing website operations and the social plugin.

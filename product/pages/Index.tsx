@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CircleHelp, Menu, Share2, X, Settings2 } from "lucide-react";
 import ProductOverview from "../components/views/ProductOverview";
+import Wizard from "../components/wizard/Wizard";
 import ProductFacts from "../components/views/ProductFacts";
 import Opportunities from "../components/views/Opportunities";
 import Campaigns from "../components/views/Campaigns";
@@ -27,10 +28,11 @@ import {
   openShuttle,
   memberLoginURL,
   MemberLoginRequired,
+  runLocal,
   type Profile,
   type Channel,
 } from "../lib/shuttle";
-import { useChecklist } from "../lib/useChecklist";
+import { useChecklist, type ChecklistData } from "../lib/useChecklist";
 import { useInShuttle } from "../lib/useShuttle";
 import { useT } from "../lib/i18n";
 import { NAV } from "../lib/edition";
@@ -53,6 +55,8 @@ export default function Index() {
     [needLogin, setNeedLogin] = useState(false),
     [plugin, setPlugin] = useState(true),
     [setupOpen, setSetupOpen] = useState(true);
+  const [wizardOpen, setWizardOpen] = useState(false),
+    [wizardStep, setWizardStep] = useState<string | null>(null);
   const handleError = useCallback((e: Error) => {
     if (e instanceof MemberLoginRequired) setNeedLogin(true);
     else setError(e.message);
@@ -147,6 +151,12 @@ export default function Index() {
   };
   const setParam = (k: string, v: string) =>
     setParams((p) => ({ ...p, [k]: v }));
+  const openWizard = async (step?: string) => {
+    try {
+      checklist.setData(await runLocal<ChecklistData>("today.openWizard", {}));
+      setWizardStep(step || null); setWizardOpen(true);
+    } catch (e) { checklist.setError((e as Error).message); }
+  };
   useEffect(() => {
     document.title = t(view);
   }, [view, t]);
@@ -163,7 +173,7 @@ export default function Index() {
     setupOpen,
     toggleSetup: () => setSetupOpen((v) => !v),
     goFromSetup: go,
-    openWizard: () => go("company"),
+    openWizard,
   };
   const render = () => {
     if (view === "company" || view === "settings")
@@ -212,6 +222,12 @@ export default function Index() {
         ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
         : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
     );
+  const wizard = checklist.data?.wizard;
+  if (ready && profile !== undefined && !needLogin && wizard && !wizard.closed && (wizardOpen || wizard.current))
+    return <Wizard ctx={ctx} initialStep={wizardStep} onExit={() => {
+      setWizardStep(null); setWizardOpen(false); setSetupOpen(true);
+      reloadProfile(); reloadChannels(); go("overview");
+    }} />;
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {mobile && (

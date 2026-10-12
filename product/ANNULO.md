@@ -2,6 +2,8 @@
 
 一个项目运营一个产品或品牌。围绕“产品事实 → 用户场景 → 增长机会 → 运营主题 → 内容与分发 → 转化复盘”工作，网站 SEO、小红书、抖音和 X 共用真实产品资料。默认不填演示数据。Creght 可以作为运营对象，模板也适用于其他产品。
 
+新项目先在向导里选择网站，再按 tasks/product-onboarding.md 整理产品与用户；解析只保存候选，用户确认后才写入资料。换网站时保留旧资料并拒绝旧任务写回。
+
 先读 ops-backend，再按业务读 product-growth、product-seo、websites 或插件 PLUGIN.md。确定的操作用本机函数，研究、写作和复盘交给 tasks；用户写法在 prompts，定制在 user/prompts。不要修改 Annulo 本身。
 
 | 模块 | 数据与函数 |
