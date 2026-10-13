@@ -74,6 +74,16 @@ export function evidenceFor(ctx: any, topic: any, articleId?: string) {
     })
     .map((r: any) => json(r.snapshot, {}));
   const ids: string[] = brief.product_ids || [];
+  const sourceRefs = [
+    ...(topic ? ctx.db.query('content_references', { where: { target_type: 'topic', target_id: topic.id, kind: 'source' }, limit: 1000 }).list : []),
+    ...(articleId ? ctx.db.query('content_references', { where: { target_type: 'article', target_id: articleId, kind: 'source' }, limit: 1000 }).list : []),
+  ];
+  const sourceIds = new Set<string>();
+  const sources = sourceRefs.filter((r: any) => {
+    if (sourceIds.has(r.source_id)) return false;
+    sourceIds.add(r.source_id);
+    return true;
+  }).map((r: any) => json(r.snapshot, {}));
   const products = ids
     .map((id) => ctx.db.get("products", id))
     .filter((p: any) => p && p.status !== "hidden")
@@ -90,5 +100,5 @@ export function evidenceFor(ctx: any, topic: any, articleId?: string) {
       verified_at: p.verified_at,
       url: p.url,
     }));
-  return { captured_at: now(), brief, findings, products };
+  return { captured_at: now(), brief, findings, sources, products };
 }

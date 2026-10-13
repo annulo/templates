@@ -36,13 +36,18 @@ export default function Checklist({ ctx, mode = 'all' }: { ctx: Ctx; mode?: 'all
   }
   const [chat, setChat] = useState<Record<string, string>>({}) // 交给助手的任务：清单项 → 对话 id
   const [picked, setPicked] = useState('') // 用户点开的那一步（没点就是 today.list 给的当前步）
+  // 正在跳过 / 恢复的那一步：函数要把清单重算一遍，在线项目要几秒，这期间按钮转圈、不能再点
+  const [pending, setPending] = useState('')
 
-  const call = async (fn: 'today.skip' | 'today.unskip' | 'today.dismiss', input: unknown) => {
+  const call = async (fn: 'today.skip' | 'today.unskip' | 'today.dismiss', input: { key: string; value?: number }) => {
+    setPending(input.key)
     try {
       setData(await runLocal<Today>(fn, input))
     } catch (e) {
       setError((e as Error).message)
       return false
+    } finally {
+      setPending('')
     }
   }
 
@@ -120,8 +125,8 @@ export default function Checklist({ ctx, mode = 'all' }: { ctx: Ctx; mode?: 'all
                       </span>
                     )}
                     {it.skipped && (
-                      <button type="button" onClick={(e) => (e.stopPropagation(), call('today.unskip', { key: it.key }))} className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-                        {tr('today.skipped')} · {tr('today.unskip')}
+                      <button type="button" disabled={pending === it.key} onClick={(e) => (e.stopPropagation(), call('today.unskip', { key: it.key }))} className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:cursor-default">
+                        {pending === it.key ? <><Loader2 className="size-3 animate-spin" />{tr('today.unskipping')}</> : <>{tr('today.skipped')} · {tr('today.unskip')}</>}
                       </button>
                     )}
                     {clickable && (
@@ -150,8 +155,8 @@ export default function Checklist({ ctx, mode = 'all' }: { ctx: Ctx; mode?: 'all
                             <MessageSquareText /> {tr('task.view')}
                           </Button>
                         )}
-                        <button type="button" onClick={() => (setPicked(''), call('today.skip', { key: it.key }))} className="ml-1 cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-                          {tr('today.skip')}
+                        <button type="button" disabled={pending === it.key} onClick={async () => { await call('today.skip', { key: it.key }); setPicked('') }} className="ml-1 inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:cursor-default">
+                          {pending === it.key ? <><Loader2 className="size-3 animate-spin" />{tr('today.skipping')}</> : tr('today.skip')}
                         </button>
                       </div>
                     </div>
@@ -178,8 +183,8 @@ export default function Checklist({ ctx, mode = 'all' }: { ctx: Ctx; mode?: 'all
                   <p className="mt-0.5 text-xs text-muted-foreground">{it.why}</p>
                 </div>
                 {act(it)}
-                <button type="button" onClick={() => call('today.dismiss', { key: it.key, value: it.count ?? 1 })} className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label={tr('today.dismiss')} title={tr('today.dismiss')}>
-                  <X className="size-4" />
+                <button type="button" disabled={pending === it.key} onClick={() => call('today.dismiss', { key: it.key, value: it.count ?? 1 })} className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-default" aria-label={tr('today.dismiss')} title={tr('today.dismiss')}>
+                  {pending === it.key ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
                 </button>
               </li>
             ))}

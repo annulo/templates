@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Sparkles } from "lucide-react";
 import { Button, Dialog, Notice, PageHeader, Panel } from "../ui";
 import WorkspaceTabs from "../WorkspaceTabs";
 import {
@@ -7,7 +7,6 @@ import {
   DataState,
   Empty,
   g,
-  TaskTools,
   TextFields,
   useProductData,
 } from "../ProductFields";
@@ -61,14 +60,9 @@ export default function ProductFacts({
         title={g("product_title")}
         desc={g("product_desc")}
         actions={
-          <TaskTools
-            task="import-products"
-            label="import_product"
-            onFinished={() => {
-              reload();
-              ctx.reloadProfile();
-            }}
-          />
+          <Button variant="outline" onClick={() => ctx.openWizard("site")}>
+            <Sparkles />{g("import_product")}
+          </Button>
         }
       />
       <WorkspaceTabs

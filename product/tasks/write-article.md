@@ -70,3 +70,5 @@ content.save 报错（比如长文正文是 Markdown、太短，笔记正文带�
 ## 产品运营上下文
 
 先读 skills/product-growth/SKILL.md。campaign 和 opportunity 提供运营目标；target_platform 指定平台表达，简报的语言优先。产品功能、边界、价格和案例只使用 products 与 research 的真实事实，use_cases 的空白成果不能补成数字。小红书、抖音需要的导流方式与限制按社媒插件的当前规格和任务处理；X 按账号定位和语言写。所有草稿保留 topic_id，content.save 会记录运营主题与产品关联。
+
+灵感来源在 research.sources 中，保留选入时的正文和博主快照。用它们帮助理解表达结构与原创角度，产品事实仍以 products 为准；参考图片和视频不会自动成为可发布素材。保存时保留 evidence_id，文章可追溯本次参考。

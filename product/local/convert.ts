@@ -61,7 +61,7 @@ export function toType(input: { article_id: string; type: ArticleType }, ctx: an
   // 同类型没有可转的：就是复制一篇（改写弹窗里选了同类型时按钮是「复制」）
   if (to === from) return copy(input, ctx)
   const body = String(a.body ?? '')
-  const out: Record<string, any> = { type: to, title: a.title, tags: a.tags || '[]', source_id: a.id }
+  const out: Record<string, any> = { type: to, title: a.title, tags: a.tags || '[]', source_id: a.id, topic_id: a.topic_id || '', evidence_snapshot: a.evidence_snapshot || '' }
   if (to === 'article') {
     out.summary = a.summary || ''
     out.body = from === 'article' ? body : textToHtml(body, from === 'post' ? parseList(a.images) : [])
@@ -86,7 +86,7 @@ export function copy(input: { article_id: string }, ctx: any) {
   const a = input?.article_id ? ctx.db.get('articles', input.article_id) : null
   if (!a) throw new Error(L(ctx, `找不到这篇文章：${input?.article_id}`, `Article not found: ${input?.article_id}`))
   const keep: Record<string, any> = {}
-  for (const k of ['type', 'summary', 'body', 'tags', 'images', 'video', 'cover_text', 'category', 'topic_id']) if (a[k] !== undefined && a[k] !== null) keep[k] = a[k]
+  for (const k of ['type', 'summary', 'body', 'tags', 'images', 'video', 'cover_text', 'category', 'topic_id', 'evidence_snapshot']) if (a[k] !== undefined && a[k] !== null) keep[k] = a[k]
   const t = new Date().toISOString()
   const row = ctx.db.insert('articles', { ...keep, title: `${a.title || ''}${L(ctx, '（副本）', ' (copy)')}`, status: 'draft', created_at: t, updated_at: t })
   return { article_id: row.id }
