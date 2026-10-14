@@ -1,3 +1,9 @@
+- version: 0.14.4
+  zh: 今日任务的统计卡片可直接进入 SEO 页面地图、营销计划与账号绑定、效果复盘。修复内容列表「更多」菜单被裁切的问题，空间不足时向上展开，支持 Escape 和点击外部关闭。
+  en: Open the SEO page map, marketing plans and account binding, or reviews directly from daily task cards. Keep content action menus fully visible outside list clipping, open upward when needed, and close with Escape or an outside click.
+- version: 0.14.3
+  zh: 营销内容与 SEO 规划融入产品运营：今日优先任务、关键词主页面地图、母题与多账号内容版本、旧正文草稿导入和素材复用。真实发布回执自动安排复盘，保留历史状态与未知指标，重复导入不覆盖现有编辑。
+  en: Integrate marketing content and SEO plans with prioritized daily actions, primary-page query maps, multi-account content variants, source draft imports and asset reuse. Verified receipts schedule reviews, historical states and unknown metrics remain distinct, and repeated imports preserve existing edits.
 - version: 0.14.2
   zh: 内容中心新增灵感库与参考博主：保存来源、收藏原因与原创转化方向，按人物归组平台账号，从灵感生成或关联选题，文章保留参考快照。支持旧营销库校验导入和重复记录去重。
   en: Add inspiration sources and reference creators to the content center, group platform accounts, generate or link topics, preserve article reference snapshots, and import existing marketing libraries without duplicate records.

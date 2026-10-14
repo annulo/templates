@@ -580,6 +580,10 @@ export type ContentReference = {
 
 export type TopicStatus = "idea" | "writing" | "done" | "dropped";
 export type Topic = {
+  target_account_id?: string;
+  account_role_key?: string;
+  marketing_plan_id?: string;
+  plan_key?: string;
   campaign_id?: string;
   opportunity_id?: string;
   product_id?: string;
@@ -606,6 +610,10 @@ export type ArticleStatus =
 /** 文章类型：article 长文（富文本，图在正文里，网站和知乎发它）、post 图文笔记（纯文字 + 一组配图）、video 视频。空的是老数据，按 article 看（local/_types.ts） */
 export type ArticleType = "article" | "post" | "video";
 export type Article = {
+  target_account_id?: string;
+  account_role_key?: string;
+  marketing_plan_id?: string;
+  plan_key?: string;
   campaign_id?: string;
   opportunity_id?: string;
   product_id?: string;

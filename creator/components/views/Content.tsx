@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { ArrowLeft, Copy, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import InspirationLibrary, { InspirationReferences } from '../InspirationLibrary'
 import { WritingBriefDialog } from '../ContentEvidence'
@@ -28,7 +29,7 @@ const TOPIC_STATUS: Record<TopicStatus, { label: string; tone: Tone }> = {
   dropped: lbl('content.t_dropped', 'default'),
 }
 
-type Tab = 'articles' | 'topics' | 'inspiration'
+type Tab = 'articles' | 'topics' | 'inspiration' | 'marketing'
 
 /** 任务 id（tasks/write-article.md）：「写一篇」「写成文章」交给助手按它写，过程看得见 */
 const WRITE_TASK = 'write-article'
@@ -54,8 +55,8 @@ async function removeArticle(a: Article, posts: SocialPost[], pubs: Publication[
 }
 
 /** 内容：文章（一篇一种类型，直接发到支持它的账号）和选题池 */
-export default function Content({ ctx, params, setParam, inspiration = false }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; inspiration?: boolean }) {
-  const tab: Tab = inspiration && params.tab === 'inspiration' ? 'inspiration' : params.tab === 'topics' ? 'topics' : 'articles'
+export default function Content({ ctx, params, setParam, inspiration = false, planning }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; inspiration?: boolean; planning?: ReactNode }) {
+  const tab: Tab = planning && params.tab === 'marketing' ? 'marketing' : inspiration && params.tab === 'inspiration' ? 'inspiration' : params.tab === 'topics' ? 'topics' : 'articles'
   const [articles, setArticles] = useState<Article[] | null>(null)
   const [topics, setTopics] = useState<Topic[] | null>(null)
   const [posts, setPosts] = useState<SocialPost[]>([])
@@ -180,7 +181,7 @@ export default function Content({ ctx, params, setParam, inspiration = false }: 
         desc={tr('content.desc')}
         actions={
           <>
-            {tab !== 'inspiration' && <Button size="sm" onClick={() => openWriter()}><Plus />{tr('content.new_article')}</Button>}
+            {tab !== 'inspiration' && tab !== 'marketing' && <Button size="sm" onClick={() => openWriter()}><Plus />{tr('content.new_article')}</Button>}
             <HeaderMore items={[{ label: tr('content.req_btn'), icon: SlidersHorizontal, onClick: () => setReqOpen(true), hidden: !writer.task }]} />
           </>
         }
@@ -193,6 +194,7 @@ export default function Content({ ctx, params, setParam, inspiration = false }: 
             { value: 'articles', label: `${tr('content.tab_articles')}${articles ? ` ${articles.length}` : ''}` },
             { value: 'topics', label: `${tr('content.tab_topics')}${topics ? ` ${topics.filter((t) => t.status === 'idea').length}` : ''}` },
             ...(inspiration ? [{ value: 'inspiration' as const, label: tr('inspiration.title') }] : []),
+            ...(planning ? [{ value: 'marketing' as const, label: tr('marketing.plan_tab') }] : []),
           ]}
         />
       </div>
@@ -203,7 +205,7 @@ export default function Content({ ctx, params, setParam, inspiration = false }: 
         desc={tr('content.writing_desc')}
       />
       <TaskFailed task={writer.task} />
-      {tab === 'inspiration' ? <InspirationLibrary ctx={ctx} params={params} setParam={setParam} onChanged={load} /> : tab === 'articles' ? (
+      {tab === 'marketing' ? planning : tab === 'inspiration' ? <InspirationLibrary ctx={ctx} params={params} setParam={setParam} onChanged={load} /> : tab === 'articles' ? (
         <Articles onRewrite={setRewriting} onCopy={copyArticle} ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
       ) : (
         <Topics inspiration={inspiration} initialTopic={params.topic} onTopicClose={() => setParam('topic', '')} ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
@@ -372,28 +374,53 @@ function RowMore({ onRewrite, onCopy, onDelete }: { onRewrite: () => void; onCop
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState('')
   const ref = useRef<HTMLDivElement>(null)
+  const anchor = useRef<HTMLButtonElement>(null)
+  const menu = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<CSSProperties | null>(null)
+  const positioned = pos !== null
+  // 挂到 body，避开列表的圆角裁切；按窗口空间向上或向下展开。
+  useLayoutEffect(() => {
+    if (!open) { setPos(null); return }
+    const b = anchor.current?.getBoundingClientRect(), popup = menu.current
+    if (!b || !popup) return
+    const gap = 8, width = popup.offsetWidth
+    const height = Math.min(popup.offsetHeight, window.innerHeight - gap * 2)
+    const left = Math.max(gap, Math.min(b.right - width, window.innerWidth - width - gap))
+    const below = window.innerHeight - b.bottom - gap
+    const top = below >= height ? b.bottom + gap : Math.max(gap, b.top - height - gap)
+    setPos({ left, top, maxHeight: window.innerHeight - gap * 2 })
+  }, [open, confirm])
+  useEffect(() => {
+    if (open && positioned) menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus({ preventScroll: true })
+  }, [open, positioned])
   useEffect(() => {
     if (!open) return
-    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) { setOpen(false); setConfirm(false) } }
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); setConfirm(false) } }
+    const dismiss = () => { setOpen(false); setConfirm(false) }
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node) && !menu.current?.contains(e.target as Node)) dismiss() }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { dismiss(); anchor.current?.focus({ preventScroll: true }) } }
+    const scroll = (e: Event) => { if (!menu.current?.contains(e.target as Node)) dismiss() }
     document.addEventListener('pointerdown', close); document.addEventListener('keydown', esc)
-    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc) }
+    window.addEventListener('scroll', scroll, true); window.addEventListener('resize', dismiss)
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); window.removeEventListener('scroll', scroll, true); window.removeEventListener('resize', dismiss) }
   }, [open])
   const act = async (key: string, fn: () => Promise<void> | void) => {
     setBusy(key)
     try { await fn(); setOpen(false); setConfirm(false) } catch (e) { toast((e as Error).message, 'error') } finally { setBusy('') }
   }
   const item = 'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left outline-none hover:bg-accent focus-visible:bg-accent disabled:cursor-default disabled:opacity-60'
-  return <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-    <button type="button" aria-label={tr('content.more_actions')} title={tr('content.more_actions')} aria-haspopup="menu" aria-expanded={open} onClick={() => { setOpen((v) => !v); setConfirm(false) }}
+  return <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => {
+    e.stopPropagation()
+    if (e.key === 'Escape') { setOpen(false); setConfirm(false); anchor.current?.focus({ preventScroll: true }) }
+  }}>
+    <button ref={anchor} type="button" aria-label={tr('content.more_actions')} title={tr('content.more_actions')} aria-haspopup="menu" aria-expanded={open} onClick={() => { setOpen((v) => !v); setConfirm(false) }}
       className={cx('inline-flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground', open && 'bg-accent text-foreground')}><MoreHorizontal className="size-4" /></button>
-    {open && <div role="menu" className="absolute top-full right-0 z-40 mt-1 w-40 rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl">
+    {open && createPortal(<div ref={menu} role="menu" aria-label={tr('content.more_actions')} style={pos ?? { visibility: 'hidden' }} className="fixed z-50 w-40 max-w-[calc(100vw-16px)] overflow-y-auto rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl">
       <button type="button" role="menuitem" className={item} onClick={() => act('rewrite', onRewrite)}><Repeat2 className="size-4" />{tr('content.row_rewrite')}</button>
       <button type="button" role="menuitem" className={item} disabled={!!busy} onClick={() => act('copy', onCopy)}>{busy === 'copy' ? <Loader className="size-4 animate-spin" /> : <Copy className="size-4" />}{tr('content.row_copy')}</button>
       {confirm
         ? <button type="button" role="menuitem" autoFocus disabled={!!busy} onClick={() => act('del', onDelete)} className={cx(item, 'bg-destructive font-medium text-white hover:bg-destructive/90 focus-visible:bg-destructive/90')}>{busy === 'del' ? <Loader className="size-4 animate-spin" /> : <Trash2 className="size-4" />}{tr('article.delete_confirm')}</button>
         : <button type="button" role="menuitem" onClick={() => setConfirm(true)} className={cx(item, 'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10')}><Trash2 className="size-4" />{tr('content.del')}</button>}
-    </div>}
+    </div>, document.body)}
   </div>
 }
 

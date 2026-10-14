@@ -3,7 +3,8 @@ import { CircleHelp, Menu, Share2, X, Settings2 } from "lucide-react";
 import ProductOverview from "../components/views/ProductOverview";
 import Wizard from "../components/wizard/Wizard";
 import ProductFacts from "../components/views/ProductFacts";
-import Opportunities from "../components/views/Opportunities";
+import GrowthPlanning from "../components/views/GrowthPlanning";
+import { MarketingPlans } from "../components/MarketingWorkspace";
 import Campaigns from "../components/views/Campaigns";
 import ProductMetrics from "../components/views/ProductMetrics";
 import Content from "../components/views/Content";
@@ -154,8 +155,11 @@ export default function Index() {
   const openWizard = async (step?: string) => {
     try {
       checklist.setData(await runLocal<ChecklistData>("today.openWizard", {}));
-      setWizardStep(step || null); setWizardOpen(true);
-    } catch (e) { checklist.setError((e as Error).message); }
+      setWizardStep(step || null);
+      setWizardOpen(true);
+    } catch (e) {
+      checklist.setError((e as Error).message);
+    }
   };
   useEffect(() => {
     document.title = t(view);
@@ -178,13 +182,24 @@ export default function Index() {
   const render = () => {
     if (view === "company" || view === "settings")
       return <ProductFacts ctx={ctx} params={params} setParam={setParam} />;
-    if (view === "opportunities") return <Opportunities ctx={ctx} />;
+    if (view === "opportunities")
+      return <GrowthPlanning ctx={ctx} params={params} setParam={setParam} />;
     if (view === "campaigns")
       return <Campaigns ctx={ctx} params={params} setParam={setParam} />;
     if (view === "metrics")
       return <ProductMetrics ctx={ctx} params={params} setParam={setParam} />;
     if (view === "content")
-      return <Content ctx={ctx} params={params} setParam={setParam} inspiration />;
+      return (
+        <Content
+          ctx={ctx}
+          params={params}
+          setParam={setParam}
+          inspiration
+          planning={
+            <MarketingPlans ctx={ctx} params={params} setParam={setParam} />
+          }
+        />
+      );
     if (view === "calendar")
       return <Calendar ctx={ctx} params={params} setParam={setParam} />;
     if (view === "assets")
@@ -223,11 +238,28 @@ export default function Index() {
         : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
     );
   const wizard = checklist.data?.wizard;
-  if (ready && profile !== undefined && !needLogin && wizard && !wizard.closed && (wizardOpen || wizard.current))
-    return <Wizard ctx={ctx} initialStep={wizardStep} onExit={() => {
-      setWizardStep(null); setWizardOpen(false); setSetupOpen(true);
-      reloadProfile(); reloadChannels(); go("overview");
-    }} />;
+  if (
+    ready &&
+    profile !== undefined &&
+    !needLogin &&
+    wizard &&
+    !wizard.closed &&
+    (wizardOpen || wizard.current)
+  )
+    return (
+      <Wizard
+        ctx={ctx}
+        initialStep={wizardStep}
+        onExit={() => {
+          setWizardStep(null);
+          setWizardOpen(false);
+          setSetupOpen(true);
+          reloadProfile();
+          reloadChannels();
+          go("overview");
+        }}
+      />
+    );
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {mobile && (

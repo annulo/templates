@@ -21,6 +21,7 @@ import {
 import TrendChart from "../charts/TrendChart";
 import { runLocal, type Campaign } from "../../lib/shuttle";
 import type { Ctx } from "./types";
+import { GrowthReviews } from "../MarketingWorkspace";
 type Summary = {
   start: string;
   end: string;
@@ -85,6 +86,7 @@ export default function ProductMetrics({
           </>
         }
       />
+      <GrowthReviews ctx={ctx} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <Choice
           name="campaign_id"

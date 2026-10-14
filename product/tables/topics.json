@@ -67,6 +67,22 @@
       "content_type": {
         "type": "string",
         "description": "article / post / video"
+      },
+      "target_account_id": {
+        "type": "string",
+        "description": "目标社媒账号 ID，账号名不能代替身份"
+      },
+      "account_role_key": {
+        "type": "string",
+        "description": "账号内容策略标识"
+      },
+      "plan_key": {
+        "type": "string",
+        "description": "同一主题内稳定内容版本标识"
+      },
+      "marketing_plan_id": {
+        "type": "string",
+        "description": "原营销计划记录 ID"
       }
     },
     "required": [

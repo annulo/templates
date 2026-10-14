@@ -63,6 +63,8 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
   const machine = useElsewhere(ctx.channels)
   // 网站在前，社媒账号在后
   const accounts = [...ctx.channels.filter(isSite), ...ctx.channels.filter((ch) => !!SOCIAL[ch.type])]
+  const targetAccountId = String((article as any).target_account_id || '')
+  const targetAccount = accounts.find(ch => ch.id === targetAccountId)
   const takes = (ch: Channel) => (isSite(ch) ? t === 'article' : supports(FIELDS[ch.type], t))
   const [picked, setPicked] = useState<string[]>([])
   const [when, setWhen] = useState<'now' | 'later'>('now')
@@ -70,7 +72,7 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
   const [result, setResult] = useState<Record<string, RowState>>({})
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
-  useEffect(() => { if (open) { setPicked([]); setResult({}); setError(''); setWhen('now'); setAt(nextHour()) } }, [open])
+  useEffect(() => { if (open) { setPicked(targetAccount && !blocked(targetAccount) ? [targetAccount.id] : []); setResult({}); setError(''); setWhen('now'); setAt(nextHour()) } }, [open, article.id, targetAccountId])
 
   // 不能选的原因：平台不支持这种类型、网站没配好发布、登录在别的电脑、登录过期
   const blocked = (ch: Channel) => !takes(ch) ? tr('article.pub_unsupported', { type: TYPE_META[t].label })
@@ -132,6 +134,7 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
     <div className="space-y-4">
       {!accounts.length ? <Notice>{tr('versions.no_channels')}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); ctx.go('channels') }}>{tr('versions.go_add', { name: tr('nav.channels') })}</button></Notice> : <>
         <p className="text-sm text-muted-foreground">{tr('article.pub_hint')}</p>
+        {targetAccountId && <Notice>{tr('article.pub_target_account', {name:targetAccount?.name || tr('article.pub_target_missing')})}</Notice>}
         <div className="max-h-80 space-y-1 overflow-y-auto">{[...usable, ...accounts.filter((ch) => !usable.includes(ch))].map(row)}</div>
         {!!unsupported.length && <p className="text-xs leading-relaxed text-muted-foreground">{tr('article.pub_rewrite_hint', { type: TYPE_META[t].label })}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); onRewrite() }}>{tr('article.rewrite')}</button></p>}
         {<div className="space-y-2 border-t border-border pt-3">
