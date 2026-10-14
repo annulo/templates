@@ -64,6 +64,10 @@
         "type": "boolean",
         "description": "新文章：AI 写好、改写好（content.save）时为 true，用户在页面上打开这篇就清掉。左侧「内容中心」的数字数它"
       },
+      "manual_status": {
+        "type": "string",
+        "description": "用户手动标记的内容状态：draft / published；空值跟随文章与真实发布记录，只用于内容管理，不更改发布记录"
+      },
       "status": {
         "type": "string",
         "description": "draft / published：至少一个网站或账号发出去了就是 published（老数据的 pending_review、rejected 按 draft 看）"

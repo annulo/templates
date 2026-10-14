@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.14.7
+  zh: 内容列表和详情顶部支持直接修改「草稿／已发布」状态，保存后刷新仍保留，筛选与数量同步更新；可恢复按发布记录自动更新，适用于在其他渠道已发布的内容。
+  en: "Change content status between Draft and Published from the list or article header. Saved choices survive reloads and update filters and counts. Restore automatic status based on publishing records, or manually mark content published on another channel."
 - version: 0.13.1
   zh: 起步清单同一时间只读一次，连着刷新不再叠起请求，后台页面不会因此卡住。
   en: "The setup checklist now loads once at a time, so repeated refreshes no longer stack up requests and stall the back office."

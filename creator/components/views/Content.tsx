@@ -4,6 +4,8 @@ import InspirationLibrary, { InspirationReferences } from '../InspirationLibrary
 import { WritingBriefDialog } from '../ContentEvidence'
 import { NotionLogo } from '../BrandIcons'
 import { ArticleEditor, ArticleView, draftOf, patchOf, sameDraft, type ArticleDraft } from '../ArticleEditor'
+import ArticleStatusControl from '../ArticleStatus'
+import { articleStatus, type ContentStatus } from '../../lib/articleStatus'
 import { ARTICLE_TYPES, PICKER_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleType } from '../ArticleTypes'
 import { PublishDialog, PublishRecords } from '../ArticlePublish'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
@@ -16,7 +18,7 @@ import { numLocale, tr } from '../../lib/i18n'
 
 // label 按当前语言取（getter）
 const lbl = (key: string, tone: Tone) => ({ get label() { return tr(key) }, tone })
-// 文章只有「草稿 / 已发布」两种：至少一个账号发出去了就是已发布。老数据里的 pending_review、rejected 按草稿显示
+// 草稿 / 已发布：默认跟随发布记录，也可由用户手动标记。
 const ARTICLE_STATUS: Partial<Record<ArticleStatus, { label: string; tone: Tone }>> = {
   draft: lbl('content.a_draft', 'default'),
   published: lbl('content.a_published', 'ok'),
@@ -70,7 +72,7 @@ export default function Content({ ctx, params, setParam, inspiration = false }: 
   const [reqOpen, setReqOpen] = useState(false)
 
   const load = useCallback(() => {
-    Promise.all([dbList('articles'), dbList('topics'), dbList('social_posts').catch(() => []), dbList('publications').catch(() => [])])
+    return Promise.all([dbList('articles'), dbList('topics'), dbList('social_posts').catch(() => []), dbList('publications').catch(() => [])])
       .then(([a, t, p, pb]) => {
         setPosts(p.filter((x) => !!x.article_id))
         setPubs(pb)
@@ -101,7 +103,7 @@ export default function Content({ ctx, params, setParam, inspiration = false }: 
     for (const p of posts) if (p.status === 'published') (to[p.article_id!] ??= []).push(p)
     return to
   }, [posts, pubs])
-  const statusOf = (a: Article): ArticleStatus => (publishedTo[a.id]?.length || a.status === 'published' ? 'published' : 'draft')
+  const statusOf = (a: Article): ContentStatus => articleStatus(a, !!publishedTo[a.id]?.length)
 
   const writer = useTask(WRITE_TASK, load)
   const openWriter = (input: WriteInput = {}, type: ArticleType = PICKER_TYPES[0]) => {
@@ -204,7 +206,7 @@ export default function Content({ ctx, params, setParam, inspiration = false }: 
       />
       <TaskFailed task={writer.task} />
       {tab === 'inspiration' ? <InspirationLibrary ctx={ctx} params={params} setParam={setParam} onChanged={load} /> : tab === 'articles' ? (
-        <Articles onRewrite={setRewriting} onCopy={copyArticle} ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
+        <Articles onChanged={load} onRewrite={setRewriting} onCopy={copyArticle} ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
       ) : (
         <Topics inspiration={inspiration} initialTopic={params.topic} onTopicClose={() => setParam('topic', '')} ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
       )}
@@ -291,7 +293,7 @@ function HeaderMore({ items }: { items: { label: string; icon: typeof SlidersHor
   </div>
 }
 
-function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, onWrite, onDelete, onRewrite, onCopy }: { onDelete: (a: Article) => Promise<void>; onRewrite: (a: Article) => void; onCopy: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; onWrite: () => void }) {
+function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, onWrite, onDelete, onRewrite, onCopy, onChanged }: { onChanged: () => void | Promise<void>; onDelete: (a: Article) => Promise<void>; onRewrite: (a: Article) => void; onCopy: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; onWrite: () => void }) {
   const [query, setQuery] = useState('')
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
@@ -352,7 +354,7 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
             <div className="flex shrink-0 flex-col items-end justify-between gap-2 self-stretch">
               <span className="flex items-center gap-1">
                 <RowMore onRewrite={() => onRewrite(a)} onCopy={() => onCopy(a)} onDelete={() => onDelete(a)} />
-                <Badge className="mt-0.5" tone={ARTICLE_STATUS[a.status]?.tone}>{ARTICLE_STATUS[a.status]?.label ?? a.status}</Badge>
+                <ArticleStatusControl article={a} status={a.status as ContentStatus} onChanged={onChanged} />
               </span>
               {chips && <span className="hidden max-w-md flex-wrap items-center justify-end gap-1.5 md:flex">{chips}</span>}
             </div>
@@ -442,7 +444,6 @@ function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, o
   const [note, setNote] = useState('')
   const [publishing, setPublishing] = useState(false)
   const [rewritingOpen, setRewritingOpen] = useState(false)
-  const st = ARTICLE_STATUS[displayStatus]
   // AI 修改：交给助手按任务 tasks/revise-article.md 改，它读的是表里现在的内容（包括手动改过的）
   const reviser = useTask(REVISE_TASK, onChanged)
   const revising = (reviser.task?.running ?? []).filter((r) => r.input?.article_id === a.id)
@@ -547,7 +548,7 @@ function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, o
           <div className="flex min-w-0 items-center gap-2">
             <Button variant="ghost" size="icon-sm" onClick={onBack} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
             <TypeBadge type={type} />
-            {displayStatus === 'published' && <Badge tone={st?.tone}>{st?.label}</Badge>}
+            <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {editing ? <><Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => setEditing(false)}>{tr('common.cancel')}</Button><Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !dirty}>{tr('common.save')}</Button></> : <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}

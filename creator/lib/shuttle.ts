@@ -308,6 +308,8 @@ export type Article = {
   unread?: boolean
   // 从外部文档导入的来源（JSON，core/local/docsync.ts）
   source_doc?: string
+  /** 用户手动标记的内容状态；空值跟随真实发布记录。 */
+  manual_status?: 'draft' | 'published' | ''
   status: ArticleStatus
   evidence_id?: string
   evidence_snapshot?: string
