@@ -1,5 +1,7 @@
 export type ContentWorkspace = 'website' | 'social'
 export type ContentStage = 'planned' | 'creating' | 'draft' | 'ready' | 'scheduled' | 'published' | 'verify' | 'blocked' | 'archived'
+export const editableContentStages = ['planned', 'creating', 'draft', 'ready', 'scheduled', 'published', 'verify', 'blocked', 'archived'] as const
+export type EditableContentStage = typeof editableContentStages[number]
 export type ContentData = {
   articles: any[]; topics: any[]; plans: any[]; posts: any[]; publications: any[];
   channels: any[]; roles?: any[]; accounts?: any[]; [key: string]: any
@@ -73,8 +75,18 @@ export function recordWorkspaces(record: any, data: ContentData, visited = new S
   return [...result]
 }
 
+/** Manual progress belongs to the primary record and the current destination. */
+export function manualEntryStage(entry: Pick<ContentEntry, 'article' | 'topic' | 'plan'>, workspace?: ContentWorkspace): EditableContentStage | undefined {
+  const row = entry.plan || entry.article || entry.topic
+  const scope = workspace || (row?.workspace === 'website' || row?.workspace === 'social' ? row.workspace : platformWorkspace(row?.target_platform || row?.platform))
+  const stage = scope && parse(row?.workflow_stages)[scope]
+  return editableContentStages.includes(stage) ? stage : undefined
+}
+
 export function entryStage(entry: Pick<ContentEntry, 'article' | 'topic' | 'plan'>, data: ContentData, workspace?: ContentWorkspace): ContentStage {
   const { article, topic, plan } = entry
+  const manual = manualEntryStage(entry, workspace)
+  if (manual) return manual
   const pubs = article ? data.publications.filter(p => p.article_id === article.id && workspace !== 'social') : []
   const posts = article ? data.posts.filter(p => p.article_id === article.id && workspace !== 'website') : []
   const receipt = plan?.receipt && parse(plan.receipt)

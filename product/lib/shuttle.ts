@@ -714,6 +714,8 @@ export type GeoRun = {
   /** 用的服务商 id；provider_name 是给人看的「谁在答」（ChatGPT · creght 平台、Claude（本机 Claude Code）） */
   provider?: string;
   provider_name?: string;
+  /** 同一次检测的几个引擎各一条，batch_id 一样；老数据没有 */
+  batch_id?: string;
   /** 这次检测的结论，JSON（GeoSummary） */
   summary?: string;
   /** 用户看过结果的时间；空 = 还没看 */
@@ -766,6 +768,26 @@ export function geoDoneText(r?: GeoRun | null): string {
   return tr("nav.geo_done", { text });
 }
 
+/** 一次检测（几个 AI 同时问，每个一条 geo_runs、batch_id 一样）跑完的提示：一个 AI 和原来一样；几个时列出每个的推荐引用数 */
+export function geoBatchDoneText(runs: GeoRun[]): string {
+  if (runs.length <= 1) return geoDoneText(runs[0]);
+  const list = runs
+    .map((r) => {
+      const sm = geoSummary(r);
+      const who = (r.provider_name || r.engine || "").split(" · ")[0];
+      return sm?.questions ? `${who} ${sm.cited}/${sm.questions}` : who;
+    })
+    .join(tr("nav.geo_done_sep"));
+  const failed = runs.reduce((n, r) => n + (geoSummary(r)?.failed.length ?? 0), 0);
+  return tr("nav.geo_done", {
+    text: tr("nav.geo_done_multi", { n: runs.length, list }) + (failed ? tr("nav.geo_done_failed", { n: failed }) : ""),
+  });
+}
+
+/** 一次检测的几条 geo_runs：和 r 的 batch_id 一样的；老数据没有 batch_id，就是它自己 */
+export const geoBatchOf = (r: GeoRun, runs: GeoRun[]) =>
+  r.batch_id ? runs.filter((x) => x.batch_id === r.batch_id) : [r];
+
 /** 跑完了、有结论、用户还没看过的检测（侧栏标点、跑完的提示用）；老数据没有 summary 的不算 */
 export const geoUnseen = (r?: GeoRun | null) =>
   !!r && !!r.finished_at && !!r.summary && !r.seen_at;
@@ -775,6 +797,8 @@ export type GeoResult = {
   id: string;
   channel_id: string;
   run_id?: string;
+  /** 用户看过这条回答的时间；空 = 还没看（品牌问题的格子标「新」） */
+  seen_at?: string;
   question_id?: string;
   question: string;
   engine?: string;
@@ -1655,6 +1679,7 @@ export function openShuttleSettings(
     | "skills"
     | "backend"
     | "connections"
+    | "browser"
     | "schedules",
 ) {
   return openShuttle("settings", section);

@@ -145,8 +145,6 @@
     "open_account_data": "Open this account in Performance: open its profile, collect again",
     "paste_hint": "or paste an image",
     "preset_prompt": "Instructions",
-    "pub_target_account": "Target account: {name}. Verify the content, assets and selected account before publishing.",
-    "pub_target_missing": "The account changed; verify it again",
     "t_article_desc": "Title + rich text with headings, lists and images in the text.",
     "pub_hint": "Pick the accounts to post to (any number). The article goes out as it is; editing it later doesn't change what's already posted.",
     "pub_rewrite_hint": "Greyed-out accounts don't take this type ({type}); rewrite it into a type they do.",

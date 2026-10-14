@@ -1,3 +1,6 @@
+- version: 0.14.6
+  zh: 网站与自媒体内容的所有任务状态均可再次编辑，包括已发布、已排期和已归档；修改保存后刷新仍保留并用于状态筛选。列表与计划详情同步显示，可恢复自动判断，正文、素材与历史回执保留。
+  en: Edit every task status in website and social content, including published, scheduled and archived tasks. Saved progress persists after reload and drives filters, with matching plan details. Restore automatic status at any time; content, assets and publication receipts are preserved.
 - version: 0.14.5
   zh: 网站运营与自媒体运营分为独立工作区，各自的内容管理合并展示选题、营销计划与成品流程，账号定位移到自媒体管理。旧内容、素材关联和发布记录全部保留，归属不明确的记录可手动确认；新内容延续当前工作区，发布目标与复盘队列分别展示。
   en: Separate website and social operations into workspaces with joined topic, plan and content workflows. Move account positioning into social management. Preserve existing content, asset links and publication history; classify older unassigned records explicitly. New content keeps its workspace, with separate publishing destinations and review queues.

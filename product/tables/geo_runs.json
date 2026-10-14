@@ -10,7 +10,7 @@
       },
       "engine": {
         "type": "string",
-        "description": "检测的 AI 引擎：openai / perplexity / doubao"
+        "description": "检测的 AI 引擎：openai（ChatGPT 接口）/ chatgpt（ChatGPT 网页版）/ deepseek / doubao / kimi / yuanbao（网页版，在用户的 Chrome 里问）；老数据还有 perplexity"
       },
       "model": {
         "type": "string",
@@ -67,6 +67,10 @@
       "created_at": {
         "type": "string",
         "description": "创建时间 ISO8601"
+      },
+      "batch_id": {
+        "type": "string",
+        "description": "同一次检测的几个引擎各记一条，batch_id 一样"
       }
     },
     "required": [

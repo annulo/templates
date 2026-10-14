@@ -2,9 +2,6 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
-- version: 0.14.4
-  zh: 修复内容列表「更多」菜单被裁切的问题，完整显示改写、复制与删除操作；空间不足时向上展开，支持 Escape 和点击外部关闭。
-  en: Keep content action menus fully visible outside list clipping, with rewrite, copy and delete actions, upward placement when needed, and Escape or outside-click dismissal.
 - version: 0.13.1
   zh: 起步清单同一时间只读一次，连着刷新不再叠起请求，后台页面不会因此卡住。
   en: "The setup checklist now loads once at a time, so repeated refreshes no longer stack up requests and stall the back office."
@@ -68,9 +65,6 @@
 - version: 0.3.0
   zh: 新增模板「自媒体工作台」：按定位出选题、写稿改稿，一篇稿件改写成各社媒平台的帖子，审核后发布或排期。
   en: "New template Creator workspace: topics from your positioning, drafting and revising, turning one draft into posts for each social platform, then review and publish or schedule."
-- version: 0.14.3
-  zh: 显式指定目标账号的内容在发布时优先勾选该账号，并显示账号核对说明。
-  en: Prefer an explicitly assigned target account in the publishing dialog and show account verification guidance.
 - version: 0.14.2
   zh: 内容中心更新共用组件；复制或转换内容时保留已有参考依据。
   en: Update shared content center components and preserve existing reference snapshots when copying or converting content.

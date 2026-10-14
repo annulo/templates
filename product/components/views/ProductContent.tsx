@@ -5,8 +5,9 @@ import { WritingBriefDialog } from '../ContentEvidence'
 import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { MarketingImport, MarketingPlans } from '../MarketingWorkspace'
+import ContentStatus from '../ContentStatus'
 import { TaskFailed, TaskLaunchButton, TaskRequirements, TaskRunning, useTask } from '../Task'
-import { Badge, Button, Dialog, Field, Notice, PageHeader, Skeleton, cx, inputCls, toast } from '../ui'
+import { Button, Dialog, Field, Notice, PageHeader, Skeleton, cx, inputCls, toast } from '../ui'
 import Select from '../Select'
 import { useProductData } from '../ProductFields'
 import { contentEntries, entryAccountIds, legacyContentWorkspace, type ContentData, type ContentEntry, type ContentStage, type ContentWorkspace } from '../../lib/contentWorkspace'
@@ -16,7 +17,6 @@ import type { Ctx } from './types'
 
 export const w = (key: string, vars?: Record<string, unknown>) => tr('workspace.' + key, vars)
 const stages: ContentStage[] = ['planned', 'creating', 'draft', 'ready', 'scheduled', 'published', 'verify', 'blocked', 'archived']
-const tone = (stage: ContentStage) => stage === 'published' ? 'ok' : stage === 'blocked' ? 'bad' : stage === 'verify' ? 'warn' : 'default'
 type Props = { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; workspace?: ContentWorkspace }
 type NewContent = { title: string; angle: string; type: ArticleType; account: string; topic?: any; savedId?: string }
 
@@ -137,7 +137,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
               {(entry.topic?.angle || entry.plan?.notes) && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{entry.topic?.angle || entry.plan?.notes}</p>}
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-              <Badge tone={tone(entry.stage)}>{w('stage_' + entry.stage)}</Badge>
+              <ContentStatus entry={entry} workspace={workspace} onChanged={reload} />
               {!entry.workspaces.length && <Button size="sm" variant="outline" onClick={() => { setAssignmentScope(workspace); setAssignment(entry) }}>{w('assign')}</Button>}
               {entry.plan && <Button size="sm" variant="ghost" onClick={() => setParam('plan', entry.plan.id)}>{w('plan_details')}</Button>}
               {entry.topic && <Button size="sm" variant="ghost" onClick={() => setParam('topic', entry.topic.id)}>{w('brief')}</Button>}
@@ -147,7 +147,8 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
         </div>}
       </>}
     </>}
-    {params.plan && <MarketingPlans ctx={ctx} params={params} setParam={setParam} detailsOnly />}
+    {params.plan && <MarketingPlans ctx={ctx} params={params} setParam={setParam} detailsOnly
+      contentEntry={entries.find(e => e.plan?.id === params.plan)} workspace={workspace} onChanged={reload} />}
     {selectedTopic && <WritingBriefDialog key={selectedTopic.id} ctx={ctx} topic={selectedTopic} onClose={() => setParam('topic', '')} onChanged={reload} onWrite={async () => {
       try {
         const latest = await runLocal<ContentData>('content-workspace.context', {})

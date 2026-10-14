@@ -20,7 +20,8 @@ import {
 import { runLocal } from "../lib/shuttle";
 import { tr } from "../lib/i18n";
 import type { Ctx } from "./views/types";
-import { contentEntries, platformWorkspace, reviewWorkspace, type ContentData, type ContentWorkspace } from "../lib/contentWorkspace";
+import { contentEntries, platformWorkspace, reviewWorkspace, type ContentData, type ContentEntry, type ContentWorkspace } from "../lib/contentWorkspace";
+import ContentStatus from './ContentStatus';
 
 export const m = (key: string, vars?: Record<string, unknown>) =>
   tr("marketing." + key, vars);
@@ -240,11 +241,17 @@ export function MarketingPlans({
   params,
   setParam,
   detailsOnly = false,
+  contentEntry,
+  workspace,
+  onChanged,
 }: {
   ctx: Ctx;
   params: Record<string, string>;
   setParam: (k: string, v: string) => void;
   detailsOnly?: boolean;
+  contentEntry?: ContentEntry;
+  workspace?: ContentWorkspace;
+  onChanged?: () => void;
 }) {
   const { data, error, reload } = useMarketing(ctx);
   const [filter, setFilter] = useState("all"),
@@ -315,7 +322,7 @@ export function MarketingPlans({
             <div className="flex flex-wrap gap-2">
               <Badge>{active.content_id}</Badge>
               <Badge>{tr("growth.platform_" + active.platform)}</Badge>
-              <Badge>{m("stage_" + active.stage)}</Badge>
+              {contentEntry && workspace ? <ContentStatus entry={contentEntry} workspace={workspace} onChanged={() => { reload(); onChanged?.() }} /> : <Badge>{m("stage_" + active.stage)}</Badge>}
               <Badge>{active.role_name || m("account_unconfirmed")}</Badge>
             </div>
             <Notice>{m("historical_note")}</Notice>
