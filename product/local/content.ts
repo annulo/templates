@@ -35,6 +35,19 @@ export function saveBrief(
     : [];
   product_ids.forEach((id) => requireRow(ctx, "products", id));
   const brief: any = { product_ids };
+  const original = json<any>(topic.brief, {});
+  for (const key of [
+    "proof",
+    "account_strategy",
+    "account_name",
+    "account_role_key",
+    "target_account_id",
+    "tracking_url",
+    "historical_notes",
+    "source_assets",
+    "source_snapshot",
+  ])
+    if (original[key] !== undefined) brief[key] = original[key];
   for (const key of [
     "audience",
     "buyer_question",
@@ -303,7 +316,7 @@ export async function context(
     ctx.db.query("channels", { limit: 200 }).list as Channel[]
   ).filter((c) => SITE_TYPES.includes(c.type));
   const ch =
-    t === "article"
+    t === "article" && topic?.workspace !== 'social' && (!topic?.target_platform || topic.target_platform === 'website')
       ? (channels.find((c) => c.id === input?.channel_id) ??
         channels.find((c) => c.publish_status === "ready") ??
         channels[0] ??
@@ -314,7 +327,10 @@ export async function context(
   const research = topic ? evidenceFor(ctx, topic) : null;
   const evidence =
     research &&
-    (research.findings.length || research.sources.length || research.products.length || topic.brief)
+    (research.findings.length ||
+      research.sources.length ||
+      research.products.length ||
+      topic.brief)
       ? ctx.db.insert("content_references", {
           kind: "generation",
           target_type: "topic",
@@ -326,6 +342,7 @@ export async function context(
   return {
     type: t,
     type_note: TYPE_NOTE[t],
+    workspace: topic?.workspace || (topic?.target_platform === 'website' ? 'website' : topic?.target_platform ? 'social' : ''),
     limits: limitsOf(ctx, t),
     project: projectBrief(project),
     topic: topic
@@ -342,6 +359,35 @@ export async function context(
       ? ctx.db.get("campaigns", topic.campaign_id)
       : null,
     target_platform: topic?.target_platform || "",
+    target_account: topic?.target_account_id
+      ? (() => {
+          const a = ctx.db.get(
+            topic.target_platform === "website"
+              ? "channels"
+              : "social_accounts",
+            topic.target_account_id,
+          );
+          return a
+            ? {
+                id: a.id,
+                name: a.name,
+                type: a.type,
+                profile: a.profile,
+                login_status: a.login_status,
+              }
+            : null;
+        })()
+      : null,
+    account_strategy: topic?.account_role_key
+      ? ctx.db.query("channel_strategies", {
+          where: { key: topic.account_role_key },
+          limit: 1,
+        }).list[0] || null
+      : null,
+    marketing_plan: topic?.marketing_plan_id
+      ? ctx.db.get("marketing_plans", topic.marketing_plan_id)
+      : null,
+    source_assets: topic ? json<any>(topic.brief, {}).source_assets || [] : [],
     use_cases: ctx.db.query("use_cases", { limit: 200 }).list,
     opportunity: topic?.opportunity_id
       ? ctx.db.get("growth_opportunities", topic.opportunity_id)
@@ -555,9 +601,14 @@ export function save(input: SaveInput, ctx: any) {
         ? {
             topic_id: topic.id,
             campaign_id: topic.campaign_id || "",
+            workspace: topic.workspace || (topic.target_platform === 'website' ? 'website' : topic.target_platform ? 'social' : ''),
             opportunity_id: topic.opportunity_id || "",
             product_id: topic.product_id || "",
             target_platform: topic.target_platform || "",
+            target_account_id: topic.target_account_id || "",
+            account_role_key: topic.account_role_key || "",
+            marketing_plan_id: topic.marketing_plan_id || "",
+            plan_key: topic.plan_key || "",
           }
         : {}),
       ...(source ? { source_id: source.id } : {}),
@@ -591,7 +642,12 @@ export function revisionContext(input: { article_id: string }, ctx: any) {
     ...current,
     sources: [
       ...(previous?.sources || []),
-      ...current.sources.filter((s: any) => !(previous?.sources || []).some((p: any) => p.source_id === s.source_id)),
+      ...current.sources.filter(
+        (s: any) =>
+          !(previous?.sources || []).some(
+            (p: any) => p.source_id === s.source_id,
+          ),
+      ),
     ],
     findings: [
       ...(previous?.findings || []),
@@ -701,13 +757,39 @@ export function rewriteContext(
   const from = typeOf(a);
   const body = String(a.body ?? "");
   const previous: any = json(a.evidence_snapshot, {});
-  const current = evidenceFor(ctx, a.topic_id ? ctx.db.get('topics', a.topic_id) : null, a.id);
+  const current = evidenceFor(
+    ctx,
+    a.topic_id ? ctx.db.get("topics", a.topic_id) : null,
+    a.id,
+  );
   const research = {
     ...current,
-    sources: [...(previous.sources || []), ...current.sources.filter((s: any) => !(previous.sources || []).some((p: any) => p.source_id === s.source_id))],
-    findings: [...(previous.findings || []), ...current.findings.filter((s: any) => !(previous.findings || []).some((p: any) => p.finding_id === s.finding_id))],
+    sources: [
+      ...(previous.sources || []),
+      ...current.sources.filter(
+        (s: any) =>
+          !(previous.sources || []).some(
+            (p: any) => p.source_id === s.source_id,
+          ),
+      ),
+    ],
+    findings: [
+      ...(previous.findings || []),
+      ...current.findings.filter(
+        (s: any) =>
+          !(previous.findings || []).some(
+            (p: any) => p.finding_id === s.finding_id,
+          ),
+      ),
+    ],
   };
-  const evidence = ctx.db.insert('content_references', { kind: 'generation', target_type: 'article', target_id: a.id, snapshot: JSON.stringify(research), created_at: research.captured_at });
+  const evidence = ctx.db.insert("content_references", {
+    kind: "generation",
+    target_type: "article",
+    target_id: a.id,
+    snapshot: JSON.stringify(research),
+    created_at: research.captured_at,
+  });
   return {
     source: {
       id: a.id,

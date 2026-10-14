@@ -1,0 +1,97 @@
+{
+  "name": "关键词与主页面",
+  "desc": "关键词与主页面",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "external_key": {
+        "type": "string",
+        "description": "external_key"
+      },
+      "keyword": {
+        "type": "string",
+        "description": "keyword"
+      },
+      "language": {
+        "type": "string",
+        "description": "language"
+      },
+      "market": {
+        "type": "string",
+        "description": "market"
+      },
+      "primary_url": {
+        "type": "string",
+        "description": "primary_url"
+      },
+      "intent": {
+        "type": "string",
+        "description": "intent"
+      },
+      "priority": {
+        "type": "string",
+        "description": "priority"
+      },
+      "supporting": {
+        "type": "string",
+        "description": "supporting"
+      },
+      "next_action": {
+        "type": "string",
+        "description": "next_action"
+      },
+      "evidence": {
+        "type": "string",
+        "description": "evidence"
+      },
+      "checked_at": {
+        "type": "string",
+        "description": "checked_at"
+      },
+      "confidence": {
+        "type": "string",
+        "description": "confidence"
+      },
+      "product_id": {
+        "type": "string",
+        "description": "product_id"
+      },
+      "origin": {
+        "type": "string",
+        "description": "origin"
+      },
+      "state": {
+        "type": "string",
+        "description": "state"
+      },
+      "opportunity_id": {
+        "type": "string",
+        "description": "opportunity_id"
+      },
+      "observed_at": {
+        "type": "string",
+        "description": "observed_at"
+      },
+      "source_snapshot": {
+        "type": "string",
+        "description": "source_snapshot"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "created_at"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "updated_at"
+      },
+      "serp_difficulty": {
+        "type": "number",
+        "description": "人工 SERP 相对难度 1–5，未知留空；不是工具 KD"
+      }
+    },
+    "required": [
+      "external_key",
+      "product_id"
+    ]
+  }
+}

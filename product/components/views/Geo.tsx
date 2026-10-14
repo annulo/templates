@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ExternalLink, Lightbulb, ListPlus, Loader2, Pause, Pencil, Play, Plus, RotateCw, Sparkles, Trash2, Wrench } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ExternalLink, Lightbulb, ListPlus, Loader2, MessageCircle, Pause, Pencil, Play, Plus, RotateCw, Settings2, Sparkles, Trash2 } from 'lucide-react'
 import { Badge, Button, Dialog, ErrorDetails, Field, Notice, Panel, PageHeader, Skeleton, cx, fmtTime, inputCls, toast, type Tone } from '../ui'
-import { dbCreate, dbDelete, dbList, dbPatch, geoDoneText, geoSummary, geoUnseen, newestFirst, runLocal, type Article, type Channel, type GeoQuestion, type GeoResult, type GeoRun, type GeoSummary, type SearchPage, isSite } from '../../lib/shuttle'
+import { dbCreate, dbDelete, dbList, dbPatch, geoBatchDoneText, geoBatchOf, geoSummary, geoUnseen, newestFirst, runLocal, type Article, type Channel, type GeoQuestion, type GeoResult, type GeoRun, type GeoSummary, type SearchPage, isSite } from '../../lib/shuttle'
 import SitePicker from '../SitePicker'
 import Markdown from '../Markdown'
 import { GeoEnginesBar, GeoEnginesDialog, useGeoEngines } from '../GeoEngines'
@@ -12,8 +12,8 @@ import { tr } from '../../lib/i18n'
 
 /** 任务 id（tasks/geo-questions.md）：「生成问题」交给助手，写还不知道这家公司的买家会问的问题 */
 const GEO_Q_TASK = 'geo-questions'
-/** 任务 id（tasks/geo-fix-facts.md）：查清 AI 说错的地方从哪来，写修正建议 */
-const GEO_FIX_TASK = 'geo-fix-facts'
+/** 任务 id（tasks/geo-ask.md）：就一条 AI 回答问助手（为什么没引用我们、怎么优化、说错了…），结论存回这条回答下面 */
+const GEO_ASK_TASK = 'geo-ask'
 
 /** 问题的问题类型 */
 const INTENT: Record<string, string> = Object.defineProperties(
@@ -22,7 +22,7 @@ const INTENT: Record<string, string> = Object.defineProperties(
 )
 
 /** 引擎的显示名；老数据没有 engine 字段的是 Perplexity */
-const ENGINE_NAME: Record<string, string> = { openai: 'ChatGPT', perplexity: 'Perplexity', get doubao() { return tr('geo.doubao') } }
+const ENGINE_NAME: Record<string, string> = { openai: 'ChatGPT', perplexity: 'Perplexity', chatgpt: 'ChatGPT', deepseek: 'DeepSeek', kimi: 'Kimi', get doubao() { return tr('geo.doubao') }, get yuanbao() { return tr('geo.yuanbao') } }
 const engineOf = (x: { engine?: string }) => x.engine || 'perplexity'
 const engineName = (k: string) => ENGINE_NAME[k] ?? k
 /** 这次检测是谁在答：新数据存了 provider_name（本机 Claude Code 写的是 Claude），老数据按引擎名 */
@@ -72,12 +72,12 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
   const [editing, setEditing] = useState<Partial<GeoQuestion> | null>(null)
   /** 检测记录里点开看明细的那次检测 */
   const [openRun, setOpenRun] = useState('')
-  /** 这个页面发起的检测的进度（geo.check 的 progress：done / total / question_id / question / step） */
+  /** 这个页面发起的检测的进度（geo.check 的 progress：done / total / asking：每个 AI 正在问哪个问题） */
   const [prog, setProg] = useState<CheckProgress | null>(null)
   const [checkErr, setCheckErr] = useState('')
   const [checkedNow, setCheckedNow] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  // 用 Shuttle 里的哪个服务商、哪个模型：「检测设置」里配（local/geo.ts engines / saveEngine）
+  // 问哪些 AI、接口用 Annulo 里的哪个服务商：「检测设置」里配（local/geo.ts engines / saveEngine）
   const eng$ = useGeoEngines()
   const [engOpen, setEngOpen] = useState(false)
   const [brandOpen, setBrandOpen] = useState(false)
@@ -101,7 +101,7 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
         setError('')
       })
       .catch((e: Error) => {
-        // 表刚建好、Shuttle 还没重启时读不到，单独给一句能懂的话
+        // 表刚建好、Annulo 还没重启时读不到，单独给一句能懂的话
         if (/没有这张表|table not found/i.test(e.message)) setNoTable(true)
         else setError(e.message)
       })
@@ -126,7 +126,7 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
   const refresh = async () => {
     setRefreshing(true)
     try {
-      await load()
+      await Promise.all([load(), eng$.reload()])
     } finally {
       setRefreshing(false)
     }
@@ -135,15 +135,21 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
   useEffect(() => {
     if (ctx.rev) load()
   }, [ctx.rev])
+
+  // 一次检测 = 几个 AI 同时问，每个一条 geo_runs（batch_id 一样）；老数据一条就是一次
   const last = runs[0]
-  // 别处发起、还在跑的检测（定时任务、离开页面前点的）：geo_runs 有开始没结束、一小时内开始的
-  const busyRun = !prog && last && !last.finished_at && Date.now() - (Date.parse(last.started_at || last.created_at || '') || 0) < 60 * 60 * 1000 ? last : null
+  const batch = useMemo(() => (last ? geoBatchOf(last, runs) : []), [runs])
+  const recent = (r: GeoRun) => Date.now() - (Date.parse(r.started_at || r.created_at || '') || 0) < 60 * 60 * 1000
+  // 别处发起、还在跑的检测（定时任务、离开页面前点的）：这次检测里有开始没结束、一小时内开始的
+  const busyRun = !prog ? (batch.find((r) => !r.finished_at && recent(r)) ?? null) : null
   // 别处发起的检测还在跑：每 8 秒重拉，问完一个就显示一个
   useEffect(() => {
     if (!busyRun) return
     const t = setInterval(load, 8000)
     return () => clearInterval(t)
   }, [busyRun?.id, load])
+  const batchKey = last ? last.batch_id || last.id : ''
+  const finished = !prog && !busyRun && batch.length > 0 && batch.every((r) => r.finished_at)
 
   const startCheck = async (retryRunId?: string) => {
     if (!channel) return
@@ -153,11 +159,11 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
     setProg({ done: 0, total: 0, started: Date.now() })
     let done = -1
     try {
-      const res = await runLocal<{ run_id?: string }>('geo.check', { channel_id: channel.id, ...(retryRunId ? { retry_run_id: retryRunId } : {}) }, (ev) => {
+      const res = await runLocal<{ run_id?: string; batch_id?: string }>('geo.check', { channel_id: channel.id, ...(retryRunId ? { retry_run_id: retryRunId } : {}) }, (ev) => {
         if (ev.type !== 'progress') return
         const d = ev.data as CheckProgress
         setProg((p) => ({ ...d, started: p?.started ?? Date.now() }))
-        // 问完一个（done 变了）就重拉，答案马上出现在列表里
+        // 问完一个（done 变了）就重拉，答案马上出现在格子里
         if (typeof d.done === 'number' && d.done !== done) {
           done = d.done
           load()
@@ -166,7 +172,7 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
       setCheckedNow(true)
       setTimeout(() => setCheckedNow(false), 2000)
       setJump(true) // 跑完滚到第一个有变化的问题
-      if (res?.run_id) setJustDone(res.run_id)
+      if (res?.batch_id || res?.run_id) setJustDone(res.batch_id || res.run_id || '')
     } catch (e) {
       setCheckErr((e as Error).message)
     } finally {
@@ -176,73 +182,101 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
     }
   }
 
-  // 每个问题最新一次结果（dbList 按时间倒序，第一条就是最新的）
-  const latestOf = useMemo(() => {
+  // 每个问题在每个 AI 上最新一次的结果（dbList 按时间倒序，第一条就是最新的）
+  const latest = useMemo(() => {
     const m = new Map<string, GeoResult>()
-    for (const r of results) if (r.question_id && !m.has(r.question_id)) m.set(r.question_id, r)
+    for (const r of results) {
+      const k = `${r.question_id}|${engineOf(r)}`
+      if (r.question_id && !m.has(k)) m.set(k, r)
+    }
     return m
   }, [results])
-  // 最近一次检测的结论；里面的变化标到对应的问题上（只标这次检测里问到的）
-  const sum = !running0(prog, busyRun) && last?.finished_at ? geoSummary(last) : null
+  const get = useCallback((qid: string, eng: string) => latest.get(`${qid}|${eng}`), [latest])
+  // 矩阵的列：检测设置里打开的 AI，加上这些问题有结果的（关掉了也还看得到上次的结果）
+  const cols = useMemo<Col[]>(() => {
+    const qids = new Set((questions ?? []).map((q) => q.id))
+    const used = new Set<string>()
+    for (const k of latest.keys()) {
+      const [qid, e] = k.split('|')
+      if (qids.has(qid)) used.add(e)
+    }
+    const list = eng$.data?.engines ?? []
+    const out: Col[] = list.filter((e) => e.enabled || used.has(e.engine)).map((e) => ({ key: e.engine, name: e.name, enabled: e.enabled }))
+    for (const e of used) if (!out.some((c) => c.key === e)) out.push({ key: e, name: engineName(e), enabled: false })
+    return out
+  }, [eng$.data, latest, questions])
+  const nameOf = (k: string) => cols.find((c) => c.key === k)?.name ?? engineName(k)
+
+  // 这次检测的结论（每个 AI 一份）；里面的变化标到对应的格子上
+  const sums = useMemo(() => (finished ? batch.map((run) => ({ run, s: geoSummary(run) })).filter((x): x is { run: GeoRun; s: GeoSummary } => !!x.s) : []), [finished, batch])
   const changeOf = useMemo(() => {
     const m = new Map<string, Change>()
-    if (!sum) return m
-    for (const id of sum.fresh) m.set(id, 'fresh')
-    for (const id of sum.gained) m.set(id, 'gained')
-    for (const id of sum.lost) m.set(id, 'lost')
+    for (const { run, s } of sums) {
+      const e = engineOf(run)
+      for (const id of s.fresh) m.set(`${id}|${e}`, 'fresh')
+      for (const id of s.gained) m.set(`${id}|${e}`, 'gained')
+      for (const id of s.lost) m.set(`${id}|${e}`, 'lost')
+    }
     return m
-  }, [last?.id, last?.summary, !!prog, !!busyRun])
-  // 看到了就算看过：侧栏「AI 搜索推荐」的点去掉（Index 听 db:changed）
+  }, [sums])
+  // 看到了就算看过：侧栏「AI 搜索推荐」的「新」去掉（Index 听 db:changed）
   useEffect(() => {
-    if (geoUnseen(last) && !prog) dbPatch('geo_runs', last!.id, { seen_at: new Date().toISOString() }).catch(() => {})
-  }, [last?.id, last?.seen_at, last?.finished_at, !!prog])
+    if (prog) return
+    for (const r of batch) if (geoUnseen(r)) dbPatch('geo_runs', r.id, { seen_at: new Date().toISOString() }).catch(() => {})
+  }, [batchKey, batch.map((r) => `${r.seen_at}${r.finished_at}`).join(), !!prog])
   // 滚到第一个有变化的问题（跑完时，或点了结论里的「新引用了 / 这次没引用」）
   const [jump, setJump] = useState(false)
-  const firstChanged = (only?: Change) => (questions ?? []).find((q) => (only ? changeOf.get(q.id) === only : changeOf.get(q.id) && changeOf.get(q.id) !== 'fresh'))
+  const firstChanged = (only?: Change) =>
+    (questions ?? []).find((q) => cols.some((c) => {
+      const ch = changeOf.get(`${q.id}|${c.key}`)
+      return only ? ch === only : ch && ch !== 'fresh'
+    }))
   const scrollTo = (q?: GeoQuestion) => q && document.getElementById(`geo-q-${q.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   useEffect(() => {
-    if (!jump || !sum) return
+    if (!jump || !sums.length) return
     setJump(false)
     setTimeout(() => scrollTo(firstChanged()), 300)
-  }, [jump, sum])
-  // 在这个页面上跑完的那次检测（这页点的，或者别处发起、在这页看着跑完的）：卡片变成「检测完成」、弹提示、这次问到的行标出来
+  }, [jump, sums.length])
+  // 在这个页面上跑完的那次检测（这页点的，或者别处发起、在这页看着跑完的）：卡片变成「检测完成」、弹提示
   const [justDone, setJustDone] = useState('')
   const watching = useRef('')
   useEffect(() => {
-    if (busyRun) watching.current = busyRun.id
-    else if (watching.current && last?.id === watching.current && last.finished_at) {
-      setJustDone(last.id)
+    if (busyRun) watching.current = batchKey
+    else if (watching.current && watching.current === batchKey && finished) {
+      setJustDone(batchKey)
       watching.current = ''
     }
-  }, [busyRun?.id, last?.id, last?.finished_at])
+  }, [busyRun?.id, batchKey, finished])
   const toasted = useRef('')
-  const done = !!justDone && last?.id === justDone && !!last.finished_at && !prog && !busyRun ? last : null
+  const done = !!justDone && justDone === batchKey && finished ? last : null
   useEffect(() => {
-    if (!done || toasted.current === done.id) return
-    toasted.current = done.id
-    toast(geoDoneText(done))
-  }, [done?.id, done?.summary])
+    if (!done || toasted.current === batchKey) return
+    toasted.current = batchKey
+    toast(geoBatchDoneText(batch))
+  }, [done?.id, batchKey])
   const isBrand = (q: GeoQuestion) => q.intent === 'brand' || brands.some((b) => q.question.toLowerCase().includes(b))
   const brandQs = useMemo(() => (questions ?? []).filter(isBrand), [questions, brands])
   const recQs = useMemo(() => (questions ?? []).filter((q) => !isBrand(q)), [questions, brands])
-  // 「AI 推荐了谁」：推荐类问题的最新回答引用的网站，按被几个问题引用排
+  // 「AI 推荐了谁」：推荐类问题在各个 AI 上最新的回答引用的网站，按被几个问题引用排
   const citedSites = useMemo(() => {
     const m = new Map<string, { host: string; ours: boolean; questions: Set<string>; pages: Set<string> }>()
     for (const q of recQs) {
-      const r = latestOf.get(q.id)
-      if (!r) continue
-      const ours = new Set(jsonList(r.cited_urls).map(hostOf))
-      for (const u of resultUrls(r)) {
-        const h = hostOf(u)
-        if (!h) continue
-        const e = m.get(h) ?? { host: h, ours: ours.has(h), questions: new Set(), pages: new Set() }
-        e.questions.add(q.id)
-        e.pages.add(u)
-        m.set(h, e)
+      for (const c of cols) {
+        const r = get(q.id, c.key)
+        if (!r) continue
+        const ours = new Set(jsonList(r.cited_urls).map(hostOf))
+        for (const u of resultUrls(r)) {
+          const h = hostOf(u)
+          if (!h) continue
+          const e = m.get(h) ?? { host: h, ours: ours.has(h), questions: new Set(), pages: new Set() }
+          e.questions.add(q.id)
+          e.pages.add(u)
+          m.set(h, e)
+        }
       }
     }
     return [...m.values()].sort((a, b) => b.questions.size - a.questions.size)
-  }, [recQs, latestOf])
+  }, [recQs, cols, get])
 
   if (!channel)
     return (
@@ -252,29 +286,24 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
       </div>
     )
 
-  const uncited = recQs.filter((q) => q.status === 'active' && !latestOf.get(q.id)?.cited)
-  const recRuns = runs.filter((r) => (r.questions ?? 0) > 0)
-
-  // 上次检测用的服务商、模型和现在的检测设置一样
-  const nowEng = eng$.data?.engines.find((e) => e.ready)
-  const sameAsNow = (r: GeoRun) => !!nowEng && r.provider === nowEng.provider && r.model === (nowEng.model || nowEng.default_model)
-  const asking = prog?.question_id ?? ''
+  // 推荐类问题：哪个 AI 都没引用本站的，可以写成选题
+  const uncited = recQs.filter((q) => q.status === 'active' && cols.some((c) => get(q.id, c.key)) && !cols.some((c) => get(q.id, c.key)?.cited))
+  // 品牌问题：还没看过的回答、标了说错还没查原因的
+  const brandResults = brandQs.flatMap((q) => cols.map((c) => get(q.id, c.key)).filter((r): r is GeoResult => !!r))
+  const pending = brandResults.filter((r) => !r.seen_at).length
+  const reported = brandResults.filter((r) => r.user_report && !r.fix_note).length
   const running = !!prog || !!busyRun
+  const noEngine = !!eng$.data && !eng$.data.engines.some((e) => e.enabled)
+  // 正在问：页面发起的看 progress 里每个 AI 在问哪个；别处发起的看不到逐步进度
+  const askingOf = (qid: string, eng: string) => prog?.asking?.find((a) => a.question_id === qid && a.engine === eng)?.step || (!prog?.asking && prog?.question_id === qid && cols[0]?.key === eng ? prog.step || tr('geo.asking') : '')
+  const batchIds = new Set(batch.map((r) => r.id))
 
   return (
     <div className="space-y-8">
-      {/* 谁在答、检测设置放在标题右边：一行说清，不单独占一块 */}
-      <PageHeader title={tr('geo.title')} desc={tr('geo.desc')} actions={<GeoEnginesBar data={eng$.data} error={eng$.error} onOpen={() => setEngOpen(true)} />} />
+      {/* 问哪些 AI、检测设置放在标题右边：一行说清，不单独占一块 */}
+      <PageHeader title={tr('geo.title')} desc={tr('geo.desc2')} actions={<GeoEnginesBar data={eng$.data} error={eng$.error} onOpen={() => setEngOpen(true)} />} />
       <SitePicker sites={sites} value={channel.id} onChange={(v) => setParam('channel', v)} />
-      <GeoEnginesDialog
-        open={engOpen}
-        onClose={() => setEngOpen(false)}
-        data={eng$.data}
-        onSaved={() => {
-          setEngOpen(false)
-          eng$.reload()
-        }}
-      />
+      <GeoEnginesDialog open={engOpen} onClose={() => setEngOpen(false)} data={eng$.data} onSaved={eng$.reload} />
       {error && <Notice tone="error">{error}</Notice>}
       {noTable && <Notice>{tr('geo.no_table')}</Notice>}
 
@@ -282,7 +311,7 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
         <Skeleton className="h-28 rounded-xl" />
       ) : noTable ? null : (
         <>
-          {/* 检测：一次跑完三块，每周自动一次。跑的时候这里显示完整进度 */}
+          {/* 检测：一次问完打开的所有 AI，每周自动一次。跑的时候这里显示完整进度 */}
           <div className={cx('rounded-xl border bg-background px-5 py-4 transition-colors', running ? 'border-primary/40' : done ? 'border-emerald-500/50' : 'border-border')}>
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <div className="min-w-0 flex-1 text-sm">
@@ -291,20 +320,16 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
                     <Loader2 className="size-4 animate-spin text-primary-text" />
                     {prog ? tr('geo.checking', { done: prog.done ?? 0, total: prog.total || '…' }) : tr('geo.checking_bg', { time: fmtTime(busyRun?.started_at || busyRun?.created_at) })}
                   </div>
+                ) : done ? (
+                  <div className="flex items-center gap-2 font-semibold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="size-4" />
+                    {tr('geo.just_done', { t: durationOf(batch) })}
+                  </div>
                 ) : (
-                  done ? (
-                    <div className="flex items-center gap-2 font-semibold text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="size-4" />
-                      {tr('geo.just_done', { t: durationOf(done) })}
-                    </div>
-                  ) : (
-                    <div className="font-semibold">{last ? tr('geo.last_run', { time: fmtTime(last.finished_at || last.created_at) }) : tr('geo.never_run')}</div>
-                  )
+                  <div className="font-semibold">{last ? tr('geo.last_run', { time: fmtTime(last.finished_at || last.created_at) }) : tr('geo.never_run')}</div>
                 )}
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {/* 上次用的和现在的检测设置一样就不重复写（标题右边写着）；换过设置才写上次用的是谁 */}
-                  {last && !running && (!sameAsNow(last) || (last.note && !sum)) ? `${sameAsNow(last) ? '' : `${askerOf(last)}${last.model ? ` · ${last.model}` : ''}`}${last.note && !sum ? `${sameAsNow(last) ? '' : ' · '}${last.note}` : ''} · ` : ''}
-                  {running && !prog ? tr('geo.checking_bg_hint', { n: results.filter((x) => x.run_id === busyRun?.id).length }) : tr('geo.run_hint')}
+                  {noEngine ? tr('geo.pick_engine_first') : running && !prog ? tr('geo.checking_bg_hint', { n: results.filter((x) => batchIds.has(x.run_id ?? '')).length }) : tr('geo.run_hint2')}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -312,14 +337,32 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
                 <Button feedback={false} variant="ghost" size="sm" disabled={refreshing} onClick={refresh} className="text-muted-foreground">
                   <RotateCw className={cx(refreshing && 'animate-spin')} /> {tr('common.refresh')}
                 </Button>
-                <Button feedback={false} size={last ? 'sm' : 'default'} disabled={running} onClick={() => startCheck()}>
-                  {running ? <Loader2 className="animate-spin" /> : <Play />}
-                  {running ? tr('ui.running') : checkedNow ? tr('ui.done') : last ? tr('geo.rerun') : tr('geo.start')}
-                </Button>
+                {/* 一个 AI 都没开（默认不开，让用户挑自己的买家在用的）：这里直接去「检测设置」打开 */}
+                {noEngine ? (
+                  <Button feedback={false} size={last ? 'sm' : 'default'} onClick={() => setEngOpen(true)}>
+                    <Settings2 /> {tr('geo.pick_engine_btn')}
+                  </Button>
+                ) : (
+                  <Button feedback={false} size={last ? 'sm' : 'default'} disabled={running} onClick={() => startCheck()}>
+                    {running ? <Loader2 className="animate-spin" /> : <Play />}
+                    {running ? tr('ui.running') : checkedNow ? tr('ui.done') : last ? tr('geo.rerun') : tr('geo.start')}
+                  </Button>
+                )}
               </div>
             </div>
-            {prog && <CheckProgressBar p={prog} />}
-            {sum && last && <RunSummary s={sum} onRetry={() => startCheck(last.id)} onJump={(c) => scrollTo(firstChanged(c))} onGen={() => document.getElementById('geo-s2')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />}
+            {prog && <CheckProgressBar p={prog} nameOf={nameOf} />}
+            {sums.length > 0 && (
+              <BatchSummary
+                items={sums}
+                nameOf={nameOf}
+                pending={pending}
+                reported={reported}
+                onRetry={(id) => startCheck(id)}
+                onJump={(c) => scrollTo(firstChanged(c))}
+                onBrand={() => document.getElementById('geo-s1')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                onGen={() => document.getElementById('geo-s2')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              />
+            )}
             {checkErr && (
               <div className="mt-3">
                 <ErrorDetails message={checkErr} actions={engAction(checkErr)} />
@@ -327,9 +370,9 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
             )}
           </div>
 
-          {/* 1. AI 怎么介绍你 */}
-          <section className="space-y-3">
-            <SectionHead n={1} title={tr('geo.s1_title')} desc={tr('geo.s1_desc')}>
+          {/* 1. AI 怎么介绍你：问题 × AI 的矩阵，格子里是「新 / 已看 / 说错」，点开一行几家的回答并排看 */}
+          <section id="geo-s1" className="scroll-mt-4 space-y-3">
+            <SectionHead n={1} title={tr('geo.s1_title')} desc={tr('geo.s1_desc2')}>
               <Button variant="outline" size="sm" fn="geo.brandQuestions" onClick={() => setBrandOpen(true)}>
                 <ListPlus /> {tr('geo.brand_fill')}
               </Button>
@@ -344,15 +387,16 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
                 </Button>
               </Empty>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-border bg-background">
+              <Matrix cols={cols} head={tr('geo.m_brand_head', { n: brandQs.length })}>
                 {brandQs.map((q) => (
-                  <FactRow key={q.id} q={q} r={latestOf.get(q.id)} justAsked={!!done && latestOf.get(q.id)?.run_id === done.id} change={changeOf.get(q.id)} asking={asking === q.id ? prog?.step || tr('geo.asking') : ''} onChanged={load} onEdit={() => setEditing(q)} />
+                  <BrandRow key={q.id} q={q} cols={cols} get={get} askingOf={askingOf} onChanged={load} onEdit={() => setEditing(q)} />
                 ))}
-              </div>
+              </Matrix>
             )}
+            {brandQs.length > 0 && cols.length > 0 && <p className="text-xs leading-relaxed text-muted-foreground">{tr('geo.m_brand_legend')}</p>}
           </section>
 
-          {/* 2. AI 推荐了谁 */}
+          {/* 2. AI 推荐了谁：问题 × AI 的矩阵，格子里是引用了本站没有，点格子看那家的回答 */}
           <section id="geo-s2" className="scroll-mt-4 space-y-3">
             <SectionHead n={2} title={tr('geo.s2_title')} desc={tr('geo.s2_desc')}>
               <TaskLaunchButton task={GEO_Q_TASK} input={{ channel_id: channel.id }} match={(r) => r.input?.channel_id === channel.id} onFinished={load} title={tr('geo.gen')} desc={tr('geo.gen_desc')} reqTitle={tr('geo.req_title')} reqHint={tr('geo.req_hint')} startLabel={tr('geo.gen_start')} icon={Sparkles} variant="outline">
@@ -370,24 +414,20 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
               </Empty>
             ) : (
               <>
-                {recRuns.length > 0 && <VisibilityStrip runs={recRuns} />}
-                {citedSites.length > 0 && <CitedSites sites={citedSites} total={recQs.filter((q) => latestOf.get(q.id)).length} />}
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold">
-                    {tr('geo.questions')} <span className="text-muted-foreground tabular-nums">{recQs.length}</span>
-                  </h3>
-                  {uncited.length > 0 && (
+                {citedSites.length > 0 && <CitedSites sites={citedSites} total={recQs.filter((q) => cols.some((c) => get(q.id, c.key))).length} />}
+                {uncited.length > 0 && (
+                  <div className="flex justify-end">
                     <TaskLaunchButton task={TOPICS_TASK} reqKey="topic_requirements" input={{ channel_id: channel.id }} match={(r) => r.input?.channel_id === channel.id && !r.input?.question_ids} title={tr('geo.to_topics', { n: uncited.length })} desc={tr('geo.topics_desc', { n: uncited.length })} reqTitle={tr('geo.topics_req_title')} reqHint={tr('geo.topics_req_hint')} startLabel={tr('geo.topics_start')} variant="outline" icon={Lightbulb}>
                       {tr('geo.to_topics', { n: uncited.length })}
                     </TaskLaunchButton>
-                  )}
-                </div>
-                <div className="overflow-hidden rounded-xl border border-border bg-background">
+                  </div>
+                )}
+                <Matrix cols={cols} head={tr('geo.m_rec_head', { n: recQs.length })} sub={(c) => <RecColHead runs={runs} eng={c.key} />}>
                   {recQs.map((q) => (
-                    <QuestionRow key={q.id} q={q} r={latestOf.get(q.id)} justAsked={!!done && latestOf.get(q.id)?.run_id === done.id} change={changeOf.get(q.id)} asking={asking === q.id ? prog?.step || tr('geo.asking') : ''} channel={channel} onChanged={load} onEdit={() => setEditing(q)} hint={<Hints q={q} pages={pages} articles={articles} />} />
+                    <RecRow key={q.id} q={q} cols={cols} get={get} askingOf={askingOf} changeOf={changeOf} channel={channel} onChanged={load} onEdit={() => setEditing(q)} hint={<Hints q={q} pages={pages} articles={articles} />} />
                   ))}
-                </div>
-                <p className="text-xs leading-relaxed text-muted-foreground">{tr('geo.rule')}</p>
+                </Matrix>
+                <p className="text-xs leading-relaxed text-muted-foreground">{tr('geo.m_rec_legend')}</p>
               </>
             )}
           </section>
@@ -406,7 +446,7 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
                     </tr>
                   </thead>
                   <tbody>
-                    {runs.slice(0, 12).map((r) => (
+                    {runs.slice(0, 20).map((r) => (
                       <Fragment key={r.id}>
                         <tr onClick={() => setOpenRun((o) => (o === r.id ? '' : r.id))} aria-expanded={openRun === r.id} title={tr('geo.run_detail')} className="cursor-pointer border-b border-border last:border-b-0 hover:bg-accent/40">
                           <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{fmtTime(r.finished_at || r.created_at)}</td>
@@ -456,18 +496,18 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
   )
 }
 
-const running0 = (prog: unknown, busyRun: unknown) => !!prog || !!busyRun
-
-/** 这次检测用了多久：「23 秒」「2 分 05 秒」 */
-function durationOf(r: GeoRun): string {
-  const secs = Math.max(0, Math.round(((Date.parse(r.finished_at || '') || 0) - (Date.parse(r.started_at || r.created_at || '') || 0)) / 1000))
+/** 这次检测用了多久（几个 AI 同时问：最早开始到最晚结束）：「23 秒」「2 分 05 秒」 */
+function durationOf(batch: GeoRun[]): string {
+  const start = Math.min(...batch.map((r) => Date.parse(r.started_at || r.created_at || '') || Infinity))
+  const end = Math.max(...batch.map((r) => Date.parse(r.finished_at || '') || 0))
+  const secs = Math.max(0, Math.round((end - start) / 1000)) || 0
   return secs >= 60 ? tr('geo.dur_min', { m: Math.floor(secs / 60), s: String(secs % 60).padStart(2, '0') }) : tr('geo.dur_sec', { s: secs })
 }
 
-type CheckProgress = { done?: number; total?: number; message?: string; question_id?: string; question?: string; step?: string; started?: number }
+type CheckProgress = { done?: number; total?: number; message?: string; question_id?: string; question?: string; step?: string; started?: number; asking?: { engine: string; question_id: string; question?: string; step?: string; done?: number; total?: number }[] }
 
-/** 检测进度：进度条、第几个、正在问的问题全文、现在在做什么、用了多久 */
-function CheckProgressBar({ p }: { p: CheckProgress }) {
+/** 检测进度：进度条、每个 AI 正在问哪个问题（第几个）、用了多久 */
+function CheckProgressBar({ p, nameOf }: { p: CheckProgress; nameOf: (k: string) => string }) {
   const [, tick] = useState(0)
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 1000)
@@ -475,13 +515,26 @@ function CheckProgressBar({ p }: { p: CheckProgress }) {
   }, [])
   const secs = Math.max(0, Math.round((Date.now() - (p.started ?? Date.now())) / 1000))
   const pct = p.total ? Math.round(((p.done ?? 0) / p.total) * 100) : 0
+  const list = p.asking ?? []
   return (
     <div className="mt-3 space-y-2">
       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${Math.max(pct, p.total ? 3 : 0)}%` }} />
       </div>
       <div className="flex flex-wrap items-start gap-x-3 gap-y-1 text-xs">
-        {p.question ? (
+        {list.length ? (
+          <ul className="min-w-0 flex-1 space-y-0.5">
+            {list.map((a) => (
+              <li key={a.engine} className="flex min-w-0 gap-2">
+                <span className="w-24 shrink-0 truncate font-semibold">{nameOf(a.engine)}</span>
+                <span className="shrink-0 text-muted-foreground tabular-nums">
+                  {(a.done ?? 0) + 1}/{a.total ?? '…'}
+                </span>
+                <span className="min-w-0 truncate">{a.question}</span>
+              </li>
+            ))}
+          </ul>
+        ) : p.question ? (
           <span className="min-w-0 flex-1">
             <span className="text-muted-foreground">{tr('geo.now_asking', { i: (p.done ?? 0) + 1, n: p.total ?? 0 })}</span>
             <span className="font-medium">{p.question}</span>
@@ -496,78 +549,334 @@ function CheckProgressBar({ p }: { p: CheckProgress }) {
   )
 }
 
-/** 和这个问题上一次的结果比，这次变了什么 */
-function ChangeBadge({ c }: { c: Change }) {
-  if (c === 'gained') return <Badge tone="ok">{tr('geo.ch_gained')}</Badge>
-  if (c === 'lost') return <Badge tone="warn">{tr('geo.ch_lost')}</Badge>
-  return null // 第一次问：行上的「新」已经说明了
-}
+/** 矩阵的一列：一个 AI。enabled = 检测设置里开着（关掉的只是还留着上次的结果） */
+type Col = { key: string; name: string; enabled: boolean }
+type GetResult = (qid: string, eng: string) => GeoResult | undefined
+type AskingOf = (qid: string, eng: string) => string
 
-/** 刚出的结果标「新」：和内容中心的新文章同一个样子（core/components/views/Content.tsx） */
-function NewPill() {
-  return <span className="mr-1.5 inline-flex h-5 items-center rounded bg-primary px-1.5 align-[1px] text-[11px] font-semibold text-primary-foreground">{tr('article.new_badge')}</span>
-}
+/** 格子一列的宽度：放得下「已看」「说错」和引擎名的前几个字 */
+const CELL_W = '6.5rem'
+const gridOf = (n: number) => ({ gridTemplateColumns: `minmax(16rem, 1fr) repeat(${n}, ${CELL_W})` })
 
-/** 检测卡片里这次的结论：品牌问题、推荐问题和可见度（比上次）、变化（点了滚到那一题）、失败的（重试）；没有推荐问题时提示生成 */
-function RunSummary({ s, onRetry, onJump, onGen }: { s: GeoSummary; onRetry: () => void; onJump: (c: Change) => void; onGen: () => void }) {
-  const [showFail, setShowFail] = useState(false)
-  const delta = s.prev_visibility == null || !s.questions ? null : s.visibility - s.prev_visibility
-  const link = 'cursor-pointer font-medium underline-offset-2 hover:underline'
+/**
+ * 问题 × AI 的矩阵：左边一列问题，每个 AI 一列格子。格子里只放事实（新 / 已看 / 说错，或者引用了没有），
+ * 回答原文点开再看：10 个问题 × 5 个 AI 也是 10 行，不是 50 段回答。列多了左右滑
+ */
+function Matrix({ cols, head, sub, children }: { cols: Col[]; head: string; sub?: (c: Col) => ReactNode; children: ReactNode }) {
   return (
-    <div className="mt-3 space-y-1.5 border-t border-border pt-3 text-sm">
-      {s.brand_asked > 0 && <div>{tr('geo.sum_brand', { n: s.brand_asked, c: s.brand_cited })}</div>}
-      {s.questions > 0 ? (
-        <div className="flex flex-wrap items-center gap-x-1.5">
-          {tr('geo.sum_rec', { n: s.questions, c: s.cited, v: s.visibility })}
-          {delta != null && (
-            <span className={cx('inline-flex items-center text-xs tabular-nums', delta > 0 ? 'text-emerald-600 dark:text-emerald-400' : delta < 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
-              {delta > 0 ? <ArrowUp className="size-3" /> : delta < 0 ? <ArrowDown className="size-3" /> : null}
-              {delta === 0 ? tr('geo.sum_same') : tr('geo.sum_delta', { d: `${delta > 0 ? '+' : '−'}${Math.abs(delta)}`, p: s.prev_visibility })}
+    <div className="overflow-x-auto rounded-xl border border-border bg-background">
+      <div style={{ minWidth: `calc(16rem + ${cols.length} * ${CELL_W})` }}>
+        <div className="grid items-end border-b border-border bg-muted/40 text-xs text-muted-foreground" style={gridOf(cols.length)}>
+          <div className="px-4 py-2 font-medium">{head}</div>
+          {cols.map((c) => (
+            <div key={c.key} className="px-1.5 py-2 text-center" title={c.enabled ? c.name : tr('geo.m_col_off', { name: c.name })}>
+              <div className={cx('line-clamp-2 leading-tight font-medium break-words', !c.enabled && 'opacity-60')}>{c.name}</div>
+              {sub?.(c)}
+            </div>
+          ))}
+        </div>
+        {cols.length === 0 ? <p className="px-4 py-3 text-xs text-muted-foreground">{tr('geo.m_no_cols')}</p> : children}
+      </div>
+    </div>
+  )
+}
+
+/** 「AI 推荐了谁」每一列的表头：这个 AI 最近一次检测里，推荐类问题引用了本站几个 */
+function RecColHead({ runs, eng }: { runs: GeoRun[]; eng: string }) {
+  const r = runs.find((x) => engineOf(x) === eng && x.finished_at && (x.questions ?? 0) > 0)
+  if (!r) return <div className="mt-0.5 tabular-nums opacity-60">–</div>
+  const v = r.visibility ?? 0
+  return (
+    <div className={cx('mt-0.5 font-semibold tabular-nums', v >= 60 ? 'text-emerald-600 dark:text-emerald-400' : v > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive')} title={tr('geo.m_vis_title', { c: r.cited ?? 0, n: r.questions ?? 0, v })}>
+      {r.cited ?? 0}/{r.questions}
+    </div>
+  )
+}
+
+/** 「新」：和内容中心的新文章同一个样子（core/components/views/Content.tsx） */
+function NewTag() {
+  return <span className="inline-flex h-5 items-center rounded bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">{tr('article.new_badge')}</span>
+}
+
+/** 编辑、暂停、删除（点两下才删：第一下变成「再点一次删除」，移开就取消） */
+function QuestionActions({ q, onChanged, onEdit }: { q: GeoQuestion; onChanged: () => void; onEdit: () => void }) {
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const run = async (f: () => Promise<unknown>) => {
+    setBusy(true)
+    try {
+      await f()
+      onChanged()
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="flex shrink-0 items-center opacity-70 group-hover:opacity-100">
+      <Button variant="ghost" size="icon-sm" disabled={busy} onClick={onEdit} className="text-muted-foreground" title={tr('geo.edit_title')}>
+        <Pencil />
+      </Button>
+      <Button variant="ghost" size="icon-sm" disabled={busy} onClick={() => run(() => dbPatch('geo_questions', q.id, { status: q.status === 'paused' ? 'active' : 'paused' }))} className="text-muted-foreground" title={q.status === 'paused' ? tr('geo.resume_title') : tr('geo.pause_title')}>
+        {q.status === 'paused' ? <Play /> : <Pause />}
+      </Button>
+      <Button
+        feedback={false}
+        variant={confirmDel ? 'default' : 'ghost'}
+        size="sm"
+        disabled={busy}
+        onClick={() => (confirmDel ? run(() => dbDelete('geo_questions', q.id)) : setConfirmDel(true))}
+        onMouseLeave={() => setConfirmDel(false)}
+        className={cx(confirmDel ? 'bg-destructive text-white hover:bg-destructive/90' : 'px-2 text-muted-foreground')}
+        title={tr('geo.del_title')}
+      >
+        <Trash2 />
+        {confirmDel && tr('geo.del_again')}
+      </Button>
+    </div>
+  )
+}
+
+/** 品牌问题的格子：这个 AI 的回答要不要你看——新（还没看）、已看、说错（你标过）；引用了本站加个绿点 */
+function BrandCell({ r, asking }: { r?: GeoResult; asking: string }) {
+  if (asking) return <Loader2 className="size-4 animate-spin text-primary-text" aria-label={asking} />
+  if (!r) return <span className="text-muted-foreground/60" title={tr('geo.q_not_run')}>·</span>
+  return (
+    <span className="inline-flex items-center gap-1">
+      {r.user_report ? (
+        <span className="inline-flex h-5 items-center rounded bg-destructive/10 px-1.5 text-[11px] font-semibold text-destructive">{tr('geo.m_reported')}</span>
+      ) : !r.seen_at ? (
+        <NewTag />
+      ) : (
+        <span className="text-xs text-muted-foreground">{tr('geo.m_seen')}</span>
+      )}
+      {r.cited && <span className="size-1.5 rounded-full bg-emerald-500" title={tr('geo.r_cited')} />}
+    </span>
+  )
+}
+
+/**
+ * 品牌问题的一行：每个 AI 一个格子。点开一行，几家 AI 的回答并排看（「各家怎么说你」），看了的格子变成「已看」；
+ * 哪家说错了就在那家的回答下面写下来，交给助手查出处、写修正建议
+ */
+function BrandRow({ q, cols, get, askingOf, onChanged, onEdit }: { q: GeoQuestion; cols: Col[]; get: GetResult; askingOf: AskingOf; onChanged: () => void; onEdit: () => void }) {
+  const [open, setOpen] = useState(false)
+  const rs = cols.map((c) => get(q.id, c.key))
+  const asking = cols.some((c) => askingOf(q.id, c.key))
+  const toggle = async () => {
+    const next = !open
+    setOpen(next)
+    // 点开了就算看过这几家的回答
+    const unseen = rs.filter((r): r is GeoResult => !!r && !r.seen_at)
+    if (next && unseen.length) {
+      const now = new Date().toISOString()
+      await Promise.all(unseen.map((r) => dbPatch('geo_results', r.id, { seen_at: now }).catch(() => {})))
+      onChanged()
+    }
+  }
+  return (
+    <div id={`geo-q-${q.id}`} className={cx('group scroll-mt-24 border-b border-border last:border-b-0', q.status === 'paused' && 'opacity-60', asking && 'bg-primary/5', rs.some((r) => r && !r.seen_at) && !open && 'bg-primary/5 shadow-[inset_3px_0_0_var(--color-primary)]')}>
+      <div className="grid items-center" style={gridOf(cols.length)}>
+        <div className="flex min-w-0 items-start gap-2 py-2 pr-2 pl-4">
+          <button type="button" onClick={toggle} aria-expanded={open} className="min-w-0 flex-1 cursor-pointer text-left">
+            <span className="text-sm font-medium">{q.question}</span>
+            <span className="ml-2 inline-flex flex-wrap items-center gap-2 align-middle text-xs text-muted-foreground">
+              {q.status === 'paused' && <Badge>{tr('geo.paused')}</Badge>}
+              {q.source === 'auto' && <span>{tr('geo.auto')}</span>}
+              <ChevronDown className={cx('size-3.5 transition-transform', open && 'rotate-180')} />
             </span>
-          )}
+          </button>
+          <QuestionActions q={q} onChanged={onChanged} onEdit={onEdit} />
+        </div>
+        {cols.map((c, i) => (
+          <button key={c.key} type="button" onClick={toggle} className="flex h-full cursor-pointer items-center justify-center border-l border-border/60 px-1 hover:bg-accent/40" title={`${c.name}`}>
+            <BrandCell r={rs[i]} asking={askingOf(q.id, c.key)} />
+          </button>
+        ))}
+      </div>
+      {open && (
+        <div className="grid gap-3 px-4 pb-4 md:grid-cols-2 2xl:grid-cols-3">
+          {cols.map((c, i) => (
+            <AnswerCard key={c.key} name={c.name} r={rs[i]} onChanged={onChanged} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 一家 AI 对一个品牌问题的回答：原文、引用了本站没有；「回答和引用」看搜了什么、引用了哪些网址；说错了写下来交给助手 */
+function AnswerCard({ name, r, onChanged }: { name: string; r?: GeoResult; onChanged: () => void }) {
+  const [more, setMore] = useState(false)
+  if (!r)
+    return (
+      <div className="rounded-lg border border-dashed border-border px-3 py-2.5 text-xs text-muted-foreground">
+        <span className="font-semibold text-foreground">{name}</span> · {tr('geo.q_not_run')}
+      </div>
+    )
+  const answer = r.answer || r.answer_excerpt || ''
+  return (
+    <div className={cx('flex min-w-0 flex-col rounded-lg border p-3', r.user_report ? 'border-destructive/40' : 'border-border')}>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-semibold">{name}</span>
+        <Badge tone={r.cited ? 'ok' : 'default'}>{r.cited ? tr('geo.r_cited') : tr('geo.r_no_site')}</Badge>
+        <span className="text-muted-foreground">{fmtTime(r.created_at)}</span>
+      </div>
+      {answer ? (
+        <div className="mt-2 max-h-72 overflow-y-auto pr-1 text-xs leading-relaxed">
+          <Markdown text={answer} />
         </div>
       ) : (
-        <div className="text-muted-foreground">
-          {tr('geo.sum_no_rec')}{' '}
-          <button type="button" onClick={onGen} className={cx(link, 'text-primary-text')}>
-            {tr('geo.sum_go_gen')}
-          </button>
+        <p className="mt-2 text-xs text-muted-foreground">{tr('common.none')}</p>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+        <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className="inline-flex cursor-pointer items-center gap-1 font-medium text-primary-text">
+          {r.searches !== undefined ? tr('geo.m_sources', { s: searchedUrls(r).length, n: resultUrls(r).length }) : tr('geo.m_sources_cited', { n: resultUrls(r).length })}
+          <ChevronDown className={cx('size-3.5 transition-transform', more && 'rotate-180')} />
+        </button>
+      </div>
+      {more && (
+        <div className="mt-2">
+          <ResultDetail r={r} noAnswer />
         </div>
       )}
-      {(s.gained.length > 0 || s.lost.length > 0) && (
-        <div className="flex flex-wrap gap-x-3 text-xs">
-          {s.gained.length > 0 && (
-            <button type="button" onClick={() => onJump('gained')} className={cx(link, 'text-emerald-600 dark:text-emerald-400')}>
-              {tr('geo.sum_gained', { n: s.gained.length })}
-            </button>
-          )}
-          {s.lost.length > 0 && (
-            <button type="button" onClick={() => onJump('lost')} className={cx(link, 'text-amber-600 dark:text-amber-400')}>
-              {tr('geo.sum_lost', { n: s.lost.length })}
-            </button>
-          )}
-        </div>
-      )}
-      {s.failed.length > 0 && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <AlertTriangle className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <button type="button" onClick={() => setShowFail((v) => !v)} aria-expanded={showFail} className={cx(link, 'inline-flex items-center gap-1')}>
-              {tr('geo.sum_failed', { n: s.failed.length })}
-              <ChevronDown className={cx('size-3 transition-transform', showFail && 'rotate-180')} />
-            </button>
-            <Button size="sm" variant="outline" className="ml-auto" onClick={onRetry}>
-              <RotateCw /> {tr('geo.sum_retry')}
-            </Button>
+      {/* 看了有疑问就问助手：为什么没引用我们、怎么优化、说错了……都行，不限一种 */}
+      <AskBox r={r} engine={name} onChanged={onChanged} />
+      {r.fix_note && (
+        <div className="mt-3 rounded-lg border border-primary/25 bg-primary/5 p-2.5 text-xs">
+          <div className="font-semibold text-primary-text">{tr('geo.ask_note', { time: fmtTime(r.fixed_at) })}</div>
+          <div className="mt-1 leading-relaxed">
+            <Markdown text={r.fix_note} />
           </div>
-          {showFail && (
-            <ul className="mt-2 space-y-1 text-muted-foreground">
-              {s.failed.map((f) => (
-                <li key={f.question_id}>
-                  <span className="font-medium text-foreground">{f.question}</span>：{f.error}
-                </li>
-              ))}
-            </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * 就这家 AI 的这条回答问助手：用户想问什么都行（为什么没引用我们、怎么让它推荐我们、这里说错了、这个说法从哪来……），
+ * 给几个常用的问法点一下就填上。交给助手（tasks/geo-ask.md，新开一段对话在后台跑），助手的结论存回这条回答下面。
+ * 用的是「这里说错了」的，同时记成说错（格子显示「说错」）
+ */
+function AskBox({ r, engine, onChanged }: { r: GeoResult; engine: string; onChanged: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [ask, setAsk] = useState('')
+  const recommend = r.kind !== 'facts'
+  const presets = [r.cited ? '' : tr('geo.ask_why'), tr('geo.ask_how'), tr('geo.ask_wrong')].filter(Boolean)
+  const wrong = tr('geo.ask_wrong')
+  const beforeRun = async () => {
+    const text = ask.trim()
+    // 说的是说错了：记下来，格子显示「说错」
+    if (text.startsWith(wrong.replace(/[:：]\s*$/, ''))) await dbPatch('geo_results', r.id, { user_report: text, reported_at: new Date().toISOString() })
+    return { result_id: r.id, ask: text }
+  }
+  if (!open)
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="mt-2 inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-primary-text">
+        <MessageCircle className="size-3.5" /> {tr('geo.ask_open', { engine })}
+      </button>
+    )
+  return (
+    <div className="mt-3 space-y-2 rounded-lg border border-border p-2.5">
+      <div className="text-xs font-semibold">{tr('geo.ask_title', { engine })}</div>
+      <div className="flex flex-wrap gap-1.5">
+        {presets.map((p) => (
+          <button key={p} type="button" onClick={() => setAsk(p)} className="inline-flex h-6 cursor-pointer items-center rounded-md border border-border px-2 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground">
+            {p}
+          </button>
+        ))}
+      </div>
+      <textarea autoFocus value={ask} onChange={(e) => setAsk(e.target.value)} rows={2} className={`${inputCls} py-2 text-xs`} placeholder={recommend ? tr('geo.ask_ph_rec') : tr('geo.ask_ph')} />
+      <div className="flex flex-wrap items-center gap-2">
+        <TaskButton task={GEO_ASK_TASK} beforeRun={beforeRun} disabled={!ask.trim()} match={(t) => t.input?.result_id === r.id} onFinished={onChanged} variant="outline" icon={MessageCircle}>
+          {tr('geo.ask_send')}
+        </TaskButton>
+        <span className="text-xs text-muted-foreground">{tr('geo.ask_hint')}</span>
+      </div>
+    </div>
+  )
+}
+
+/** 推荐类问题的格子：这个 AI 的回答引用了本站（✓）、只提到了（◐）、都没有（·）、还没问（–）；比上次多了 / 少了加个箭头 */
+function RecCell({ r, asking, change }: { r?: GeoResult; asking: string; change?: Change }) {
+  if (asking) return <Loader2 className="size-4 animate-spin text-primary-text" aria-label={asking} />
+  if (!r) return <span className="text-muted-foreground/60" title={tr('geo.q_not_run')}>–</span>
+  const mark = r.cited ? (
+    <span className="inline-flex size-5 items-center justify-center rounded-full bg-emerald-500/15 text-xs font-bold text-emerald-600 dark:text-emerald-400" title={tr('geo.r_cited')}>✓</span>
+  ) : r.mentioned ? (
+    <span className="inline-flex size-5 items-center justify-center rounded-full bg-amber-500/15 text-xs font-bold text-amber-600 dark:text-amber-400" title={tr('geo.r_mentioned')}>◐</span>
+  ) : (
+    <span className="inline-flex size-5 items-center justify-center text-muted-foreground" title={tr('geo.r_none')}>·</span>
+  )
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {mark}
+      {change === 'gained' && <ArrowUp className="size-3 text-emerald-600 dark:text-emerald-400" aria-label={tr('geo.ch_gained')} />}
+      {change === 'lost' && <ArrowDown className="size-3 text-amber-600 dark:text-amber-400" aria-label={tr('geo.ch_lost')} />}
+    </span>
+  )
+}
+
+/** 推荐类问题的一行：每个 AI 一个格子，点格子在下面看那家的回答、搜了什么、引用了谁；GSC 排名和本站文章的对照在问题下面 */
+function RecRow({ q, cols, get, askingOf, changeOf, channel, onChanged, onEdit, hint }: { q: GeoQuestion; cols: Col[]; get: GetResult; askingOf: AskingOf; changeOf: Map<string, Change>; channel: Channel; onChanged: () => void; onEdit: () => void; hint?: ReactNode }) {
+  const [open, setOpen] = useState('')
+  const rs = cols.map((c) => get(q.id, c.key))
+  const asked = rs.some(Boolean)
+  const anyCited = rs.some((r) => r?.cited)
+  const firstWithResult = cols.find((_, i) => rs[i])?.key ?? cols[0]?.key ?? ''
+  const openR = open ? get(q.id, open) : undefined
+  return (
+    <div id={`geo-q-${q.id}`} className={cx('group scroll-mt-24 border-b border-border last:border-b-0', q.status === 'paused' && 'opacity-60', cols.some((c) => askingOf(q.id, c.key)) && 'bg-primary/5')}>
+      <div className="grid items-center" style={gridOf(cols.length)}>
+        <div className="flex min-w-0 items-start gap-2 py-2 pr-2 pl-4">
+          <button type="button" onClick={() => setOpen((o) => (o ? '' : firstWithResult))} aria-expanded={!!open} className="min-w-0 flex-1 cursor-pointer text-left">
+            <span className="text-sm font-medium">{q.question}</span>
+            <span className="ml-2 inline-flex flex-wrap items-center gap-2 align-middle text-xs text-muted-foreground">
+              {q.status === 'paused' && <Badge>{tr('geo.paused')}</Badge>}
+              {q.intent && INTENT[q.intent] && <span>{INTENT[q.intent]}</span>}
+            </span>
+            {hint && <span className="mt-0.5 block">{hint}</span>}
+          </button>
+          <div className="flex shrink-0 items-center">
+            {asked && !anyCited && (
+              <TaskLaunchButton task={TOPICS_TASK} reqKey="topic_requirements" input={{ channel_id: channel.id, question_ids: [q.id] }} match={(r) => (r.input?.question_ids as string[] | undefined)?.includes(q.id) ?? false} title={tr('geo.gen_topic')} desc={tr('geo.topic_one_desc', { q: q.question })} reqTitle={tr('geo.topics_req_title')} reqHint={tr('geo.topics_req_hint')} startLabel={tr('geo.topics_start')} variant="ghost" icon={Lightbulb} className="text-primary-text">
+                {tr('geo.gen_topic')}
+              </TaskLaunchButton>
+            )}
+            <QuestionActions q={q} onChanged={onChanged} onEdit={onEdit} />
+          </div>
+        </div>
+        {cols.map((c, i) => (
+          <button key={c.key} type="button" onClick={() => setOpen((o) => (o === c.key ? '' : c.key))} aria-pressed={open === c.key} className={cx('flex h-full cursor-pointer items-center justify-center border-l border-border/60 px-1 hover:bg-accent/40', open === c.key && 'bg-accent/60')} title={c.name}>
+            <RecCell r={rs[i]} asking={askingOf(q.id, c.key)} change={changeOf.get(`${q.id}|${c.key}`)} />
+          </button>
+        ))}
+      </div>
+      {open && (
+        <div className="space-y-2 px-4 pb-4">
+          {/* 换着看别家：同一行点别的格子也行 */}
+          <div className="flex flex-wrap gap-1">
+            {cols.map((c, i) => (
+              <button key={c.key} type="button" disabled={!rs[i]} onClick={() => setOpen(c.key)} className={cx('inline-flex h-7 cursor-pointer items-center rounded-md border px-2.5 text-xs font-medium transition-colors disabled:cursor-default disabled:opacity-40', open === c.key ? 'border-primary/40 bg-primary/10 text-primary-text' : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground')}>
+                {c.name}
+              </button>
+            ))}
+          </div>
+          {!openR ? (
+            <p className="text-xs text-muted-foreground">{tr('geo.q_not_run')}</p>
+          ) : (
+            <>
+              <ResultDetail r={openR} />
+              <AskBox r={openR} engine={cols.find((c) => c.key === open)?.name ?? ''} onChanged={onChanged} />
+              {openR.fix_note && (
+                <div className="rounded-lg border border-primary/25 bg-primary/5 p-2.5 text-xs">
+                  <div className="font-semibold text-primary-text">{tr('geo.ask_note', { time: fmtTime(openR.fixed_at) })}</div>
+                  <div className="mt-1 leading-relaxed">
+                    <Markdown text={openR.fix_note} />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -575,13 +884,95 @@ function RunSummary({ s, onRetry, onJump, onGen }: { s: GeoSummary; onRetry: () 
   )
 }
 
-/** 列表里正在问的那一行：转圈 + 现在在做什么 */
-function AskingBadge({ step }: { step: string }) {
+/** 检测卡片里这次的结论：品牌回答待看几个、说错的还没查原因几个；每个 AI 推荐类引用了本站几个（比上次）、没问成的（重试） */
+function BatchSummary({ items, nameOf, pending, reported, onRetry, onJump, onBrand, onGen }: { items: { run: GeoRun; s: GeoSummary }[]; nameOf: (k: string) => string; pending: number; reported: number; onRetry: (runId: string) => void; onJump: (c: Change) => void; onBrand: () => void; onGen: () => void }) {
+  const [showFail, setShowFail] = useState('')
+  const link = 'cursor-pointer font-medium underline-offset-2 hover:underline'
+  const anyRec = items.some((x) => x.s.questions > 0)
+  const gained = items.reduce((n, x) => n + x.s.gained.length, 0)
+  const lost = items.reduce((n, x) => n + x.s.lost.length, 0)
   return (
-    <span className="mt-0.5 inline-flex min-w-0 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary-text" title={step}>
-      <Loader2 className="size-3 shrink-0 animate-spin" />
-      <span className="truncate">{tr('geo.asking')}</span>
-    </span>
+    <div className="mt-3 space-y-2 border-t border-border pt-3 text-sm">
+      {(pending > 0 || reported > 0) && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {pending > 0 && (
+            <button type="button" onClick={onBrand} className={cx(link, 'inline-flex items-center gap-1.5 text-primary-text')}>
+              <NewTag /> {tr('geo.m_pending', { n: pending })}
+            </button>
+          )}
+          {reported > 0 && (
+            <button type="button" onClick={onBrand} className={cx(link, 'text-destructive')}>
+              {tr('geo.m_reported_n', { n: reported })}
+            </button>
+          )}
+        </div>
+      )}
+      <ul className="space-y-1">
+        {items.map(({ run, s }) => {
+          const delta = s.prev_visibility == null || !s.questions ? null : s.visibility - s.prev_visibility
+          return (
+            <li key={run.id}>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="w-28 shrink-0 truncate font-semibold">{nameOf(engineOf(run))}</span>
+                {s.questions > 0 ? (
+                  <span className="tabular-nums">{tr('geo.m_sum_rec', { c: s.cited, n: s.questions, v: s.visibility })}</span>
+                ) : (
+                  <span className="text-muted-foreground">{tr('geo.m_sum_brand', { n: s.brand_asked })}</span>
+                )}
+                {delta != null && delta !== 0 && (
+                  <span className={cx('inline-flex items-center text-xs tabular-nums', delta > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')}>
+                    {delta > 0 ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />}
+                    {tr('geo.sum_delta', { d: `${delta > 0 ? '+' : '−'}${Math.abs(delta)}`, p: s.prev_visibility })}
+                  </span>
+                )}
+                {s.failed.length > 0 && (
+                  <>
+                    <button type="button" onClick={() => setShowFail((v) => (v === run.id ? '' : run.id))} aria-expanded={showFail === run.id} className={cx(link, 'inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400')}>
+                      <AlertTriangle className="size-3.5" />
+                      {tr('geo.sum_failed', { n: s.failed.length })}
+                    </button>
+                    <Button size="sm" variant="outline" onClick={() => onRetry(run.id)}>
+                      <RotateCw /> {tr('geo.sum_retry')}
+                    </Button>
+                  </>
+                )}
+              </div>
+              {showFail === run.id && (
+                <ul className="mt-1 space-y-1 pl-30 text-xs text-muted-foreground">
+                  {s.failed.map((f) => (
+                    <li key={f.question_id}>
+                      <span className="font-medium text-foreground">{f.question}</span>：{f.error.replace(/^\[\w+\]\s*/, '')}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      {!anyRec && (
+        <div className="text-muted-foreground">
+          {tr('geo.sum_no_rec')}{' '}
+          <button type="button" onClick={onGen} className={cx(link, 'text-primary-text')}>
+            {tr('geo.sum_go_gen')}
+          </button>
+        </div>
+      )}
+      {(gained > 0 || lost > 0) && (
+        <div className="flex flex-wrap gap-x-3 text-xs">
+          {gained > 0 && (
+            <button type="button" onClick={() => onJump('gained')} className={cx(link, 'text-emerald-600 dark:text-emerald-400')}>
+              {tr('geo.sum_gained', { n: gained })}
+            </button>
+          )}
+          {lost > 0 && (
+            <button type="button" onClick={() => onJump('lost')} className={cx(link, 'text-amber-600 dark:text-amber-400')}>
+              {tr('geo.sum_lost', { n: lost })}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -838,262 +1229,14 @@ function QuestionDialog({ editing, onClose, onSaved, channelId, brand }: { editi
   )
 }
 
-function Visibility({ value, small }: { value: number; small?: boolean }) {
-  const tone = value >= 60 ? 'text-emerald-600 dark:text-emerald-400' : value >= 30 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'
-  const r = 26
-  const c = 2 * Math.PI * r
-  return (
-    <div className={cx('relative shrink-0', small ? 'size-12' : 'size-16')} role="img" aria-label={tr('geo.vis_aria', { n: value })}>
-      <svg viewBox="0 0 64 64" className={cx('-rotate-90', small ? 'size-12' : 'size-16')}>
-        <circle cx="32" cy="32" r={r} fill="none" stroke="var(--muted)" strokeWidth="6" />
-        {/* 0% 不画：圆头的线帽长度为 0 时还会留一个点 */}
-        {value > 0 && <circle cx="32" cy="32" r={r} fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(value / 100) * c} ${c}`} className={tone} />}
-      </svg>
-      <span className={cx('absolute inset-0 flex items-center justify-center font-semibold tabular-nums', small ? 'text-xs' : 'text-base', tone)}>{value}%</span>
-    </div>
-  )
-}
-
-/** 「AI 推荐了谁」顶上的一行概况：可见度、本站被引用了几个、历次趋势（两次以上才画） */
-function VisibilityStrip({ runs }: { runs: GeoRun[] }) {
-  const cur = runs[0]
-  const hist = [...runs].slice(0, 12).reverse()
-  return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-background px-4 py-3">
-      <Visibility value={cur.visibility ?? 0} small />
-      <div className="min-w-0 flex-1 text-sm">
-        <div className="font-semibold">
-          {tr('geo.vis_label')} · {tr('geo.cited_n', { c: cur.cited ?? 0, n: cur.questions ?? 0 })}
-        </div>
-        <div className="mt-0.5 text-xs text-muted-foreground">
-          {(cur.mentioned ?? 0) > 0 ? `${tr('geo.mentioned_n', { n: cur.mentioned ?? 0 })} · ` : ''}
-          {tr('geo.vis_rule')}
-        </div>
-      </div>
-      {hist.length >= 2 && (
-        <div className="flex items-end gap-1" title={tr('geo.history')}>
-          {hist.map((r) => (
-            <div key={r.id} title={`${r.visibility ?? 0}% · ${fmtTime(r.finished_at || r.created_at)}`} className={cx('w-2 rounded-t-[2px]', (r.visibility ?? 0) > 0 ? 'bg-primary/70' : 'bg-muted')} style={{ height: `${Math.max(3, ((r.visibility ?? 0) / 100) * 32)}px` }} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 /** 状态标签那一列的宽度（放得下最长的「Not mentioned」）；详情的缩进 = 行的左边距 1rem + 这一列 6rem + 间距 0.75rem */
 const BADGE_COL = 'flex w-24 shrink-0'
-const DETAIL_INDENT = 'pr-4 pb-4 pl-[7.75rem]'
 
 const RESULT: Record<'cited' | 'mentioned' | 'none' | 'idle', { label: string; tone: Tone }> = {
   cited: { get label() { return tr('geo.r_cited') }, tone: 'ok' },
   mentioned: { get label() { return tr('geo.r_mentioned') }, tone: 'warn' },
   none: { get label() { return tr('geo.r_none') }, tone: 'bad' },
   idle: { get label() { return tr('geo.r_idle') }, tone: 'default' },
-}
-
-/** 推荐类问题的一行：引用了本站没有、GSC 和本站文章的对照，点开看回答和引用 */
-function QuestionRow({ q, r, justAsked, change, asking, channel, onChanged, onEdit, hint }: { q: GeoQuestion; r?: GeoResult; justAsked?: boolean; change?: Change; asking?: string; channel: Channel; onChanged: () => void; onEdit: () => void; hint?: ReactNode }) {
-  const [open, setOpen] = useState(false)
-  const [confirmDel, setConfirmDel] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const key = !r ? 'idle' : r.cited ? 'cited' : r.mentioned ? 'mentioned' : 'none'
-  const badge = RESULT[key]
-
-  const setStatus = async (status: GeoQuestion['status']) => {
-    setBusy(true)
-    try {
-      await dbPatch('geo_questions', q.id, { status })
-      onChanged()
-    } finally {
-      setBusy(false)
-    }
-  }
-  const remove = async () => {
-    if (!confirmDel) {
-      setConfirmDel(true)
-      return
-    }
-    setBusy(true)
-    try {
-      await dbDelete('geo_questions', q.id)
-      onChanged()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div id={`geo-q-${q.id}`} className={cx('scroll-mt-24 border-b border-border last:border-b-0', q.status === 'paused' && 'opacity-60', asking && 'bg-primary/5', !asking && (change === 'gained' || change === 'lost') && 'bg-amber-500/[0.04]', justAsked && 'bg-primary/5 shadow-[inset_3px_0_0_var(--color-primary)]')}>
-      <div className="flex items-start gap-3 px-4 py-3">
-        {/* 状态标签占固定宽度的一列：长短不一的标签后面，问题文字和展开的详情都对齐同一条线 */}
-        <span className={BADGE_COL}>
-          {asking ? <AskingBadge step={asking} /> : (
-            <Badge tone={badge.tone} className="mt-0.5">
-              {badge.label}
-            </Badge>
-          )}
-        </span>
-        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="min-w-0 flex-1 cursor-pointer text-left">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium">{justAsked && <NewPill />}{q.question}</span>
-            {q.status === 'paused' && <Badge>{tr('geo.paused')}</Badge>}
-            {q.intent && INTENT[q.intent] && <span className="text-xs text-muted-foreground">{INTENT[q.intent]}</span>}
-            {r && <span className="text-xs text-muted-foreground">{fmtTime(r.created_at)}</span>}
-            {change && <ChangeBadge c={change} />}
-          </div>
-          {q.keywords && <p className="mt-1 truncate text-xs text-muted-foreground">{tr('geo.keywords', { k: q.keywords })}</p>}
-          {hint && <span className="mt-1 block">{hint}</span>}
-          {r && (
-            <span className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary-text">
-              {tr('geo.view_answer', { n: resultUrls(r).length })}
-              <ChevronDown className={cx('size-3.5 transition-transform', open && 'rotate-180')} />
-            </span>
-          )}
-        </button>
-        <div className="flex shrink-0 items-center gap-1">
-          {r && !r.cited && (
-            <TaskLaunchButton task={TOPICS_TASK} reqKey="topic_requirements" input={{ channel_id: channel.id, question_ids: [q.id] }} match={(r) => (r.input?.question_ids as string[] | undefined)?.includes(q.id) ?? false} title={tr('geo.gen_topic')} desc={tr('geo.topic_one_desc', { q: q.question })} reqTitle={tr('geo.topics_req_title')} reqHint={tr('geo.topics_req_hint')} startLabel={tr('geo.topics_start')} variant="ghost" icon={Lightbulb} className="text-primary-text">
-              {tr('geo.gen_topic')}
-            </TaskLaunchButton>
-          )}
-          <Button variant="ghost" size="sm" disabled={busy} onClick={onEdit} className="text-muted-foreground" title={tr('geo.edit_title')}>
-            <Pencil />
-          </Button>
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => setStatus(q.status === 'paused' ? 'active' : 'paused')} className="text-muted-foreground" title={q.status === 'paused' ? tr('geo.resume_title') : tr('geo.pause_title')}>
-            {q.status === 'paused' ? <Play /> : <Pause />}
-          </Button>
-          {/* 点两下才删：第一下变成「再点一次删除」（和内容中心的删除一样），移开就取消；删了这一行就没了，不要「已完成」 */}
-          <Button feedback={false} variant={confirmDel ? 'default' : 'ghost'} size="sm" disabled={busy} onClick={remove} onMouseLeave={() => setConfirmDel(false)} className={cx(confirmDel ? 'bg-destructive text-white hover:bg-destructive/90' : 'text-muted-foreground')} title={tr('geo.del_title')}>
-            <Trash2 />
-            {confirmDel && tr('geo.del_again')}
-          </Button>
-        </div>
-      </div>
-      {open && (
-        <div className={DETAIL_INDENT}>
-          {!r ? <p className="text-xs text-muted-foreground">{tr('geo.q_not_run')}</p> : <ResultDetail r={r} />}
-        </div>
-      )}
-    </div>
-  )
-}
-
-/** 品牌问题的一行：AI 怎么回答的（原文 + 引用的网址），不判断对错——什么是对的系统不知道、资料也可能过时，由用户看了判断。
- * 用户觉得哪里说错了，写下来（geo_results.user_report），交给助手查出处、写修正建议（tasks/geo-fix-facts.md） */
-function FactRow({ q, r, justAsked, change, asking, onChanged, onEdit }: { q: GeoQuestion; r?: GeoResult; justAsked?: boolean; change?: Change; asking?: string; onChanged: () => void; onEdit: () => void }) {
-  const [open, setOpen] = useState(false)
-  const [report, setReport] = useState(r?.user_report ?? '')
-  const [confirmDel, setConfirmDel] = useState(false)
-  const [busy, setBusy] = useState(false)
-  useEffect(() => setReport(r?.user_report ?? ''), [r?.id, r?.user_report])
-  const answer = r?.answer || r?.answer_excerpt || ''
-  // 品牌问题必然带着你的名字，「提到」没有意义：只说回答引用了本站没有
-  const badge = !r ? RESULT.idle : r.cited ? RESULT.cited : { label: tr('geo.r_no_site'), tone: 'default' as Tone }
-  const patch = async (body: Partial<GeoQuestion>) => {
-    setBusy(true)
-    try {
-      await dbPatch('geo_questions', q.id, body)
-      onChanged()
-    } finally {
-      setBusy(false)
-    }
-  }
-  const remove = async () => {
-    if (!confirmDel) {
-      setConfirmDel(true)
-      return
-    }
-    setBusy(true)
-    try {
-      await dbDelete('geo_questions', q.id)
-      onChanged()
-    } finally {
-      setBusy(false)
-    }
-  }
-  // 交给助手前先把用户写的存下来，任务从 geo.factsContext 读
-  const saveReport = async () => {
-    if (!r) return
-    await dbPatch('geo_results', r.id, { user_report: report.trim(), reported_at: new Date().toISOString() })
-    return { result_id: r.id }
-  }
-  return (
-    <div id={`geo-q-${q.id}`} className={cx('scroll-mt-24 border-b border-border last:border-b-0', q.status === 'paused' && 'opacity-60', asking && 'bg-primary/5', !asking && (change === 'gained' || change === 'lost') && 'bg-amber-500/[0.04]', justAsked && 'bg-primary/5 shadow-[inset_3px_0_0_var(--color-primary)]')}>
-      <div className="flex items-start gap-3 px-4 py-3">
-        <span className={BADGE_COL}>
-          {asking ? <AskingBadge step={asking} /> : (
-            <Badge tone={badge.tone} className="mt-0.5">
-              {badge.label}
-            </Badge>
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium">{justAsked && <NewPill />}{q.question}</span>
-            {q.status === 'paused' && <Badge>{tr('geo.paused')}</Badge>}
-            {q.source === 'auto' && <span className="text-xs text-muted-foreground">{tr('geo.auto')}</span>}
-            {r && <span className="text-xs text-muted-foreground">{fmtTime(r.created_at)}</span>}
-            {change && <ChangeBadge c={change} />}
-            {r?.user_report && <Badge tone="bad">{tr('geo.reported')}</Badge>}
-          </div>
-          {!r ? (
-            <p className="mt-1 text-xs text-muted-foreground">{tr('geo.q_not_run')}</p>
-          ) : (
-            <>
-              {/* 回答直接摆出来：这一块要的就是用户看 AI 怎么说 */}
-              {!open && answer && (
-                <button type="button" onClick={() => setOpen(true)} className="mt-1.5 block w-full cursor-pointer text-left">
-                  <span className="line-clamp-3 text-xs leading-relaxed whitespace-pre-line text-muted-foreground">{answer.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/[#*|`]/g, '')}</span>
-                </button>
-              )}
-              <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="mt-1.5 inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-primary-text">
-                {open ? tr('geo.collapse') : tr('geo.view_answer', { n: resultUrls(r).length })}
-                <ChevronDown className={cx('size-3.5 transition-transform', open && 'rotate-180')} />
-              </button>
-            </>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" size="sm" disabled={busy} onClick={onEdit} className="text-muted-foreground" title={tr('geo.edit_title')}>
-            <Pencil />
-          </Button>
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => patch({ status: q.status === 'paused' ? 'active' : 'paused' })} className="text-muted-foreground" title={q.status === 'paused' ? tr('geo.resume_title') : tr('geo.pause_title')}>
-            {q.status === 'paused' ? <Play /> : <Pause />}
-          </Button>
-          {/* 点两下才删：第一下变成「再点一次删除」（和内容中心的删除一样），移开就取消；删了这一行就没了，不要「已完成」 */}
-          <Button feedback={false} variant={confirmDel ? 'default' : 'ghost'} size="sm" disabled={busy} onClick={remove} onMouseLeave={() => setConfirmDel(false)} className={cx(confirmDel ? 'bg-destructive text-white hover:bg-destructive/90' : 'text-muted-foreground')} title={tr('geo.del_title')}>
-            <Trash2 />
-            {confirmDel && tr('geo.del_again')}
-          </Button>
-        </div>
-      </div>
-      {open && r && (
-        <div className={cx(DETAIL_INDENT, 'space-y-3')}>
-          <ResultDetail r={r} />
-          {/* 对不对由用户判断：哪里说错了写下来，交给助手查出处、写修正建议 */}
-          <div className="space-y-2 rounded-lg border border-border p-3">
-            <div className="text-xs font-semibold">{tr('geo.report_title')}</div>
-            <textarea value={report} onChange={(e) => setReport(e.target.value)} rows={3} className={`${inputCls} py-2 text-xs`} placeholder={tr('geo.report_ph')} />
-            <div className="flex flex-wrap items-center gap-2">
-              <TaskButton task={GEO_FIX_TASK} beforeRun={saveReport} disabled={!report.trim()} match={(t) => t.input?.result_id === r.id} onFinished={onChanged} variant="outline" icon={Wrench}>
-                {r.fix_note ? tr('geo.fix_again') : tr('geo.fix')}
-              </TaskButton>
-              <span className="text-xs text-muted-foreground">{tr('geo.report_hint')}</span>
-            </div>
-          </div>
-          {r.fix_note && (
-            <div className="rounded-lg border border-primary/25 bg-primary/5 p-3 text-xs">
-              <div className="font-semibold text-primary-text">{tr('geo.fix_note', { time: fmtTime(r.fixed_at) })}</div>
-              <div className="mt-1 leading-relaxed">
-                <Markdown text={r.fix_note} />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
 }
 
 /** 回答引用的全部网址；老数据没有 urls，用本站的引用 + 竞品域名凑 */
@@ -1103,8 +1246,13 @@ function resultUrls(r: GeoResult): string[] {
   return [...jsonList(r.cited_urls), ...jsonList(r.competitor_domains).map((d) => `https://${d}`)]
 }
 
+/** 这次联网搜索搜到的网址（各步去重） */
+function searchedUrls(r: GeoResult): string[] {
+  return [...new Set(jsonArr<{ sources?: string[] }>(r.searches).flatMap((x) => x.sources || []))]
+}
+
 /** 一条检测结果的「回答和引用」：AI 的完整回答 + 回答引用的全部网址（本站的标出来） */
-function ResultDetail({ r }: { r: GeoResult }) {
+function ResultDetail({ r, noAnswer }: { r: GeoResult; noAnswer?: boolean }) {
   const ours = new Set(jsonList(r.cited_urls))
   const urls = resultUrls(r)
   const answer = r.answer || r.answer_excerpt || ''
@@ -1112,6 +1260,7 @@ function ResultDetail({ r }: { r: GeoResult }) {
   return (
     <div className="space-y-3">
       {r.searches !== undefined && <Searches steps={steps} />}
+      {!noAnswer && (
       <div className="rounded-lg border border-border bg-muted/40 p-3">
         <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           <span className="font-semibold">{tr('geo.answer_full', { engine: engineName(engineOf(r)) })}</span>
@@ -1129,6 +1278,7 @@ function ResultDetail({ r }: { r: GeoResult }) {
           <p className="mt-1 text-xs text-muted-foreground">{tr('common.none')}</p>
         )}
       </div>
+      )}
       <div className="text-xs">
         <div className="font-semibold text-muted-foreground">{tr('geo.all_urls', { n: urls.length })}</div>
         {urls.length === 0 ? (
@@ -1162,7 +1312,8 @@ function Searches({ steps }: { steps: { type: string; queries?: string[]; url?: 
       ) : (
         <ol className="mt-1 space-y-1">
           {steps.map((x, i) => {
-            const label = x.queries?.length ? x.queries.join(' · ') : x.url ? x.url.replace(/^https?:\/\//, '') : x.type
+            // 搜索步骤拿不到搜索词（ChatGPT 网页版）时 url 是对话链接，不当搜索词显示
+            const label = x.queries?.length ? x.queries.join(' · ') : x.type === 'search' ? tr('geo.step_no_query') : x.url ? x.url.replace(/^https?:\/\//, '') : x.type
             const kind = x.type === 'open_page' ? tr('geo.step_open') : x.type === 'find_in_page' ? tr('geo.step_find') : tr('geo.step_search')
             return (
               <li key={i}>
