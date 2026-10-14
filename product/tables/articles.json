@@ -139,6 +139,10 @@
       "marketing_plan_id": {
         "type": "string",
         "description": "原营销计划记录 ID"
+      },
+      "workspace": {
+        "type": "string",
+        "description": "内容归属 website / social；旧记录未确认时为空，不根据内容格式猜测"
       }
     },
     "required": [

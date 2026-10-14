@@ -20,6 +20,7 @@ import {
 import { runLocal } from "../lib/shuttle";
 import { tr } from "../lib/i18n";
 import type { Ctx } from "./views/types";
+import { contentEntries, platformWorkspace, reviewWorkspace, type ContentData, type ContentWorkspace } from "../lib/contentWorkspace";
 
 export const m = (key: string, vars?: Record<string, unknown>) =>
   tr("marketing." + key, vars);
@@ -238,10 +239,12 @@ export function MarketingPlans({
   ctx,
   params,
   setParam,
+  detailsOnly = false,
 }: {
   ctx: Ctx;
   params: Record<string, string>;
   setParam: (k: string, v: string) => void;
+  detailsOnly?: boolean;
 }) {
   const { data, error, reload } = useMarketing(ctx);
   const [filter, setFilter] = useState("all"),
@@ -252,11 +255,12 @@ export function MarketingPlans({
   );
   return (
     <div className="space-y-5">
+      <DataState loading={!data} error={error} />
+      {!detailsOnly && <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{m("plans_desc")}</p>
         <MarketingImport data={data} onDone={reload} />
       </div>
-      <DataState loading={!data} error={error} />
       {data && !data.plans.length && <Notice>{m("plans_empty")}</Notice>}
       <AccountStrategies ctx={ctx} data={data} reload={reload} />
       {data && (
@@ -299,6 +303,7 @@ export function MarketingPlans({
           </button>
         ))}
       </div>
+      </>}
       <Dialog
         open={!!active}
         onClose={() => setParam("plan", "")}
@@ -402,6 +407,11 @@ export function MarketingPlans({
                 </div>
               </Panel>
             )}
+            {active.receipt && <Panel title={tr('workspace.verified_receipt')}>
+              <p className="text-sm">{m('actual_account')}：{[...(data.accounts || []), ...(data.site_accounts || [])].find((a: any) => a.id === active.receipt.account_id)?.name || tr('content.removed_channel')}</p>
+              <a href={active.receipt.url} target="_blank" rel="noreferrer" className="mt-2 block break-all text-xs text-primary-text">{active.receipt.url}</a>
+              <p className="mt-2 text-xs text-muted-foreground">{m('published_time')}：{new Date(active.receipt.published_at).toLocaleString(undefined, { timeZone: 'Asia/Shanghai' })}</p>
+            </Panel>}
             <div className="flex flex-wrap items-center gap-2">
               {active.article ? (
                 <Button
@@ -689,7 +699,10 @@ export function SeoMap({
   );
 }
 export function GrowthOverview({ ctx }: { ctx: Ctx }) {
-  const { data, error, reload } = useMarketing(ctx);
+  const { data, error, reload } = useProductData<ContentData>('content-workspace.context', {}, ctx.rev);
+  const entries = data ? contentEntries(data) : [];
+  const due = (workspace: ContentWorkspace) => data?.reviews.filter((r: any) => r.status === 'pending' && r.due_at <= new Date().toISOString() && reviewWorkspace(r, data) === workspace).length;
+  const cw = (key: string, vars?: Record<string, unknown>) => tr('workspace.' + key, vars);
   const actions: any[] = [];
   for (const item of ctx.checklist.data?.daily || [])
     if (item.key === "d_issues")
@@ -701,12 +714,12 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
         extra: {},
         label: item.action_label,
       });
-  if (data?.counts.due)
+  for (const workspace of ['website', 'social'] as const) if (due(workspace))
     actions.push({
-      key: "reviews",
-      title: m("due_reviews"),
+      key: "reviews:" + workspace,
+      title: cw(workspace + '_reviews'),
       why: m("review_rule"),
-      view: "metrics",
+      view: workspace === 'website' ? 'metrics' : 'social-metrics',
       extra: {},
       label: m("record_review"),
     });
@@ -716,8 +729,8 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
         key: "role:" + r.id,
         title: m("bind_role", { name: r.name }),
         why: r.purpose,
-        view: "content",
-        extra: { tab: "marketing" },
+        view: "social",
+        extra: {},
         label: m("bind_account"),
       });
   for (const p of data?.plans || [])
@@ -726,8 +739,8 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
         key: p.id,
         title: p.title,
         why: p.notes,
-        view: "content",
-        extra: { tab: "marketing", plan: p.id },
+        view: (p.workspace || platformWorkspace(p.platform)) === 'website' ? 'website-content' : 'social-content',
+        extra: { plan: p.id },
         label: m("handle_blocker"),
       });
   for (const p of data?.plans || [])
@@ -736,8 +749,8 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
         key: p.id,
         title: p.title,
         why: m("receipt_missing"),
-        view: "content",
-        extra: { tab: "marketing", plan: p.id },
+        view: (p.workspace || platformWorkspace(p.platform)) === 'website' ? 'website-content' : 'social-content',
+        extra: { plan: p.id },
         label: m("confirm_receipt"),
       });
   if (data?.seo_targets.length)
@@ -774,33 +787,47 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
       </Panel>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Panel title={cw('website_ops')}>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <MetricCard
           label={m("seo_targets")}
           value={data?.counts.seo}
           onClick={() => ctx.go("opportunities", { tab: "map" })}
         />
         <MetricCard
-          label={m("plans_count")}
-          value={data?.counts.plans}
-          onClick={() => ctx.go("content", { tab: "marketing" })}
+          label={cw('website_content')}
+          value={data ? entries.filter(e => e.workspaces.includes('website')).length : undefined}
+          onClick={() => ctx.go("website-content")}
+        />
+        <MetricCard label={m('due_reviews')} value={due('website')} onClick={() => ctx.go('metrics')} />
+      </div>
+      </Panel>
+      <Panel title={cw('social_ops')}>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <MetricCard label={cw('social_content')} value={data ? entries.filter(e => e.workspaces.includes('social')).length : undefined} onClick={() => ctx.go('social-content')}
         />
         <MetricCard
           label={m("account_gaps")}
           value={data?.counts.account_gaps}
-          onClick={() => ctx.go("content", { tab: "marketing" })}
+          onClick={() => ctx.go("social")}
         />
         <MetricCard
           label={m("due_reviews")}
-          value={data?.counts.due}
-          onClick={() => ctx.go("metrics")}
+          value={due('social')}
+          onClick={() => ctx.go("social-metrics")}
         />
       </div>
+      </Panel>
+      {!!entries.filter(e => !e.workspaces.length).length && <Button variant="ghost" onClick={() => ctx.go('social-content', { ownership: 'unassigned' })}>{cw('unassigned_count', { n: entries.filter(e => !e.workspaces.length).length })}</Button>}
     </div>
   );
 }
-export function GrowthReviews({ ctx }: { ctx: Ctx }) {
-  const { data, error, reload } = useMarketing(ctx);
+export function GrowthReviews({ ctx, workspace }: { ctx: Ctx; workspace?: ContentWorkspace }) {
+  const { data: original, error, reload } = useMarketing(ctx);
+  const data = original && workspace ? { ...original,
+    plans: original.plans.filter((p: any) => (p.workspace || platformWorkspace(p.platform)) === workspace),
+    reviews: original.reviews.filter((r: any) => !reviewWorkspace(r, original) || reviewWorkspace(r, original) === workspace),
+  } : original;
   const [edit, setEdit] = useState<any>(null);
   const pipeline = data
     ? [
@@ -881,6 +908,7 @@ export function GrowthReviews({ ctx }: { ctx: Ctx }) {
               <Badge tone={r.status === "done" ? "ok" : "default"}>
                 {r.status === "done" ? m("review_done") : m("review_pending")}
               </Badge>
+              {workspace && !reviewWorkspace(r, original) && <Badge tone="warn">{tr('workspace.unassigned')}</Badge>}
               <Button
                 variant="outline"
                 onClick={() => {

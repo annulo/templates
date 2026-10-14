@@ -4,10 +4,11 @@ import ProductOverview from "../components/views/ProductOverview";
 import Wizard from "../components/wizard/Wizard";
 import ProductFacts from "../components/views/ProductFacts";
 import GrowthPlanning from "../components/views/GrowthPlanning";
-import { MarketingPlans } from "../components/MarketingWorkspace";
+import { AccountStrategies, GrowthReviews, useMarketing } from "../components/MarketingWorkspace";
 import Campaigns from "../components/views/Campaigns";
 import ProductMetrics from "../components/views/ProductMetrics";
-import Content from "../components/views/Content";
+import ProductContent from "../components/views/ProductContent";
+import InspirationLibrary from "../components/InspirationLibrary";
 import Calendar from "../components/views/Calendar";
 import Assets from "../components/views/Assets";
 import Reports from "../components/views/Reports";
@@ -35,7 +36,7 @@ import {
 } from "../lib/shuttle";
 import { useChecklist, type ChecklistData } from "../lib/useChecklist";
 import { useInShuttle } from "../lib/useShuttle";
-import { useT } from "../lib/i18n";
+import { tr, useT } from "../lib/i18n";
 import { NAV } from "../lib/edition";
 import type { Ctx, View } from "../components/views/types";
 
@@ -131,6 +132,10 @@ export default function Index() {
     "campaigns",
     "metrics",
     "content",
+    "website-content",
+    "social-content",
+    "inspiration",
+    "social-metrics",
     "calendar",
     "assets",
     "search",
@@ -147,6 +152,14 @@ export default function Index() {
     ? (params.view as View)
     : "overview";
   const go = (v: View, extra: Record<string, string> = {}) => {
+    if (v === "content") {
+      if (extra.tab === "inspiration") v = "inspiration";
+      else {
+        const website = extra.workspace === "website" || ["website-content", "opportunities", "search", "geo", "audit", "site", "metrics"].includes(view);
+        if (website) v = "website-content";
+        else if (extra.workspace === "social" || ["social", "social-content", "inspiration", "social-metrics", "calendar"].includes(view)) v = "social-content";
+      }
+    }
     setParams({ view: v, ...extra });
     setMobile(false);
   };
@@ -188,26 +201,22 @@ export default function Index() {
       return <Campaigns ctx={ctx} params={params} setParam={setParam} />;
     if (view === "metrics")
       return <ProductMetrics ctx={ctx} params={params} setParam={setParam} />;
-    if (view === "content")
-      return (
-        <Content
-          ctx={ctx}
-          params={params}
-          setParam={setParam}
-          inspiration
-          planning={
-            <MarketingPlans ctx={ctx} params={params} setParam={setParam} />
-          }
-        />
-      );
+    if (view === "inspiration" || (view === "content" && params.tab === "inspiration"))
+      return <InspirationLibrary ctx={ctx} params={params} setParam={setParam} workspace="social" onChanged={() => setRev(r => r + 1)} />;
+    if (["content", "website-content", "social-content"].includes(view))
+      return <ProductContent key={view} ctx={ctx} params={params} setParam={setParam}
+        workspace={view === "website-content" ? "website" : view === "social-content" ? "social" : undefined} />;
     if (view === "calendar")
-      return <Calendar ctx={ctx} params={params} setParam={setParam} />;
+      return <Calendar ctx={ctx} params={params} setParam={setParam} scope="social" />;
     if (view === "assets")
       return <Assets ctx={ctx} params={params} setParam={setParam} />;
     if (view === "reports")
       return <Reports ctx={ctx} params={params} setParam={setParam} />;
     if (view === "social")
-      return <Social ctx={ctx} params={params} setParam={setParam} />;
+      return <SocialAccounts ctx={ctx} params={params} setParam={setParam} />;
+    if (view === "social-metrics")
+      return <div className="space-y-6"><Social ctx={ctx} params={{ ...params, section: "data" }} setParam={setParam} hideTabs
+        title={tr('workspace.social_reviews')} onSectionChange={(section, extra) => ctx.go(section === 'data' ? 'social-metrics' : 'social', extra)} /><GrowthReviews ctx={ctx} workspace="social" /></div>;
     if (view === "channels")
       return (
         <Channels
@@ -397,4 +406,15 @@ export default function Index() {
       </main>
     </div>
   );
+}
+
+function SocialAccounts({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
+  const { data, error, reload } = useMarketing(ctx);
+  return <div className="space-y-6">
+    <Social ctx={ctx} params={{ ...params, section: 'overview' }} setParam={setParam} hideTabs title={tr('workspace.account_position')}
+      onSectionChange={(section, extra) => ctx.go(section === 'data' ? 'social-metrics' : 'social', extra)} />
+    {error && <Notice tone="error">{error}</Notice>}
+    <h2 className="text-lg font-semibold">{tr('workspace.account_strategies')}</h2>
+    <AccountStrategies ctx={ctx} data={data} reload={reload} />
+  </div>;
 }

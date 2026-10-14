@@ -86,7 +86,7 @@ export default function ProductMetrics({
           </>
         }
       />
-      <GrowthReviews ctx={ctx} />
+      <GrowthReviews ctx={ctx} workspace="website" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <Choice
           name="campaign_id"

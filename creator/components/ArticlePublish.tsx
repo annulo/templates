@@ -58,11 +58,11 @@ function nextHour() {
 type RowState = 'queued' | 'scheduled' | string
 
 /** 发布：勾选账号（只有支持这种类型的能选，别的灰掉、写明原因），现在发或者排期；一条条发，结果逐个显示 */
-export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewrite }: { open: boolean; ctx: Ctx; article: Article; posts: SocialPost[]; pubs: Publication[]; onClose: () => void; onRewrite: () => void }) {
+export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewrite, scope }: { open: boolean; ctx: Ctx; article: Article; posts: SocialPost[]; pubs: Publication[]; scope?: 'website' | 'social'; onClose: () => void; onRewrite: () => void }) {
   const t = typeOf(article)
   const machine = useElsewhere(ctx.channels)
   // 网站在前，社媒账号在后
-  const accounts = [...ctx.channels.filter(isSite), ...ctx.channels.filter((ch) => !!SOCIAL[ch.type])]
+  const accounts = [...ctx.channels.filter(isSite), ...ctx.channels.filter((ch) => !!SOCIAL[ch.type])].filter(ch => !scope || (scope === 'website' ? isSite(ch) : !isSite(ch)))
   const targetAccountId = String((article as any).target_account_id || '')
   const targetAccount = accounts.find(ch => ch.id === targetAccountId)
   const takes = (ch: Channel) => (isSite(ch) ? t === 'article' : supports(FIELDS[ch.type], t))
@@ -133,10 +133,10 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
   </>}>
     <div className="space-y-4">
       {!accounts.length ? <Notice>{tr('versions.no_channels')}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); ctx.go('channels') }}>{tr('versions.go_add', { name: tr('nav.channels') })}</button></Notice> : <>
-        <p className="text-sm text-muted-foreground">{tr('article.pub_hint')}</p>
+        <p className="text-sm text-muted-foreground">{tr(scope ? 'article.pub_hint_' + scope : 'article.pub_hint')}</p>
         {targetAccountId && <Notice>{tr('article.pub_target_account', {name:targetAccount?.name || tr('article.pub_target_missing')})}</Notice>}
         <div className="max-h-80 space-y-1 overflow-y-auto">{[...usable, ...accounts.filter((ch) => !usable.includes(ch))].map(row)}</div>
-        {!!unsupported.length && <p className="text-xs leading-relaxed text-muted-foreground">{tr('article.pub_rewrite_hint', { type: TYPE_META[t].label })}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); onRewrite() }}>{tr('article.rewrite')}</button></p>}
+        {!!unsupported.length && <p className="text-xs leading-relaxed text-muted-foreground">{tr(scope ? 'article.pub_rewrite_hint_' + scope : 'article.pub_rewrite_hint', { type: TYPE_META[t].label })}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); onRewrite() }}>{tr('article.rewrite')}</button></p>}
         {<div className="space-y-2 border-t border-border pt-3">
           <div className="flex flex-wrap gap-4 text-sm">
             <label className="inline-flex cursor-pointer items-center gap-2"><input type="radio" name="when" checked={when === 'now'} disabled={running} onChange={() => setWhen('now')} className="accent-primary" />{tr('social.publish_now')}</label>

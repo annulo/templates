@@ -44,7 +44,7 @@ type WriteInput = { topic_id?: string; subject?: string; channel_id?: string }
  * 删掉一篇文章：已经发出去、正在发、排了期的不能删（先在发布记录里处理）；没发出去的发布记录（社媒的、网站的）一起删掉，
  * 免得留下指向不存在的文章的记录。删完顶部提示一下
  */
-async function removeArticle(a: Article, posts: SocialPost[], pubs: Publication[]) {
+export async function removeArticle(a: Article, posts: SocialPost[], pubs: Publication[]) {
   const mine = posts.filter((p) => p.article_id === a.id)
   const sites = pubs.filter((p) => p.article_id === a.id)
   if (mine.some((p) => ['published', 'publishing', 'scheduled'].includes(p.status)) || sites.some((p) => p.status === 'published' || p.status === 'publishing' || !!p.scheduled_at)) throw new Error(tr('article.delete_published'))
@@ -369,7 +369,7 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
 
 /** 列表每行的删除：悬停时出现，点一下变成「确认删除」，再点才删；点到别处就取消。删不了的（发出去了）顶部提示原因 */
 /** 列表一行右上角的「更多」：改写、复制、删除（删除点两下确认）。点菜单不会打开这篇 */
-function RowMore({ onRewrite, onCopy, onDelete }: { onRewrite: () => void; onCopy: () => Promise<void>; onDelete: () => Promise<void> }) {
+export function RowMore({ onRewrite, onCopy, onDelete }: { onRewrite: () => void; onCopy: () => Promise<void>; onDelete: () => Promise<void> }) {
   const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState('')
@@ -424,7 +424,7 @@ function RowMore({ onRewrite, onCopy, onDelete }: { onRewrite: () => void; onCop
   </div>
 }
 
-function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false }: { inspiration?: boolean; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
+export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope }: { inspiration?: boolean; publishScope?: 'website' | 'social'; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
   const type = typeOf(a)
   const [moreOpen, setMoreOpen] = useState(false)
   // 菜单往哪边展开：宽屏时按钮在一行最右边，往左；手机上按钮换到下一行的左边，往左会伸出屏幕，改往右。按打开时按钮的实际位置算
@@ -653,7 +653,7 @@ function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, o
       {inspiration && <InspirationReferences ctx={ctx} targetType="article" targetId={a.id} onChanged={onChanged} />}
       <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} />
 
-      <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
+      <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} scope={publishScope} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
       <RewriteDialog open={rewritingOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setRewritingOpen(false)} onStart={startRewrite} onConvert={convertTo} />
       <TaskRequirements task={reviser.task} onSaved={reviser.setTask} title={tr('content.revise_req_title')} hint={tr('content.revise_req_hint')} open={requirementsOpen} onOpenChange={(o) => { setRequirementsOpen(o); if (!o) moreRef.current?.querySelector('button')?.focus() }} />
       <Dialog

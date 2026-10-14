@@ -316,7 +316,7 @@ export async function context(
     ctx.db.query("channels", { limit: 200 }).list as Channel[]
   ).filter((c) => SITE_TYPES.includes(c.type));
   const ch =
-    t === "article"
+    t === "article" && topic?.workspace !== 'social' && (!topic?.target_platform || topic.target_platform === 'website')
       ? (channels.find((c) => c.id === input?.channel_id) ??
         channels.find((c) => c.publish_status === "ready") ??
         channels[0] ??
@@ -342,6 +342,7 @@ export async function context(
   return {
     type: t,
     type_note: TYPE_NOTE[t],
+    workspace: topic?.workspace || (topic?.target_platform === 'website' ? 'website' : topic?.target_platform ? 'social' : ''),
     limits: limitsOf(ctx, t),
     project: projectBrief(project),
     topic: topic
@@ -600,6 +601,7 @@ export function save(input: SaveInput, ctx: any) {
         ? {
             topic_id: topic.id,
             campaign_id: topic.campaign_id || "",
+            workspace: topic.workspace || (topic.target_platform === 'website' ? 'website' : topic.target_platform ? 'social' : ''),
             opportunity_id: topic.opportunity_id || "",
             product_id: topic.product_id || "",
             target_platform: topic.target_platform || "",

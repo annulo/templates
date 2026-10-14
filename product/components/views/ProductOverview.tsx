@@ -27,7 +27,7 @@ export default function ProductOverview({ ctx }: { ctx: Ctx }) {
           <Button variant="outline" onClick={() => ctx.go("company")}>
             {g("define_goal")}
           </Button>
-          <Button variant="outline" onClick={() => ctx.go("campaigns")}>
+          <Button variant="outline" onClick={() => ctx.go("social-content")}>
             {g("quick_campaigns")}
           </Button>
           <Button variant="outline" onClick={() => ctx.go("metrics")}>

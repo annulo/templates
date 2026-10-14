@@ -135,6 +135,10 @@
       "material_snapshot": {
         "type": "string",
         "description": "成品补充的来源、读取时间及原文快照"
+      },
+      "workspace": {
+        "type": "string",
+        "description": "内容归属 website / social；旧记录未确认时为空，不根据内容格式猜测"
       }
     },
     "required": [

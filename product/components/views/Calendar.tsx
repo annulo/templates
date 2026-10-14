@@ -67,7 +67,7 @@ function postItem(p: SocialPost, channels: Channel[]): Item | null {
 }
 
 /** 排期日历：社媒笔记 / 推文（排期、发布、失败）和发到网站的文章按天排开；已排期的社媒能拖到别的时间 */
-export default function Calendar({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
+export default function Calendar({ ctx, params, setParam, scope }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; scope?: 'website' | 'social' }) {
   const mode: Mode = params.cal === 'month' ? 'month' : 'week'
   const today = new Date()
   const anchor = parseDay(params.d) ?? new Date(today.getFullYear(), today.getMonth(), today.getDate())
@@ -93,16 +93,16 @@ export default function Calendar({ ctx, params, setParam }: { ctx: Ctx; params: 
 
   const items = useMemo(() => {
     const out: Item[] = []
-    for (const p of posts ?? []) {
+    for (const p of scope === 'website' ? [] : posts ?? []) {
       const it = postItem(p, ctx.channels)
       if (it) out.push(it)
     }
-    for (const a of articles) {
+    for (const a of scope === 'social' ? [] : articles) {
       const at = a.status === 'published' ? time(a.published_at) : null
       if (at) out.push({ key: 'a:' + a.id, at, title: a.title, label: tr('calendar.article'), tone: 'ok', channel: ctx.channels.find((c) => c.id === a.channel_id), article: a })
     }
     return out.sort((x, y) => x.at.getTime() - y.at.getTime())
-  }, [posts, articles, ctx.channels])
+  }, [posts, articles, ctx.channels, scope])
   const byDay = useMemo(() => {
     const m: Record<string, Item[]> = {}
     for (const it of items) (m[dayKey(it.at)] ??= []).push(it)
