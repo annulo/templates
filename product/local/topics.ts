@@ -1,21 +1,26 @@
 import { L } from "./_i18n";
 import { context as growthContext } from "./growth";
 import { sourceSnapshot, link } from './inspiration';
+import { platformWorkspace } from '../lib/contentWorkspace';
 export const cloud = ["context", "save"];
 export function context(input: any, ctx: any) {
-  return { ...growthContext({}, ctx), channel_id: input?.channel_id || "", sources: [...new Set<string>(input?.source_ids || [])].map((id) => sourceSnapshot(ctx, id)) };
+  return { ...growthContext({}, ctx), workspace: input?.workspace || (input?.channel_id ? 'website' : ''), channel_id: input?.channel_id || "", sources: [...new Set<string>(input?.source_ids || [])].map((id) => sourceSnapshot(ctx, id)) };
 }
 export function save(
   input: {
     ideas: { title: string; angle?: string; keywords?: string; source_ids?: string[] }[];
     source?: string;
     source_ids?: string[];
+    workspace?: 'website' | 'social';
   },
   ctx: any,
 ) {
   const old = ctx.db.query("topics", { limit: 1000 }).list;
   const seen = new Set(
-    old.map((t: any) => String(t.title).trim().toLowerCase()),
+    old.filter((t: any) => {
+      const workspace = t.workspace || platformWorkspace(t.target_platform) || (['search', 'geo'].includes(t.source) ? 'website' : '');
+      return !input.workspace || !workspace || workspace === input.workspace;
+    }).map((t: any) => String(t.title).trim().toLowerCase()),
   );
   const sourceIds = new Set<string>([...(input.source_ids || []), ...(input.ideas || []).flatMap((x) => x.source_ids || [])]);
   sourceIds.forEach((id) => sourceSnapshot(ctx, id));
@@ -35,6 +40,7 @@ export function save(
       keywords: String(x.keywords || ""),
       source: sourceIds.size ? 'inspiration' : input.source || "agent",
       status: "idea",
+      ...(input.workspace ? { workspace: input.workspace, ...(input.workspace === 'website' ? { target_platform: 'website', content_type: 'article' } : {}) } : {}),
       created_at: new Date().toISOString(),
     });
     for (const id of new Set([...(input.source_ids || []), ...(x.source_ids || [])])) link({ source_id: id, target_type: 'topic', target_id: row.id }, ctx);

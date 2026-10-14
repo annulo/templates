@@ -1,0 +1,153 @@
+{
+  "name": "营销内容计划",
+  "desc": "营销内容计划",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "external_key": {
+        "type": "string",
+        "description": "external_key"
+      },
+      "content_id": {
+        "type": "string",
+        "description": "content_id"
+      },
+      "parent_key": {
+        "type": "string",
+        "description": "parent_key"
+      },
+      "title": {
+        "type": "string",
+        "description": "title"
+      },
+      "platform": {
+        "type": "string",
+        "description": "platform"
+      },
+      "role_key": {
+        "type": "string",
+        "description": "role_key"
+      },
+      "content_type": {
+        "type": "string",
+        "description": "content_type"
+      },
+      "stage": {
+        "type": "string",
+        "description": "stage"
+      },
+      "series": {
+        "type": "string",
+        "description": "series"
+      },
+      "audience": {
+        "type": "string",
+        "description": "audience"
+      },
+      "angle": {
+        "type": "string",
+        "description": "angle"
+      },
+      "proof": {
+        "type": "string",
+        "description": "proof"
+      },
+      "cta": {
+        "type": "string",
+        "description": "cta"
+      },
+      "landing_url": {
+        "type": "string",
+        "description": "landing_url"
+      },
+      "campaign_tag": {
+        "type": "string",
+        "description": "campaign_tag"
+      },
+      "utm_content": {
+        "type": "string",
+        "description": "utm_content"
+      },
+      "body": {
+        "type": "string",
+        "description": "body"
+      },
+      "notes": {
+        "type": "string",
+        "description": "notes"
+      },
+      "historical_date": {
+        "type": "string",
+        "description": "historical_date"
+      },
+      "media": {
+        "type": "string",
+        "description": "media"
+      },
+      "legacy_publication": {
+        "type": "string",
+        "description": "legacy_publication"
+      },
+      "source_snapshot": {
+        "type": "string",
+        "description": "source_snapshot"
+      },
+      "product_id": {
+        "type": "string",
+        "description": "product_id"
+      },
+      "origin": {
+        "type": "string",
+        "description": "origin"
+      },
+      "observed_at": {
+        "type": "string",
+        "description": "observed_at"
+      },
+      "topic_id": {
+        "type": "string",
+        "description": "topic_id"
+      },
+      "article_id": {
+        "type": "string",
+        "description": "article_id"
+      },
+      "target_account_id": {
+        "type": "string",
+        "description": "target_account_id"
+      },
+      "receipt": {
+        "type": "string",
+        "description": "receipt"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "created_at"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "updated_at"
+      },
+      "campaign_id": {
+        "type": "string",
+        "description": "campaign_id"
+      },
+      "material_snapshot": {
+        "type": "string",
+        "description": "成品补充的来源、读取时间及原文快照"
+      },
+      "workspace": {
+        "type": "string",
+        "description": "内容归属 website / social；旧记录未确认时为空，不根据内容格式猜测"
+      },
+      "workflow_stages": {
+        "type": "string",
+        "description": "按工作区保存的手动任务进度 JSON：website / social；空值恢复自动判断，不代替发布或排期记录"
+      }
+    },
+    "required": [
+      "external_key",
+      "product_id"
+    ]
+  }
+}

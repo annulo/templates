@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Settings2 } from "lucide-react";
-import { Button, Field, inputCls, Notice, Skeleton } from "./ui";
+import { ArrowRight, Settings2 } from "lucide-react";
+import { Button, cx, Field, inputCls, Notice, Skeleton } from "./ui";
 import Select from "./Select";
 import { TaskButton, TaskRequirements, useTask } from "./Task";
 import { runLocal } from "../lib/shuttle";
@@ -78,12 +78,14 @@ export function TaskTools({
   input,
   onFinished,
   disabled = false,
+  beforeRun,
 }: {
   task: string;
   label: string;
   input?: unknown;
   onFinished?: () => void;
   disabled?: boolean;
+  beforeRun?: () => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
   const job = useTask(task);
@@ -92,6 +94,7 @@ export function TaskTools({
       <TaskButton
         task={task}
         input={input}
+        beforeRun={beforeRun}
         disabled={disabled}
         onFinished={onFinished}
       >
@@ -164,16 +167,33 @@ export function DataState({
 export function MetricCard({
   label,
   value,
+  onClick,
 }: {
   label: string;
   value: number | null | undefined;
+  onClick?: () => void;
 }) {
-  return (
-    <div className="rounded-xl border border-border bg-background p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">
+  const content = (
+    <>
+      <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        {label}
+        {onClick && <ArrowRight aria-hidden="true" className="size-4 shrink-0" />}
+      </span>
+      <span className="mt-2 block text-2xl font-semibold tracking-tight tabular-nums">
         {value == null ? "—" : value.toLocaleString()}
-      </p>
-    </div>
+      </span>
+    </>
+  );
+  const className = "rounded-xl border border-border bg-background p-4";
+  return onClick ? (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(className, "w-full cursor-pointer text-left transition-colors hover:border-primary/40 hover:bg-accent/50 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50")}
+    >
+      {content}
+    </button>
+  ) : (
+    <div className={className}>{content}</div>
   );
 }

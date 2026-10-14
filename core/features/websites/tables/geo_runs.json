@@ -1,0 +1,80 @@
+{
+  "name": "GEO 检测记录",
+  "desc": "每次 GEO 可见度检测的结果",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "engine": {
+        "type": "string",
+        "description": "检测的 AI 引擎：openai（ChatGPT 接口）/ chatgpt（ChatGPT 网页版）/ deepseek / doubao / kimi / yuanbao（网页版，在用户的 Chrome 里问）；老数据还有 perplexity"
+      },
+      "model": {
+        "type": "string",
+        "description": "用的模型，比如 gpt-5.5、sonar"
+      },
+      "provider": {
+        "type": "string",
+        "description": "用 Annulo 设置 → 模型 里的哪个服务商（id）；本机 agent 是 claude-code / codex"
+      },
+      "provider_name": {
+        "type": "string",
+        "description": "这次是谁在答，给人看的（比如「ChatGPT · creght 平台」「Claude（本机 Claude Code）」）"
+      },
+      "questions": {
+        "type": "integer",
+        "description": "问了多少个推荐类问题（品牌问题不算，见 fact_questions）"
+      },
+      "cited": {
+        "type": "integer",
+        "description": "推荐类问题里被引用了几个"
+      },
+      "mentioned": {
+        "type": "integer",
+        "description": "推荐类问题里被提到（未必引用）几个"
+      },
+      "visibility": {
+        "type": "integer",
+        "description": "可见度 0-100 = 推荐类问题被引用数 / 推荐类问题数"
+      },
+      "fact_questions": {
+        "type": "integer",
+        "description": "问了几个品牌问题"
+      },
+      "note": {
+        "type": "string",
+        "description": "备注：部分失败、跑的次数等"
+      },
+      "summary": {
+        "type": "string",
+        "description": "这次检测的结论，JSON：{ asker, brand_asked, brand_cited, questions, cited, mentioned, visibility, prev_visibility, failed: [{question_id, question, error}], gained / lost / fresh: [问题 id] }（local/geo.ts summarize）"
+      },
+      "seen_at": {
+        "type": "string",
+        "description": "用户看过这次结果的时间 ISO8601；空 = 还没看，侧栏「AI 搜索推荐」标点"
+      },
+      "started_at": {
+        "type": "string",
+        "description": "开始时间 ISO8601"
+      },
+      "finished_at": {
+        "type": "string",
+        "description": "结束时间 ISO8601"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "batch_id": {
+        "type": "string",
+        "description": "同一次检测的几个引擎各记一条，batch_id 一样"
+      }
+    },
+    "required": [
+      "channel_id"
+    ]
+  }
+}

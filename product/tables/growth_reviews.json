@@ -1,0 +1,56 @@
+{
+  "name": "发布后复盘",
+  "desc": "发布后复盘",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "key": {
+        "type": "string",
+        "description": "key"
+      },
+      "target_id": {
+        "type": "string",
+        "description": "target_id"
+      },
+      "target_kind": {
+        "type": "string",
+        "description": "target_kind"
+      },
+      "title": {
+        "type": "string",
+        "description": "title"
+      },
+      "url": {
+        "type": "string",
+        "description": "url"
+      },
+      "due_at": {
+        "type": "string",
+        "description": "due_at"
+      },
+      "status": {
+        "type": "string",
+        "description": "status"
+      },
+      "result": {
+        "type": "string",
+        "description": "result"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "created_at"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "updated_at"
+      },
+      "offset_hours": {
+        "type": "number",
+        "description": "发布后复盘间隔小时数"
+      }
+    },
+    "required": [
+      "key"
+    ]
+  }
+}

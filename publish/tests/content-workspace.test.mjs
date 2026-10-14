@@ -1,0 +1,216 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+const { build } = createRequire(import.meta.url)(process.env.ESBUILD_MODULE || 'esbuild');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'content-workspace-'));
+fs.cpSync(path.join(root, 'product'), temp, { recursive: true });
+fs.cpSync(path.join(root, 'core/local'), path.join(temp, 'local'), { recursive: true });
+fs.cpSync(path.join(root, 'core/features/websites'), temp, { recursive: true });
+await build({ stdin: { contents: "export * from './lib/contentWorkspace'; export * as workspace from './local/content-workspace'; export * as topics from './local/topics';", resolveDir: temp },
+  bundle: true, platform: 'node', format: 'esm', outfile: path.join(temp, 'test.mjs'), logLevel: 'silent',
+  // These read/classification tests never invoke the installed social transport or format adapters.
+  plugins: [{ name: 'social-fixture', setup(b) {
+    b.onResolve({ filter: /plugins\/social\// }, a => ({ path: a.path, namespace: 'social-fixture' }));
+    b.onLoad({ filter: /.*/, namespace: 'social-fixture' }, () => ({ loader: 'ts', contents: "export const FIELDS={}; export const CONTENT_TYPES=['article','post','video']; export const contentType=c=>c?.type || 'article'; export const parseList=v=>Array.isArray(v)?v:JSON.parse(v || '[]'); export const lengthOn=c=>String(c.body || '').length; export const platformsFor=()=>[]; export const htmlImages=()=>[]; export const supports=()=>false; export const fromContent=c=>c; export async function summary(){return []}" }));
+  } }] });
+const { contentEntries, entryAccountIds, legacyContentWorkspace, reviewWorkspace, workspace, topics } = await import(pathToFileURL(path.join(temp, 'test.mjs')));
+const empty = () => ({ articles: [], topics: [], plans: [], posts: [], publications: [], channels: [] });
+
+test('destination evidence determines ownership, including long social content; format alone stays unassigned', () => {
+  const data = empty();
+  data.channels = [{ id: 'site', type: 'creght_site' }, { id: 'account', type: 'zhihu' }];
+  data.articles = [{ id: 'long-social', type: 'article', target_account_id: 'account' }, { id: 'site-draft', channel_id: 'site' }, { id: 'old-video', type: 'video' }];
+  const rows = contentEntries(data);
+  assert.deepEqual(rows.find(r => r.article.id === 'long-social').workspaces, ['social']);
+  assert.deepEqual(rows.find(r => r.article.id === 'site-draft').workspaces, ['website']);
+  assert.deepEqual(rows.find(r => r.article.id === 'old-video').workspaces, []);
+});
+test('old article/topic/plan links resolve their own destination rather than matching missing parameters', () => {
+  const data = empty(); data.plans = [{ id: 'first-plan', platform: 'xiaohongshu' }]; data.topics = [{ id: 'site-topic', source: 'search' }]; data.articles = [{ id: 'site-article', target_platform: 'website' }];
+  const rows = contentEntries(data);
+  assert.equal(legacyContentWorkspace({ article: 'site-article' }, rows), 'website');
+  assert.equal(legacyContentWorkspace({ topic: 'site-topic' }, rows), 'website');
+  assert.equal(legacyContentWorkspace({ plan: 'first-plan' }, rows), 'social');
+  assert.equal(legacyContentWorkspace({ workspace: 'website' }, rows), 'website');
+});
+test('linked plan, topic and article are one workflow; equal titles are not merged', () => {
+  const data = empty();
+  data.plans = [{ id: 'plan', platform: 'website', topic_id: 'topic', article_id: 'article', title: 'Same' }];
+  data.topics = [{ id: 'topic', article_id: 'article', title: 'Same' }, { id: 'unrelated', title: 'Same' }];
+  data.articles = [{ id: 'article', topic_id: 'topic', title: 'Same' }];
+  const before = JSON.stringify(data), rows = contentEntries(data);
+  assert.equal(rows.length, 2); assert.equal(rows[0].plan.id, 'plan'); assert.equal(rows[0].topic.id, 'topic'); assert.equal(rows[0].article.id, 'article');
+  assert.equal(JSON.stringify(data), before);
+});
+test('copied drafts and multiple actual versions remain separately accessible', () => {
+  const data = empty();
+  data.plans = [{ id: 'plan', platform: 'xiaohongshu', topic_id: 'topic', article_id: 'original' }];
+  data.topics = [{ id: 'topic', marketing_plan_id: 'plan' }];
+  data.articles = [{ id: 'original', topic_id: 'topic' }, { id: 'copy', topic_id: 'topic', source_id: 'original' }, { id: 'other-version', topic_id: 'topic' }];
+  const rows = contentEntries(data);
+  assert.equal(rows.length, 3); assert.deepEqual(new Set(rows.map(r => r.article.id)), new Set(['original', 'copy', 'other-version']));
+});
+test('shared originals retain both destinations and all publication records; stage is workspace-specific', () => {
+  const data = empty(); data.articles = [{ id: 'article', target_platform: 'website' }];
+  data.publications = [{ id: 'site-record', article_id: 'article', status: 'draft', url: 'https://example.com' }];
+  data.posts = [{ id: 'social-record', article_id: 'article', status: 'published', post_url: 'https://social.example.com/post' }];
+  const before = JSON.stringify(data);
+  assert.deepEqual(new Set(contentEntries(data)[0].workspaces), new Set(['website', 'social']));
+  assert.equal(contentEntries(data, 'website')[0].stage, 'draft'); assert.equal(contentEntries(data, 'social')[0].stage, 'published');
+  assert.equal(JSON.stringify(data), before);
+});
+test('account filters and labels retain receipt/native publication destinations without mixing workspaces', () => {
+  const data = empty(); data.plans = [{ id: 'plan', platform: 'xiaohongshu', article_id: 'article', receipt: { account_id: 'social-account', url: 'https://social.example/post' } }]; data.articles = [{ id: 'article' }];
+  data.publications = [{ id: 'publication', article_id: 'article', channel_id: 'site-account', status: 'published' }];
+  const entry = contentEntries(data)[0];
+  assert.deepEqual(entryAccountIds(entry, data, 'social', true), ['social-account']);
+  assert.deepEqual(entryAccountIds(entry, data, 'website', true), ['site-account']);
+  assert.ok(entryAccountIds(entry, data, 'social').includes('social-account'));
+});
+test('existing review checkpoints use their persisted target relationship to select the workspace', () => {
+  const data = { plans: [{ id: 'social-plan', platform: 'douyin' }, { id: 'site-plan', platform: 'website' }] };
+  assert.equal(reviewWorkspace({ target_kind: 'plan', target_id: 'social-plan' }, data), 'social');
+  assert.equal(reviewWorkspace({ target_kind: 'plan', target_id: 'site-plan' }, data), 'website');
+  assert.equal(reviewWorkspace({ target_kind: 'publication', target_id: 'article' }, data), 'website');
+  assert.equal(reviewWorkspace({ target_kind: 'post', target_id: 'article' }, data), 'social');
+  assert.equal(reviewWorkspace({ target_kind: 'plan', target_id: 'removed-plan' }, data), undefined);
+});
+test('historical claims, completed topics and prepared media do not fabricate successful publication', () => {
+  const data = empty(); data.plans = [{ id: 'claim', stage: 'reported_published' }, { id: 'ready', stage: 'ready' }];
+  data.topics = [{ id: 'done', status: 'done' }, { id: 'dropped', status: 'dropped' }]; data.articles = [{ id: 'legacy', status: 'published' }];
+  const rows = contentEntries(data);
+  assert.equal(rows.find(r => r.key === 'plan:claim').stage, 'verify'); assert.equal(rows.find(r => r.key === 'plan:ready').stage, 'ready');
+  assert.equal(rows.find(r => r.key === 'topic:done').stage, 'verify'); assert.equal(rows.find(r => r.key === 'topic:dropped').stage, 'archived');
+  assert.equal(rows.find(r => r.key === 'article:legacy').stage, 'verify'); assert.ok(rows.every(r => r.stage !== 'published'));
+});
+function fixture() {
+  const tables = { products: [], channels: [], social_accounts: [], articles: [{ id: 'article', topic_id: 'topic', body: '<p>Original body</p>', images: '["asset"]', status: 'draft' }], topics: [{ id: 'topic', status: 'done', article_id: 'article' }], marketing_plans: [], social_posts: [], publications: [], channel_strategies: [], search_pages: [], seo_targets: [], growth_reviews: [] };
+  const updates = [];
+  const ctx = { db: { query: table => ({ list: tables[table] || [] }), get: (table, id) => (tables[table] || []).find(r => r.id === id),
+    insert: (table, value) => { const row = { ...value, id: 'new-' + (tables[table] || []).length }; (tables[table] ||= []).push(row); return row; },
+    update: (table, id, patch) => { updates.push({ table, id, patch }); const row = tables[table].find(r => r.id === id); Object.assign(row, patch); return row; } } };
+  return { ctx, tables, updates };
+}
+test('reading the workspaces does not migrate or rewrite any stored record', () => {
+  const { ctx, tables, updates } = fixture(), before = JSON.stringify(tables);
+  const data = workspace.context({}, ctx); assert.equal(contentEntries(data).length, 1);
+  assert.equal(JSON.stringify(tables), before); assert.equal(updates.length, 0);
+});
+test('explicit classification only updates ownership, preserves content and publication data, and is idempotent', () => {
+  const { ctx, tables, updates } = fixture(); const original = structuredClone(tables);
+  workspace.assign({ key: 'topic:topic', workspace: 'social' }, ctx);
+  assert.equal(tables.articles[0].body, original.articles[0].body); assert.equal(tables.articles[0].images, original.articles[0].images);
+  assert.equal(tables.articles[0].status, original.articles[0].status); assert.deepEqual(tables.publications, original.publications);
+  assert.ok(updates.every(u => Object.keys(u.patch).join() === 'workspace'));
+  const n = updates.length; workspace.assign({ key: 'topic:topic', workspace: 'social' }, ctx); assert.equal(updates.length, n);
+});
+test('new topic generation keeps its workspace and allows a different channel treatment of the same title', () => {
+  const { ctx, tables } = fixture();
+  tables.topics = [{ id: 'site', title: 'Same subject', workspace: 'website' }];
+  topics.save({ workspace: 'social', ideas: [{ title: 'Same subject', angle: 'An account-specific treatment' }] }, ctx);
+  assert.equal(tables.topics.length, 2); assert.equal(tables.topics[1].workspace, 'social');
+  assert.throws(() => topics.save({ workspace: 'social', ideas: [{ title: 'Same subject' }] }, ctx));
+  assert.equal(tables.topics.length, 2);
+});
+test('ownership assignment cannot relocate content that already has another destination', () => {
+  const { ctx, tables, updates } = fixture(); tables.articles[0].target_platform = 'website';
+  assert.throws(() => workspace.assign({ key: 'topic:topic', workspace: 'social' }, ctx)); assert.equal(updates.length, 0);
+});
+test('editing task progress persists through reload, uses filters, and preserves content and creation status', () => {
+  const { ctx, tables, updates } = fixture();
+  tables.articles[0].workspace = 'social';
+  const before = structuredClone(tables);
+  workspace.setStage({ key: 'topic:topic', workspace: 'social', stage: 'ready' }, ctx);
+  const reloaded = contentEntries(workspace.context({}, ctx), 'social');
+  assert.equal(reloaded.filter(e => e.stage === 'ready').length, 1);
+  assert.equal(tables.articles[0].body, before.articles[0].body);
+  assert.equal(tables.articles[0].images, before.articles[0].images);
+  assert.equal(tables.articles[0].status, before.articles[0].status);
+  assert.deepEqual(tables.topics, before.topics);
+  assert.deepEqual(tables.social_posts, before.social_posts);
+  assert.deepEqual(tables.publications, before.publications);
+  assert.deepEqual(updates.map(u => Object.keys(u.patch)), [['workflow_stages']]);
+  workspace.setStage({ key: 'topic:topic', workspace: 'social', stage: 'ready' }, ctx);
+  assert.equal(updates.length, 1);
+  workspace.setStage({ key: 'topic:topic', workspace: 'social', stage: '' }, ctx);
+  assert.equal(contentEntries(workspace.context({}, ctx), 'social')[0].stage, 'draft');
+  assert.equal(tables.articles[0].workflow_stages, '');
+});
+test('manual progress works for plans and topics and preserves the other workspace on a shared record', () => {
+  const { ctx, tables } = fixture();
+  tables.marketing_plans = [{ id: 'plan', platform: 'xiaohongshu', topic_id: 'topic', article_id: 'article', stage: 'creating', workflow_stages: '{"website":"blocked"}' }];
+  tables.publications = [{ id: 'pub', article_id: 'article', status: 'draft' }];
+  workspace.setStage({ key: 'plan:plan', workspace: 'social', stage: 'archived' }, ctx);
+  const data = workspace.context({}, ctx);
+  assert.equal(contentEntries(data, 'social')[0].stage, 'archived');
+  assert.equal(contentEntries(data, 'website')[0].stage, 'blocked');
+  assert.equal(tables.marketing_plans[0].stage, 'creating');
+  tables.topics.push({ id: 'new-topic', workspace: 'social', status: 'idea' });
+  workspace.setStage({ key: 'topic:new-topic', workspace: 'social', stage: 'creating' }, ctx);
+  assert.equal(contentEntries(workspace.context({}, ctx), 'social').find(e => e.key === 'topic:new-topic').stage, 'creating');
+});
+test('status editing rejects invalid progress and other workspaces before writing', () => {
+  const { ctx, tables, updates } = fixture();
+  tables.articles[0].workspace = 'social';
+  for (const stage of ['made-up', undefined]) assert.throws(() => workspace.setStage({ key: 'topic:topic', workspace: 'social', stage }, ctx));
+  assert.throws(() => workspace.setStage({ key: 'topic:topic', workspace: 'website', stage: 'ready' }, ctx));
+  assert.throws(() => workspace.setStage({ key: 'missing', workspace: 'social', stage: 'ready' }, ctx));
+  assert.equal(updates.length, 0);
+});
+test('every task state can be edited repeatedly without changing publication records; automatic status can be restored', () => {
+  const { ctx, tables, updates } = fixture();
+  tables.articles[0].workspace = 'social';
+  for (const originalStatus of ['scheduled', 'published']) {
+    tables.social_posts = [{ id: 'post', article_id: 'article', status: originalStatus, post_url: 'https://example.com/post', scheduled_at: '2026-10-20T12:00:00Z' }];
+    const originalPosts = structuredClone(tables.social_posts);
+    for (const stage of ['planned', 'creating', 'draft', 'ready', 'scheduled', 'published', 'verify', 'blocked', 'archived']) {
+      workspace.setStage({ key: 'topic:topic', workspace: 'social', stage }, ctx);
+      assert.equal(contentEntries(workspace.context({}, ctx), 'social')[0].stage, stage);
+      assert.deepEqual(tables.social_posts, originalPosts);
+      assert.equal(tables.growth_reviews.length, 0);
+    }
+    workspace.setStage({ key: 'topic:topic', workspace: 'social', stage: '' }, ctx);
+    assert.equal(contentEntries(workspace.context({}, ctx), 'social')[0].stage, originalStatus);
+  }
+  assert.ok(updates.every(u => Object.keys(u.patch).join() === 'workflow_stages'));
+});
+test('manually marking a plan published or scheduled creates no publication or schedule', () => {
+  const { ctx, tables } = fixture();
+  tables.marketing_plans = [{ id: 'plan', platform: 'xiaohongshu', stage: 'ready', body: 'Keep the original copy' }];
+  for (const stage of ['published', 'scheduled', 'archived', 'draft', 'creating']) {
+    workspace.setStage({ key: 'plan:plan', workspace: 'social', stage }, ctx);
+    assert.equal(contentEntries(workspace.context({}, ctx), 'social').find(e => e.key === 'plan:plan').stage, stage);
+  }
+  assert.equal(tables.marketing_plans[0].body, 'Keep the original copy');
+  assert.equal(tables.marketing_plans[0].stage, 'ready');
+  assert.deepEqual(tables.social_posts, []);
+  assert.deepEqual(tables.publications, []);
+  assert.deepEqual(tables.growth_reviews, []);
+});
+test('database rows wrapped afresh by the local runtime do not loop over cyclic topic/article links', () => {
+  const { ctx, tables } = fixture();
+  const query = ctx.db.query;
+  ctx.db.query = table => ({ list: new Proxy(query(table).list, {
+    get(target, key) {
+      const value = Reflect.get(target, key);
+      return typeof key === 'string' && /^\d+$/.test(key) ? { ...value } : value;
+    }
+  }) });
+  workspace.setStage({ key: 'topic:topic', workspace: 'social', stage: 'ready' }, ctx);
+  assert.equal(JSON.parse(tables.articles[0].workflow_stages).social, 'ready');
+  workspace.assign({ key: 'topic:topic', workspace: 'social' }, ctx);
+  assert.equal(tables.articles[0].workspace, 'social');
+  assert.equal(tables.topics[0].workspace, 'social');
+});
+test('every original ID survives the joined view even with stale links and record cycles', () => {
+  const data = empty(); data.plans = [{ id: 'p', topic_id: 't', article_id: 'a', platform: 'website' }, { id: 'stale', topic_id: 'missing' }];
+  data.topics = [{ id: 't', marketing_plan_id: 'p', article_id: 'a' }, { id: 'old', article_id: 'missing' }]; data.articles = [{ id: 'a', topic_id: 't', marketing_plan_id: 'p' }, { id: 'orphan' }];
+  const rows = contentEntries(data);
+  for (const [table, field] of [['articles', 'article'], ['topics', 'topic'], ['plans', 'plan']]) for (const original of data[table]) assert.ok(rows.some(row => row[field]?.id === original.id));
+});
+process.on('exit', () => fs.rmSync(temp, { recursive: true, force: true }));

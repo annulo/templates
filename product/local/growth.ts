@@ -71,6 +71,7 @@ export function context(_input: {}, ctx: any) {
       name: c.name,
       profile: c.profile,
     })),
+    account_strategies: all(ctx, "channel_strategies"),
   };
 }
 export function saveOpportunity(input: any, ctx: any) {
@@ -291,13 +292,19 @@ export function campaignContext(input: { campaign_id: string }, ctx: any) {
     profile: profile(ctx),
     topics: all(ctx, "topics").filter((t) => t.campaign_id === c.id),
     articles: all(ctx, "articles").filter((a) => a.campaign_id === c.id),
-    assets: all(ctx, "assets"),
+    assets: all(ctx, "assets").map((a) =>
+      a.kind === "text" ? { ...a, text: text(a.text).slice(0, 180) } : a,
+    ),
     accounts: all(ctx, "social_accounts").map((a) => ({
       id: a.id,
       type: a.type,
       profile: a.profile,
       name: a.name,
     })),
+    account_strategies: all(ctx, "channel_strategies"),
+    marketing_plans: all(ctx, "marketing_plans").filter(
+      (p) => p.campaign_id === c.id,
+    ),
   };
 }
 export function savePlan(
@@ -311,13 +318,47 @@ export function savePlan(
   const seen = new Set<string>();
   const plans = input.topics.map((t) => {
     const platform = choice(ctx, t.target_platform, channels, "");
-    if (seen.has(platform))
+    const role = t.account_role_key
+      ? all(ctx, "channel_strategies").find((r) => r.key === t.account_role_key)
+      : null;
+    if (t.account_role_key && (!role || role.platform !== platform))
       error(
         ctx,
-        "同一平台在本次计划中只能出现一次",
-        "Each platform can appear only once in this plan.",
+        "账号策略与平台不匹配",
+        "The account strategy does not match the platform.",
       );
-    seen.add(platform);
+    const accountId = text(t.target_account_id || role?.account_id);
+    if (accountId) {
+      const account = row(
+        ctx,
+        platform === "website" ? "channels" : "social_accounts",
+        accountId,
+      );
+      if (
+        platform === "website"
+          ? !["creght_site", "wordpress"].includes(account.type)
+          : account.type !== platform
+      )
+        error(
+          ctx,
+          "账号与平台不匹配",
+          "The account does not match the platform.",
+        );
+    }
+    const planKey =
+      text(t.plan_key) ||
+      [
+        platform,
+        t.account_role_key || accountId || "default",
+        text(t.slot) || "default",
+      ].join(":");
+    if (seen.has(planKey))
+      error(
+        ctx,
+        "内容版本标识重复，请为同账号的不同角度设置不同 plan_key",
+        "Duplicate content variant. Give different angles distinct plan_key values.",
+      );
+    seen.add(planKey);
     const contentType =
       platform === "website"
         ? "article"
@@ -335,6 +376,9 @@ export function savePlan(
       channels: platform,
       cta: text(t.cta) || c.cta,
       gaps: text(t.gaps),
+      account_strategy: role?.guidance || "",
+      account_role_key: text(t.account_role_key),
+      target_account_id: accountId,
     };
     return {
       title: text(t.title),
@@ -348,12 +392,20 @@ export function savePlan(
       content_type: contentType,
       source: "campaign",
       status: "idea",
+      plan_key: planKey,
+      account_role_key: text(t.account_role_key),
+      target_account_id: accountId,
     };
   });
   const existing = all(ctx, "topics").filter((t) => t.campaign_id === c.id);
   const saved = plans.map((p) => {
     const old = existing.find(
-      (t) => t.target_platform === p.target_platform && t.status !== "dropped",
+      (t) =>
+        (t.plan_key === p.plan_key ||
+          (!t.plan_key &&
+            p.plan_key === `${p.target_platform}:default:default` &&
+            t.target_platform === p.target_platform)) &&
+        t.status !== "dropped",
     );
     if (old) return old; // 重试不会覆盖已有简报或重复创建。
     return ctx.db.insert("topics", { ...p, created_at: now() });

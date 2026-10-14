@@ -1,0 +1,48 @@
+{
+  "name": "GEO 检测引擎",
+  "desc": "每个 AI 引擎的检测设置：开关、接口引擎用 Annulo 里哪个服务商和模型（key 在 Annulo 的模型设置里，不进表）、网页版最近一次「试一下」的结果",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "engine": {
+        "type": "string",
+        "description": "引擎：openai（ChatGPT 接口）/ chatgpt（ChatGPT 网页版）/ deepseek / doubao / kimi / yuanbao（网页版，在用户的 Chrome 里问）；老数据还有 perplexity，一个引擎一行"
+      },
+      "enabled": {
+        "type": "boolean",
+        "description": "检测时问不问它（「检测设置」里的开关）。默认都不开；老项目没有这个字段、选过服务商的 openai 当作开着"
+      },
+      "provider": {
+        "type": "string",
+        "description": "用 Shuttle 设置 → 模型 里的哪个服务商（服务商 id，creght 平台是 creght）；空 = 没选（老项目的本机密钥还能用）"
+      },
+      "model": {
+        "type": "string",
+        "description": "用的模型，空 = 默认 gpt-5.5"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      },
+      "tested_at": {
+        "type": "string",
+        "description": "网页版：最近一次「试一下」的时间 ISO8601"
+      },
+      "test_error": {
+        "type": "string",
+        "description": "网页版：最近一次「试一下」的错误（空 = 成功），开头的 [login] 这类是 aichat 的错误码"
+      },
+      "test_profile": {
+        "type": "string",
+        "description": "网页版：最近一次试成功时用的是哪个 Chrome 用户（名字）"
+      }
+    },
+    "required": [
+      "engine"
+    ]
+  }
+}

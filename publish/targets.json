@@ -1,0 +1,15 @@
+{
+  "blank": {
+    "name": "空白项目",
+    "core": false
+  },
+  "creator": {
+    "name": "自媒体工作台"
+  },
+  "product": {
+    "name": "产品运营助手",
+    "features": [
+      "websites"
+    ]
+  }
+}

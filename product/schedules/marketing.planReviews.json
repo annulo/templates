@@ -1,0 +1,5 @@
+{
+  "fn": "marketing.planReviews",
+  "every": "6h",
+  "name": "整理发布后的复盘队列"
+}

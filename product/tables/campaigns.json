@@ -67,6 +67,18 @@
       "updated_at": {
         "type": "string",
         "description": "更新时间 ISO8601"
+      },
+      "origin_key": {
+        "type": "string",
+        "description": "origin_key"
+      },
+      "source_snapshot": {
+        "type": "string",
+        "description": "source_snapshot"
+      },
+      "origin": {
+        "type": "string",
+        "description": "origin"
       }
     },
     "required": [
