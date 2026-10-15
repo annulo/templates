@@ -319,6 +319,8 @@
   },
   "files": {
     "open": "打开",
-    "open_browser": "在浏览器中打开"
+    "open_hint": "用系统默认程序打开（网页用浏览器）",
+    "reveal_mac": "在访达中显示",
+    "reveal": "在文件夹中显示"
   }
 }

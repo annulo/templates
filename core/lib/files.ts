@@ -26,16 +26,16 @@ export const kindOfMime = (mime: string) => (mime.startsWith('video/') ? 'video'
 export const fileSrc = (url?: string) => (url?.startsWith('local:') ? '/_shuttle/files/' + url.slice(6) : url ?? '')
 
 /**
- * 用系统程序打开（网页用系统浏览器）：本机文件交给 Annulo 打开（POST local/open，能力版本 43）；
+ * 用系统程序打开（网页用系统浏览器），reveal 时在访达 / 文件夹里显示：本机文件交给 Annulo（POST local/open，能力版本 43）；
  * 服务端部署时 Annulo 回一个地址，在新标签页打开。网址直接新标签页打开
  */
-export async function openFile(url?: string) {
+export async function openFile(url?: string, reveal = false) {
   if (!url) return
   if (!url.startsWith('local:')) {
     window.open(url, '_blank', 'noopener')
     return
   }
-  const res = await fetch('/_shuttle/api/local/open', { method: 'POST', headers: { 'X-Shuttle': '1', 'content-type': 'application/json' }, body: JSON.stringify({ path: url }) })
+  const res = await fetch('/_shuttle/api/local/open', { method: 'POST', headers: { 'X-Shuttle': '1', 'content-type': 'application/json' }, body: JSON.stringify({ path: url, reveal }) })
   const body = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
   if (body.open_url) window.open(body.open_url, '_blank', 'noopener')

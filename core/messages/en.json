@@ -319,6 +319,8 @@
   },
   "files": {
     "open": "Open",
-    "open_browser": "Open in browser"
+    "open_hint": "Open in the default app (web pages in your browser)",
+    "reveal_mac": "Show in Finder",
+    "reveal": "Show in folder"
   }
 }

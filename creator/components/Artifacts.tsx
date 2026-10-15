@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Check, Loader2, MessageSquareText, Pencil, Trash2 } from 'lucide-react'
 import { typeOf } from './ArticleTypes'
-import { AssetPreview } from './AssetPreview'
+import { AssetPreview, FileActions } from './AssetPreview'
 import { TaskRunning, useTaskRuns } from './Task'
 import { Badge, Button, Notice, cx, fmtTime, inputCls } from './ui'
 import type { VideoMaking } from './views/Content'
@@ -92,8 +92,9 @@ function ArtifactCard({ x, article, articles, current, onChanged }: { x: Asset; 
   })
   return (
     <div className={cx('flex flex-col gap-4 rounded-xl border p-3 sm:flex-row', current ? 'border-primary/40 bg-primary/5' : 'border-border')}>
-      <div className="w-full shrink-0 overflow-hidden rounded-lg sm:w-56">
+      <div className="w-full shrink-0 sm:w-56 [&>:first-child]:overflow-hidden [&>:first-child]:rounded-lg">
         <AssetPreview a={x} className="aspect-video" />
+        <FileActions url={x.url} className="mt-1" />
       </div>
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2">

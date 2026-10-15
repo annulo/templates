@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { Copy, FileText, Pencil, Plus, Search, Trash2, Upload, Video } from 'lucide-react'
-import { AssetPreview } from '../AssetPreview'
+import { AssetPreview, FileActions } from '../AssetPreview'
 import { fileSrc, kindOfMime, mimeOf } from '../../lib/files'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls } from '../ui'
 import { dbCreate, dbDelete, dbList, dbPatch, type Asset, type AssetKind } from '../../lib/shuttle'
@@ -190,6 +190,7 @@ function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabl
           {a.kind === 'video' && <Video className="pointer-events-none absolute top-2 left-2 size-4 text-white drop-shadow" />}
         </div>
       )}
+      {a.kind !== 'text' && <FileActions url={a.url} className="px-2 pt-1.5" />}
       {zoom && a.url && <Lightbox src={fileSrc(a.url)} alt={a.name ?? ''} onClose={() => setZoom(false)} />}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
         <div className="flex min-w-0 items-center gap-1.5">
