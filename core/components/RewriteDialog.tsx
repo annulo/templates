@@ -27,7 +27,7 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   const [converting, setConverting] = useState(false)
-  const { presets, error: loadErr, reload } = usePresets(open, 'article', video)
+  const { presets, error: loadErr, reload } = usePresets(open, video)
   const making = video && type === 'video'
   const convert = async () => {
     setConverting(true); setErr('')
@@ -45,7 +45,7 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
   const usePreset = (p: Preset) => { setType(p.type); setNote(p.prompt); setMsg('') }
   const save = async () => {
     setErr(''); setMsg('')
-    try { await savePreset('article', type, note); await reload(); setMsg(tr('article.preset_saved')) } catch (e) { setErr((e as Error).message) }
+    try { await savePreset(type, note); await reload(); setMsg(tr('article.preset_saved')) } catch (e) { setErr((e as Error).message) }
   }
 
   return <Dialog open={open} onClose={onClose} title={tr('article.rewrite_title')} width={640} footer={<>
@@ -68,6 +68,6 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
       </div>
       {(err || error || loadErr) && <Notice tone="error">{err || error || loadErr}</Notice>}
     </div>
-    <PresetsDialog open={managing} target="article" presets={presets ?? []} onClose={() => setManaging(false)} onChanged={reload} />
+    <PresetsDialog open={managing} presets={presets ?? []} onClose={() => setManaging(false)} onChanged={reload} />
   </Dialog>
 }

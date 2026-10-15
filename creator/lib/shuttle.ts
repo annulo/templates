@@ -326,7 +326,7 @@ export type Publication = { id: string; article_id: string; channel_id: string; 
 export const isSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress')
 
 /** AI 预设（rewrite_presets 表）：产出哪种类型 + 要求；名字、用在哪、模板自带的哪条见 core/lib/presets.ts */
-export type RewritePreset = { id: string; type: ArticleType; prompt: string; name?: string; target?: 'article' | 'video_version'; builtin?: string; hidden?: boolean; created_at?: string; updated_at?: string }
+export type RewritePreset = { id: string; type: ArticleType; prompt: string; name?: string; builtin?: string; hidden?: boolean; created_at?: string; updated_at?: string }
 
 /** 视频的一个版本（video_versions 表，local/video.ts 写）：成片是本机文件 local:<name> */
 export type VideoVersion = {
@@ -342,6 +342,8 @@ export type VideoVersion = {
   width?: number
   height?: number
   notes?: string
+  /** 做这一版的对话：页面上「继续对话」打开它 */
+  chat_id?: string
   status?: 'making' | 'done' | 'failed'
   error?: string
   created_at?: string

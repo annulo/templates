@@ -28,7 +28,7 @@
 | 总览 `overview`（起步步骤 + 今天要做的 + 粉丝、发布数） | `checklist` | `today.list`（用户问「接下来做什么」先跑它照着答）、`channels.stats` |
 | 每周总结 `reports` | `reports` | `reports.data` / `reports.save`；任务 `weekly-report`（每 7 天定时，也能在页面点） |
 | 社媒 `social`（账号概览、数据表现） | 社媒插件的 `social_accounts`、`social_daily`、`social_post_daily`、`social_health` | `social/social.*`、`social/stats.summary` |
-| 内容中心 `content`（选题 → 文章（长文 / 图文笔记 / 视频）→ 发布到支持这种类型的账号 / 排期；改写成别的类型、做成视频） | `topics`、`articles`、`rewrite_presets`（AI 预设）、`video_versions`、插件的 `social_posts`（发布记录） | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.rewriteContext` / `save`（任务 `rewrite-article`）、`video.start` / `finish`（任务 `make-video`、`revise-video`）、`publish.prepare` |
+| 内容中心 `content`（选题 → 文章（长文 / 图文笔记 / 视频）→ 发布到支持这种类型的账号 / 排期；改写成别的类型、做成视频） | `topics`、`articles`、`rewrite_presets`（AI 预设）、`video_versions`、插件的 `social_posts`（发布记录） | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.rewriteContext` / `save`（任务 `rewrite-article`）、`video.start` / `finish`（任务 `make-video`；对话找不到时 `revise-video`）、`publish.prepare` |
 | 发布日历 `calendar`（按天看排期和发布，拖动改排期） | 读 `social_posts`、`articles` | |
 | 我的定位 `company` | `profile` | `profile.get` / `save` |
 | 资料库 `assets` | `assets` | |
@@ -57,7 +57,8 @@
 交给 AI 的事都是「产出哪种类型 + 一段要求」，叫 **AI 预设**（`rewrite_presets` 表，模板自带的几条在 `lib/presets.ts`）。在文章页点「改写 / 做视频」选视频，就是照这篇文档做一条视频：
 
 - 任务 `make-video`（参数 `article_id` 是文档、`note` 是要求）：`video.start` 建视频文章（`source_id` 指回文档）和第 1 版，你在这台电脑上把视频做出来，`annulo upload --local` 存进项目，`video.finish` 记下成片。
-- 视频文章页列出它的版本（`video_versions`：每版的要求、当时文档的内容、成片 `local:<name>`）；在某一版上「提修改意见」是任务 `revise-video`（`article_id`、`version_id`、`note`），做一个新版本。`articles.video` 是当前版，发布用它；成片也放进资料库。
+- 视频文章页列出它的版本（`video_versions`：每版的要求、当时文档的内容、做它的对话 `chat_id`、成片 `local:<name>`）。`articles.video` 是当前版，发布用它；成片也放进资料库。
+- **要改就回到做它的那段对话**：页面上「继续对话」打开它，用户在对话里直接说，你照 `make-video` 第 5 步做新版本。那段对话找不到时用户会新开一段，照任务 `revise-video` 先问要改什么。
 - 用什么工具做由你定（要求里指定了就用它）；工程和中间文件放哪照系统提示的「工作文件放哪」，不要放进项目目录，表里也不记它们的路径。
 - 用户在对话里说「把这篇做成视频」「第 2 版节奏快一点」，照这两个任务做，不要另起一套。
 

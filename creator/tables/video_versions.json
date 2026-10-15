@@ -1,6 +1,6 @@
 {
   "name": "视频版本",
-  "desc": "视频文章的各个版本：每做一次（做成视频、提修改意见）存一行，成片是这台电脑上的本机文件。由 video.start / video.finish 写",
+  "desc": "视频文章的各个版本：每做一次（做成视频、在对话里接着改）存一行，成片是这台电脑上的本机文件。由 video.start / video.finish 写",
   "json_schema": {
     "type": "object",
     "properties": {
@@ -47,6 +47,10 @@
       "notes": {
         "type": "string",
         "description": "助手对这一版的说明：怎么做的、和上一版比改了什么"
+      },
+      "chat_id": {
+        "type": "string",
+        "description": "做这一版的对话（video.start 从 ctx.chat_id 记下）：要改就回到这段对话接着说，页面上「继续对话」打开它"
       },
       "status": {
         "type": "string",

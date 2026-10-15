@@ -301,7 +301,6 @@
     "name_hint": "Shown on the button; leave empty to show the start of the instructions",
     "type": "Output",
     "prompt": "Instructions (prompt)",
-    "revise_ph": "e.g. Faster pace, cut the repeated shots",
     "builtin_tag": "Built in",
     "builtin_changed": "Built in · edited",
     "reset": "Restore default",
@@ -309,14 +308,6 @@
       "make_video": {
         "name": "Make a video",
         "prompt": "Make a video for the platforms it will go to: 9:16 portrait for Douyin and Xiaohongshu, 16:9 landscape for YouTube and Bilibili; about 60 seconds. Say what the video is about in the first 3 seconds, follow the structure of the document, get the key points across in voice-over or captions, and end with a line inviting people to follow."
-      },
-      "video_tighter": {
-        "name": "Faster pace",
-        "prompt": "Make the pace faster: cut repeated or slow shots and pauses, one point per shot, about a third shorter overall. Leave everything else as is."
-      },
-      "video_captions": {
-        "name": "Bigger captions",
-        "prompt": "Make the captions bigger and bold, inside the safe area at the bottom, with key words highlighted in the primary color, readable on a phone without zooming. Leave everything else as is."
       }
     }
   }

@@ -3,16 +3,16 @@ import { Check, Pencil, Plus, RotateCcw, Settings2, Trash2 } from 'lucide-react'
 import { ARTICLE_TYPES, TYPE_META, TypeBadge, type ArticleType } from './ArticleTypes'
 import { Button, Dialog, Field, Notice, Segmented, cx, inputCls } from './ui'
 import { tr } from '../lib/i18n'
-import { mergePresets, presetLabel, type Preset, type PresetRow, type PresetTarget } from '../lib/presets'
+import { mergePresets, presetLabel, type Preset, type PresetRow } from '../lib/presets'
 import { dbCreate, dbDelete, dbList, dbPatch } from '../lib/shuttle'
 
 /** 读 AI 预设（rewrite_presets 表 + 模板自带的），合成一个列表。video：项目能做视频时才有做视频的默认预设 */
-export function usePresets(open: boolean, target: PresetTarget, video: boolean) {
+export function usePresets(open: boolean, video: boolean) {
   const [rows, setRows] = useState<PresetRow[] | null>(null)
   const [error, setError] = useState('')
   const load = useCallback(() => dbList('rewrite_presets').then((l) => { setRows(l as PresetRow[]); setError('') }).catch((e) => { setRows([]); setError((e as Error).message) }), [])
   useEffect(() => { if (open) void load() }, [open, load])
-  return { presets: rows ? mergePresets(rows, { target, video }) : null, error, reload: load }
+  return { presets: rows ? mergePresets(rows, { video }) : null, error, reload: load }
 }
 
 /** 一排预设按钮：点一下把类型和要求填进去；当前选中的打勾 */
@@ -38,18 +38,15 @@ export function PresetChips({ presets, picked, onPick, onManage, emptyText }: { 
 export const pickedPreset = (presets: Preset[] | null, type: ArticleType, prompt: string) => (presets ?? []).find((p) => p.type === type && p.prompt.trim() === prompt.trim())
 
 /** 把这次的要求存成一条预设 */
-export async function savePreset(target: PresetTarget, type: ArticleType, prompt: string) {
+export async function savePreset(type: ArticleType, prompt: string) {
   const t = new Date().toISOString()
-  await dbCreate('rewrite_presets', { type, prompt: prompt.trim(), target, created_at: t, updated_at: t } as any)
+  await dbCreate('rewrite_presets', { type, prompt: prompt.trim(), created_at: t, updated_at: t })
 }
 
 type Draft = { preset?: Preset; type: ArticleType; name: string; prompt: string }
 
-/**
- * 管理预设：列出这一类（target）的全部，每条能改名字、类型、要求，能删；模板自带的改过能「恢复默认」。
- * 视频版本的预设类型固定是视频，不给选。
- */
-export function PresetsDialog({ open, target, presets, onClose, onChanged }: { open: boolean; target: PresetTarget; presets: Preset[]; onClose: () => void; onChanged: () => Promise<unknown> }) {
+/** 管理预设：列出全部，每条能改名字、类型、要求，能删；模板自带的改过能「恢复默认」 */
+export function PresetsDialog({ open, presets, onClose, onChanged }: { open: boolean; presets: Preset[]; onClose: () => void; onChanged: () => Promise<unknown> }) {
   const [editing, setEditing] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -60,7 +57,7 @@ export function PresetsDialog({ open, target, presets, onClose, onChanged }: { o
   }
   const now = () => new Date().toISOString()
   const save = () => editing && run(async () => {
-    const d = { type: editing.type, name: editing.name.trim(), prompt: editing.prompt.trim(), target, updated_at: now() }
+    const d = { type: editing.type, name: editing.name.trim(), prompt: editing.prompt.trim(), updated_at: now() }
     const p = editing.preset
     if (p?.row) await dbPatch('rewrite_presets', p.row.id, d as any)
     else await dbCreate('rewrite_presets', { ...d, ...(p?.builtin ? { builtin: p.builtin } : {}), created_at: now() } as any)
@@ -69,7 +66,7 @@ export function PresetsDialog({ open, target, presets, onClose, onChanged }: { o
   const remove = (p: Preset) => run(async () => {
     if (!p.builtin) return p.row && dbDelete('rewrite_presets', p.row.id)
     if (p.row) return dbPatch('rewrite_presets', p.row.id, { hidden: true, updated_at: now() } as any)
-    return dbCreate('rewrite_presets', { type: p.type, prompt: p.prompt, target, builtin: p.builtin, hidden: true, created_at: now(), updated_at: now() } as any)
+    return dbCreate('rewrite_presets', { type: p.type, prompt: p.prompt, builtin: p.builtin, hidden: true, created_at: now(), updated_at: now() } as any)
   })
   const reset = (p: Preset) => run(async () => p.row && dbDelete('rewrite_presets', p.row.id))
 
@@ -77,11 +74,11 @@ export function PresetsDialog({ open, target, presets, onClose, onChanged }: { o
     <Field label={tr('presets.name')} hint={tr('presets.name_hint')}>
       <input autoFocus value={d.name} onChange={(e) => setEditing({ ...d, name: e.target.value })} className={inputCls} />
     </Field>
-    {target === 'article' && <Field group label={tr('presets.type')}>
+    <Field group label={tr('presets.type')}>
       <Segmented<ArticleType> value={d.type} onChange={(t) => setEditing({ ...d, type: t })} options={ARTICLE_TYPES.map((t) => ({ value: t, label: TYPE_META[t].label }))} />
-    </Field>}
+    </Field>
     <Field label={tr('presets.prompt')}>
-      <textarea rows={4} value={d.prompt} onChange={(e) => setEditing({ ...d, prompt: e.target.value })} placeholder={target === 'video_version' ? tr('presets.revise_ph') : tr(`article.rewrite_ph_${d.type}`)} className={cx(inputCls, 'py-2')} />
+      <textarea rows={4} value={d.prompt} onChange={(e) => setEditing({ ...d, prompt: e.target.value })} placeholder={tr(`article.rewrite_ph_${d.type}`)} className={cx(inputCls, 'py-2')} />
     </Field>
     <div className="flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={() => setEditing(null)}>{tr('common.cancel')}</Button><Button size="sm" disabled={busy || !d.prompt.trim()} onClick={save}><Check />{tr('common.save')}</Button></div>
   </div>
@@ -101,7 +98,7 @@ export function PresetsDialog({ open, target, presets, onClose, onChanged }: { o
           <button type="button" disabled={busy} onClick={() => setEditing({ preset: p, type: p.type, name: p.name, prompt: p.prompt })} aria-label={tr('article.preset_edit')} title={tr('article.preset_edit')} className={icon}><Pencil className="size-3.5" /></button>
           <button type="button" disabled={busy} onClick={() => remove(p)} aria-label={tr('article.preset_delete')} title={tr('article.preset_delete')} className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3.5" /></button>
         </div>)}
-      {editing && !editing.preset ? form(editing) : <Button size="sm" variant="outline" disabled={busy} onClick={() => setEditing({ type: target === 'video_version' ? 'video' : 'post', name: '', prompt: '' })}><Plus />{tr('article.preset_new')}</Button>}
+      {editing && !editing.preset ? form(editing) : <Button size="sm" variant="outline" disabled={busy} onClick={() => setEditing({ type: 'post', name: '', prompt: '' })}><Plus />{tr('article.preset_new')}</Button>}
       {err && <Notice tone="error">{err}</Notice>}
     </div>
   </Dialog>

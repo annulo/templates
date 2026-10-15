@@ -1,5 +1,6 @@
-// 做视频（本机函数，Annulo 在用户电脑上执行，不经过模型）。视频本身由助手按任务 tasks/make-video.md / revise-video.md 做，
-// 用什么工具、工程放哪由助手定；这里只管表：开一个版本、记下当时的文档，做好了记下成片、换成当前版、放进资料库。
+// 做视频（本机函数，Annulo 在用户电脑上执行，不经过模型）。视频本身由助手按任务 tasks/make-video.md 做，
+// 用什么工具、工程放哪由助手定；这里只管表：开一个版本、记下当时的文档和做它的对话（ctx.chat_id），做好了记下成片、换成当前版、放进资料库。
+// 要改就回到做它的那段对话接着说（页面上「继续对话」），每改一次是一个新版本；那段对话找不到时按 tasks/revise-video.md 在新对话里改。
 //
 //   video.start({ doc_id, note })                       照一篇文档做一条新视频：建一篇视频文章（source_id 指回文档）和它的第 1 版
 //   video.start({ article_id, version_id?, note })      给视频文章做一个新版本：在 version_id 那一版上改（不给就在当前版上改；还没有版本就照文档重新做）
@@ -76,7 +77,7 @@ export function start(input: { doc_id?: string; article_id?: string; version_id?
   const snapshot = d ? snapshotOf(d) : `${video.title ?? ''}\n\n${video.body ?? ''}`.trim()
   const all = versionsOf(ctx, video.id)
   const n = all.reduce((m, v) => Math.max(m, Number(v.n) || 0), 0) + 1
-  const v = ctx.db.insert('video_versions', { article_id: video.id, n, parent_id: base?.id ?? '', prompt: note, doc_id: doc?.id ?? '', doc_snapshot: snapshot, status: 'making', created_at: now() })
+  const v = ctx.db.insert('video_versions', { article_id: video.id, n, parent_id: base?.id ?? '', prompt: note, doc_id: doc?.id ?? '', doc_snapshot: snapshot, chat_id: String(ctx.chat_id ?? ''), status: 'making', created_at: now() })
   // 从第 1 版到 base 这一串改过来的要求，助手看得出这条视频是怎么一步步改成现在这样的
   const chain: any[] = []
   for (let p = base; p; p = all.find((x) => x.id === p.parent_id)) chain.unshift({ n: p.n, prompt: p.prompt ?? '', notes: p.notes ?? '' })

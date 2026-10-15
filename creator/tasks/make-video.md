@@ -72,4 +72,15 @@ annulo run video.finish --input @/tmp/video-finish.json
 annulo run video.finish --input '{"version_id":"<version_id>","error":"没做成的原因，用户看得懂的一句话"}'
 ```
 
-最后回复用户：做成了什么样（时长、尺寸、几个镜头）、用了什么工具，给出链接 `[打开「标题」](<link>)`。
+最后回复用户：做成了什么样（时长、尺寸、几个镜头）、用了什么工具，给出链接 `[打开「标题」](<link>)`，说一句「要改就在这里直接说，每改一次存一个新版本」。
+
+## 5. 用户在这段对话里接着提意见
+
+用户看完会回到这段对话里接着说（页面上的「继续对话」打开的就是这里）。**每改一次是一个新版本**，旧版本留着：
+
+1. `annulo run video.start --input '{"article_id":"<video_article_id>","version_id":"<在哪一版上改>","note":"<用户这次的原话>"}'`：
+   `version_id` 一般是刚做好的那一版；用户说「在第 2 版上改」就用第 2 版的（id 用 db_query 查 `video_versions`，按 `article_id` 和 `n` 找）。返回里 `doc_changed` 为真说明文档改过了，照新文档改。
+2. 在这一版的工程上改，**只改用户提到的**，别的保持不变；渲染、自查照第 2 步。
+3. `annulo upload --local`、`annulo run video.finish`（第 3、4 步；标题、简介、话题没变就不传），`notes` 写这一版改了什么。
+
+用户说的不是改视频（比如问问题、要换个选题），照常回答，不用开新版本。
