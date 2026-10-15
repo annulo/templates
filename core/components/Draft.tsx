@@ -81,7 +81,7 @@ export default function Draft({ a, locked, onChanged, onAIWrite, control }: { a:
         <div className="space-y-3 border-t border-border px-3 pt-3 pb-3">
           <p className="text-xs text-muted-foreground">{tr('draft.hint')}</p>
           <RichEditor key={editorKey} value={value} onChange={setValue} />
-          <div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
+          <div className="flex flex-wrap items-center gap-1.5">
             <Button size="sm" variant="outline" disabled={!plain(value) || !!busy || locked} onClick={toBody} onMouseLeave={() => setConfirm(false)}>{busy === 'body' ? <Loader2 className="animate-spin" /> : <ArrowDownToLine />}{confirm ? tr('draft.to_body_confirm') : tr('draft.to_body')}</Button>
             {onAIWrite && <Button size="sm" variant="outline" disabled={!plain(value) || locked} onClick={async () => { if (dirty && !(await save())) return; onAIWrite() }}><Wand2 />{tr('draft.ai_write')}</Button>}
           </div>
