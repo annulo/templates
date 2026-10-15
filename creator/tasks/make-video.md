@@ -49,7 +49,7 @@ JSON
 annulo run content.save --input @/tmp/video-article.json
 ```
 
-再把成片放进资料库，挂在这篇视频文章上（`note` 是备注：怎么做的、用了什么工具、有几个镜头，给用户和下一次改的你看，不写路径）：
+再把成片放进资料库，作为这篇视频文章的产物（`mime` 不用传，按扩展名猜；`note` 是备注：怎么做的、用了什么工具、有几个镜头，给用户和下一次改的你看，不写路径）：
 
 ```bash
 annulo run assets.add --input '{"url":"local:<name>","article_id":"<content.save 返回的 article_id>","note":"<备注>","use":true}'

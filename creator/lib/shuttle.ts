@@ -423,6 +423,8 @@ export type Asset = {
   tags?: string
   /** url / manual / upload / agent / platform */
   source?: string
+  /** 文件类型（video/mp4、image/png、text/html…）：页面按它显示；没有时按扩展名猜（core/lib/files.ts） */
+  mime?: string
   /** 备注：文章页的产物列表和资料库显示同一条 */
   note?: string
   /** AI 给哪篇文章做的产物（文章页列出它） */

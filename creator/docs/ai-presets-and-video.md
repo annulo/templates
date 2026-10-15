@@ -1,6 +1,6 @@
 # AI 预设与视频制作
 
-所有「交给 AI 做」的操作都按同一套逻辑：**交给助手，Prompt 是 xxx**。改写成图文、扩成长文、做成视频、给视频提意见都是这样，区别只在产出什么。实现在：`core/lib/presets.ts`、`core/components/Presets.tsx`、`core/components/RewriteDialog.tsx`（交给 AI 弹窗），`creator/components/Outputs.tsx`（产物列表），`creator/local/video.ts`、`creator/local/assets.ts`，任务 `creator/tasks/make-video.md`。core 只在调用方传了 `video`（`VideoMaking`）时做视频，别的模板不受影响。
+所有「交给 AI 做」的操作都按同一套逻辑：**交给助手，Prompt 是 xxx**。改写成图文、扩成长文、做成视频、给视频提意见都是这样，区别只在产出什么。实现在：`core/lib/presets.ts`、`core/components/Presets.tsx`、`core/components/RewriteDialog.tsx`（交给 AI 弹窗），`creator/components/Artifacts.tsx`（产物列表）、`core/components/AssetPreview.tsx`（按 mime 显示），`creator/local/video.ts`、`creator/local/assets.ts`，任务 `creator/tasks/make-video.md`。core 只在调用方传了 `video`（`VideoMaking`）时做视频，别的模板不受影响。
 
 ## 预设
 
@@ -20,7 +20,7 @@
 
 不再有「剧本」这个概念：做视频的依据就是一篇文档，可以是内容中心里的一篇长文，也可以是从 Notion 导入的（`core/local/docsync.ts`）。要精确到秒的分镜，就直接写在文档里。改文档的方式和普通文章一样：自己改、AI 改，或者从 Notion 同步。
 
-## 产物
+## 产物（artifacts）
 
 AI 给一篇文章做出来的东西（视频，以后还有图片、音乐）就是**资料库里的一条**（`assets`），不另设「版本」的概念：
 
@@ -29,7 +29,9 @@ AI 给一篇文章做出来的东西（视频，以后还有图片、音乐）�
 | `article_id` | 哪篇文章做出来的：文章页列出这篇的产物，最新的在前 |
 | `chat_id` | 做它的对话（`assets.add` 从 `ctx.chat_id` 记下） |
 | `note` | 备注：这是什么、怎么做的、和之前的比改了什么。助手存进来时写，用户随时能改；文章页和资料库显示同一条 |
-| `url`、`kind` | 成片 `local:<name>`（存在本机、不上传），`video` / `image` |
+| `url` | 成片 `local:<name>`（存在本机、不上传）或网址 |
+| `mime` | 文件类型（`video/mp4`、`image/png`、`text/html`、`audio/mpeg`…）：页面按它显示，视频、图片直接放，音频给播放器，网页、PDF 用系统程序打开（网页用系统浏览器，服务端部署时在新标签页）。没有时按扩展名猜 |
+| `kind` | 筛选用的大类：`image` / `video` / `text` / `file`（其余的），由 `mime` 推出来 |
 
 - 视频文章的 `video` 是发布用的那个；产物上「发布用这个」改它，`assets.add` 传 `use: true` 也是改它。发布还是现在的流程。
 - **要改就回到做它的那段对话**：页面上「继续对话」打开发布用的那个产物的对话（没记就用最近一个记了的），用户在对话里直接说，助手照 `make-video` 第 5 步每改一次存一个新的，旧的留着。页面上不弹框收意见、不新开对话。对话找不到（老数据）时才给「在新对话里改」，同样照第 5 步，先问要改什么。

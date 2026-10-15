@@ -1600,7 +1600,7 @@
     "pub_schedule_go": "排期 {n} 个账号",
     "records_empty": "还没发到任何账号。"
   },
-  "outputs": {
+  "artifacts": {
     "title": "产物",
     "making_from_doc": "正在照这篇做视频",
     "making_desc": "AI 在这台电脑上做视频，做好了出现在这篇视频文章的产物里；点「看过程」看它在做什么。",

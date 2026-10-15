@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { Copy, FileText, Pencil, Plus, Search, Trash2, Upload, Video } from 'lucide-react'
+import { AssetPreview } from '../AssetPreview'
+import { fileSrc, kindOfMime, mimeOf } from '../../lib/files'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls } from '../ui'
-import { dbCreate, dbDelete, dbList, dbPatch, shuttleImage, videoSrc, type Asset, type AssetKind } from '../../lib/shuttle'
+import { dbCreate, dbDelete, dbList, dbPatch, type Asset, type AssetKind } from '../../lib/shuttle'
 import { usePasteFiles } from '../../lib/usePasteFiles'
 import { ACCEPT_UPLOAD, ASSET_KINDS, assetTags, filterAssets, kindOfUrl, nameOfUrl, splitTags, uploadAssets, type UploadItem } from '../../lib/assets'
 import UploadProgress from '../UploadProgress'
@@ -9,11 +11,15 @@ import Lightbox from '../Lightbox'
 import type { Ctx } from './types'
 import { tr } from '../../lib/i18n'
 
-type KindFilter = '' | AssetKind
+// file：图片、视频、文字以外的（AI 做的网页、音频、文档…），按 mime 归类（lib/files.ts）
+type KindFilter = '' | AssetKind | 'file'
+
+/** 筛选用的大类：文字看 kind，别的按 mime（老数据没有 mime 按扩展名、kind 猜） */
+const groupOf = (a: Asset): string => (a.kind === 'text' ? 'text' : kindOfMime(mimeOf(a as Asset & { mime?: string })))
 
 /** 素材库：图片、视频的地址和文字素材，存在 assets 表。写社媒笔记时「从素材库选」读这里 */
 export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
-  const kind: KindFilter = (['image', 'video', 'text'] as string[]).includes(params.kind) ? (params.kind as AssetKind) : ''
+  const kind: KindFilter = (['image', 'video', 'text', 'file'] as string[]).includes(params.kind) ? (params.kind as KindFilter) : ''
   const tag = params.tag ?? ''
   const [q, setQ] = useState('')
   const [list, setList] = useState<Asset[] | null>(null)
@@ -39,15 +45,15 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
   }, [ctx.rev])
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { '': 0, image: 0, video: 0, text: 0 }
+    const c: Record<string, number> = { '': 0, image: 0, video: 0, text: 0, file: 0 }
     for (const a of list ?? []) {
       c['']++
-      c[a.kind] = (c[a.kind] ?? 0) + 1
+      c[groupOf(a)] = (c[groupOf(a)] ?? 0) + 1
     }
     return c
   }, [list])
   const tags = useMemo(() => [...new Set((list ?? []).flatMap(assetTags))].sort(), [list])
-  const shown = useMemo(() => filterAssets(list ?? [], { q, kind, tag }), [list, q, kind, tag])
+  const shown = useMemo(() => filterAssets(list ?? [], { q, tag }).filter((a) => !kind || groupOf(a) === kind), [list, q, kind, tag])
 
   const upload = async (files: File[]) => {
     if (!files.length || uploading) return
@@ -106,6 +112,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
             { value: 'image', label: tr('assets.f_image', { n: counts.image }) },
             { value: 'video', label: tr('assets.f_video', { n: counts.video }) },
             { value: 'text', label: tr('assets.f_text', { n: counts.text }) },
+            ...(counts.file ? [{ value: 'file' as const, label: tr('assets.f_file', { n: counts.file }) }] : []),
           ]}
         />
         <div className="relative min-w-48 flex-1 sm:max-w-72">
@@ -178,17 +185,13 @@ function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabl
           <FileText className="size-4 text-muted-foreground" />
           <p className="line-clamp-5 text-xs leading-relaxed whitespace-pre-line">{a.text}</p>
         </div>
-      ) : a.kind === 'video' ? (
-        <div className="relative">
-          <video src={videoSrc(a.url)} controls preload="metadata" className="aspect-[4/3] w-full bg-black object-contain" />
-          <Video className="pointer-events-none absolute top-2 left-2 size-4 text-white drop-shadow" />
-        </div>
       ) : (
-        <button type="button" onClick={() => setZoom(true)} aria-label={a.name || ASSET_KINDS[a.kind]} className="block w-full cursor-zoom-in bg-muted">
-          <img src={shuttleImage(a.url)} alt={a.name ?? ''} loading="lazy" className="aspect-[4/3] w-full object-cover" />
-        </button>
+        <div className="relative">
+          <AssetPreview a={a} onZoom={() => setZoom(true)} />
+          {a.kind === 'video' && <Video className="pointer-events-none absolute top-2 left-2 size-4 text-white drop-shadow" />}
+        </div>
       )}
-      {zoom && a.url && <Lightbox src={a.url} alt={a.name ?? ''} onClose={() => setZoom(false)} />}
+      {zoom && a.url && <Lightbox src={fileSrc(a.url)} alt={a.name ?? ''} onClose={() => setZoom(false)} />}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="truncate text-sm font-medium" title={a.name}>

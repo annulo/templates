@@ -10,7 +10,11 @@
       },
       "kind": {
         "type": "string",
-        "description": "image / video / text"
+        "description": "image / video / text / file（网页、音频、文档这类其余的文件；具体是什么看 mime）"
+      },
+      "mime": {
+        "type": "string",
+        "description": "文件类型，比如 video/mp4、image/png、text/html、audio/mpeg：页面按它显示（视频、图片直接放，网页用浏览器打开）。没有时按地址的扩展名猜"
       },
       "name": {
         "type": "string",

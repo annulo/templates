@@ -313,6 +313,11 @@
   },
   "assets": {
     "note": "备注",
-    "note_ph": "这是什么、怎么来的"
+    "note_ph": "这是什么、怎么来的",
+    "f_file": "其他 {n}"
+  },
+  "files": {
+    "open": "打开",
+    "open_browser": "在浏览器中打开"
   }
 }

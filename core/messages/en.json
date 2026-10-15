@@ -313,6 +313,11 @@
   },
   "assets": {
     "note": "Note",
-    "note_ph": "What this is and where it came from"
+    "note_ph": "What this is and where it came from",
+    "f_file": "Other {n}"
+  },
+  "files": {
+    "open": "Open",
+    "open_browser": "Open in browser"
   }
 }
