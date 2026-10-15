@@ -1,3 +1,6 @@
+- version: 0.14.7
+  zh: 工作台整合今日任务与每周总结，网站运营、自媒体运营和产品资料分组展示，侧栏支持折叠。增长目标与常用入口集中在工作台，保留原有内容和周报链接。
+  en: Combine daily tasks and weekly summaries in the workbench, group website operations, social operations and product resources, and support collapsible navigation. Keep growth goals and shortcuts together while preserving existing content and report links.
 - version: 0.14.6
   zh: 网站与自媒体内容的所有任务状态均可再次编辑，包括已发布、已排期和已归档；修改保存后刷新仍保留并用于状态筛选。列表与计划详情同步显示，可恢复自动判断，正文、素材与历史回执保留。
   en: Edit every task status in website and social content, including published, scheduled and archived tasks. Saved progress persists after reload and drives filters, with matching plan details. Restore automatic status at any time; content, assets and publication receipts are preserved.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { CircleHelp, Menu, Share2, X, Settings2 } from "lucide-react";
+import { ChevronDown, CircleHelp, Menu, Share2, X, Settings2 } from "lucide-react";
 import ProductOverview from "../components/views/ProductOverview";
 import Wizard from "../components/wizard/Wizard";
 import ProductFacts from "../components/views/ProductFacts";
@@ -21,7 +21,6 @@ import SiteVisits from "../components/views/SiteVisits";
 import Help from "../components/views/Help";
 import Assistant from "../components/views/Assistant";
 import PublishProgress from "../components/PublishProgress";
-import SocialNavEntry from "../components/SocialNavEntry";
 import { Button, Notice, Skeleton, cx } from "../components/ui";
 import { g } from "../components/ProductFields";
 import {
@@ -40,6 +39,7 @@ import { tr, useT } from "../lib/i18n";
 import { NAV } from "../lib/edition";
 import type { Ctx, View } from "../components/views/types";
 
+const NAV_COLLAPSED = "annulo:product-nav-collapsed";
 const read = () =>
   typeof window === "undefined"
     ? {}
@@ -124,6 +124,23 @@ export default function Index() {
     return () => clearInterval(timer);
   }, [plugin, reloadChannels]);
   const checklist = useChecklist(rev);
+  // 侧栏收起的分组只记在这台电脑的浏览器里；读不到就全部展开
+  const [collapsed, setCollapsed] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(NAV_COLLAPSED) || "[]");
+      if (Array.isArray(saved))
+        setCollapsed(saved.filter((group): group is string => typeof group === "string"));
+    } catch {}
+  }, []);
+  const toggleGroup = (group: string) =>
+    setCollapsed((c) => {
+      const next = c.includes(group) ? c.filter((x) => x !== group) : [...c, group];
+      try {
+        localStorage.setItem(NAV_COLLAPSED, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   const allowed: View[] = [
     "overview",
     "reports",
@@ -211,7 +228,8 @@ export default function Index() {
     if (view === "assets")
       return <Assets ctx={ctx} params={params} setParam={setParam} />;
     if (view === "reports")
-      return <Reports ctx={ctx} params={params} setParam={setParam} />;
+      return <ProductOverview ctx={ctx} tab="weekly" onTab={(v) => go(v === "weekly" ? "reports" : "overview")}
+        weekly={<Reports ctx={ctx} params={params} setParam={setParam} embedded />} />;
     if (view === "social")
       return <SocialAccounts ctx={ctx} params={params} setParam={setParam} />;
     if (view === "social-metrics")
@@ -237,8 +255,12 @@ export default function Index() {
       return <Help ctx={ctx} params={params} setParam={setParam} />;
     if (view === "assistant")
       return <Assistant ctx={ctx} params={params} setParam={setParam} />;
-    return <ProductOverview ctx={ctx} />;
+    return <ProductOverview ctx={ctx} tab="today" onTab={(v) => go(v === "weekly" ? "reports" : "overview")} />;
   };
+  // 每周总结并进了工作台：旧的 view=reports 链接仍然能打开，侧栏高亮工作台
+  const navView: View = view === "reports" ? "overview" : view;
+  const groupActive = (group: (typeof NAV)[number]) =>
+    group.sections.some((s) => s.items.some((n) => n.view === navView));
   const navClass = (active: boolean) =>
     cx(
       "flex h-9 w-full cursor-pointer items-center gap-2 rounded-md px-3 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring",
@@ -296,38 +318,83 @@ export default function Index() {
             <X className="size-4" />
           </button>
         </div>
-        <nav className="flex-1 space-y-5 overflow-y-auto p-3">
-          {NAV.map((group, i) => (
-            <div key={group.group || i}>
-              {group.presentation === "social" ? (
-                <SocialNavEntry
-                  channels={channels}
-                  active={view === "social"}
-                  onClick={() => go("social")}
-                />
-              ) : (
-                <>
-                  <p className="mb-2 px-3 text-xs text-muted-foreground">
-                    {t(group.group || "g_work")}
-                  </p>
-                  <div className="space-y-1">
-                    {group.items.map((n) => (
-                      <button
-                        key={n.view}
-                        aria-current={view === n.view ? "page" : undefined}
-                        className={navClass(view === n.view)}
-                        title={t(n.view + "_sub")}
-                        onClick={() => go(n.view)}
-                      >
-                        <n.icon className="size-4 shrink-0" />
-                        <span>{t(n.view)}</span>
-                      </button>
+        <nav className="flex-1 space-y-4 overflow-y-auto p-3">
+          {NAV.map((group, i) => {
+            const items = group.sections.flatMap((s) => s.items);
+            // 没有组名的是最上面的常用入口，直接列出来
+            if (!group.group)
+              return (
+                <div key={i} className="space-y-1">
+                  {items.map((n) => (
+                    <button
+                      key={n.view}
+                      aria-current={navView === n.view ? "page" : undefined}
+                      className={navClass(navView === n.view)}
+                      title={t(n.view + "_sub")}
+                      onClick={() => go(n.view)}
+                    >
+                      <n.icon className="size-4 shrink-0" />
+                      <span>{t(n.view)}</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            const active = groupActive(group);
+            const open = active || !collapsed.includes(group.group);
+            const GroupIcon = group.icon;
+            return (
+              <div
+                key={group.group}
+                className={cx(
+                  "rounded-lg",
+                  i === NAV.length - 1 && "border-t border-sidebar-border pt-4",
+                )}
+              >
+                <button
+                  aria-expanded={open}
+                  onClick={() => !active && toggleGroup(group.group!)}
+                  className={cx(
+                    "flex h-8 w-full items-center gap-2 rounded-md px-3 text-left text-xs font-semibold tracking-wide transition-colors",
+                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                    !active && "cursor-pointer",
+                  )}
+                >
+                  {GroupIcon && <GroupIcon className="size-3.5 shrink-0" />}
+                  <span className="flex-1">{t(group.group)}</span>
+                  {!active && (
+                    <ChevronDown
+                      className={cx("size-3.5 transition-transform", !open && "-rotate-90")}
+                    />
+                  )}
+                </button>
+                {open && (
+                  <div className="mt-1 ml-[18px] space-y-2 border-l border-sidebar-border pl-2">
+                    {group.sections.map((sec, j) => (
+                      <div key={sec.section || j} className="space-y-0.5">
+                        {sec.section && group.sections.length > 1 && (
+                          <p className="px-3 pt-1 pb-0.5 text-[11px] text-muted-foreground/70">
+                            {t(sec.section)}
+                          </p>
+                        )}
+                        {sec.items.map((n) => (
+                          <button
+                            key={n.view}
+                            aria-current={navView === n.view ? "page" : undefined}
+                            className={cx(navClass(navView === n.view), "h-8")}
+                            title={t(n.view + "_sub")}
+                            onClick={() => go(n.view)}
+                          >
+                            <n.icon className="size-4 shrink-0" />
+                            <span className="truncate">{t(n.view)}</span>
+                          </button>
+                        ))}
+                      </div>
                     ))}
                   </div>
-                </>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </nav>
         <div className="space-y-1 border-t border-sidebar-border p-3">
           {(

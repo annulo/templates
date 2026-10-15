@@ -794,8 +794,9 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
       </Panel>
+      <div className="grid gap-4 xl:grid-cols-2">
       <Panel title={cw('website_ops')}>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <MetricCard
           label={m("seo_targets")}
           value={data?.counts.seo}
@@ -810,7 +811,7 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
       </div>
       </Panel>
       <Panel title={cw('social_ops')}>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <MetricCard label={cw('social_content')} value={data ? entries.filter(e => e.workspaces.includes('social')).length : undefined} onClick={() => ctx.go('social-content')}
         />
         <MetricCard
@@ -825,6 +826,7 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
         />
       </div>
       </Panel>
+      </div>
       {!!entries.filter(e => !e.workspaces.length).length && <Button variant="ghost" onClick={() => ctx.go('social-content', { ownership: 'unassigned' })}>{cw('unassigned_count', { n: entries.filter(e => !e.workspaces.length).length })}</Button>}
     </div>
   );
