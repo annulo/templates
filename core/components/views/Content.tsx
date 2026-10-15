@@ -45,7 +45,7 @@ type Writer = ReturnType<typeof useTask>
  * 能做视频的模板（creator）传进来：「交给 AI」选视频时交给 task 真的做一条视频（参数 { article_id, note }），
  * 文章页在正文下面放 Panel（视频的各个版本、正在做的视频）。没传就和以前一样，改成视频只写标题和简介。
  */
-export type VideoMaking = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void }> }
+export type VideoMaking = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void; rev?: number }> }
 
 /** 交给做视频的任务：开一段对话、在右侧打开 */
 async function startVideo(video: VideoMaking, articleId: string, note: string) {
@@ -680,7 +680,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
         <footer className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4"><ArticleTime label={tr('content.created')} value={a.created_at} /><ArticleTime label={tr('content.updated')} value={a.updated_at || a.created_at} /></footer>
       </article>
 
-      {video && <video.Panel article={a} all={all} open={open} onChanged={onChanged} />}
+      {video && <video.Panel article={a} all={all} open={open} onChanged={onChanged} rev={ctx.rev} />}
       {inspiration && <InspirationReferences ctx={ctx} targetType="article" targetId={a.id} onChanged={onChanged} />}
       <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} linkedRecords={publicationLinks} />
 
