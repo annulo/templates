@@ -373,6 +373,7 @@
   "content": {
     "restored": "恢复了上次没保存的修改（{ago}）。",
     "restored_changed": "这篇在那之后被改过（比如 AI 改了），保存会盖掉那边的改动。",
-    "restored_discard": "丢弃，用已保存的"
+    "restored_discard": "丢弃，用已保存的",
+    "edit_done": "完成"
   }
 }

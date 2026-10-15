@@ -578,8 +578,10 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     run('save', async () => {
       if (!draft.title.trim()) throw new Error(tr('content.need_title'))
       await dbPatch('articles', a.id, { ...patchOf(draft, type), updated_at: new Date().toISOString() })
-      setEditing(false)
+      // 保存了还在编辑：存的就是现在的底稿（表里刷新回来和它一样，编辑框不重载、光标不丢）
+      setBase(draft)
       setStale(false)
+      setRestored(null)
     })
 
   // 有没保存的手动修改：先存再交给 AI，AI 才看得到
@@ -624,7 +626,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
             {statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {editing ? <><Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => setEditing(false)}>{tr('common.cancel')}</Button><Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !dirty}>{tr('common.save')}</Button></> : <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
+            {editing ? <><Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => setEditing(false)}>{dirty ? tr('common.cancel') : tr('content.edit_done')}</Button><Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !dirty}>{tr('common.save')}</Button></> : <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
             {/* 能「在这篇上做」的模板：改正文也在「交给 AI」里说，不单独一个「AI 修改」 */}
             {!work && <Button size="sm" variant="outline" onClick={() => setAsking(true)} disabled={locked || !reviser.shuttle}><Sparkles />{tr('content.ask_ai')}</Button>}
             <Button size="sm" variant="outline" onClick={() => setAiOpen(work ? {} : { mode: 'new' })} disabled={locked || !rewriter.shuttle}>{work ? <Wand2 /> : <Repeat2 />}{work ? tr('article.ai') : tr('article.rewrite')}</Button>
