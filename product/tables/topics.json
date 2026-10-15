@@ -67,6 +67,30 @@
       "content_type": {
         "type": "string",
         "description": "article / post / video"
+      },
+      "target_account_id": {
+        "type": "string",
+        "description": "目标社媒账号 ID，账号名不能代替身份"
+      },
+      "account_role_key": {
+        "type": "string",
+        "description": "账号内容策略标识"
+      },
+      "plan_key": {
+        "type": "string",
+        "description": "同一主题内稳定内容版本标识"
+      },
+      "marketing_plan_id": {
+        "type": "string",
+        "description": "原营销计划记录 ID"
+      },
+      "workspace": {
+        "type": "string",
+        "description": "内容归属 website / social；旧记录未确认时为空，不根据内容格式猜测"
+      },
+      "workflow_stages": {
+        "type": "string",
+        "description": "按工作区保存的手动任务进度 JSON：website / social；空值恢复自动判断，不代替发布或排期记录"
       }
     },
     "required": [

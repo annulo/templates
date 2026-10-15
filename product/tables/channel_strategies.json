@@ -1,0 +1,52 @@
+{
+  "name": "账号内容策略",
+  "desc": "账号内容策略",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "key": {
+        "type": "string",
+        "description": "key"
+      },
+      "name": {
+        "type": "string",
+        "description": "name"
+      },
+      "platform": {
+        "type": "string",
+        "description": "platform"
+      },
+      "purpose": {
+        "type": "string",
+        "description": "purpose"
+      },
+      "guidance": {
+        "type": "string",
+        "description": "guidance"
+      },
+      "cta": {
+        "type": "string",
+        "description": "cta"
+      },
+      "account_id": {
+        "type": "string",
+        "description": "account_id"
+      },
+      "origin": {
+        "type": "string",
+        "description": "origin"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "created_at"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "updated_at"
+      }
+    },
+    "required": [
+      "key"
+    ]
+  }
+}

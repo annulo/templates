@@ -55,7 +55,7 @@ function localDay(d: Date) {
  * 社交媒体：账号的状态和数据（粉丝、互动、采集）。内容的编辑、审核、发布、排期在内容页（各渠道版本）和发布日历，这里不重复。
  * 旧链接的 ?tab=… 已经没有对应的页签，落到账号概览；?post=<id> 仍然打开那一条（从平台采回来、不属于任何文章的帖子只在这里看得到）。
  */
-export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
+export default function Social({ ctx, params, setParam, title, hideTabs = false, onSectionChange }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; title?: string; hideTabs?: boolean; onSectionChange?: (section: 'overview' | 'data', extra: Record<string, string>) => void }) {
   type Section = 'overview' | 'data'
   const section: Section = params.section === 'data' ? 'data' : 'overview'
   const [posts, setPosts] = useState<SocialPost[] | null>(null)
@@ -101,7 +101,7 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const issues = accounts.filter((a) => expired(a) || broken(a))
   const collectable = accounts.filter((a) => !other(a) && a.login_status === 'ok')
   const oldest = collectable.map((a) => a.collected_at).filter((t): t is string => !!t).sort()[0]
-  const openSection = (next: Section, extra: Record<string, string> = {}) => ctx.go('social', { section: next, ...extra })
+  const openSection = (next: Section, extra: Record<string, string> = {}) => onSectionChange ? onSectionChange(next, extra) : ctx.go('social', { section: next, ...extra })
   const manage = () => ctx.go('channels', selected ? { channel: selected.id } : {})
   const focused = owned.find((p) => p.id === params.post)
   const openPost = (p: SocialPost) => p.article_id ? ctx.go('content', { article: p.article_id, version: p.id }) : setParam('post', p.id)
@@ -122,11 +122,11 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const recent = [...owned].filter((p) => p.status === 'published').sort((x, y) => Date.parse(y.published_at || '') - Date.parse(x.published_at || '')).slice(0, 5)
 
   return <div className="space-y-6">
-    <PageHeader title={tr('social.hub_title')} desc={tr('social.hub_desc')} actions={<>
+    <PageHeader title={title || tr('social.hub_title')} desc={tr('social.hub_desc')} actions={<>
       <Button variant="outline" onClick={manage}>{tr('social.manage_accounts')}</Button>
       <Button onClick={() => ctx.go('content', { tab: 'articles', new: '1' })}><Plus />{tr('social.create_social')}</Button>
     </>} />
-    <WorkspaceTabs id="social" label={tr('social.hub_title')} value={section} onChange={(next) => openSection(next, selected ? { account: selected.id } : {})} options={[{ value: 'overview', label: tr('social.tab_overview') }, { value: 'data', label: tr('social.tab_data') }]} />
+    {!hideTabs && <WorkspaceTabs id="social" label={tr('social.hub_title')} value={section} onChange={(next) => openSection(next, selected ? { account: selected.id } : {})} options={[{ value: 'overview', label: tr('social.tab_overview') }, { value: 'data', label: tr('social.tab_data') }]} />}
     {error && <ErrorDetails message={error} />}
     <div id="social-panel" role="tabpanel" aria-labelledby={`social-${section}`} className="space-y-6">
       {accounts.length === 0 ? <Notice>{tr('social.hub_empty', { name: tr('nav.channels') })}</Notice> : section === 'overview' ? <>
