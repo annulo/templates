@@ -88,9 +88,11 @@ const Video = Node.create({
     const idle = () => {
       playing = false
       dom.classList.remove('playing')
+      dom.removeAttribute('draggable') // 回到能整块拖动（ProseMirror 按节点的 draggable 处理）
       v.controls = false
     }
-    v.addEventListener('pause', idle)
+    // 拖进度条时有的浏览器会先发一个 pause：那不是真暂停，等拖完再看还停着才算
+    v.addEventListener('pause', () => setTimeout(() => { if (v.paused && !v.seeking && playing) idle() }, 300))
     v.addEventListener('ended', idle)
     tag.addEventListener('click', (e) => {
       e.preventDefault()
@@ -105,6 +107,8 @@ const Video = Node.create({
       e.stopPropagation()
       playing = true
       dom.classList.add('playing')
+      // 播放时不能整块拖动：在视频上按住拖是拖进度条
+      dom.setAttribute('draggable', 'false')
       v.src = shown(node.attrs.src)
       v.controls = true
       v.muted = false
@@ -113,7 +117,7 @@ const Video = Node.create({
     })
     dom.append(v, tag, play)
     // 播放起来以后，视频上的点击、拖进度条交给播放器，编辑器不当成选中、拖动
-    return { dom, stopEvent: (e: Event) => e.target === play || e.target === tag || (playing && e.target === v), ignoreMutation: () => true }
+    return { dom, stopEvent: (e: Event) => e.target === play || e.target === tag || (playing && (e.target === v || e.type.startsWith('drag'))), ignoreMutation: () => true }
   },
 })
 
