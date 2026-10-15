@@ -40,12 +40,19 @@ class ComposeTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             lib.compose('creator/', {}, self.files, 'test')
 
-    def test_scoped_release_requires_its_own_changelog(self):
+    def test_release_requires_the_template_changelog_and_a_higher_version(self):
         files = {'creator/changelog.yaml': b'- version: 0.14.0\n'}
-        with self.assertRaises(SystemExit):
-            publish.check_changelog(files, 'v0.14.0', ['product'])
-        publish.check_changelog(files, 'v0.14.0', ['creator'])
-
+        current = publish.current
+        try:
+            publish.current = lambda name: 'v0.13.1'
+            publish.check_version(files, 'creator', 'v0.14.0')
+            for bad in ['v0.13.1', 'v0.13.0', 'creator/v0.14.0', '0.14.0', 'v0.15.0']:
+                with self.assertRaises(SystemExit):
+                    publish.check_version(files, 'creator', bad)
+            with self.assertRaises(SystemExit):
+                publish.check_version(files, 'product', 'v0.14.0')
+        finally:
+            publish.current = current
 
 if __name__ == '__main__':
     unittest.main()

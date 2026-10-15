@@ -18,8 +18,8 @@ To use templates from your own repository: New project → **Add a git template*
 
 ## Versions
 
-A version is a semver tag (`v1.2.0`); pre-releases (`v1.3.0-beta.1`) are not offered. Annulo reads only tags, never `main`, and copies each template directory as it is at the tag, so every tag must contain finished templates.
-That is why tags live on the [`release`](../../tree/release) branch: `main` holds the sources, and `python3 publish/publish.py release --note "…" --tag vX.Y.Z` assembles each template (its own files + `core/`), commits the result to `release` and tags it. Nobody commits to `release` by hand.
+Each template has its own versions: a tag `<template>/vX.Y.Z` (`creator/v0.14.0`), like the [plugins](https://github.com/annulo/plugins). Pre-releases (`v1.3.0-beta.1`) are not offered. Tags `vX.Y.Z` without a directory are the versions released before templates were versioned separately; Annulo still uses them as history.
+Annulo reads only tags, never `main`, and copies the template directory as it is at the tag, so every tag must contain a finished template. That is why tags live on the [`release`](../../tree/release) branch: `main` holds the sources, and `python3 publish/publish.py <template> --note "…" --tag vX.Y.Z` assembles the template (its own files + `core/`), commits it to `release` and tags it `<template>/vX.Y.Z`. Nobody commits to `release` by hand.
 Upgrade notes come from each template's `changelog.yaml` (newest first, one entry per version with a paragraph per language); the tag message is shown only when the file has no entry for that version.
 
 ## Contributing
