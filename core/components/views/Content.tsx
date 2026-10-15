@@ -693,7 +693,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
       )}
       {/* 稿子：能「在这篇上做」的模板才有（文章表有 draft 字段） */}
       {/* 稿子的编辑条和正文的一样吸在顶上那条下面（--sticky-top） */}
-      {work && <div style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><Draft a={a} locked={locked} onChanged={onChanged} control={onDraftControl} onAIWrite={() => setAiOpen({ mode: 'here', preset: 'from_draft' })} onRewrite={() => setAiOpen({ mode: 'new' })} /></div>}
+      {work && <div style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><Draft a={a} locked={locked} onChanged={onChanged} control={onDraftControl} onAIWrite={() => setAiOpen({ mode: 'here', preset: 'from_draft' })} /></div>}
       <article className="w-full min-w-0" style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}>
         {editing ? (
           <div className="space-y-3">

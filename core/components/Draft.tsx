@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowDownToLine, ChevronDown, ChevronRight, Loader2, NotebookPen, Repeat2, Wand2 } from 'lucide-react'
+import { ArrowDownToLine, ChevronDown, ChevronRight, Loader2, NotebookPen, Wand2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, cx } from './ui'
 import { tr } from '../lib/i18n'
@@ -8,7 +8,7 @@ import { htmlImages, htmlText, parseList, typeOf } from '../local/_types'
 import { clearUnsaved, readUnsaved, writeUnsaved } from '../lib/unsaved'
 
 // 稿子（articles.draft）：每篇文章可选的工作稿，默认折叠（creator/docs/artifacts.md「稿子」）。写为什么写这篇、大纲、草稿、剧本，不发出去。
-// 下面三个入口：放进正文（不经过 AI，按类型换格式）、AI 写成正文（「在这篇上做」的预设，onAIWrite）、改写成…（另写一篇，onRewrite）。
+// 下面两个入口：放进正文（不经过 AI，按类型换格式）、AI 写成正文（「在这篇上做」的预设，onAIWrite）。改写成别的类型在顶部「交给 AI → 另写一篇」。
 
 const draftOf = (a: Article) => String((a as Article & { draft?: string }).draft ?? '')
 const plain = (html: string) => htmlText(html).trim()
@@ -16,7 +16,7 @@ const plain = (html: string) => htmlText(html).trim()
 /** 交给文章页顶部的「保存」「取消」：稿子没有自己的保存按钮，顶部一次存正文和稿子 */
 export type DraftControl = { dirty: boolean; save: () => Promise<boolean>; discard: () => void; restoredAt: number }
 
-export default function Draft({ a, locked, onChanged, onAIWrite, onRewrite, control }: { a: Article; locked: boolean; onChanged: () => void; onAIWrite?: () => void; onRewrite: () => void; control?: (c: DraftControl) => void }) {
+export default function Draft({ a, locked, onChanged, onAIWrite, control }: { a: Article; locked: boolean; onChanged: () => void; onAIWrite?: () => void; control?: (c: DraftControl) => void }) {
   const saved = draftOf(a)
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState(saved)
@@ -84,7 +84,6 @@ export default function Draft({ a, locked, onChanged, onAIWrite, onRewrite, cont
           <div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
             <Button size="sm" variant="outline" disabled={!plain(value) || !!busy || locked} onClick={toBody} onMouseLeave={() => setConfirm(false)}>{busy === 'body' ? <Loader2 className="animate-spin" /> : <ArrowDownToLine />}{confirm ? tr('draft.to_body_confirm') : tr('draft.to_body')}</Button>
             {onAIWrite && <Button size="sm" variant="outline" disabled={!plain(value) || locked} onClick={async () => { if (dirty && !(await save())) return; onAIWrite() }}><Wand2 />{tr('draft.ai_write')}</Button>}
-            <Button size="sm" variant="outline" disabled={locked} onClick={async () => { if (dirty && !(await save())) return; onRewrite() }}><Repeat2 />{tr('draft.rewrite')}</Button>
           </div>
           {err && <Notice tone="error">{err}</Notice>}
         </div>
