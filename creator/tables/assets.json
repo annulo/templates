@@ -1,6 +1,6 @@
 {
   "name": "资料库",
-  "desc": "资料库：图片、视频、文字资料。写文章、社媒帖子时从这里选",
+  "desc": "资料库：图片、视频、文字资料。写文章、社媒帖子时从这里选；AI 给文章做出来的产物（视频等）也存在这里，带 article_id",
   "json_schema": {
     "type": "object",
     "properties": {
@@ -19,6 +19,18 @@
       "text": {
         "type": "string",
         "description": "文字素材的内容（kind 是 text 时）"
+      },
+      "note": {
+        "type": "string",
+        "description": "备注：这是什么、怎么做的、和上一个比改了什么。助手存进来时写，用户随时能改；文章页的产物列表和资料库显示同一条"
+      },
+      "article_id": {
+        "type": "string",
+        "description": "哪篇文章做出来的产物（articles 的 id）：文章页列出它的产物"
+      },
+      "chat_id": {
+        "type": "string",
+        "description": "做它的对话（assets.add 从 ctx.chat_id 记下）：要改就回到这段对话接着说"
       },
       "tags": {
         "type": "string",

@@ -1,39 +1,34 @@
 ---
 name: 做成视频
-description: 照一篇文档做一条视频：video.start 建视频文章和第 1 版，在这台电脑上把视频做出来，annulo upload --local 存进来，video.finish 记下成片
+description: 照一篇文档做一条视频：video.context 拿文档和平台，在这台电脑上把视频做出来，annulo upload --local 存进来，content.save 建视频文章，assets.add 放进资料库；用户在这段对话里接着改，每改一次存一个新的
 ---
 
 参数：`article_id` 是照着做的文档（内容中心里的一篇文章：长文、图文笔记，或从 Notion 导入的），`note` 是用户这次的要求（可能来自一条 AI 预设，可以是空的）。
 
-## 1. 开一个版本，拿上下文
+## 1. 拿上下文
 
 ```bash
-annulo run video.start --input '{"doc_id":"<article_id>","note":"<note 原文>"}'
+annulo run video.context --input '{"doc_id":"<article_id>"}'
 ```
-
-它新建一篇视频文章（`source_id` 指回文档）和它的第 1 版（制作中），返回：
 
 | 字段 | 是什么 |
 |---|---|
-| `video_article_id`、`version_id`、`n` | 新视频文章、这一版、第几版。后面存结果要用 `version_id` |
 | `doc` | 文档：`title`、`type`、`summary`、`text`（纯文字）。**视频照它做**：结构、要点、措辞都从这里来；文档里写了分镜、时间码就照着做 |
-| `note` | 这次的要求 |
-| `platforms` | 要发的平台：`video` 是 `only`（只发视频：YouTube、抖音、B 站）还是 `optional`；`title_max`、`body_max`、`tags_max` 是标题、简介、话题的上限 |
+| `platforms` | 要发的平台，只发视频的在前：`video` 是 `only`（YouTube、抖音、B 站）还是 `optional`；`title_max`、`body_max`、`tags_max` 是标题、简介、话题的上限 |
 | `project` | 我的定位（语气、写给谁、不写什么） |
-| `link` | 视频文章的页面地址 |
-
-`video.start` 报错就照报错改了再跑；它一旦成功，后面不管做没做成都要跑一次 `video.finish`（见第 4 步），不然页面上这一版一直是「制作中」。
 
 ## 2. 把视频做出来
 
-照 `note` 做，`note` 是空的就照常规做：抖音、小红书用 9:16 竖屏，YouTube、B 站用 16:9 横屏，几个平台都有时以排在前面的为准；60 秒左右；开头 3 秒说清这条视频讲什么。
+照 `note` 做，`note` 是空的就照常规做：按 `platforms` 排在最前面的平台定横竖屏（抖音、小红书 9:16 竖屏，YouTube、B 站 16:9 横屏）；60 秒左右；开头 3 秒说清这条视频讲什么。
 
 - **用什么做由你定**：Remotion、ffmpeg、HTML 动画录屏……`note` 里指定了就用它。这台电脑上缺的工具自己装（npm、pip、brew），装了什么在回复里告诉用户。
-- **工程和中间文件放哪**照系统提示里「工作文件放哪」：不要放进项目目录。同一个项目做视频共用一个工程（放在那个目录的 `video/` 下），每条视频一个子目录，用视频文章的 id（`video_article_id`）命名，下次改版照这个规则就能找回来；渲染完把这一版的源码留一份（按版本号 `v<n>` 存，或者用 git 提交），以后能从任意一版接着改。路径不要写进表里。
+- **工程和中间文件放哪**照系统提示里「工作文件放哪」：不要放进项目目录。同一个项目做视频共用一个工程（放在那个目录的 `video/` 下），每条视频一个子目录，用文档的 id 命名，用户在这段对话里接着改时在这里接着做；路径不要写进表里。
 - 画面里的文字、旁白只用文档和定位里有的信息，不编造数据、案例、经历；`project` 里「不写什么」的不碰。
 - 用户的素材可以用：`annulo run content.images` 列出资料库里的图片（网址）。不要去翻 Annulo 的数据目录。
 - 没有配音工具时做成字幕 + 画面的版本，在回复里说明可以接什么配音。
 - 渲染出 mp4（H.264），先自己看一遍：抽几帧截图看文字有没有出界、被裁、太小，时长对不对。有问题改了再渲染。
+
+**做不成**（工具装不上、渲染一直失败）就在回复里说清卡在哪、要用户做什么，不要存半成品。
 
 ## 3. 存进项目
 
@@ -43,44 +38,31 @@ annulo upload --local <成片.mp4>
 
 打印 `local:<name>`：视频复制进了项目在这台电脑上的文件，不传云端。
 
-## 4. 记下结果
+## 4. 建视频文章、放进资料库
 
-写成 JSON 文件再存（`title`、`body`、`tags`、`category` 是视频文章发布用的标题、简介、话题、B 站分区，按 `platforms` 里最严的上限写；简介是纯文字，讲清这条视频看什么）：
+先建视频文章（`title`、`body`、`tags`、`category` 是发布用的标题、简介、话题、B 站分区，按 `platforms` 里最严的上限写；简介是纯文字，讲清这条视频看什么）：
 
 ```bash
-cat > /tmp/video-finish.json <<'JSON'
-{
-  "version_id": "<version_id>",
-  "file": "local:<name>",
-  "duration": 58.5,
-  "width": 1080,
-  "height": 1920,
-  "notes": "怎么做的、用了什么工具、有几个镜头（给下一次改版的你看，不写路径）",
-  "title": "视频标题",
-  "body": "视频简介",
-  "tags": ["话题"]
-}
+cat > /tmp/video-article.json <<'JSON'
+{ "type": "video", "source_id": "<article_id>", "title": "视频标题", "body": "视频简介", "tags": ["话题"], "video": "local:<name>" }
 JSON
-annulo run video.finish --input @/tmp/video-finish.json
+annulo run content.save --input @/tmp/video-article.json
 ```
 
-它把这一版标成做好了、设成这篇视频文章的当前视频，并放进资料库。
-
-**做不成**（工具装不上、渲染一直失败）也要记下原因，页面上这一版显示「没做成」：
+再把成片放进资料库，挂在这篇视频文章上（`note` 是备注：怎么做的、用了什么工具、有几个镜头，给用户和下一次改的你看，不写路径）：
 
 ```bash
-annulo run video.finish --input '{"version_id":"<version_id>","error":"没做成的原因，用户看得懂的一句话"}'
+annulo run assets.add --input '{"url":"local:<name>","article_id":"<content.save 返回的 article_id>","note":"<备注>","use":true}'
 ```
 
-最后回复用户：做成了什么样（时长、尺寸、几个镜头）、用了什么工具，给出链接 `[打开「标题」](<link>)`，说一句「要改就在这里直接说，每改一次存一个新版本」。
+回复用户：做成了什么样（时长、尺寸、几个镜头）、用了什么工具，给出链接 `[打开「标题」](/?view=content&article=<视频文章的 article_id>)`，说一句「要改就在这里直接说，每改一次存一个新的，旧的都留着」。
 
-## 5. 用户在这段对话里接着提意见
+## 5. 用户在这段对话里接着改
 
-用户看完会回到这段对话里接着说（页面上的「继续对话」打开的就是这里）。**每改一次是一个新版本**，旧版本留着：
+用户看完会回到这段对话里接着说（视频文章页的「继续对话」打开的就是这里），也可能在别的对话里说「把某条视频改一下」（这时先用 db_query 查 `assets` 里 `article_id` 是那篇视频文章的几条，看备注，问清楚在哪个上改、改什么）。**每改一次存一个新的，旧的留着**：
 
-1. `annulo run video.start --input '{"article_id":"<video_article_id>","version_id":"<在哪一版上改>","note":"<用户这次的原话>"}'`：
-   `version_id` 一般是刚做好的那一版；用户说「在第 2 版上改」就用第 2 版的（id 用 db_query 查 `video_versions`，按 `article_id` 和 `n` 找）。返回里 `doc_changed` 为真说明文档改过了，照新文档改。
-2. 在这一版的工程上改，**只改用户提到的**，别的保持不变；渲染、自查照第 2 步。
-3. `annulo upload --local`、`annulo run video.finish`（第 3、4 步；标题、简介、话题没变就不传），`notes` 写这一版改了什么。
+1. 在工程里改，**只改用户提到的**，别的保持不变；用户说「在之前那个上改」就从那个的状态接着改。渲染、自查照第 2 步。
+2. `annulo upload --local <新的成片.mp4>`；
+3. `annulo run assets.add --input '{"url":"local:<name>","article_id":"<视频文章的 id>","note":"<这次改了什么>","use":true}'`。不用再建视频文章；标题、简介要跟着改就用 `content.update`（`{"article_id":"…","title":"…","body":"…"}`）。
 
-用户说的不是改视频（比如问问题、要换个选题），照常回答，不用开新版本。
+用户说的不是改视频（问问题、要换个选题），照常回答。

@@ -310,5 +310,9 @@
         "prompt": "Make a video for the platforms it will go to: 9:16 portrait for Douyin and Xiaohongshu, 16:9 landscape for YouTube and Bilibili; about 60 seconds. Say what the video is about in the first 3 seconds, follow the structure of the document, get the key points across in voice-over or captions, and end with a line inviting people to follow."
       }
     }
+  },
+  "assets": {
+    "note": "Note",
+    "note_ph": "What this is and where it came from"
   }
 }

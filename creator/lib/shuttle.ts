@@ -328,28 +328,6 @@ export const isSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_
 /** AI 预设（rewrite_presets 表）：产出哪种类型 + 要求；名字、用在哪、模板自带的哪条见 core/lib/presets.ts */
 export type RewritePreset = { id: string; type: ArticleType; prompt: string; name?: string; builtin?: string; hidden?: boolean; created_at?: string; updated_at?: string }
 
-/** 视频的一个版本（video_versions 表，local/video.ts 写）：成片是本机文件 local:<name> */
-export type VideoVersion = {
-  id: string
-  article_id: string
-  n?: number
-  parent_id?: string
-  prompt?: string
-  doc_id?: string
-  doc_snapshot?: string
-  file?: string
-  duration?: number
-  width?: number
-  height?: number
-  notes?: string
-  /** 做这一版的对话：页面上「继续对话」打开它 */
-  chat_id?: string
-  status?: 'making' | 'done' | 'failed'
-  error?: string
-  created_at?: string
-  finished_at?: string
-}
-
 /** 产品目录（products 表） */
 export type Product = {
   id: string
@@ -445,6 +423,12 @@ export type Asset = {
   tags?: string
   /** url / manual / upload / agent / platform */
   source?: string
+  /** 备注：文章页的产物列表和资料库显示同一条 */
+  note?: string
+  /** AI 给哪篇文章做的产物（文章页列出它） */
+  article_id?: string
+  /** 做它的对话：要改就回到这段对话 */
+  chat_id?: string
   created_at?: string
 }
 
@@ -653,7 +637,6 @@ type Tables = {
   topics: Topic
   articles: Article
   rewrite_presets: RewritePreset
-  video_versions: VideoVersion
   publications: Publication
   social_accounts: Channel
   social_health: PlatformHealth

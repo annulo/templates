@@ -205,6 +205,7 @@ function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabl
             ))}
           </div>
         )}
+        {noteOf(a) && <p className="line-clamp-3 text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]" title={noteOf(a)}>{noteOf(a)}</p>}
         <div className="text-[11px] text-muted-foreground">{fmtTime(a.created_at)}</div>
         {err && <div className="text-xs text-destructive">{err}</div>}
         <div className="mt-auto flex items-center gap-0.5 pt-1">
@@ -326,8 +327,12 @@ function AddDialog({ open, onClose, onDone }: { open: boolean; onClose: () => vo
   )
 }
 
+/** 备注（assets.note）：AI 给文章做的产物存进来时写的，用户也能改；文章页的产物列表显示同一条。老模板的表没有这个字段时是空的 */
+const noteOf = (a: Asset) => ((a as Asset & { note?: string }).note ?? '').trim()
+
 function EditDialog({ a, onClose, onDone }: { a: Asset | null; onClose: () => void; onDone: () => void }) {
   const [name, setName] = useState('')
+  const [note, setNote] = useState('')
   const [tags, setTags] = useState('')
   const [text, setText] = useState('')
   const [err, setErr] = useState('')
@@ -336,12 +341,13 @@ function EditDialog({ a, onClose, onDone }: { a: Asset | null; onClose: () => vo
     setName(a.name ?? '')
     setTags(assetTags(a).join(' '))
     setText(a.text ?? '')
+    setNote(noteOf(a))
     setErr('')
   }, [a?.id])
   const save = async () => {
     if (!a) return
     try {
-      await dbPatch('assets', a.id, { name: name.trim(), tags: JSON.stringify(splitTags(tags)), ...(a.kind === 'text' ? { text: text.trim() } : {}) })
+      await dbPatch('assets', a.id, { name: name.trim(), tags: JSON.stringify(splitTags(tags)), ...(a.kind === 'text' ? { text: text.trim() } : {}), ...(note.trim() !== noteOf(a) ? { note: note.trim() } : {}) } as Partial<Asset>)
       onDone()
     } catch (e) {
       setErr((e as Error).message)
@@ -375,6 +381,9 @@ function EditDialog({ a, onClose, onDone }: { a: Asset | null; onClose: () => vo
         )}
         <Field label={tr('assets.tags')} hint={tr('assets.tags_hint_short')}>
           <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} />
+        </Field>
+        <Field label={tr('assets.note')}>
+          <textarea className={cx(inputCls, 'min-h-20 py-2')} value={note} placeholder={tr('assets.note_ph')} onChange={(e) => setNote(e.target.value)} />
         </Field>
         {err && <Notice tone="error">{err}</Notice>}
       </div>

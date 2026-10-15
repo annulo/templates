@@ -20,6 +20,10 @@
         "type": "string",
         "description": "文字素材的内容（kind 是 text 时）"
       },
+      "note": {
+        "type": "string",
+        "description": "备注：这是什么、怎么做的、和上一个比改了什么。助手存进来时写，用户随时能改；文章页的产物列表和资料库显示同一条"
+      },
       "tags": {
         "type": "string",
         "description": "标签，JSON 数组字符串"
