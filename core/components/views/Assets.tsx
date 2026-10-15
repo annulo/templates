@@ -5,6 +5,7 @@ import { fileSrc, kindOfMime, mimeOf } from '../../lib/files'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls } from '../ui'
 import { dbCreate, dbDelete, dbList, dbPatch, type Asset, type AssetKind } from '../../lib/shuttle'
 import { usePasteFiles } from '../../lib/usePasteFiles'
+import { useTables } from '../../lib/useTables'
 import { ACCEPT_UPLOAD, ASSET_KINDS, assetTags, filterAssets, kindOfUrl, nameOfUrl, splitTags, uploadAssets, type UploadItem } from '../../lib/assets'
 import UploadProgress from '../UploadProgress'
 import Lightbox from '../Lightbox'
@@ -40,9 +41,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
       })
   }, [])
   useEffect(load, [load])
-  useEffect(() => {
-    if (ctx.rev) load()
-  }, [ctx.rev])
+  useTables(['assets'], load, ctx.rev)
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { '': 0, image: 0, video: 0, text: 0, file: 0 }

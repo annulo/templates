@@ -6,6 +6,7 @@ import { TaskRunning, useTaskRuns } from './Task'
 import { Badge, Button, Notice, cx, fmtTime, inputCls } from './ui'
 import type { VideoMaking } from './views/Content'
 import { tr } from '../lib/i18n'
+import { useTables } from '../lib/useTables'
 import { mimeOf } from '../lib/files'
 import { askInNewChat, dbDelete, dbList, dbPatch, deleteLocalFile, openChat, type Article, type Asset } from '../lib/shuttle'
 
@@ -20,7 +21,7 @@ const MAKE_TASK = 'make-video'
 /** 交给内容中心（core/components/views/Content.tsx） */
 export const videoMaking: VideoMaking = { task: MAKE_TASK, Panel: Artifacts }
 
-function Artifacts({ article: a, all, onChanged, rev }: { article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void; rev?: number }) {
+function Artifacts({ article: a, all, onChanged }: { article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void }) {
   const [list, setList] = useState<Asset[] | null>(null)
   const [error, setError] = useState('')
   const [asking, setAsking] = useState(false)
@@ -32,8 +33,9 @@ function Artifacts({ article: a, all, onChanged, rev }: { article: Article; all:
   const changed = () => { load(); onChanged() }
   // 照这篇文档正在做的视频（make-video 任务那一轮）
   const { runs } = useTaskRuns([MAKE_TASK], (r) => r.input?.article_id === a.id, changed)
-  // rev：助手一轮做完（shuttle:refresh）时变，它在对话里新存的产物不一定改了文章本身，也要重读
-  useEffect(load, [load, a.updated_at, rev])
+  useEffect(load, [load])
+  // 资料库变了（助手在对话里存了新产物、改了备注…）就重读：Annulo 写表就推 db:changed（能力版本 44）
+  useTables(['assets'], load)
 
   const items = list ?? []
   if (!items.length) return runs.length ? <div className="mt-4"><TaskRunning runs={runs} title={() => tr('artifacts.making_from_doc')} desc={tr('artifacts.making_desc')} /></div> : null

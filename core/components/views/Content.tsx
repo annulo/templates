@@ -13,6 +13,7 @@ import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls, toast, type Tone } from '../ui'
 import { TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { CHANNEL_TYPES } from '../../lib/channels'
+import { useTables } from '../../lib/useTables'
 import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, runLocal, runTask, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
 import type { Ctx } from './types'
 import { numLocale, tr } from '../../lib/i18n'
@@ -45,7 +46,7 @@ type Writer = ReturnType<typeof useTask>
  * 能做视频的模板（creator）传进来：「交给 AI」选视频时交给 task 真的做一条视频（参数 { article_id, note }），
  * 文章页在正文下面放 Panel（视频的各个版本、正在做的视频）。没传就和以前一样，改成视频只写标题和简介。
  */
-export type VideoMaking = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void; rev?: number }> }
+export type VideoMaking = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void }> }
 
 /** 交给做视频的任务：开一段对话、在右侧打开 */
 async function startVideo(video: VideoMaking, articleId: string, note: string) {
@@ -104,16 +105,8 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
     setTopics(null)
     load()
   }, [load])
-  // 助手改了数据：静默重拉，不清空
-  useEffect(() => {
-    if (ctx.rev) load()
-  }, [ctx.rev])
-  // 后台发布（lib/publishQueue）发完一条、页面里改了文章或发布记录：静默重拉，发布记录和「已发布」跟着变
-  useEffect(() => {
-    const f = (e: Event) => { const t = (e as CustomEvent<{ table?: string }>).detail?.table; if (t === 'social_posts' || t === 'publications' || t === 'articles') load() }
-    window.addEventListener('db:changed', f)
-    return () => window.removeEventListener('db:changed', f)
-  }, [load])
+  // 用到的表变了（助手、本机函数、后台发布、别的页面写的，或者这里自己改的）：静默重拉，不清空
+  useTables(['articles', 'topics', 'social_posts', 'publications', 'assets'], load, ctx.rev)
   // 每篇发到了哪些网站和账号（只算发出去的）：列表里显示成标签，也决定「已发布」
   const publishedTo = useMemo(() => {
     const to: Record<string, { id: string; channel_id: string }[]> = {}
@@ -680,7 +673,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
         <footer className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4"><ArticleTime label={tr('content.created')} value={a.created_at} /><ArticleTime label={tr('content.updated')} value={a.updated_at || a.created_at} /></footer>
       </article>
 
-      {video && <video.Panel article={a} all={all} open={open} onChanged={onChanged} rev={ctx.rev} />}
+      {video && <video.Panel article={a} all={all} open={open} onChanged={onChanged} />}
       {inspiration && <InspirationReferences ctx={ctx} targetType="article" targetId={a.id} onChanged={onChanged} />}
       <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} linkedRecords={publicationLinks} />
 
