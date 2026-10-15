@@ -374,6 +374,7 @@
     "restored": "Restored your unsaved changes from {ago}.",
     "restored_changed": "This piece was changed since (for example by AI); saving will overwrite those changes.",
     "restored_discard": "Discard, use the saved version",
-    "edit_done": "Done"
+    "edit_done": "Done",
+    "draft_save_failed": "The draft wasn't saved; try again"
   }
 }

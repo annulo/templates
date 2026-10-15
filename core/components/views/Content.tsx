@@ -10,7 +10,7 @@ import { articleStatus, type ContentStatus } from '../../lib/articleStatus'
 import { ARTICLE_TYPES, PICKER_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleType } from '../ArticleTypes'
 import { PublishDialog, PublishRecords } from '../ArticlePublish'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
-import Draft from '../Draft'
+import Draft, { type DraftControl } from '../Draft'
 import type { PresetMode } from '../../lib/presets'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls, toast, type Tone } from '../ui'
 import { TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
@@ -549,6 +549,12 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     setEditing(true)
   }
   const dirty = editing && !sameDraft(draft, fromRow())
+  // 稿子的改动也由顶部的「保存」「取消」管（Draft 交上来的）
+  const draftCtl = useRef<DraftControl | null>(null)
+  const [draftDirty, setDraftDirty] = useState(false)
+  const [draftRestoredAt, setDraftRestoredAt] = useState(0)
+  const onDraftControl = useCallback((c: DraftControl) => { draftCtl.current = c; setDraftDirty(c.dirty); setDraftRestoredAt(c.restoredAt) }, [])
+  const anyDirty = dirty || draftDirty
   // 没保存的修改存在这台电脑上（core/lib/unsaved.ts）：离开、刷新都不丢，下次打开这篇自动恢复。保存、取消（退出编辑）后删掉
   const unsavedKey = `article:${a.id}`
   const [restored, setRestored] = useState<{ at: number; changed: boolean } | null>(null)
@@ -576,6 +582,8 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
   const discardRestored = () => { clearUnsaved(unsavedKey); setRestored(null); loadDraft(fromRow()); setEditing(false) }
   const saveEdit = () =>
     run('save', async () => {
+      if (draftCtl.current?.dirty && !(await draftCtl.current.save())) throw new Error(tr('content.draft_save_failed'))
+      if (!editing) return
       if (!draft.title.trim()) throw new Error(tr('content.need_title'))
       await dbPatch('articles', a.id, { ...patchOf(draft, type), updated_at: new Date().toISOString() })
       // 保存了还在编辑：存的就是现在的底稿（表里刷新回来和它一样，编辑框不重载、光标不丢）
@@ -626,7 +634,10 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
             {statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {editing ? <><Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => setEditing(false)}>{dirty ? tr('common.cancel') : tr('content.edit_done')}</Button><Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !dirty}>{tr('common.save')}</Button></> : <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
+            {/* 编辑中：取消（有没存的）/ 完成、保存；没在编辑但稿子改了：编辑、保存。保存一次存正文和稿子 */}
+            {editing && <Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => { draftCtl.current?.discard(); setEditing(false) }}>{anyDirty ? tr('common.cancel') : tr('content.edit_done')}</Button>}
+            {!editing && <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
+            {(editing || draftDirty) && <Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !anyDirty}>{tr('common.save')}</Button>}
             {/* 能「在这篇上做」的模板：改正文也在「交给 AI」里说，不单独一个「AI 修改」 */}
             {!work && <Button size="sm" variant="outline" onClick={() => setAsking(true)} disabled={locked || !reviser.shuttle}><Sparkles />{tr('content.ask_ai')}</Button>}
             <Button size="sm" variant="outline" onClick={() => setAiOpen(work ? {} : { mode: 'new' })} disabled={locked || !rewriter.shuttle}>{work ? <Wand2 /> : <Repeat2 />}{work ? tr('article.ai') : tr('article.rewrite')}</Button>
@@ -672,16 +683,17 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
 
       {/* 和顶上的按钮左右对齐，不居中限宽；顶上那条吸在 -1rem（抵掉滚动区的上内边距），露出来的高度是它的高度减 1rem */}
       {/* 恢复了上次没保存的修改：放在最上面的横幅 */}
-      {restored && editing && (
+      {((restored && editing) || draftRestoredAt > 0) && (
         <Notice tone="info">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="min-w-0 flex-1">{tr('content.restored', { ago: fmtTime(new Date(restored.at).toISOString()) })}{restored.changed && ` ${tr('content.restored_changed')}`}</span>
-            <Button size="sm" variant="outline" onClick={discardRestored}>{tr('content.restored_discard')}</Button>
+            <span className="min-w-0 flex-1">{tr('content.restored', { ago: fmtTime(new Date(Math.min(...[restored && editing ? restored.at : 0, draftRestoredAt].filter(Boolean))).toISOString()) })}{restored?.changed && editing && ` ${tr('content.restored_changed')}`}</span>
+            <Button size="sm" variant="outline" onClick={() => { draftCtl.current?.discard(); if (restored) discardRestored() }}>{tr('content.restored_discard')}</Button>
           </div>
         </Notice>
       )}
       {/* 稿子：能「在这篇上做」的模板才有（文章表有 draft 字段） */}
-      {work && <Draft a={a} locked={locked} onChanged={onChanged} onAIWrite={() => setAiOpen({ mode: 'here', preset: 'from_draft' })} onRewrite={() => setAiOpen({ mode: 'new' })} />}
+      {/* 稿子的编辑条和正文的一样吸在顶上那条下面（--sticky-top） */}
+      {work && <div style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><Draft a={a} locked={locked} onChanged={onChanged} control={onDraftControl} onAIWrite={() => setAiOpen({ mode: 'here', preset: 'from_draft' })} onRewrite={() => setAiOpen({ mode: 'new' })} /></div>}
       <article className="w-full min-w-0" style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}>
         {editing ? (
           <div className="space-y-3">

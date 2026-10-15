@@ -435,8 +435,9 @@ const cleanSlug = (v: unknown) =>
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/^-+|-+$/g, "");
+// 资料库里的图：网址、离线上传的 /_annulo/uploaded/…、AI 做的本机文件 local:<name>（发布时 b.upload 直接认）
 const isAsset = (u: string) =>
-  /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/)\S+$/.test(u);
+  /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/|local:[0-9a-f]{32})\S*$/.test(u);
 const cleanTags = (v: unknown) => [
   ...new Set(
     parseList(v)
@@ -796,6 +797,7 @@ export function rewriteContext(
       type: from,
       title: a.title,
       summary: a.summary ?? "",
+      draft: htmlText(String(a.draft ?? "")).slice(0, 20000),
       ...(from === "article"
         ? {
             html: body.slice(0, 60000),

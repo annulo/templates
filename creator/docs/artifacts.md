@@ -1,6 +1,6 @@
 # 文章、产物和交给 AI
 
-2026-10-15 定。已做：稿子、交给 AI 两种做法（`core/components/RewriteDialog.tsx`、`Draft.tsx`、`core/lib/presets.ts`）、任务 `work-on-article`（`local/work.ts`）、产物一组文件和 `assets.add` / `replace`（`local/assets.ts`、`components/Artifacts.tsx`、`core/components/AssetPreview.tsx`）、复制引用；产品运营、外贸还没接，「从资料库选图」展开一组、文章列表多选复制、Notion 导进稿子还没做。三个模板（自媒体、产品运营、外贸）都上，做在 `core/`；先在自媒体模板里打磨。引用（`@表:id#n`）是 Annulo 的原语，见 Annulo 仓库 `docs/references.md`。
+2026-10-15 定。已做：稿子、交给 AI 两种做法（`core/components/RewriteDialog.tsx`、`Draft.tsx`、`core/lib/presets.ts`）、任务 `work-on-article`（`local/work.ts`）、产物一组文件和 `assets.add` / `replace`（`local/assets.ts`、`components/Artifacts.tsx`、`core/components/AssetPreview.tsx`）、复制引用；三个模板都接上了（`core/components/Artifacts.tsx`、`core/local/assets.ts`、`core/local/work.ts`、`core/tasks/work-on-article.md`，文章页传 `aiWork`）。「从资料库选图」展开一组、文章列表多选复制、Notion 导进稿子还没做。三个模板（自媒体、产品运营、外贸）都上，做在 `core/`；先在自媒体模板里打磨。引用（`@表:id#n`）是 Annulo 的原语，见 Annulo 仓库 `docs/references.md`。
 
 已经做了的：AI 预设、按 `mime` 显示资料库、「打开 / 在访达中显示」、产物挂在文章上（`assets.article_id`、`chat_id`、`note`）、数据按表推送后重读。本稿是在这之上的下一步。
 

@@ -11,9 +11,12 @@ import { deleteLocalFile, filesOf } from '../lib/files'
 import { refOf } from '../lib/refs'
 import { useTables } from '../lib/useTables'
 import { parseList } from '../local/_types'
-import { askInNewChat, dbDelete, dbList, dbPatch, openChat, type Article, type Asset } from '../lib/shuttle'
+import { askInNewChat, dbDelete, dbList, dbPatch, openChat, type Article, type Asset as LibAsset } from '../lib/shuttle'
 
-// 产物（artifacts，creator/docs/artifacts.md）：AI 在一篇文章上做出来的东西（一条视频、小红书的 6 张图、一个网页…）就是资料库里的一条，带 article_id，
+/** 资料库的一条，带产物的字段（几个模板的 lib/shuttle.ts 不一定都声明了这几个） */
+type Asset = LibAsset & { article_id?: string; chat_id?: string; note?: string; files?: string; mime?: string }
+
+// 产物（artifacts，creator/docs/artifacts.md；三个模板共用，文章页传 aiWork 才有）：AI 在一篇文章上做出来的东西（一条视频、小红书的 6 张图、一个网页…）就是资料库里的一条，带 article_id，
 // 可以是一组文件（files）。文章页列出这篇的产物，最新的在前；一组显示成当前这个 + 一排缩略图（core/components/AssetPreview.tsx）。
 // 「交给 AI → 在这篇上做」交给 tasks/work-on-article.md（新任务，新开对话）。要改就回到做它的那段对话接着说（「继续对话」），
 // 整组重做存新的、只改一个改原来那组（assets.replace），不在页面上弹框收意见（AGENTS.md「接着改 AI 做出来的东西」）；那段对话找不到才新开一段。
@@ -42,7 +45,7 @@ function Artifacts({ article: a, all, onChanged }: { article: Article; all: Arti
   const [asking, setAsking] = useState(false)
   const load = useCallback(() => {
     dbList('assets')
-      .then((l) => { setList(l.filter((x) => x.article_id === a.id).sort((x, y) => String(y.created_at ?? '').localeCompare(String(x.created_at ?? '')))); setError('') })
+      .then((l) => { setList((l as Asset[]).filter((x) => x.article_id === a.id).sort((x, y) => String(y.created_at ?? '').localeCompare(String(x.created_at ?? '')))); setError('') })
       .catch((e) => { setList([]); setError((e as Error).message) })
   }, [a.id])
   const changed = () => { load(); onChanged() }
@@ -105,7 +108,7 @@ function ArtifactCard({ x, article, articles, current, onChanged }: { x: Asset; 
   const use = t === 'video' && video ? { label: tr('artifacts.use_video'), patch: { video: video.url } }
     : t === 'post' && images.length ? { label: tr('artifacts.use_images', { n: images.length }), patch: { images: JSON.stringify(images) } }
     : null
-  const saveNote = () => act(() => dbPatch('assets', x.id, { note: note.trim() })).then((ok) => ok && setEditing(false))
+  const saveNote = () => act(() => dbPatch('assets', x.id, { note: note.trim() } as Partial<LibAsset>)).then((ok) => ok && setEditing(false))
   // 删一个产物：从资料库删掉；文件没有别处在用（别的文章、发布记录）就连本机文件一起删
   const remove = () => act(async () => {
     await dbDelete('assets', x.id)

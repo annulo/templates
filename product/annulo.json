@@ -7,7 +7,7 @@
     "zh": "围绕产品与用户场景运营网站 SEO、小红书、抖音和 X：研究增长机会、规划页面、制作多平台内容，追踪注册与激活并每周复盘。",
     "en": "Grow a product through SEO, Xiaohongshu, Douyin and X: research opportunities, plan pages, create content and review acquisition and activation."
   },
-  "min_annulo_api": 40,
+  "min_annulo_api": 45,
   "plugins": {
     "social": "https://github.com/annulo/plugins#social",
     "docs": "https://github.com/annulo/plugins#docs"
