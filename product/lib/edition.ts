@@ -64,10 +64,8 @@ export const NAV: NavGroup[] = [
       },
       {
         section: "s_accounts",
-        items: [
-          { view: "social", icon: UserRound },
-          { view: "social-metrics", icon: ChartNoAxesCombined },
-        ],
+        // 单篇的数据挂在内容上（内容列表、复盘），这里只放账号：连接、定位、账号的数据
+        items: [{ view: "social", icon: UserRound }],
       },
     ],
   },
