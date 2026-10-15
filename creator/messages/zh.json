@@ -1629,6 +1629,8 @@
     "ask_new_title": "改视频：{title}",
     "ask_new_text": "我想接着改视频「{title}」（视频文章 {id}，现在是第 {n} 版）。照项目的任务 tasks/revise-video.md 做：先问我要改什么。",
     "making_n": "AI 正在做第 {n} 版",
-    "watch": "看过程"
+    "watch": "看过程",
+    "expand": "展开",
+    "collapse": "收起"
   }
 }

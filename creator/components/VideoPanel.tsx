@@ -74,6 +74,9 @@ function VideoPanel({ article: a, all, onChanged }: { article: Article; all: Art
 
 function VersionCard({ v, all, article, articles, current, onChanged }: { v: VideoVersion; all: VideoVersion[]; article: Article; articles: Article[]; current: boolean; onChanged: () => void }) {
   const [showDoc, setShowDoc] = useState(false)
+  // 要求、说明默认收成几行，长的点「展开」看全
+  const [full, setFull] = useState(false)
+  const long = (v.prompt?.length ?? 0) > 120 || (v.notes?.length ?? 0) > 80
   const [confirmDel, setConfirmDel] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -122,8 +125,9 @@ function VersionCard({ v, all, article, articles, current, onChanged }: { v: Vid
           {parent && <span className="text-xs text-muted-foreground">{tr('video.based_on', { n: parent.n ?? '?' })}</span>}
           {v.duration ? <span className="text-xs text-muted-foreground">{tr('video.seconds', { n: Math.round(v.duration) })}{v.width && v.height ? ` · ${v.width}×${v.height}` : ''}</span> : null}
         </div>
-        <p className="line-clamp-3 text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]" title={v.prompt}>{v.prompt?.trim() || <span className="text-muted-foreground">{tr('video.no_prompt')}</span>}</p>
-        {v.notes && <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground" title={v.notes}>{v.notes}</p>}
+        <p className={cx('text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]', !full && 'line-clamp-3')}>{v.prompt?.trim() || <span className="text-muted-foreground">{tr('video.no_prompt')}</span>}</p>
+        {v.notes && <p className={cx('text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]', !full && 'line-clamp-2')}>{v.notes}</p>}
+        {long && <button type="button" onClick={() => setFull((x) => !x)} className="cursor-pointer text-xs text-primary-text hover:underline">{full ? tr('video.collapse') : tr('video.expand')}</button>}
         {(status === 'failed' || status === 'stalled') && <p className="text-xs text-destructive">{v.error || tr('video.stalled_hint')}</p>}
         <div className="flex flex-wrap items-center gap-1.5 pt-1">
           {status === 'done' && !current && <Button size="sm" variant="outline" disabled={busy} onClick={setCurrent}><Check />{tr('video.set_current')}</Button>}
