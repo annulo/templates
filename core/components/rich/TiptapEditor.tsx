@@ -91,8 +91,9 @@ const Video = Node.create({
       dom.removeAttribute('draggable') // 回到能整块拖动（ProseMirror 按节点的 draggable 处理）
       v.controls = false
     }
-    // 拖进度条时有的浏览器会先发一个 pause：那不是真暂停，等拖完再看还停着才算
-    v.addEventListener('pause', () => setTimeout(() => { if (v.paused && !v.seeking && playing) idle() }, 300))
+    // 暂停了控件留着（还能拖进度）；点到这一块外面、而且停着，才回到能选中的样子；放完了也回去
+    const outside = (e: MouseEvent) => { if (playing && v.paused && !dom.contains(e.target as globalThis.Node)) idle() }
+    document.addEventListener('mousedown', outside)
     v.addEventListener('ended', idle)
     tag.addEventListener('click', (e) => {
       e.preventDefault()
@@ -117,7 +118,7 @@ const Video = Node.create({
     })
     dom.append(v, tag, play)
     // 播放起来以后，视频上的点击、拖进度条交给播放器，编辑器不当成选中、拖动
-    return { dom, stopEvent: (e: Event) => e.target === play || e.target === tag || (playing && (e.target === v || e.type.startsWith('drag'))), ignoreMutation: () => true }
+    return { dom, stopEvent: (e: Event) => e.target === play || e.target === tag || (playing && (e.target === v || e.type.startsWith('drag'))), ignoreMutation: () => true, destroy: () => document.removeEventListener('mousedown', outside) }
   },
 })
 
