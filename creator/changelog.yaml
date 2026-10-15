@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.15.0
+  zh: "每篇文章可以带一个「稿子」（默认折叠）：写为什么写这篇、大纲、剧本，不会发出去；可以直接放进正文、让 AI 照稿子写成正文，或者改写成别的类型。「改写」变成「交给 AI」，分两种：「在这篇上做」（照稿子写正文、配 5 张图、做封面、做视频……做出来的挂在这篇下面）和「另写一篇」。AI 做出来的东西是这篇的「产物」，一组图算一个产物，能左右翻看、用作配图或发布用的视频，同时出现在资料库里，带备注；要改就点「继续对话」回到做它的对话里说，只改其中一张时改原来那组。文章、产物、组里的某一张都能「复制引用」，贴进对话交给 AI（比如复制几篇文章让它做总结）。视频文件只存在这台电脑上。需要 Annulo 能力版本 45。"
+  en: "Each article can have a draft (collapsed by default): why you're writing it, an outline, a script, never published. Use it as the content, have AI write the content from it, or rewrite it as another type. \"Rewrite\" is now \"Ask AI\" with two ways: \"Work on this\" (write from the draft, make 5 images, a cover, a video… attached to this piece) and \"Write a new one\". What AI makes is this piece's artifacts: a set of images counts as one, you can flip through it and use it as the post's images or the video to publish, and it also appears in your library with a note. To change it, click \"Continue chat\" and say so in the chat that made it; changing one image updates the set in place. Articles, artifacts and single images in a set can be copied as references and pasted into a chat (for example, copy a few articles and ask for a summary). Video files stay on this computer. Requires Annulo API 45."
 - version: 0.14.7
   zh: 内容列表和详情顶部支持直接修改「草稿／已发布」状态，保存后刷新仍保留，筛选与数量同步更新；可恢复按发布记录自动更新，适用于在其他渠道已发布的内容。
   en: "Change content status between Draft and Published from the list or article header. Saved choices survive reloads and update filters and counts. Restore automatic status based on publishing records, or manually mark content published on another channel."

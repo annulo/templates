@@ -2,7 +2,7 @@ import { metricText } from '../lib/apiMetrics'
 import { facebookPublishRecovery } from '../lib/facebookPublishRecovery'
 import FacebookPublishRecovery from './FacebookPublishRecovery'
 import FacebookComments from './FacebookComments'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { AlertTriangle, ArrowUpRight, Loader2, Send, Trash2 } from 'lucide-react'
 import SchedulePopover, { ScheduledLine } from './SchedulePopover'
 import { TYPE_META, typeOf } from './ArticleTypes'
@@ -151,7 +151,7 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
 }
 
 /** 发布记录：这篇发到了哪些账号、发没发出去。失败的重发、排期的改时间或马上发、没发出去的删记录 */
-export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, onPublish }: { ctx: Ctx; article: Article; posts: SocialPost[]; pubs: Publication[]; focus?: string; onChanged: () => void; onPublish: () => void }) {
+export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, onPublish, linkedRecords }: { ctx: Ctx; article: Article; posts: SocialPost[]; pubs: Publication[]; focus?: string; onChanged: () => void; onPublish: () => void; linkedRecords?: ReactNode }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
   const queue = usePublishQueue()
@@ -172,7 +172,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
   return <section className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h2 className="text-base font-semibold">{tr('article.records')}</h2>
-      {!!(list.length || pubs.length) && <Button size="sm" variant="outline" feedback={false} onClick={onPublish}><Send />{tr('article.publish')}</Button>}
+      {!!(list.length || pubs.length || linkedRecords) && <Button size="sm" variant="outline" feedback={false} onClick={onPublish}><Send />{tr('article.publish')}</Button>}
     </div>
     {error && <Notice tone="error">{error}</Notice>}
     {!!pubs.length && <div className="overflow-hidden rounded-lg border border-border">{pubs.map((p) => {
@@ -200,7 +200,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
         </div>}
       </div>
     })}</div>}
-    {!list.length && !pubs.length ? <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">{tr('article.records_empty')}<div className="mt-3"><Button size="sm" feedback={false} onClick={onPublish}><Send />{tr('article.publish')}</Button></div></div>
+    {!list.length && !pubs.length && !linkedRecords ? <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">{tr('article.records_empty')}<div className="mt-3"><Button size="sm" feedback={false} onClick={onPublish}><Send />{tr('article.publish')}</Button></div></div>
       : !!list.length && <div className="overflow-hidden rounded-lg border border-border">{list.map((p) => {
         const ch = ctx.channels.find((c) => c.id === p.channel_id)
         const recovery = facebookPublishRecovery(p, ch)
@@ -232,5 +232,6 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
           </div>}
         </div>
       })}</div>}
+    {linkedRecords}
   </section>
 }

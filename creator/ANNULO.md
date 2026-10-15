@@ -28,7 +28,7 @@
 | 总览 `overview`（起步步骤 + 今天要做的 + 粉丝、发布数） | `checklist` | `today.list`（用户问「接下来做什么」先跑它照着答）、`channels.stats` |
 | 每周总结 `reports` | `reports` | `reports.data` / `reports.save`；任务 `weekly-report`（每 7 天定时，也能在页面点） |
 | 社媒 `social`（账号概览、数据表现） | 社媒插件的 `social_accounts`、`social_daily`、`social_post_daily`、`social_health` | `social/social.*`、`social/stats.summary` |
-| 内容中心 `content`（选题 → 文章（长文 / 图文笔记 / 视频）→ 发布到支持这种类型的账号 / 排期；改写成别的类型） | `topics`、`articles`、`rewrite_presets`、插件的 `social_posts`（发布记录） | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.rewriteContext` / `save`（任务 `rewrite-article`）、`publish.prepare` |
+| 内容中心 `content`（选题 → 文章（长文 / 图文笔记 / 视频）→ 发布到支持这种类型的账号 / 排期；改写成别的类型、做成视频） | `topics`、`articles`、`rewrite_presets`（AI 预设）、`assets`（产物）、插件的 `social_posts`（发布记录） | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.rewriteContext` / `save`（任务 `rewrite-article`）、`work.context`、`assets.add` / `replace`（任务 `work-on-article`）、`publish.prepare` |
 | 发布日历 `calendar`（按天看排期和发布，拖动改排期） | 读 `social_posts`、`articles` | |
 | 我的定位 `company` | `profile` | `profile.get` / `save` |
 | 资料库 `assets` | `assets` | |
@@ -51,6 +51,18 @@
 要发到不支持这种类型的平台，就「改写」成它支持的类型：任务 `rewrite-article`（参数 `article_id`、`type`、`note`）另存一篇新的，`source_id` 指回原文。
 `content.save` 存的文章带 `unread: true`（新文章），用户打开就清掉；左侧「内容中心」的数字数它，列表里新文章单独标出来。
 用户常用的改写要求存在 `rewrite_presets`（`type` + `prompt`），在改写弹窗里点一下就填好。
+
+## 稿子、交给 AI、产物、引用
+
+设计见 `docs/artifacts.md`。
+
+- **稿子**（`articles.draft`，可选，默认折叠）：作者的工作稿（为什么写这篇、大纲、草稿、剧本），**不发出去**；正文才发。读哪个、怎么用你自己定；用户没让写稿子就不改稿子。
+- **交给 AI** 两种做法，都是预设（`rewrite_presets`，`mode`）：
+  - **在这篇上做**：任务 `work-on-article`（参数 `article_id`、`note`），改这篇的正文（原来的「AI 修改」）也走它：`work.context` 拿这篇的稿子、正文、产物、平台；写正文用 `content.update`，做文件 `annulo upload --local` 后 `assets.add` 存成这篇的产物；
+  - **另写一篇**：任务 `rewrite-article`，只生成新文章的正文。
+- **产物（artifacts）**是资料库里带 `article_id` 的一条，可以是一组文件（`files`，6 张图一条），带 `chat_id`、`note`（备注，文章页和资料库显示同一条）。`assets.add({ files: [{ url, mime, name }], article_id, note, use })`；整组重做存新的，只改其中一个用 `assets.replace({ asset_id, n, url, note })` 改原来那组。`use: true`：视频文章设成发布用的视频，图文换成配图。
+- **要改就回到做它的那段对话**：用户在对话里接着说，照 `work-on-article` 第 5 步做。
+- **引用** `@表:id#n`：用户从页面「复制引用」贴进对话（文章 `@articles:<id>`，产物 `@assets:<id>`，组里第 3 个 `@assets:<id>#3`），消息后面有 `<references>`。资料库 `#n` 数 `files`，图文文章数 `images`。
 
 ## 定位怎么用
 

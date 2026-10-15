@@ -143,7 +143,9 @@ export function ErrorDetails({ message, actions }: { message: string; actions?: 
 }
 
 /** 空状态 / 提示：平台的虚线框 */
-export function Notice({ children, tone = 'muted' }: { children: ReactNode; tone?: 'muted' | 'error' }) {
+export function Notice({ children, tone = 'muted' }: { children: ReactNode; tone?: 'muted' | 'error' | 'info' }) {
+  // info：一条横幅提示（恢复了没保存的修改这类），主色淡底，左对齐
+  if (tone === 'info') return <div role="status" className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary-text">{children}</div>
   if (tone === 'error' && typeof children === 'string' && isNeedsShuttle(children)) return <div className="rounded-lg bg-muted/60 px-3 py-2 text-sm text-muted-foreground">{children}</div>
   return tone === 'error' ? (
     <div className="min-w-0 max-w-full [overflow-wrap:anywhere] rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{typeof children === 'string' ? <ErrorDetails message={children} /> : children}</div>
@@ -211,7 +213,22 @@ function DialogInner({ onClose, title, children, footer, width }: { onClose: () 
   const ref = useRefD<HTMLDialogElement>(null)
   const edited = useRefD(false)
   useEffectD(() => {
-    ref.current?.showModal()
+    const d = ref.current
+    d?.showModal()
+    // 弹出来光标就在第一个输入框里（放在末尾），直接就能写。showModal 默认聚焦第一个能聚焦的（常常是一个按钮）；
+    // 里面已经有输入框拿到焦点（autoFocus）就不动；内容晚一点才出来（读数据）的，等一下再看一次
+    const focusInput = () => {
+      if (!d) return
+      const cur = d.ownerDocument.activeElement as HTMLElement | null
+      if (cur && d.contains(cur) && cur.matches('input, textarea, select, [contenteditable="true"]')) return
+      const el = d.querySelector<HTMLInputElement | HTMLTextAreaElement>('textarea:not([disabled]):not([readonly]), input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([disabled]):not([readonly])')
+      if (!el) return
+      el.focus()
+      try { el.setSelectionRange(el.value.length, el.value.length) } catch { /* 有的 input 类型不支持选区 */ }
+    }
+    focusInput()
+    const t = setTimeout(focusInput, 150)
+    return () => clearTimeout(t)
   }, [])
   const nudge = () => ref.current?.animate?.([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 220 })
   return (

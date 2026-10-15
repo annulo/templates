@@ -1,19 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { Copy, FileText, Pencil, Plus, Search, Trash2, Upload, Video } from 'lucide-react'
+import { AssetGroup, CopyRef } from '../AssetPreview'
+import { fileSrc, kindOfMime, mimeOf } from '../../lib/files'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls } from '../ui'
-import { dbCreate, dbDelete, dbList, dbPatch, shuttleImage, type Asset, type AssetKind } from '../../lib/shuttle'
+import { dbCreate, dbDelete, dbList, dbPatch, type Asset, type AssetKind } from '../../lib/shuttle'
 import { usePasteFiles } from '../../lib/usePasteFiles'
+import { useTables } from '../../lib/useTables'
 import { ACCEPT_UPLOAD, ASSET_KINDS, assetTags, filterAssets, kindOfUrl, nameOfUrl, splitTags, uploadAssets, type UploadItem } from '../../lib/assets'
 import UploadProgress from '../UploadProgress'
 import Lightbox from '../Lightbox'
 import type { Ctx } from './types'
 import { tr } from '../../lib/i18n'
 
-type KindFilter = '' | AssetKind
+// file：图片、视频、文字以外的（AI 做的网页、音频、文档…），按 mime 归类（lib/files.ts）
+type KindFilter = '' | AssetKind | 'file'
+
+/** 筛选用的大类：文字看 kind，别的按 mime（老数据没有 mime 按扩展名、kind 猜） */
+const groupOf = (a: Asset): string => (a.kind === 'text' ? 'text' : kindOfMime(mimeOf(a as Asset & { mime?: string })))
 
 /** 素材库：图片、视频的地址和文字素材，存在 assets 表。写社媒笔记时「从素材库选」读这里 */
 export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
-  const kind: KindFilter = (['image', 'video', 'text'] as string[]).includes(params.kind) ? (params.kind as AssetKind) : ''
+  const kind: KindFilter = (['image', 'video', 'text', 'file'] as string[]).includes(params.kind) ? (params.kind as KindFilter) : ''
   const tag = params.tag ?? ''
   const [q, setQ] = useState('')
   const [list, setList] = useState<Asset[] | null>(null)
@@ -25,7 +32,10 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const [dragging, setDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // AI 给文章做的产物（带 article_id）：卡片上能点回那篇文章，这里记下每篇的标题
+  const [articles, setArticles] = useState<Record<string, string>>({})
   const load = useCallback(() => {
+    dbList('articles').then((l) => setArticles(Object.fromEntries(l.map((x) => [x.id, x.title || tr('versions.untitled')])))).catch(() => {})
     dbList('assets')
       .then((l) => setList([...l].sort((a, b) => (Date.parse(b.created_at ?? '') || 0) - (Date.parse(a.created_at ?? '') || 0))))
       .catch((e) => {
@@ -34,20 +44,18 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
       })
   }, [])
   useEffect(load, [load])
-  useEffect(() => {
-    if (ctx.rev) load()
-  }, [ctx.rev])
+  useTables(['assets'], load, ctx.rev)
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { '': 0, image: 0, video: 0, text: 0 }
+    const c: Record<string, number> = { '': 0, image: 0, video: 0, text: 0, file: 0 }
     for (const a of list ?? []) {
       c['']++
-      c[a.kind] = (c[a.kind] ?? 0) + 1
+      c[groupOf(a)] = (c[groupOf(a)] ?? 0) + 1
     }
     return c
   }, [list])
   const tags = useMemo(() => [...new Set((list ?? []).flatMap(assetTags))].sort(), [list])
-  const shown = useMemo(() => filterAssets(list ?? [], { q, kind, tag }), [list, q, kind, tag])
+  const shown = useMemo(() => filterAssets(list ?? [], { q, tag }).filter((a) => !kind || groupOf(a) === kind), [list, q, kind, tag])
 
   const upload = async (files: File[]) => {
     if (!files.length || uploading) return
@@ -75,7 +83,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
   }
 
   return (
-    <div className={cx('relative space-y-6', dragging && 'rounded-xl outline-2 outline-offset-8 outline-primary/60 outline-dashed')} onDragOver={onDragOver} onDragLeave={(e) => e.currentTarget === e.target && setDragging(false)} onDrop={onDrop}>
+    <div className={cx('@container relative space-y-6', dragging && 'rounded-xl outline-2 outline-offset-8 outline-primary/60 outline-dashed')} onDragOver={onDragOver} onDragLeave={(e) => e.currentTarget === e.target && setDragging(false)} onDrop={onDrop}>
       <PageHeader
         title={tr('assets.title')}
         desc={tr('assets.desc')}
@@ -106,6 +114,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
             { value: 'image', label: tr('assets.f_image', { n: counts.image }) },
             { value: 'video', label: tr('assets.f_video', { n: counts.video }) },
             { value: 'text', label: tr('assets.f_text', { n: counts.text }) },
+            ...(counts.file ? [{ value: 'file' as const, label: tr('assets.f_file', { n: counts.file }) }] : []),
           ]}
         />
         <div className="relative min-w-48 flex-1 sm:max-w-72">
@@ -124,7 +133,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
       )}
 
       {list === null ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-3 @5xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="aspect-[4/5] rounded-xl" />
           ))}
@@ -134,9 +143,10 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
       ) : !shown.length ? (
         <Notice>{tr('assets.no_match')}</Notice>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-3 @5xl:grid-cols-4">
           {shown.map((a) => (
-            <AssetCard key={a.id} a={a} disabled={false} onEdit={() => setEditing(a)} onChanged={load} onTag={(t) => setParam('tag', t)} />
+            <AssetCard key={a.id} a={a} disabled={false} onEdit={() => setEditing(a)} onChanged={load} onTag={(t) => setParam('tag', t)}
+              article={articleOf(a, articles)} onOpenArticle={(id) => ctx.go('content', { article: id })} />
           ))}
         </div>
       )}
@@ -147,9 +157,15 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
   )
 }
 
-function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabled: boolean; onEdit: () => void; onChanged: () => void; onTag: (t: string) => void }) {
+/** 这条是哪篇文章的产物（article_id 指的文章还在才算） */
+function articleOf(a: Asset, titles: Record<string, string>) {
+  const id = (a as Asset & { article_id?: string }).article_id
+  return id && titles[id] ? { id, title: titles[id] } : undefined
+}
+
+function AssetCard({ a, disabled, onEdit, onChanged, onTag, article, onOpenArticle }: { a: Asset; disabled: boolean; onEdit: () => void; onChanged: () => void; onTag: (t: string) => void; article?: { id: string; title: string }; onOpenArticle: (id: string) => void }) {
   const [confirmDel, setConfirmDel] = useState(false)
-  const [zoom, setZoom] = useState(false)
+  const [zoom, setZoom] = useState('')
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState(false)
   const tags = assetTags(a)
@@ -178,17 +194,13 @@ function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabl
           <FileText className="size-4 text-muted-foreground" />
           <p className="line-clamp-5 text-xs leading-relaxed whitespace-pre-line">{a.text}</p>
         </div>
-      ) : a.kind === 'video' ? (
-        <div className="relative">
-          <video src={a.url} controls preload="metadata" className="aspect-[4/3] w-full bg-black object-contain" />
-          <Video className="pointer-events-none absolute top-2 left-2 size-4 text-white drop-shadow" />
-        </div>
       ) : (
-        <button type="button" onClick={() => setZoom(true)} aria-label={a.name || ASSET_KINDS[a.kind]} className="block w-full cursor-zoom-in bg-muted">
-          <img src={shuttleImage(a.url)} alt={a.name ?? ''} loading="lazy" className="aspect-[4/3] w-full object-cover" />
-        </button>
+        <div className="relative">
+          <AssetGroup a={a} table="assets" id={a.id} onZoom={setZoom} actionsClassName="px-2" />
+          {a.kind === 'video' && <Video className="pointer-events-none absolute top-2 left-2 size-4 text-white drop-shadow" />}
+        </div>
       )}
-      {zoom && a.url && <Lightbox src={a.url} alt={a.name ?? ''} onClose={() => setZoom(false)} />}
+      {zoom && <Lightbox src={zoom} alt={a.name ?? ''} onClose={() => setZoom('')} />}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="truncate text-sm font-medium" title={a.name}>
@@ -196,6 +208,12 @@ function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabl
           </span>
           {a.source === 'agent' && <Badge>{tr('assets.by_agent')}</Badge>}
         </div>
+        {article && (
+          <button type="button" onClick={() => onOpenArticle(article.id)} title={article.title} className="inline-flex min-w-0 cursor-pointer items-center gap-1 text-left text-xs text-primary-text hover:underline">
+            <FileText className="size-3.5 shrink-0" />
+            <span className="truncate">{tr('assets.from_article', { title: article.title })}</span>
+          </button>
+        )}
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1 text-xs text-primary-text">
             {tags.map((t) => (
@@ -205,12 +223,14 @@ function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabl
             ))}
           </div>
         )}
+        {noteOf(a) && <p className="line-clamp-3 text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]" title={noteOf(a)}>{noteOf(a)}</p>}
         <div className="text-[11px] text-muted-foreground">{fmtTime(a.created_at)}</div>
         {err && <div className="text-xs text-destructive">{err}</div>}
         <div className="mt-auto flex items-center gap-0.5 pt-1">
           <Button variant="ghost" size="icon-sm" title={a.kind === 'text' ? tr('assets.copy_text') : tr('assets.copy_url')} onClick={copy}>
             <Copy className={cx(copied && 'text-emerald-600')} />
           </Button>
+          {a.kind === 'text' && <CopyRef refs={[`@assets:${a.id}`]} label="" className="h-8 px-2" />}
           <Button variant="ghost" size="icon-sm" title={tr('assets.edit_title')} onClick={onEdit} disabled={disabled}>
             <Pencil />
           </Button>
@@ -326,8 +346,12 @@ function AddDialog({ open, onClose, onDone }: { open: boolean; onClose: () => vo
   )
 }
 
+/** 备注（assets.note）：AI 给文章做的产物存进来时写的，用户也能改；文章页的产物列表显示同一条。老模板的表没有这个字段时是空的 */
+const noteOf = (a: Asset) => ((a as Asset & { note?: string }).note ?? '').trim()
+
 function EditDialog({ a, onClose, onDone }: { a: Asset | null; onClose: () => void; onDone: () => void }) {
   const [name, setName] = useState('')
+  const [note, setNote] = useState('')
   const [tags, setTags] = useState('')
   const [text, setText] = useState('')
   const [err, setErr] = useState('')
@@ -336,12 +360,13 @@ function EditDialog({ a, onClose, onDone }: { a: Asset | null; onClose: () => vo
     setName(a.name ?? '')
     setTags(assetTags(a).join(' '))
     setText(a.text ?? '')
+    setNote(noteOf(a))
     setErr('')
   }, [a?.id])
   const save = async () => {
     if (!a) return
     try {
-      await dbPatch('assets', a.id, { name: name.trim(), tags: JSON.stringify(splitTags(tags)), ...(a.kind === 'text' ? { text: text.trim() } : {}) })
+      await dbPatch('assets', a.id, { name: name.trim(), tags: JSON.stringify(splitTags(tags)), ...(a.kind === 'text' ? { text: text.trim() } : {}), ...(note.trim() !== noteOf(a) ? { note: note.trim() } : {}) } as Partial<Asset>)
       onDone()
     } catch (e) {
       setErr((e as Error).message)
@@ -375,6 +400,9 @@ function EditDialog({ a, onClose, onDone }: { a: Asset | null; onClose: () => vo
         )}
         <Field label={tr('assets.tags')} hint={tr('assets.tags_hint_short')}>
           <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} />
+        </Field>
+        <Field label={tr('assets.note')}>
+          <textarea className={cx(inputCls, 'min-h-20 py-2')} value={note} placeholder={tr('assets.note_ph')} onChange={(e) => setNote(e.target.value)} />
         </Field>
         {err && <Notice tone="error">{err}</Notice>}
       </div>

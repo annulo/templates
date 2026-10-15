@@ -1,6 +1,6 @@
 {
   "name": "资料库",
-  "desc": "资料库：图片、视频、文字资料。写文章、社媒帖子时从这里选",
+  "desc": "资料库：图片、视频、文字资料。写文章、社媒帖子时从这里选；AI 给文章做出来的产物（视频等）也存在这里，带 article_id",
   "json_schema": {
     "type": "object",
     "properties": {
@@ -8,9 +8,17 @@
         "type": "string",
         "description": "文件的公开地址（图片、视频）；文字素材可以为空"
       },
+      "files": {
+        "type": "string",
+        "description": "一组文件（JSON 数组字符串，[{ url, mime, name }]，顺序就是轮播顺序，第一个是封面）：AI 一次做出来的一组（小红书的 6 张图）。只有一个文件时用 url。引用 @assets:<id>#n 的 n 数的就是它"
+      },
       "kind": {
         "type": "string",
-        "description": "image / video / text"
+        "description": "image / video / text / file（网页、音频、文档这类其余的文件；具体是什么看 mime）"
+      },
+      "mime": {
+        "type": "string",
+        "description": "文件类型，比如 video/mp4、image/png、text/html、audio/mpeg：页面按它显示（视频、图片直接放，网页用浏览器打开）。没有时按地址的扩展名猜"
       },
       "name": {
         "type": "string",
@@ -19,6 +27,18 @@
       "text": {
         "type": "string",
         "description": "文字素材的内容（kind 是 text 时）"
+      },
+      "note": {
+        "type": "string",
+        "description": "备注：这是什么、怎么做的、和上一个比改了什么。助手存进来时写，用户随时能改；文章页的产物列表和资料库显示同一条"
+      },
+      "article_id": {
+        "type": "string",
+        "description": "哪篇文章做出来的产物（articles 的 id）：文章页列出它的产物"
+      },
+      "chat_id": {
+        "type": "string",
+        "description": "做它的对话（assets.add 从 ctx.chat_id 记下）：要改就回到这段对话接着说"
       },
       "tags": {
         "type": "string",

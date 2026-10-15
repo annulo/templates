@@ -292,6 +292,8 @@ export type Article = {
   channel_id?: string
   topic_id?: string
   title: string
+  /** 稿子（HTML，可选）：作者的工作稿，不发出去 */
+  draft?: string
   summary?: string
   body?: string
   video?: string
@@ -325,8 +327,8 @@ export type Publication = { id: string; article_id: string; channel_id: string; 
 /** 网站渠道（creght 站点、WordPress）；这个模板没有网站，永远是 false */
 export const isSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress')
 
-/** 改写预设（rewrite_presets 表）：改成哪种类型 + 改写要求 */
-export type RewritePreset = { id: string; type: ArticleType; prompt: string; created_at?: string; updated_at?: string }
+/** AI 预设（rewrite_presets 表）：产出哪种类型 + 要求；名字、用在哪、模板自带的哪条见 core/lib/presets.ts */
+export type RewritePreset = { id: string; type: ArticleType; prompt: string; name?: string; builtin?: string; hidden?: boolean; created_at?: string; updated_at?: string }
 
 /** 产品目录（products 表） */
 export type Product = {
@@ -423,6 +425,16 @@ export type Asset = {
   tags?: string
   /** url / manual / upload / agent / platform */
   source?: string
+  /** 文件类型（video/mp4、image/png、text/html…）：页面按它显示；没有时按扩展名猜（core/lib/files.ts） */
+  mime?: string
+  /** 一组文件（JSON 数组字符串 [{ url, mime, name }]）：AI 一次做出来的一组，只有一个文件时为空、用 url */
+  files?: string
+  /** 备注：文章页的产物列表和资料库显示同一条 */
+  note?: string
+  /** AI 给哪篇文章做的产物（文章页列出它） */
+  article_id?: string
+  /** 做它的对话：要改就回到这段对话 */
+  chat_id?: string
   created_at?: string
 }
 

@@ -5,6 +5,7 @@ import { runLocal } from '../lib/shuttle'
 import type { ChecklistData } from '../lib/useChecklist'
 import Overview from '../components/views/Overview'
 import Content from '../components/views/Content'
+import { aiWork } from '../components/Artifacts'
 import Reports from '../components/views/Reports'
 import Calendar from '../components/views/Calendar'
 import Assets from '../components/views/Assets'
@@ -321,7 +322,7 @@ export default function Index() {
           ) : view === 'reports' ? (
             <Reports ctx={ctx} params={params} setParam={setParam} />
           ) : view === 'content' ? (
-            <Content ctx={ctx} params={params} setParam={setParam} />
+            <Content ctx={ctx} params={params} setParam={setParam} work={aiWork} />
           ) : view === 'calendar' ? (
             <Calendar ctx={ctx} params={params} setParam={setParam} />
           ) : view === 'assets' ? (
