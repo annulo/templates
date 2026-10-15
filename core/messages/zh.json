@@ -358,7 +358,8 @@
     "to_body": "放进正文",
     "to_body_confirm": "替换现在的正文？",
     "ai_write": "AI 写成正文",
-    "rewrite": "改写成…"
+    "rewrite": "改写成…",
+    "restored": "恢复了上次没保存的稿子（{ago}），记得保存。"
   },
   "editor": {
     "upload_media": "上传媒体",
@@ -368,5 +369,10 @@
     "ph_media": "输入正文。插图片、视频：点上面的「上传媒体」「从资料库选」，或者直接粘贴、拖进来；输入 / 插入标题、列表…",
     "video_tag": "视频",
     "video_play": "播放"
+  },
+  "content": {
+    "restored": "恢复了上次没保存的修改（{ago}）。",
+    "restored_changed": "这篇在那之后被改过（比如 AI 改了），保存会盖掉那边的改动。",
+    "restored_discard": "丢弃，用已保存的"
   }
 }

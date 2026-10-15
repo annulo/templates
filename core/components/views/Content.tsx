@@ -17,6 +17,7 @@ import { TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { CHANNEL_TYPES } from '../../lib/channels'
 import { useTables } from '../../lib/useTables'
 import { copyRefs, refOf } from '../../lib/refs'
+import { clearUnsaved, readUnsaved, writeUnsaved } from '../../lib/unsaved'
 import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, runLocal, runTask, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
 import type { Ctx } from './types'
 import { numLocale, tr } from '../../lib/i18n'
@@ -548,6 +549,31 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     setEditing(true)
   }
   const dirty = editing && !sameDraft(draft, fromRow())
+  // 没保存的修改存在这台电脑上（core/lib/unsaved.ts）：离开、刷新都不丢，下次打开这篇自动恢复。保存、取消（退出编辑）后删掉
+  const unsavedKey = `article:${a.id}`
+  const [restored, setRestored] = useState<{ at: number; changed: boolean } | null>(null)
+  const wasEditing = useRef(false)
+  useEffect(() => {
+    const u = readUnsaved<ArticleDraft>(unsavedKey)
+    if (!u || sameDraft(u.value, fromRow())) return clearUnsaved(unsavedKey)
+    setBase(fromRow())
+    setDraft(u.value)
+    setStale(false)
+    setEditorKey((k) => k + 1)
+    setEditing(true)
+    setRestored({ at: u.at, changed: u.base !== (a.updated_at ?? '') })
+  }, [a.id])
+  useEffect(() => {
+    if (editing) {
+      wasEditing.current = true
+      if (!dirty) return clearUnsaved(unsavedKey)
+      const t = setTimeout(() => writeUnsaved(unsavedKey, draft, a.updated_at ?? ''), 500)
+      return () => clearTimeout(t)
+    }
+    // 只在从编辑里出来时删（打开页面那一刻还没进编辑，不能删，恢复要读它）
+    if (wasEditing.current) { wasEditing.current = false; clearUnsaved(unsavedKey); setRestored(null) }
+  }, [editing, draft, dirty])
+  const discardRestored = () => { clearUnsaved(unsavedKey); setRestored(null); loadDraft(fromRow()); setEditing(false) }
   const saveEdit = () =>
     run('save', async () => {
       if (!draft.title.trim()) throw new Error(tr('content.need_title'))
@@ -648,6 +674,14 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
       <article className="w-full min-w-0" style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}>
         {editing ? (
           <div className="space-y-3">
+            {restored && (
+              <Notice>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-0 flex-1">{tr('content.restored', { ago: fmtTime(new Date(restored.at).toISOString()) })}{restored.changed && ` ${tr('content.restored_changed')}`}</span>
+                  <Button size="sm" variant="outline" onClick={discardRestored}>{tr('content.restored_discard')}</Button>
+                </div>
+              </Notice>
+            )}
             {stale && (
               <Notice>
                 <div className="flex flex-wrap items-center gap-2">

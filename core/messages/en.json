@@ -358,7 +358,8 @@
     "to_body": "Use as content",
     "to_body_confirm": "Replace the current content?",
     "ai_write": "AI: write the content",
-    "rewrite": "Rewrite as…"
+    "rewrite": "Rewrite as…",
+    "restored": "Restored your unsaved draft from {ago}; remember to save."
   },
   "editor": {
     "upload_media": "Upload media",
@@ -368,5 +369,10 @@
     "ph_media": "Write here. Add images or videos with \"Upload media\" or \"From library\" above, or paste or drop them in; type / for headings, lists…",
     "video_tag": "Video",
     "video_play": "Play"
+  },
+  "content": {
+    "restored": "Restored your unsaved changes from {ago}.",
+    "restored_changed": "This piece was changed since (for example by AI); saving will overwrite those changes.",
+    "restored_discard": "Discard, use the saved version"
   }
 }
