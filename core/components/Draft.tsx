@@ -76,7 +76,7 @@ export default function Draft({ a, locked, onChanged, onAIWrite, onRewrite }: { 
       {open && (
         <div className="space-y-3 border-t border-border px-3 pt-3 pb-3">
           <p className="text-xs text-muted-foreground">{tr('draft.hint')}</p>
-          {restoredAt > 0 && dirty && <Notice>{tr('draft.restored', { ago: fmtTime(new Date(restoredAt).toISOString()) })}</Notice>}
+          {restoredAt > 0 && dirty && <Notice tone="info">{tr('draft.restored', { ago: fmtTime(new Date(restoredAt).toISOString()) })}</Notice>}
           <RichEditor key={editorKey} value={value} onChange={setValue} />
           {dirty && <div className="flex gap-2">
             <Button size="sm" onClick={save} disabled={!!busy || locked}>{busy === 'save' && <Loader2 className="animate-spin" />}{tr('common.save')}</Button>

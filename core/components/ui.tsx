@@ -143,7 +143,9 @@ export function ErrorDetails({ message, actions }: { message: string; actions?: 
 }
 
 /** 空状态 / 提示：平台的虚线框 */
-export function Notice({ children, tone = 'muted' }: { children: ReactNode; tone?: 'muted' | 'error' }) {
+export function Notice({ children, tone = 'muted' }: { children: ReactNode; tone?: 'muted' | 'error' | 'info' }) {
+  // info：一条横幅提示（恢复了没保存的修改这类），主色淡底，左对齐
+  if (tone === 'info') return <div role="status" className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary-text">{children}</div>
   if (tone === 'error' && typeof children === 'string' && isNeedsShuttle(children)) return <div className="rounded-lg bg-muted/60 px-3 py-2 text-sm text-muted-foreground">{children}</div>
   return tone === 'error' ? (
     <div className="min-w-0 max-w-full [overflow-wrap:anywhere] rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{typeof children === 'string' ? <ErrorDetails message={children} /> : children}</div>

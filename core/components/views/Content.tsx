@@ -669,19 +669,20 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
       </div>}
 
       {/* 和顶上的按钮左右对齐，不居中限宽；顶上那条吸在 -1rem（抵掉滚动区的上内边距），露出来的高度是它的高度减 1rem */}
+      {/* 恢复了上次没保存的修改：放在最上面的横幅 */}
+      {restored && editing && (
+        <Notice tone="info">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 flex-1">{tr('content.restored', { ago: fmtTime(new Date(restored.at).toISOString()) })}{restored.changed && ` ${tr('content.restored_changed')}`}</span>
+            <Button size="sm" variant="outline" onClick={discardRestored}>{tr('content.restored_discard')}</Button>
+          </div>
+        </Notice>
+      )}
       {/* 稿子：能「在这篇上做」的模板才有（文章表有 draft 字段） */}
       {work && <Draft a={a} locked={locked} onChanged={onChanged} onAIWrite={() => setAiOpen({ mode: 'here', preset: 'from_draft' })} onRewrite={() => setAiOpen({ mode: 'new' })} />}
       <article className="w-full min-w-0" style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}>
         {editing ? (
           <div className="space-y-3">
-            {restored && (
-              <Notice>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="min-w-0 flex-1">{tr('content.restored', { ago: fmtTime(new Date(restored.at).toISOString()) })}{restored.changed && ` ${tr('content.restored_changed')}`}</span>
-                  <Button size="sm" variant="outline" onClick={discardRestored}>{tr('content.restored_discard')}</Button>
-                </div>
-              </Notice>
-            )}
             {stale && (
               <Notice>
                 <div className="flex flex-wrap items-center gap-2">
