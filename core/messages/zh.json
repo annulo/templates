@@ -161,7 +161,8 @@
     "make_video_go": "做成视频",
     "make_video_hint": "照「{title}」做一条视频：AI 在这台电脑上把视频做出来，存成一篇新的视频文章，每改一次存一个版本。原文不动。",
     "make_video_note_hint": "写你要什么样的视频：时长、横屏还是竖屏、风格、节奏、字幕、用什么工具……不写就按要发的平台的常规做。",
-    "make_video_ph": "比如：60 秒竖屏，开头 3 秒抛出结论，大字幕，节奏快，用 Remotion 做"
+    "make_video_ph": "比如：60 秒竖屏，开头 3 秒抛出结论，大字幕，节奏快，用 Remotion 做",
+    "artifacts_n": "{n} 个产物"
   },
   "ui": {
     "watch_show": "打开看",

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, Copy, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, Boxes, Copy, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import InspirationLibrary, { InspirationReferences } from '../InspirationLibrary'
 import { WritingBriefDialog } from '../ContentEvidence'
 import { NotionLogo } from '../BrandIcons'
@@ -84,11 +84,16 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   // 「写作要求」在页头的「更多」里
   const [reqOpen, setReqOpen] = useState(false)
 
+  // 每篇文章有几个产物（artifacts：资料库里带 article_id 的，AI 给这篇做的视频、图片、网页…）。没有这个字段的模板都是 0，不显示
+  const [artifacts, setArtifacts] = useState<Record<string, number>>({})
   const load = useCallback(() => {
-    return Promise.all([dbList('articles'), dbList('topics'), dbList('social_posts').catch(() => []), dbList('publications').catch(() => [])])
-      .then(([a, t, p, pb]) => {
+    return Promise.all([dbList('articles'), dbList('topics'), dbList('social_posts').catch(() => []), dbList('publications').catch(() => []), dbList('assets').catch(() => [])])
+      .then(([a, t, p, pb, as]) => {
         setPosts(p.filter((x) => !!x.article_id))
         setPubs(pb)
+        const n: Record<string, number> = {}
+        for (const x of as as { article_id?: string }[]) if (x.article_id) n[x.article_id] = (n[x.article_id] ?? 0) + 1
+        setArtifacts(n)
         setArticles(a)
         setTopics(t)
       })
@@ -220,7 +225,7 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
       />
       <TaskFailed task={writer.task} />
       {tab === 'marketing' ? planning : tab === 'inspiration' ? <InspirationLibrary ctx={ctx} params={params} setParam={setParam} onChanged={load} /> : tab === 'articles' ? (
-        <Articles onChanged={load} onRewrite={setRewriting} onCopy={copyArticle} ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
+        <Articles artifacts={artifacts} onChanged={load} onRewrite={setRewriting} onCopy={copyArticle} ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
       ) : (
         <Topics inspiration={inspiration} initialTopic={params.topic} onTopicClose={() => setParam('topic', '')} ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
       )}
@@ -310,7 +315,7 @@ function HeaderMore({ items }: { items: { label: string; icon: typeof SlidersHor
   </div>
 }
 
-function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, onWrite, onDelete, onRewrite, onCopy, onChanged }: { onChanged: () => void | Promise<void>; onDelete: (a: Article) => Promise<void>; onRewrite: (a: Article) => void; onCopy: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; onWrite: () => void }) {
+function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, onWrite, onDelete, onRewrite, onCopy, onChanged, artifacts = {} }: { artifacts?: Record<string, number>; onChanged: () => void | Promise<void>; onDelete: (a: Article) => Promise<void>; onRewrite: (a: Article) => void; onCopy: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; onWrite: () => void }) {
   const [query, setQuery] = useState('')
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
@@ -364,6 +369,7 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
               {sub && <div className="mt-1 line-clamp-1 text-xs leading-relaxed text-muted-foreground">{sub}</div>}
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
                 <TypeBadge type={t} />
+                {!!artifacts[a.id] && <span className="inline-flex items-center gap-1 whitespace-nowrap"><Boxes className="size-3.5" />{tr('article.artifacts_n', { n: artifacts[a.id] })}</span>}
                 <span className="whitespace-nowrap">{tr('content.updated')} {fmtTime(a.updated_at || a.created_at)}</span>
               </div>
               {chips && <div className="mt-2 flex flex-wrap items-center gap-1.5 md:hidden">{chips}</div>}

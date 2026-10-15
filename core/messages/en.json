@@ -161,7 +161,8 @@
     "make_video_go": "Make a video",
     "make_video_hint": "Make a video from \"{title}\": AI produces it on this computer and saves it as a new video article, with a version for every change. The original stays as is.",
     "make_video_note_hint": "Describe the video you want: length, landscape or portrait, style, pace, captions, which tool to use… Leave it empty to follow the norms of the platforms you post to.",
-    "make_video_ph": "e.g. 60 seconds, portrait, state the takeaway in the first 3 seconds, big captions, fast pace, made with Remotion"
+    "make_video_ph": "e.g. 60 seconds, portrait, state the takeaway in the first 3 seconds, big captions, fast pace, made with Remotion",
+    "artifacts_n": "{n} artifacts"
   },
   "ui": {
     "watch_show": "Watch",
