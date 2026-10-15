@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowLeft, Copy, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import InspirationLibrary, { InspirationReferences } from '../InspirationLibrary'
@@ -13,7 +13,7 @@ import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls, toast, type Tone } from '../ui'
 import { TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { CHANNEL_TYPES } from '../../lib/channels'
-import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, runLocal, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
+import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, runLocal, runTask, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
 import type { Ctx } from './types'
 import { numLocale, tr } from '../../lib/i18n'
 
@@ -40,6 +40,18 @@ const REVISE_TASK = 'revise-article'
 /** 任务 id（tasks/suggest-topics.md）：「出一批选题」，GEO 页「写成选题」也是它 */
 export const TOPICS_TASK = 'suggest-topics'
 type Writer = ReturnType<typeof useTask>
+
+/**
+ * 能做视频的模板（creator）传进来：「交给 AI」选视频时交给 task 真的做一条视频（参数 { article_id, note }），
+ * 文章页在正文下面放 Panel（视频的各个版本、正在做的视频）。没传就和以前一样，改成视频只写标题和简介。
+ */
+export type VideoMaking = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void }> }
+
+/** 交给做视频的任务：开一段对话、在右侧打开 */
+async function startVideo(video: VideoMaking, articleId: string, note: string) {
+  const r = await runTask(video.task, { article_id: articleId, note })
+  openChat(r.chat_id)
+}
 type WriteInput = { topic_id?: string; subject?: string; channel_id?: string }
 
 /**
@@ -57,7 +69,7 @@ export async function removeArticle(a: Article, posts: SocialPost[], pubs: Publi
 }
 
 /** 内容：文章（一篇一种类型，直接发到支持它的账号）和选题池 */
-export default function Content({ ctx, params, setParam, inspiration = false, planning }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; inspiration?: boolean; planning?: ReactNode }) {
+export default function Content({ ctx, params, setParam, inspiration = false, planning, video }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; inspiration?: boolean; planning?: ReactNode; video?: VideoMaking }) {
   const tab: Tab = planning && params.tab === 'marketing' ? 'marketing' : inspiration && params.tab === 'inspiration' ? 'inspiration' : params.tab === 'topics' ? 'topics' : 'articles'
   const [articles, setArticles] = useState<Article[] | null>(null)
   const [topics, setTopics] = useState<Topic[] | null>(null)
@@ -174,7 +186,7 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const writingTitle = topicTitle(writingInput?.topic_id) || writingInput?.subject
   const writerBusy = !writer.shuttle || !writer.task || writer.starting || !!writer.task.running.length
 
-  if (openArticle) return <ArticleDetail key={openArticle.id} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
+  if (openArticle) return <ArticleDetail key={openArticle.id} video={video} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
 
   return (
     <div className="space-y-6">
@@ -213,8 +225,11 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
         <Topics inspiration={inspiration} initialTopic={params.topic} onTopicClose={() => setParam('topic', '')} ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
       )}
       <TaskRequirements task={writer.task} onSaved={writer.setTask} title={tr('content.req_title')} hint={tr('content.req_hint')} open={reqOpen} onOpenChange={setReqOpen} />
-      {rewriting && <RewriteDialog open article={rewriting} starting={listRewriter.starting} error={listRewriter.error} onClose={() => setRewriting(null)}
-        onStart={async (to, note) => { if (await listRewriter.run({ article_id: rewriting.id, type: to, note })) setRewriting(null) }}
+      {rewriting && <RewriteDialog open article={rewriting} starting={listRewriter.starting} error={listRewriter.error} onClose={() => setRewriting(null)} videoTask={video?.task}
+        onStart={async (to, note) => {
+          if (to === 'video' && video) { try { await startVideo(video, rewriting.id, note); setRewriting(null) } catch (e) { toast((e as Error).message, 'error') } return }
+          if (await listRewriter.run({ article_id: rewriting.id, type: to, note })) setRewriting(null)
+        }}
         onConvert={async (to) => { const r = await runLocal<{ article_id: string }>('convert.toType', { article_id: rewriting.id, type: to }); setRewriting(null); load(); setParam('article', r.article_id) }} />}
       <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingTitle ? `${tr('content.new_article')} · ${writingTitle}` : tr('content.new_article')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button>{!writingInput?.topic_id && !docUrl && <Button variant="outline" onClick={writeSelf} disabled={savingSelf || writer.starting}>{savingSelf ? <Loader className="animate-spin" /> : <Pencil />}{tr('content.write_self')}</Button>}<Button variant={docUrl ? 'outline' : 'default'} onClick={startWriting} disabled={writerBusy || savingSelf || importing}>{writer.starting ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.ai_write_this')}</Button>{docUrl && <Button onClick={importDoc} disabled={importing}>{importing ? <Loader className="animate-spin" /> : <Download />}{tr('content.import_doc')}</Button>}</>}>
         <div className="space-y-4">
@@ -429,7 +444,7 @@ export function RowMore({ items = [], onRewrite, onCopy, onDelete }: { items?: {
   </div>
 }
 
-export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks }: { inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
+export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks, video }: { video?: VideoMaking; inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
   const type = typeOf(a)
   const [moreOpen, setMoreOpen] = useState(false)
   // 菜单往哪边展开：宽屏时按钮在一行最右边，往左；手机上按钮换到下一行的左边，往左会伸出屏幕，改往右。按打开时按钮的实际位置算
@@ -551,6 +566,11 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
   }
   const startRewrite = async (to: ArticleType, req: string) => {
     if (dirty && !(await saveEdit())) return
+    if (to === 'video' && video) {
+      setError('')
+      try { await startVideo(video, a.id, req); setRewritingOpen(false) } catch (e) { setError((e as Error).message) }
+      return
+    }
     const id = await rewriter.run({ article_id: a.id, type: to, note: req })
     if (id) setRewritingOpen(false)
   }
@@ -583,7 +603,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
           <div className="flex flex-wrap items-center justify-end gap-2">
             {editing ? <><Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => setEditing(false)}>{tr('common.cancel')}</Button><Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !dirty}>{tr('common.save')}</Button></> : <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
             <Button size="sm" variant="outline" onClick={() => setAsking(true)} disabled={locked || !reviser.shuttle}><Sparkles />{tr('content.ask_ai')}</Button>
-            <Button size="sm" variant="outline" onClick={() => setRewritingOpen(true)} disabled={locked || !rewriter.shuttle}><Repeat2 />{tr('article.rewrite')}</Button>
+            <Button size="sm" variant="outline" onClick={() => setRewritingOpen(true)} disabled={locked || !rewriter.shuttle}><Repeat2 />{video ? tr('article.rewrite_or_video') : tr('article.rewrite')}</Button>
             <Button size="sm" feedback={false} onClick={() => void openPublish()} disabled={locked}><Send />{tr('article.publish')}</Button>
             <div ref={moreRef} className="relative">
               <Button size="sm" variant="ghost" onClick={() => { const r = moreRef.current?.getBoundingClientRect(); setMoreLeft(!!r && r.right < 224 + 8); setMoreOpen((v) => !v); setConfirmDel(false) }} aria-haspopup="menu" aria-expanded={moreOpen} aria-controls={`article-more-${a.id}`}>
@@ -654,11 +674,12 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
         <footer className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4"><ArticleTime label={tr('content.created')} value={a.created_at} /><ArticleTime label={tr('content.updated')} value={a.updated_at || a.created_at} /></footer>
       </article>
 
+      {video && <video.Panel article={a} all={all} open={open} onChanged={onChanged} />}
       {inspiration && <InspirationReferences ctx={ctx} targetType="article" targetId={a.id} onChanged={onChanged} />}
       <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} linkedRecords={publicationLinks} />
 
       <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} scope={publishScope} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
-      <RewriteDialog open={rewritingOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setRewritingOpen(false)} onStart={startRewrite} onConvert={convertTo} />
+      <RewriteDialog open={rewritingOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setRewritingOpen(false)} onStart={startRewrite} onConvert={convertTo} videoTask={video?.task} />
       <TaskRequirements task={reviser.task} onSaved={reviser.setTask} title={tr('content.revise_req_title')} hint={tr('content.revise_req_hint')} open={requirementsOpen} onOpenChange={(o) => { setRequirementsOpen(o); if (!o) moreRef.current?.querySelector('button')?.focus() }} />
       <Dialog
         open={asking}

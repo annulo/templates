@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { Copy, FileText, Pencil, Plus, Search, Trash2, Upload, Video } from 'lucide-react'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls } from '../ui'
-import { dbCreate, dbDelete, dbList, dbPatch, shuttleImage, type Asset, type AssetKind } from '../../lib/shuttle'
+import { dbCreate, dbDelete, dbList, dbPatch, shuttleImage, videoSrc, type Asset, type AssetKind } from '../../lib/shuttle'
 import { usePasteFiles } from '../../lib/usePasteFiles'
 import { ACCEPT_UPLOAD, ASSET_KINDS, assetTags, filterAssets, kindOfUrl, nameOfUrl, splitTags, uploadAssets, type UploadItem } from '../../lib/assets'
 import UploadProgress from '../UploadProgress'
@@ -180,7 +180,7 @@ function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabl
         </div>
       ) : a.kind === 'video' ? (
         <div className="relative">
-          <video src={a.url} controls preload="metadata" className="aspect-[4/3] w-full bg-black object-contain" />
+          <video src={videoSrc(a.url)} controls preload="metadata" className="aspect-[4/3] w-full bg-black object-contain" />
           <Video className="pointer-events-none absolute top-2 left-2 size-4 text-white drop-shadow" />
         </div>
       ) : (

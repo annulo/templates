@@ -325,8 +325,28 @@ export type Publication = { id: string; article_id: string; channel_id: string; 
 /** 网站渠道（creght 站点、WordPress）；这个模板没有网站，永远是 false */
 export const isSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress')
 
-/** 改写预设（rewrite_presets 表）：改成哪种类型 + 改写要求 */
-export type RewritePreset = { id: string; type: ArticleType; prompt: string; created_at?: string; updated_at?: string }
+/** AI 预设（rewrite_presets 表）：产出哪种类型 + 要求；名字、用在哪、模板自带的哪条见 core/lib/presets.ts */
+export type RewritePreset = { id: string; type: ArticleType; prompt: string; name?: string; target?: 'article' | 'video_version'; builtin?: string; hidden?: boolean; created_at?: string; updated_at?: string }
+
+/** 视频的一个版本（video_versions 表，local/video.ts 写）：成片是本机文件 local:<name> */
+export type VideoVersion = {
+  id: string
+  article_id: string
+  n?: number
+  parent_id?: string
+  prompt?: string
+  doc_id?: string
+  doc_snapshot?: string
+  file?: string
+  duration?: number
+  width?: number
+  height?: number
+  notes?: string
+  status?: 'making' | 'done' | 'failed'
+  error?: string
+  created_at?: string
+  finished_at?: string
+}
 
 /** 产品目录（products 表） */
 export type Product = {
@@ -609,6 +629,12 @@ export function videoSrc(v?: string) {
   return v.startsWith('local:') ? '/_shuttle/files/' + v.slice(6) : v
 }
 
+/** 删掉一个本机文件（local:<name>）。不是本机文件的地址不动 */
+export async function deleteLocalFile(ref?: string) {
+  if (!ref?.startsWith('local:')) return
+  await api<{ ok: boolean }>('local/files/' + encodeURIComponent(ref.slice(6)), { method: 'DELETE' })
+}
+
 /** 写一个本机密钥（比如用户在弹窗里填的应用密码）：只能写，读不回来。表里只存密钥名 */
 export const setSecret = (name: string, value: string) => api<{ ok: boolean }>('local/secrets', { method: 'PUT', body: { name, value } })
 
@@ -625,6 +651,7 @@ type Tables = {
   topics: Topic
   articles: Article
   rewrite_presets: RewritePreset
+  video_versions: VideoVersion
   publications: Publication
   social_accounts: Channel
   social_health: PlatformHealth

@@ -103,9 +103,9 @@
     "legacy_version": "An older media version (may differ from the article): delete it to post the article instead",
     "delete_published": "This article has been posted or scheduled, so it can't be deleted: handle it under Publishing first.",
     "rewrite": "Rewrite",
-    "rewrite_title": "Rewrite into a new article",
+    "rewrite_title": "Hand it to AI as a new piece",
     "rewrite_hint": "Rewrites \"{title}\" into a new article your way; the original stays as it is and the new one appears in the list.",
-    "rewrite_to": "Rewrite into",
+    "rewrite_to": "Make it into",
     "rewrite_go": "AI rewrite into {type}",
     "convert_go": "Convert",
     "copy_go": "Duplicate",
@@ -115,7 +115,7 @@
     "rewrite_ph_article": "e.g. Expand into a ~1500-word article with headings",
     "rewrite_ph_post": "e.g. Short, under 200 words, open with a hook",
     "rewrite_ph_video": "e.g. Title and description for a 1-minute talking-head video",
-    "presets": "Rewrite presets",
+    "presets": "AI presets",
     "presets_empty": "No presets yet: pick a type, write the instructions and click \"Save as preset\", or add one under \"Manage presets\".",
     "preset_use": "Use this preset",
     "preset_edit": "Edit preset",
@@ -156,7 +156,12 @@
     "paste_hint": "or paste an image",
     "preset_prompt": "Instructions",
     "pub_target_account": "Target account: {name}. Verify the content, assets and selected account before publishing.",
-    "pub_target_missing": "The account changed; verify it again"
+    "pub_target_missing": "The account changed; verify it again",
+    "rewrite_or_video": "Rewrite / video",
+    "make_video_go": "Make a video",
+    "make_video_hint": "Make a video from \"{title}\": AI produces it on this computer and saves it as a new video article, with a version for every change. The original stays as is.",
+    "make_video_note_hint": "Describe the video you want: length, landscape or portrait, style, pace, captions, which tool to use… Leave it empty to follow the norms of the platforms you post to.",
+    "make_video_ph": "e.g. 60 seconds, portrait, state the takeaway in the first 3 seconds, big captions, fast pace, made with Remotion"
   },
   "ui": {
     "watch_show": "Watch",
@@ -290,5 +295,29 @@
     "type_media": "Media",
     "type_other": "Other",
     "import_too_large": "JSON files must be smaller than 20 MB"
+  },
+  "presets": {
+    "name": "Name",
+    "name_hint": "Shown on the button; leave empty to show the start of the instructions",
+    "type": "Output",
+    "prompt": "Instructions (prompt)",
+    "revise_ph": "e.g. Faster pace, cut the repeated shots",
+    "builtin_tag": "Built in",
+    "builtin_changed": "Built in · edited",
+    "reset": "Restore default",
+    "builtin": {
+      "make_video": {
+        "name": "Make a video",
+        "prompt": "Make a video for the platforms it will go to: 9:16 portrait for Douyin and Xiaohongshu, 16:9 landscape for YouTube and Bilibili; about 60 seconds. Say what the video is about in the first 3 seconds, follow the structure of the document, get the key points across in voice-over or captions, and end with a line inviting people to follow."
+      },
+      "video_tighter": {
+        "name": "Faster pace",
+        "prompt": "Make the pace faster: cut repeated or slow shots and pauses, one point per shot, about a third shorter overall. Leave everything else as is."
+      },
+      "video_captions": {
+        "name": "Bigger captions",
+        "prompt": "Make the captions bigger and bold, inside the safe area at the bottom, with key words highlighted in the primary color, readable on a phone without zooming. Leave everything else as is."
+      }
+    }
   }
 }

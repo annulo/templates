@@ -103,19 +103,19 @@
     "legacy_version": "以前的媒体版本（内容和文章可能不一样）：要发就删掉它，在上面按文章发",
     "delete_published": "这篇已经发出去或排了期，不能直接删除：先在「发布记录」里处理。",
     "rewrite": "改写",
-    "rewrite_title": "改写成一篇新的",
+    "rewrite_title": "交给 AI 另做一篇",
     "rewrite_hint": "按你的要求把「{title}」改写成另一篇，原文不动，新的出现在文章列表里。",
-    "rewrite_to": "改写成",
+    "rewrite_to": "做成",
     "rewrite_go": "AI 改写成{type}",
     "convert_go": "转换",
     "copy_go": "复制",
     "convert_hint": "不经过 AI：内容不动，只按类型换格式（长文的小标题、段落变成一行一行的纯文字，正文里的图做配图；反过来一行变一段），另存一篇",
-    "rewrite_note": "改写要求（选填）",
+    "rewrite_note": "要求（选填）",
     "rewrite_note_hint": "不填就按这种类型的常规写法改；也可以在预设的基础上改，或者自己写。",
     "rewrite_ph_article": "比如：展开成 1500 字左右的长文，加小标题",
     "rewrite_ph_post": "比如：简短，200 字以内，开头一句话抓人",
     "rewrite_ph_video": "比如：写成 1 分钟口播视频的标题和简介",
-    "presets": "改写预设",
+    "presets": "AI 预设",
     "presets_empty": "还没有预设：选好类型、写好要求后点「存为预设」，或者在「管理预设」里新建。",
     "preset_use": "用这个预设",
     "preset_edit": "修改预设",
@@ -156,7 +156,12 @@
     "paste_hint": "也可以直接粘贴图片",
     "preset_prompt": "改写要求",
     "pub_target_account": "本稿目标账号：{name}。请核对正文、素材和已勾选账号后发布。",
-    "pub_target_missing": "账号已变更，请重新核对"
+    "pub_target_missing": "账号已变更，请重新核对",
+    "rewrite_or_video": "改写 / 做视频",
+    "make_video_go": "做成视频",
+    "make_video_hint": "照「{title}」做一条视频：AI 在这台电脑上把视频做出来，存成一篇新的视频文章，每改一次存一个版本。原文不动。",
+    "make_video_note_hint": "写你要什么样的视频：时长、横屏还是竖屏、风格、节奏、字幕、用什么工具……不写就按要发的平台的常规做。",
+    "make_video_ph": "比如：60 秒竖屏，开头 3 秒抛出结论，大字幕，节奏快，用 Remotion 做"
   },
   "ui": {
     "watch_show": "打开看",
@@ -290,5 +295,29 @@
     "type_media": "媒体 / 资讯类",
     "type_other": "其他",
     "import_too_large": "JSON 文件不能超过 20 MB"
+  },
+  "presets": {
+    "name": "名字",
+    "name_hint": "按钮上显示的字，不填就显示要求的开头",
+    "type": "产出",
+    "prompt": "要求（Prompt）",
+    "revise_ph": "比如：节奏再快一点，删掉重复的镜头",
+    "builtin_tag": "模板自带",
+    "builtin_changed": "模板自带 · 改过",
+    "reset": "恢复默认",
+    "builtin": {
+      "make_video": {
+        "name": "做成视频",
+        "prompt": "按要发的平台做一条视频：抖音、小红书用 9:16 竖屏，YouTube、B 站用 16:9 横屏；时长 60 秒左右。开头 3 秒说清这条视频讲什么，画面跟着文档的结构走，旁白或字幕把要点讲清楚，结尾一句引导关注。"
+      },
+      "video_tighter": {
+        "name": "节奏快一点",
+        "prompt": "节奏再快一点：删掉重复、拖沓的镜头和停顿，每个镜头只讲一个点，总时长缩短三分之一左右，别的不动。"
+      },
+      "video_captions": {
+        "name": "字幕放大",
+        "prompt": "字幕放大、加粗，放在画面下方安全区内，关键词换主色高亮；手机上不用放大也能看清。别的不动。"
+      }
+    }
   }
 }

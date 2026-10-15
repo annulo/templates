@@ -1,6 +1,6 @@
 {
-  "name": "改写预设",
-  "desc": "改写文章时常用的要求：改成哪种类型、怎么改。用户在「改写」弹窗里存和挑",
+  "name": "AI 预设",
+  "desc": "交给 AI 做的常用要求：产出哪种类型、怎么做（改写成笔记、做成视频、给视频提意见…）。用户在「交给 AI」弹窗里存和挑；模板自带的默认预设在代码里（core/lib/presets.ts），用户改了、删了存一行 builtin",
   "json_schema": {
     "type": "object",
     "properties": {
@@ -10,7 +10,23 @@
       },
       "prompt": {
         "type": "string",
-        "description": "改写要求，比如「简短，200 字以内，开头一句话抓人」"
+        "description": "要求，比如「简短，200 字以内，开头一句话抓人」「60 秒竖屏，大字幕」"
+      },
+      "name": {
+        "type": "string",
+        "description": "预设的名字（按钮上显示）；空的显示要求开头"
+      },
+      "target": {
+        "type": "string",
+        "description": "用在哪：article 一篇文章（改写、做成视频，默认）/ video_version 视频的某个版本（提修改意见）"
+      },
+      "builtin": {
+        "type": "string",
+        "description": "改的是哪条模板自带的预设（它的 id）；空的是用户自己加的"
+      },
+      "hidden": {
+        "type": "boolean",
+        "description": "用户删掉了这条模板自带的预设（只和 builtin 一起用）"
       },
       "created_at": {
         "type": "string"
