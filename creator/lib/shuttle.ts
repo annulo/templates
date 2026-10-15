@@ -292,6 +292,8 @@ export type Article = {
   channel_id?: string
   topic_id?: string
   title: string
+  /** 稿子（HTML，可选）：作者的工作稿，不发出去 */
+  draft?: string
   summary?: string
   body?: string
   video?: string
@@ -425,6 +427,8 @@ export type Asset = {
   source?: string
   /** 文件类型（video/mp4、image/png、text/html…）：页面按它显示；没有时按扩展名猜（core/lib/files.ts） */
   mime?: string
+  /** 一组文件（JSON 数组字符串 [{ url, mime, name }]）：AI 一次做出来的一组，只有一个文件时为空、用 url */
+  files?: string
   /** 备注：文章页的产物列表和资料库显示同一条 */
   note?: string
   /** AI 给哪篇文章做的产物（文章页列出它） */
@@ -615,12 +619,6 @@ export function uploadLocalFile(file: File, onProgress?: (p: number) => void): P
 export function videoSrc(v?: string) {
   if (!v) return ''
   return v.startsWith('local:') ? '/_shuttle/files/' + v.slice(6) : v
-}
-
-/** 删掉一个本机文件（local:<name>）。不是本机文件的地址不动 */
-export async function deleteLocalFile(ref?: string) {
-  if (!ref?.startsWith('local:')) return
-  await api<{ ok: boolean }>('local/files/' + encodeURIComponent(ref.slice(6)), { method: 'DELETE' })
 }
 
 /** 写一个本机密钥（比如用户在弹窗里填的应用密码）：只能写，读不回来。表里只存密钥名 */

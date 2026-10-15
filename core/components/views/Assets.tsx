@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { Copy, FileText, Pencil, Plus, Search, Trash2, Upload, Video } from 'lucide-react'
-import { AssetPreview, FileActions } from '../AssetPreview'
+import { AssetGroup, CopyRef } from '../AssetPreview'
 import { fileSrc, kindOfMime, mimeOf } from '../../lib/files'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls } from '../ui'
 import { dbCreate, dbDelete, dbList, dbPatch, type Asset, type AssetKind } from '../../lib/shuttle'
@@ -155,7 +155,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
 
 function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabled: boolean; onEdit: () => void; onChanged: () => void; onTag: (t: string) => void }) {
   const [confirmDel, setConfirmDel] = useState(false)
-  const [zoom, setZoom] = useState(false)
+  const [zoom, setZoom] = useState('')
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState(false)
   const tags = assetTags(a)
@@ -186,12 +186,11 @@ function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabl
         </div>
       ) : (
         <div className="relative">
-          <AssetPreview a={a} onZoom={() => setZoom(true)} />
+          <AssetGroup a={a} table="assets" id={a.id} onZoom={setZoom} actionsClassName="px-2" />
           {a.kind === 'video' && <Video className="pointer-events-none absolute top-2 left-2 size-4 text-white drop-shadow" />}
         </div>
       )}
-      {a.kind !== 'text' && <FileActions url={a.url} className="px-2 pt-1.5" />}
-      {zoom && a.url && <Lightbox src={fileSrc(a.url)} alt={a.name ?? ''} onClose={() => setZoom(false)} />}
+      {zoom && <Lightbox src={zoom} alt={a.name ?? ''} onClose={() => setZoom('')} />}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="truncate text-sm font-medium" title={a.name}>
@@ -215,6 +214,7 @@ function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabl
           <Button variant="ghost" size="icon-sm" title={a.kind === 'text' ? tr('assets.copy_text') : tr('assets.copy_url')} onClick={copy}>
             <Copy className={cx(copied && 'text-emerald-600')} />
           </Button>
+          {a.kind === 'text' && <CopyRef refs={[`@assets:${a.id}`]} label="" className="h-8 px-2" />}
           <Button variant="ghost" size="icon-sm" title={tr('assets.edit_title')} onClick={onEdit} disabled={disabled}>
             <Pencil />
           </Button>

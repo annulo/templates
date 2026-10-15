@@ -28,7 +28,7 @@
 | 总览 `overview`（起步步骤 + 今天要做的 + 粉丝、发布数） | `checklist` | `today.list`（用户问「接下来做什么」先跑它照着答）、`channels.stats` |
 | 每周总结 `reports` | `reports` | `reports.data` / `reports.save`；任务 `weekly-report`（每 7 天定时，也能在页面点） |
 | 社媒 `social`（账号概览、数据表现） | 社媒插件的 `social_accounts`、`social_daily`、`social_post_daily`、`social_health` | `social/social.*`、`social/stats.summary` |
-| 内容中心 `content`（选题 → 文章（长文 / 图文笔记 / 视频）→ 发布到支持这种类型的账号 / 排期；改写成别的类型、做成视频） | `topics`、`articles`、`rewrite_presets`（AI 预设）、`assets`（产物）、插件的 `social_posts`（发布记录） | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.rewriteContext` / `save`（任务 `rewrite-article`）、`video.context`、`assets.add`（任务 `make-video`）、`publish.prepare` |
+| 内容中心 `content`（选题 → 文章（长文 / 图文笔记 / 视频）→ 发布到支持这种类型的账号 / 排期；改写成别的类型、做成视频） | `topics`、`articles`、`rewrite_presets`（AI 预设）、`assets`（产物）、插件的 `social_posts`（发布记录） | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.rewriteContext` / `save`（任务 `rewrite-article`）、`work.context`、`assets.add` / `replace`（任务 `work-on-article`）、`publish.prepare` |
 | 发布日历 `calendar`（按天看排期和发布，拖动改排期） | 读 `social_posts`、`articles` | |
 | 我的定位 `company` | `profile` | `profile.get` / `save` |
 | 资料库 `assets` | `assets` | |
@@ -52,16 +52,17 @@
 `content.save` 存的文章带 `unread: true`（新文章），用户打开就清掉；左侧「内容中心」的数字数它，列表里新文章单独标出来。
 用户常用的改写要求存在 `rewrite_presets`（`type` + `prompt`），在改写弹窗里点一下就填好。
 
-## 做视频
+## 稿子、交给 AI、产物、引用
 
-交给 AI 的事都是「产出哪种类型 + 一段要求」，叫 **AI 预设**（`rewrite_presets` 表，模板自带的几条在 `lib/presets.ts`）。在文章页点「改写 / 做视频」选视频，就是照这篇文档做一条视频：
+设计见 `docs/artifacts.md`。
 
-- 任务 `make-video`（参数 `article_id` 是文档、`note` 是要求）：`video.context` 拿文档和平台，你在这台电脑上把视频做出来，`annulo upload --local` 存进项目，`content.save` 建视频文章（`source_id` 指回文档），`assets.add` 把成片放进资料库。
-- **产物（artifacts）就是资料库里的一条**：带 `article_id`（哪篇文章做的）、`chat_id`（做它的对话，`assets.add` 自己记）、`mime`（文件类型，页面按它显示：视频、图片直接放，网页用浏览器打开）、`note`（备注，文章页和资料库显示同一条）。文章页列出这篇的产物；视频文章的 `video` 是发布用的那个（`assets.add` 传 `use: true` 设它）。
-- 给一篇文章做别的东西（一张配图、一个网页、一段音乐），做好也是 `annulo upload --local` 再 `assets.add`（带 `article_id`、`note`，`mime` 不给按扩展名猜），就出现在这篇文章的产物里。
-- **要改就回到做它的那段对话**：页面上「继续对话」打开它，用户在对话里直接说，你照 `make-video` 第 5 步每改一次存一个新的。那段对话找不到时用户会新开一段，也照第 5 步做。
-- 用什么工具做由你定（要求里指定了就用它）；工程和中间文件放哪照系统提示的「工作文件放哪」，不要放进项目目录，表里也不记它们的路径。
-- 用户在对话里说「把这篇做成视频」「第 2 版节奏快一点」，照这两个任务做，不要另起一套。
+- **稿子**（`articles.draft`，可选，默认折叠）：作者的工作稿（为什么写这篇、大纲、草稿、剧本），**不发出去**；正文才发。读哪个、怎么用你自己定；用户没让写稿子就不改稿子。
+- **交给 AI** 两种做法，都是预设（`rewrite_presets`，`mode`）：
+  - **在这篇上做**：任务 `work-on-article`（参数 `article_id`、`note`）：`work.context` 拿这篇的稿子、正文、产物、平台；写正文用 `content.update`，做文件 `annulo upload --local` 后 `assets.add` 存成这篇的产物；
+  - **另写一篇**：任务 `rewrite-article`，只生成新文章的正文。
+- **产物（artifacts）**是资料库里带 `article_id` 的一条，可以是一组文件（`files`，6 张图一条），带 `chat_id`、`note`（备注，文章页和资料库显示同一条）。`assets.add({ urls, article_id, note, use })`；整组重做存新的，只改其中一个用 `assets.replace({ asset_id, n, url, note })` 改原来那组。`use: true`：视频文章设成发布用的视频，图文换成配图。
+- **要改就回到做它的那段对话**：用户在对话里接着说，照 `work-on-article` 第 5 步做。
+- **引用** `@表:id#n`：用户从页面「复制引用」贴进对话（文章 `@articles:<id>`，产物 `@assets:<id>`，组里第 3 个 `@assets:<id>#3`），消息后面有 `<references>`。资料库 `#n` 数 `files`，图文文章数 `images`。
 
 ## 定位怎么用
 

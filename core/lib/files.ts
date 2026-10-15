@@ -40,3 +40,21 @@ export async function openFile(url?: string, reveal = false) {
   if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
   if (body.open_url) window.open(body.open_url, '_blank', 'noopener')
 }
+
+/** 删掉一个本机文件（local:<name>）。不是本机文件的地址不动 */
+export async function deleteLocalFile(ref?: string) {
+  if (!ref?.startsWith('local:')) return
+  const res = await fetch('/_shuttle/api/local/files/' + encodeURIComponent(ref.slice(6)), { method: 'DELETE', headers: { 'X-Shuttle': '1' } })
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`)
+}
+
+export type FileItem = { url: string; mime: string; name?: string }
+
+/** 资料库一条里的文件：一组（files）或单个（url） */
+export function filesOf(a: { files?: string; url?: string; mime?: string; kind?: string; name?: string }): FileItem[] {
+  try {
+    const l = JSON.parse(a.files || '[]')
+    if (Array.isArray(l) && l.length) return l.filter((f) => f && f.url).map((f) => ({ url: String(f.url), mime: f.mime || mimeOf({ url: f.url }), name: f.name }))
+  } catch {}
+  return a.url ? [{ url: a.url, mime: mimeOf(a), name: a.name }] : []
+}

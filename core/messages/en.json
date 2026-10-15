@@ -103,7 +103,7 @@
     "legacy_version": "An older media version (may differ from the article): delete it to post the article instead",
     "delete_published": "This article has been posted or scheduled, so it can't be deleted: handle it under Publishing first.",
     "rewrite": "Rewrite",
-    "rewrite_title": "Hand it to AI as a new piece",
+    "rewrite_title": "Ask AI",
     "rewrite_hint": "Rewrites \"{title}\" into a new article your way; the original stays as it is and the new one appears in the list.",
     "rewrite_to": "Make it into",
     "rewrite_go": "AI rewrite into {type}",
@@ -157,12 +157,14 @@
     "preset_prompt": "Instructions",
     "pub_target_account": "Target account: {name}. Verify the content, assets and selected account before publishing.",
     "pub_target_missing": "The account changed; verify it again",
-    "rewrite_or_video": "Rewrite / video",
-    "make_video_go": "Make a video",
-    "make_video_hint": "Make a video from \"{title}\": AI produces it on this computer and saves it as a new video article, with a version for every change. The original stays as is.",
-    "make_video_note_hint": "Describe the video you want: length, landscape or portrait, style, pace, captions, which tool to use… Leave it empty to follow the norms of the platforms you post to.",
-    "make_video_ph": "e.g. 60 seconds, portrait, state the takeaway in the first 3 seconds, big captions, fast pace, made with Remotion",
-    "artifacts_n": "{n} artifacts"
+    "artifacts_n": "{n} artifacts",
+    "ai": "Ask AI",
+    "ai_title": "Ask AI",
+    "work_go": "Start",
+    "work_hint": "Work on \"{title}\": write its content, or make images or a video attached to it, following the instructions below. To change the result, keep talking in the chat on the right.",
+    "work_note": "Instructions",
+    "work_note_hint": "Say what AI should make and how: how many images, what style, how long, which tool…",
+    "preset_save_here": "Save as preset"
   },
   "ui": {
     "watch_show": "Watch",
@@ -307,10 +309,32 @@
     "reset": "Restore default",
     "builtin": {
       "make_video": {
-        "name": "Make a video",
-        "prompt": "Make a video for the platforms it will go to: 9:16 portrait for Douyin and Xiaohongshu, 16:9 landscape for YouTube and Bilibili; about 60 seconds. Say what the video is about in the first 3 seconds, follow the structure of the document, get the key points across in voice-over or captions, and end with a line inviting people to follow."
+        "name": "Make the video",
+        "prompt": "Turn this into a video: portrait or landscape for the platforms it goes to (9:16 for Douyin and Xiaohongshu, 16:9 for YouTube and Bilibili), about 60 seconds. Say what it's about in the first 3 seconds, follow the structure of the draft (or the description if there's no draft), get the key points across in voice-over or captions, and end with a line inviting people to follow. Use it as the video to publish and write the title, description and tags."
+      },
+      "from_draft": {
+        "name": "Write from the draft",
+        "prompt": "Write this piece from its draft: title, body (the description for videos) and tags for its type, following my writing instructions. Keep the draft's points, examples and wording where you can, fill in the structure, and don't invent anything that isn't in the draft."
+      },
+      "post_images": {
+        "name": "Make 5 images",
+        "prompt": "Make 5 images for this post: 3:4 portrait; the first is the cover (a big headline that says what it's about at a glance), the rest each cover one point with little, large text and a consistent palette. Use them as this post's images."
+      },
+      "cover": {
+        "name": "Make a cover",
+        "prompt": "Make a cover image for this piece: a big headline that says what it's about at a glance, 3:4 portrait for posts and 16:9 landscape for long-form, simple style."
+      },
+      "to_video": {
+        "name": "Make it a video",
+        "prompt": "Write a new video piece: write the video's title, description and tags, then make the video itself (as in \"Work on this\": about 60 seconds, portrait or landscape for the platforms, say what it's about in the first 3 seconds)."
       }
-    }
+    },
+    "mode": "How",
+    "mode_here": "Work on this",
+    "mode_new": "Write a new one",
+    "types": "Use on",
+    "types_hint": "Leave all off to use it on every type",
+    "here_ph": "e.g. Make 6 Xiaohongshu images from the draft, 3:4 portrait, big headline text, colors that match my positioning"
   },
   "assets": {
     "note": "Note",
@@ -321,6 +345,17 @@
     "open": "Open",
     "open_hint": "Open in the default app (web pages in your browser)",
     "reveal_mac": "Show in Finder",
-    "reveal": "Show in folder"
+    "reveal": "Show in folder",
+    "copy_ref": "Copy reference",
+    "copy_ref_n": "Copy reference #{n}"
+  },
+  "draft": {
+    "title": "Draft",
+    "empty": "Why you're writing this, an outline, a script… (never published)",
+    "hint": "The draft is your working copy: why you're writing this, an outline, notes, a script, shots. It's never published; AI reads it when writing the content or making images and videos.",
+    "to_body": "Use as content",
+    "to_body_confirm": "Replace the current content?",
+    "ai_write": "AI: write the content",
+    "rewrite": "Rewrite as…"
   }
 }

@@ -8,6 +8,10 @@
         "type": "string",
         "description": "文件的公开地址（图片、视频）；文字素材可以为空"
       },
+      "files": {
+        "type": "string",
+        "description": "一组文件（JSON 数组字符串，[{ url, mime, name }]，顺序就是轮播顺序，第一个是封面）：AI 一次做出来的一组（小红书的 6 张图）。只有一个文件时用 url。引用 @assets:<id>#n 的 n 数的就是它"
+      },
       "kind": {
         "type": "string",
         "description": "image / video / text / file（网页、音频、文档这类其余的文件；具体是什么看 mime）"

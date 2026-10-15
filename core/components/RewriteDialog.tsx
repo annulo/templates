@@ -1,73 +1,91 @@
 import { useEffect, useState } from 'react'
-import { ArrowRightLeft, Bookmark, Clapperboard, Copy, Loader2, Sparkles } from 'lucide-react'
+import { ArrowRightLeft, Bookmark, Copy, Loader2, Sparkles, Wand2 } from 'lucide-react'
 import { TYPE_META, TypePicker, typeOf, type ArticleType } from './ArticleTypes'
 import { PresetChips, PresetsDialog, pickedPreset, savePreset, usePresets } from './Presets'
-import { Button, Dialog, Field, Notice, cx, inputCls } from './ui'
+import { Button, Dialog, Field, Notice, Segmented, cx, inputCls } from './ui'
 import { tr } from '../lib/i18n'
-import type { Preset } from '../lib/presets'
+import { fitsType, type Preset, type PresetMode } from '../lib/presets'
 import type { Article } from '../lib/shuttle'
 
 /** 任务 id（tasks/rewrite-article.md）：把一篇文章改写成选的类型，另存一篇新的 */
 export const REWRITE_TASK = 'rewrite-article'
 
 /**
- * 交给 AI：选产出哪种类型、写这次的要求（Prompt），交给助手另做一篇（原文不动）。
- * 常用的要求存成「AI 预设」（core/lib/presets.ts：类型 + 要求，模板也自带几条）：这里点一下类型和要求都填好，改、删、加在「管理预设」弹窗里。
- * 「转换」不经过 AI，内容不动、只按类型换格式（onConvert，core/local/convert.ts）。
- * videoTask：项目能做视频（creator 的 tasks/make-video.md）时传，选视频就是真的做一条视频（onStart 由调用方交给那个任务），
- * 不传时改成视频只写标题和简介。
+ * 交给 AI（creator/docs/artifacts.md「交给 AI」），两种做法：
+ *   在这篇上做（onWork，项目有「在这篇上做」的任务时才有）：写这篇的正文、做产物挂在这篇上，照 Prompt 做；
+ *   另写一篇（onStart）：选改成哪种类型、写这次的要求，交给助手另写一篇（原文不动）。「转换」不经过 AI，只按类型换格式（onConvert）。
+ * 常用的要求存成「AI 预设」（core/lib/presets.ts，模板也自带几条）：点一下就填好，改、删、加在「管理预设」里。
  */
-export default function RewriteDialog({ open, article, starting, error, onClose, onStart, onConvert, videoTask }: { open: boolean; article: Article; starting: boolean; error: string; onClose: () => void; onStart: (type: ArticleType, note: string) => void; onConvert: (type: ArticleType) => Promise<void>; videoTask?: string }) {
+export default function RewriteDialog({ open, article, starting, error, onClose, onStart, onConvert, onWork, initialMode, initialNote, initialPreset }: {
+  open: boolean
+  article: Article
+  starting: boolean
+  error: string
+  onClose: () => void
+  onStart: (type: ArticleType, note: string) => void
+  onConvert: (type: ArticleType) => Promise<void>
+  /** 在这篇上做：交给项目的「在这篇上做」任务，note 是这次的要求。不传就只有「另写一篇」 */
+  onWork?: (note: string) => Promise<void>
+  initialMode?: PresetMode
+  initialNote?: string
+  /** 打开时预先选上这条模板自带的预设（它的 builtin id，比如稿子的「AI 写成正文」是 from_draft） */
+  initialPreset?: string
+}) {
   const from = typeOf(article)
-  const video = !!videoTask
-  const first: ArticleType = video && from !== 'video' ? 'video' : from === 'article' ? 'post' : 'article'
-  const [type, setType] = useState<ArticleType>(first)
+  const here = !!onWork
+  const [mode, setMode] = useState<PresetMode>(here ? 'here' : 'new')
+  const [type, setType] = useState<ArticleType>(from === 'article' ? 'post' : 'article')
   const [note, setNote] = useState('')
   const [managing, setManaging] = useState(false)
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
-  const [converting, setConverting] = useState(false)
-  const { presets, error: loadErr, reload } = usePresets(open, video)
-  const making = video && type === 'video'
-  const convert = async () => {
-    setConverting(true); setErr('')
-    try { await onConvert(type) } catch (e) { setErr((e as Error).message) } finally { setConverting(false) }
-  }
-  useEffect(() => { if (open) { setType(first); setNote(''); setMsg(''); setErr('') } }, [open])
-  // 打开时默认选上「做成视频」这类模板自带的预设，要求直接填好
+  const [busy, setBusy] = useState(false)
+  const { presets, error: loadErr, reload } = usePresets(open, here)
+  const list = (presets ?? []).filter((p) => p.mode === mode && fitsType(p, from))
   useEffect(() => {
-    if (!open || note || !presets) return
-    const def = presets.find((p) => p.builtin && p.type === type)
-    if (def) setNote(def.prompt)
-  }, [open, presets])
+    if (!open) return
+    setMode(initialMode ?? (here ? 'here' : 'new')); setType(from === 'article' ? 'post' : 'article'); setNote(initialNote ?? ''); setMsg(''); setErr('')
+  }, [open])
 
-  const picked = pickedPreset(presets, type, note)
-  const usePreset = (p: Preset) => { setType(p.type); setNote(p.prompt); setMsg('') }
+  // 预先选的预设：读到列表后填进去（用户改过它就用改过的）
+  useEffect(() => {
+    if (!open || !initialPreset || !presets) return
+    const p = presets.find((x) => x.builtin === initialPreset)
+    if (p) { setMode(p.mode); setNote(p.prompt) }
+  }, [open, initialPreset, !!presets])
+  const picked = pickedPreset(presets, mode, type, note)
+  const usePreset = (p: Preset) => { if (p.mode === 'new') setType(p.type); setNote(p.prompt); setMsg('') }
   const save = async () => {
     setErr(''); setMsg('')
-    try { await savePreset(type, note); await reload(); setMsg(tr('article.preset_saved')) } catch (e) { setErr((e as Error).message) }
+    try { await savePreset(mode, mode === 'here' ? from : type, note); await reload(); setMsg(tr('article.preset_saved')) } catch (e) { setErr((e as Error).message) }
   }
+  const run = async (f: () => Promise<unknown>) => {
+    setBusy(true); setErr('')
+    try { await f() } catch (e) { setErr((e as Error).message) } finally { setBusy(false) }
+  }
+  const working = starting || busy
 
-  return <Dialog open={open} onClose={onClose} title={tr('article.rewrite_title')} width={640} footer={<>
+  return <Dialog open={open} onClose={onClose} title={tr('article.ai_title')} width={640} footer={<>
     <Button variant="ghost" onClick={onClose}>{tr('common.cancel')}</Button>
-    {/* 同类型没有可转的，按钮就是「复制」；做视频没有「转换」 */}
-    {!making && <Button variant="outline" onClick={convert} disabled={converting || starting} title={type === from ? undefined : tr('article.convert_hint')}>{converting ? <Loader2 className="animate-spin" /> : type === from ? <Copy /> : <ArrowRightLeft />}{type === from ? tr('article.copy_go') : tr('article.convert_go')}</Button>}
-    <Button needsShuttle onClick={() => onStart(type, note.trim())} disabled={starting || converting}>{starting ? <Loader2 className="animate-spin" /> : making ? <Clapperboard /> : <Sparkles />}{making ? tr('article.make_video_go') : tr('article.rewrite_go', { type: TYPE_META[type].label })}</Button>
+    {mode === 'new' && <Button variant="outline" onClick={() => run(() => onConvert(type))} disabled={working} title={type === from ? undefined : tr('article.convert_hint')}>{type === from ? <Copy /> : <ArrowRightLeft />}{type === from ? tr('article.copy_go') : tr('article.convert_go')}</Button>}
+    {mode === 'here'
+      ? <Button needsShuttle onClick={() => run(() => onWork!(note.trim()))} disabled={working || !note.trim()}>{working ? <Loader2 className="animate-spin" /> : <Wand2 />}{tr('article.work_go')}</Button>
+      : <Button needsShuttle onClick={() => onStart(type, note.trim())} disabled={working}>{working ? <Loader2 className="animate-spin" /> : <Sparkles />}{tr('article.rewrite_go', { type: TYPE_META[type].label })}</Button>}
   </>}>
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{making ? tr('article.make_video_hint', { title: article.title }) : tr('article.rewrite_hint', { title: article.title })}</p>
-      <PresetChips presets={presets} picked={picked} onPick={usePreset} onManage={() => setManaging(true)} emptyText={tr('article.presets_empty')} />
-      <Field group label={tr('article.rewrite_to')}><TypePicker value={type} onChange={(t) => { if (picked) setNote(''); setType(t) }} exclude={video ? undefined : from} /></Field>
-      {/* 要求选填：不填就按目标类型的常规写法改（tasks/rewrite-article.md）、按平台的常规做视频（tasks/make-video.md） */}
-      <Field label={tr('article.rewrite_note')} hint={making ? tr('article.make_video_note_hint') : tr('article.rewrite_note_hint')}>
-        <textarea value={note} onChange={(e) => { setNote(e.target.value); setMsg('') }} rows={making ? 6 : 4} className={cx(inputCls, 'py-2')} placeholder={making ? tr('article.make_video_ph') : tr(`article.rewrite_ph_${type}`)} />
+      {here && <Segmented<PresetMode> value={mode} onChange={(m) => { setMode(m); setNote(''); setMsg('') }} options={[{ value: 'here', label: tr('presets.mode_here') }, { value: 'new', label: tr('presets.mode_new') }]} />}
+      <p className="text-sm text-muted-foreground">{mode === 'here' ? tr('article.work_hint', { title: article.title }) : tr('article.rewrite_hint', { title: article.title })}</p>
+      <PresetChips presets={list} picked={picked} onPick={usePreset} onManage={() => setManaging(true)} emptyText={tr('article.presets_empty')} />
+      {mode === 'new' && <Field group label={tr('article.rewrite_to')}><TypePicker value={type} onChange={(t) => { if (picked) setNote(''); setType(t) }} /></Field>}
+      <Field label={mode === 'here' ? tr('article.work_note') : tr('article.rewrite_note')} hint={mode === 'here' ? tr('article.work_note_hint') : tr('article.rewrite_note_hint')}>
+        <textarea value={note} onChange={(e) => { setNote(e.target.value); setMsg('') }} rows={mode === 'here' ? 5 : 4} className={cx(inputCls, 'py-2')} placeholder={mode === 'here' ? tr('presets.here_ph') : tr(`article.rewrite_ph_${type}`)} />
       </Field>
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" disabled={!note.trim() || !!picked} onClick={save}><Bookmark />{picked ? tr('article.preset_exists') : tr('article.preset_save', { type: TYPE_META[type].label })}</Button>
+        <Button size="sm" variant="outline" disabled={!note.trim() || !!picked} onClick={save}><Bookmark />{picked ? tr('article.preset_exists') : mode === 'here' ? tr('article.preset_save_here') : tr('article.preset_save', { type: TYPE_META[type].label })}</Button>
         {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
       </div>
       {(err || error || loadErr) && <Notice tone="error">{err || error || loadErr}</Notice>}
     </div>
-    <PresetsDialog open={managing} presets={presets ?? []} onClose={() => setManaging(false)} onChanged={reload} />
+    <PresetsDialog open={managing} presets={presets ?? []} here={here} onClose={() => setManaging(false)} onChanged={reload} />
   </Dialog>
 }

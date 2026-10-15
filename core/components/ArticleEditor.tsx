@@ -15,6 +15,10 @@ import { uploadAssets, type UploadItem } from '../lib/assets'
 import { usePasteFiles } from '../lib/usePasteFiles'
 import { FIELDS } from '../plugins/social/local/_fields'
 import { parseList, tagsOf, typeOf, type ArticleType } from '../local/_types'
+import { fileSrc } from '../lib/files'
+
+/** 配图的地址给 <img>：AI 做的本机文件（local:<name>）换成 Annulo 的地址 */
+const imgSrc = (u: string) => fileSrc(u)
 
 // 一篇文章的编辑框和阅读视图，按文章类型显示字段（local/_types.ts）：
 //   长文：标题、摘要、富文本正文（图在正文里）；图文笔记：标题、纯文字正文、一组配图、封面大字；视频：标题、视频、简介、分区。都有话题。
@@ -94,7 +98,7 @@ function ImagesField({ images, max, hint, onChange }: { images: string[]; max: n
         onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = 'move' }} onDragOver={(e) => { if (dragFrom !== null) e.preventDefault() }}
         onDrop={(e) => { e.preventDefault(); if (dragFrom !== null && dragFrom !== i) move(dragFrom, i); setDragFrom(null) }} onDragEnd={() => setDragFrom(null)}
         title={images.length > 1 ? tr('social.drag_sort') : undefined} className={cx('relative', images.length > 1 && 'cursor-grab active:cursor-grabbing', dragFrom === i && 'opacity-40')}>
-        <button type="button" onClick={() => setZoom(u)} aria-label={tr('social.view_image')} className="block cursor-zoom-in rounded"><img src={u} alt="" draggable={false} className="size-24 rounded border border-border object-cover" /></button>
+        <button type="button" onClick={() => setZoom(u)} aria-label={tr('social.view_image')} className="block cursor-zoom-in rounded"><img src={imgSrc(u)} alt="" draggable={false} className="size-24 rounded border border-border object-cover" /></button>
         {i === 0 && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">{tr('article.cover')}</span>}
         <button type="button" aria-label={tr('social.remove_image')} onClick={() => onChange(images.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-foreground text-background opacity-80 hover:opacity-100"><X className="size-3" /></button>
       </div>)}</div>}
@@ -106,7 +110,7 @@ function ImagesField({ images, max, hint, onChange }: { images: string[]; max: n
       </div>}
       <UploadProgress items={uploads} />
     </div>
-    {zoom && <Lightbox src={zoom} onClose={() => setZoom('')} />}
+    {zoom && <Lightbox src={imgSrc(zoom)} onClose={() => setZoom('')} />}
     <AssetPicker open={picking} kind="image" max={max - images.length} onClose={() => setPicking(false)} onPick={(urls) => { onChange([...images, ...urls.filter((u) => !images.includes(u))].slice(0, max)); setPicking(false) }} />
   </Field>
 }
@@ -131,11 +135,11 @@ export function ArticleView({ a }: { a: Article }) {
     {tagLine}
   </div>
   return <div className="mt-5 space-y-4 border-t border-border pt-4">
-    {images.length ? <div className="flex flex-wrap gap-2">{images.map((u, i) => <button key={u + i} type="button" onClick={() => setZoom(u)} className="relative cursor-zoom-in"><img src={u} alt="" loading="lazy" className="size-40 rounded-lg border border-border object-cover" />{i === 0 && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">{tr('article.cover')}</span>}</button>)}</div>
+    {images.length ? <div className="flex flex-wrap gap-2">{images.map((u, i) => <button key={u + i} type="button" onClick={() => setZoom(u)} className="relative cursor-zoom-in"><img src={imgSrc(u)} alt="" loading="lazy" className="size-40 rounded-lg border border-border object-cover" />{i === 0 && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">{tr('article.cover')}</span>}</button>)}</div>
       : a.cover_text ? <div className="w-40 overflow-hidden rounded-lg border border-border"><TextCover text={a.cover_text} className="w-full" /></div> : <p className="text-xs text-muted-foreground">{tr('article.no_images')}</p>}
     {a.body ? <p className="text-[15px] leading-[1.75] whitespace-pre-wrap">{a.body}</p> : <p className="text-sm text-muted-foreground">{tr('content.no_body')}</p>}
     {tagLine}
-    {zoom && <Lightbox src={zoom} onClose={() => setZoom('')} />}
+    {zoom && <Lightbox src={imgSrc(zoom)} onClose={() => setZoom('')} />}
   </div>
 }
 

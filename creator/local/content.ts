@@ -106,7 +106,8 @@ type Fields = { title?: string; summary?: string; slug?: string; keywords?: stri
 type SaveInput = Fields & { type?: string; topic_id?: string; source_id?: string; title: string; body: string }
 
 const cleanSlug = (v: unknown) => String(v ?? '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
-const isAsset = (u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/)\S+$/.test(u)
+// 资料库里的图：网址、离线上传的 /_annulo/uploaded/…、AI 做的本机文件 local:<name>（发布时 b.upload 直接认）
+const isAsset = (u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/|local:[0-9a-f]{32})\S*$/.test(u)
 const cleanTags = (v: unknown) => [...new Set(parseList(v).map((x) => x.replace(/^#/, '').trim()).filter(Boolean))]
 
 /** 文章字段的校验（按类型）：标题不能空；长文正文是 HTML、像写完的文章；图文笔记、视频正文是纯文字。只校验传了的字段 */
@@ -189,7 +190,7 @@ export function rewriteContext(input: { article_id: string; type: string }, ctx:
   const body = String(a.body ?? '')
   return {
     source: {
-      id: a.id, type: from, title: a.title, summary: a.summary ?? '',
+      id: a.id, type: from, title: a.title, summary: a.summary ?? '', draft: htmlText(String(a.draft ?? '')).slice(0, 20000),
       ...(from === 'article' ? { html: body.slice(0, 60000), text: htmlText(body).slice(0, 12000), images: htmlImages(body) } : { text: body, images: parseList(a.images) }),
       tags: tagsOf(a), video: a.video ?? '',
     },

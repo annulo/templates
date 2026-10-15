@@ -11,11 +11,13 @@ description: 把一篇文章改写成另一种类型（或同类型的另一个�
 annulo run content.rewriteContext --input '{"article_id":"<article_id>","type":"<type>"}'
 ```
 
-输出里：`source` 是原文（`type`、`title`、`text` 纯文字、长文还有 `html`、`images` 原文的配图、`tags`、`video`）；
+输出里：`source` 是原文（`type`、`title`、`draft` 稿子、`text` 正文的纯文字、长文还有 `html`、`images` 原文的配图、`tags`、`video`）；
 `type_note` 说明目标类型的字段怎么填；`limits` 是目标类型在用户各账号平台上的限制（标题、正文字数、话题个数、配图张数），**照最严的那个写**；
 `project` 是我的定位；`images` 是资料库里能配的图，视频类型还有 `videos`。
 
 ## 2. 怎么写
+
+**稿子**（`draft`）是作者的工作稿（为什么写这篇、大纲、草稿、剧本），不发出去；**正文**是发出去的内容。两个都给你，读哪个、怎么用你自己定。**只生成新文章的正文**，不写它的稿子。
 
 照 `note` 写（`note` 是空的：用户没提要求，按目标类型的常规写法改），`note` 和下面的规则冲突时以规则为准。按目标类型改的不只是长短，是写法：
 
@@ -52,3 +54,7 @@ annulo run content.save --input @/tmp/rewrite.json
 ```
 
 content.save 报错就按报错改了再存。存完回复用户：改写成了什么、多长、配了几张图，最后给出新文章的链接 `[打开「标题」](/?view=content&article=<content.save 返回的 article_id>)`。
+
+## 5. 要求里要把视频（或图）也做出来时
+
+比如「另写一篇视频，再把视频做出来」：存好新文章后，接着在**新的那篇**上照项目的任务 `tasks/work-on-article.md` 做（`work.context` 用新文章的 id，第 3 步做文件、`assets.add` 挂在新文章上），回复里给新文章的链接。

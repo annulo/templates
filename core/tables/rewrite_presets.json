@@ -12,6 +12,14 @@
         "type": "string",
         "description": "要求，比如「简短，200 字以内，开头一句话抓人」「60 秒竖屏，大字幕」"
       },
+      "mode": {
+        "type": "string",
+        "description": "做法：here 在这篇上做（写这篇的正文、做产物挂在这篇上）/ new 另写一篇（改写成 type 那种类型，默认）"
+      },
+      "types": {
+        "type": "string",
+        "description": "在这篇上做的预设用在哪些类型的文章上（JSON 数组字符串，比如 [\"post\"]）；空的是都能用"
+      },
       "name": {
         "type": "string",
         "description": "预设的名字（按钮上显示）；空的显示要求开头"

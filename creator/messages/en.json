@@ -1602,16 +1602,14 @@
   },
   "artifacts": {
     "title": "Artifacts",
-    "making_from_doc": "Making a video from this",
-    "making_desc": "AI is making the video on this computer; it shows up under the video article's artifacts when done. Click \"View\" to watch what it is doing.",
+    "making_desc": "AI is making it on this computer; it shows up in this piece's artifacts when done. Click \"View\" to watch what it is doing.",
     "continue": "Continue chat",
     "continue_hint": "To change it, say so in the chat that made it. Each change is saved as a new artifact; old ones stay.",
     "ask_new": "Change it in a new chat",
     "ask_new_hint": "The chat that made it is gone: start a new one and say what to change. Each change is saved as a new artifact.",
     "ask_new_title": "Change video: {title}",
-    "ask_new_text": "I want to keep changing the video \"{title}\" (video article {id}). Follow step 5 of the project task tasks/make-video.md: look at its artifacts and notes, then ask me what to change.",
+    "ask_new_text": "I want to keep changing the artifacts of {ref} (\"{title}\"). Follow step 5 of the project task tasks/work-on-article.md: look at its artifacts and notes, then ask me what to change.",
     "in_use": "Used for publishing",
-    "use": "Use for publishing",
     "no_note": "No note",
     "note_ph": "What this is and what changed from the previous one",
     "edit_note": "Edit note",
@@ -1620,6 +1618,11 @@
     "del_confirm": "Confirm delete",
     "del_in_use": "The one used for publishing can't be deleted: pick another one first",
     "expand": "Show more",
-    "collapse": "Show less"
+    "collapse": "Show less",
+    "working": "AI is working on this",
+    "use_video": "Use for publishing",
+    "use_images": "Use as images ({n})",
+    "n_files": "{n} files",
+    "copy_ref_all": "Copy reference to the set"
   }
 }
