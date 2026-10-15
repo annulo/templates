@@ -656,7 +656,9 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
                   const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (current + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
                   items[next]?.focus()
                 }}>
-                {(reviser.task?.prompt_file || reviser.task?.prompt_has_default) && <><button type="button" role="menuitem" className={item} onClick={() => { setMoreOpen(false); setRequirementsOpen(true) }}><SlidersHorizontal className="size-4" />{tr('content.revise_req_btn')}</button><div role="separator" className="my-1 border-t border-border" /></>}
+                <button type="button" role="menuitem" className={item} onClick={() => { setMoreOpen(false); void copyRefs([refOf('articles', a.id)]) }}><AtSign className="size-4" />{tr('files.copy_ref')}</button>
+                {(reviser.task?.prompt_file || reviser.task?.prompt_has_default) && <><button type="button" role="menuitem" className={item} onClick={() => { setMoreOpen(false); setRequirementsOpen(true) }}><SlidersHorizontal className="size-4" />{tr('content.revise_req_btn')}</button></>}
+                <div role="separator" className="my-1 border-t border-border" />
                 <button type="button" role="menuitem" disabled={locked} className={cx(item, 'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10 disabled:cursor-default disabled:opacity-50')} onClick={() => {
                   if (!confirmDel) { setConfirmDel(true); return }
                   void run('del', async () => {
