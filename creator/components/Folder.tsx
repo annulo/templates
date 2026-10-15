@@ -41,7 +41,7 @@ function iconOf(e: Entry, open: boolean) {
 export default function Folder({ article: a, onChanged }: { article: Article; onChanged: () => void }) {
   const { t } = useT('folder')
   const id = a.id
-  const [state, setState] = useState<{ dir: string; path: string; entries: Entry[] } | null>(null)
+  const [state, setState] = useState<{ dir: string; path: string; entries: Entry[]; can_open?: boolean } | null>(null)
   const [error, setError] = useState('')
   const [sel, setSel] = useState('')
   const [openDirs, setOpenDirs] = useState<Record<string, boolean>>({})
@@ -119,7 +119,7 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
       </section>
     )
   }
-  const viewer = (e: Entry) => <Viewer key={e.path + e.mtime} root={state.path} e={e} kids={children[e.path] ?? []} call={call} reload={load} onSelect={setSel} />
+  const viewer = (e: Entry) => <Viewer key={e.path + e.mtime} root={state.path} canOpen={!!state.can_open} e={e} kids={children[e.path] ?? []} call={call} reload={load} onSelect={setSel} />
 
   const row = (e: Entry, depth: number) => {
     const Icon = iconOf(e, isOpen(e.path))
@@ -142,13 +142,14 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-base font-semibold">{t('title')}</h2>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground" title={state.dir}>{state.dir.replace(/^(\/Users\/[^/]+|\/home\/[^/]+|[A-Z]:\\Users\\[^\\]+)/, '~')}</p>
+          {/* 路径只在本机版显示：服务端部署是服务器上的目录，用户用不上 */}
+          {state.can_open && <p className="mt-0.5 truncate text-xs text-muted-foreground" title={state.dir}>{state.dir.replace(/^(\/Users\/[^/]+|\/home\/[^/]+|[A-Z]:\\Users\\[^\\]+)/, '~')}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Button size="sm" needsShuttle disabled={asking} onClick={() => void continueChat()} title={chat ? t('continue_hint') : t('ask_hint')}>{asking ? <Loader2 className="animate-spin" /> : <MessageSquareText />}{chat ? t('continue') : t('ask')}</Button>
           <Button size="sm" variant="outline" onClick={() => startAdd('file')}><FilePlus />{t('new_file')}</Button>
           {view === 'tree' && <Button size="sm" variant="outline" onClick={() => startAdd('dir')}><FolderPlus />{t('new_dir')}</Button>}
-          <Button size="sm" variant="ghost" onClick={() => void call('open', {}).catch((e) => setError((e as Error).message))}><FolderOpen />{t('open_folder')}</Button>
+          {state.can_open && <Button size="sm" variant="ghost" onClick={() => void call('open', {}).catch((e) => setError((e as Error).message))}><FolderOpen />{t('open_folder')}</Button>}
           <Button size="sm" variant="ghost" onClick={() => void load()} aria-label={t('refresh')} title={t('refresh')}><RefreshCw /></Button>
           <div className="flex rounded-md border border-border p-0.5">
             <button type="button" title={t('view_grid')} aria-pressed={view === 'grid'} onClick={() => switchView('grid')} className={cx('cursor-pointer rounded p-1', view === 'grid' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground')}><LayoutGrid className="size-4" /></button>
@@ -188,7 +189,7 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
 }
 
 /** 一个文件或目录：上面一排是名字（双击改名）和操作，下面按类型看 / 改 */
-function Viewer({ root, e, kids, call, reload, onSelect }: { root: string; e: Entry; kids: Entry[]; call: Call; reload: () => Promise<void>; onSelect: (p: string) => void }) {
+function Viewer({ root, canOpen, e, kids, call, reload, onSelect }: { root: string; canOpen: boolean; e: Entry; kids: Entry[]; call: Call; reload: () => Promise<void>; onSelect: (p: string) => void }) {
   const { t } = useT('folder')
   const [error, setError] = useState('')
   const [renaming, setRenaming] = useState(false)
@@ -214,8 +215,9 @@ function Viewer({ root, e, kids, call, reload, onSelect }: { root: string; e: En
             : <span className="min-w-0 cursor-text truncate rounded px-1 text-sm font-medium hover:bg-muted" title={t('rename_hint')} onDoubleClick={() => setRenaming(true)}>{e.path}</span>}
           {!e.dir && <span className="shrink-0 text-xs text-muted-foreground">{fmtSize(e.size)}</span>}
         </div>
-        {!e.dir && <Button size="sm" variant="ghost" onClick={() => void run(() => call('open', { path: e.path }))}><ExternalLink />{t('open')}</Button>}
-        <Button size="sm" variant="ghost" onClick={() => void run(() => call('open', { path: e.path, reveal: true }))}><FolderOpen />{t('reveal')}</Button>
+        {/* 服务端部署（canOpen 是 false）：用户不在服务器前面，「打开」在新标签页打开预览地址，没有「在文件夹中显示」 */}
+        {!e.dir && <Button size="sm" variant="ghost" onClick={() => (canOpen ? void run(() => call('open', { path: e.path })) : void window.open(workSrc(`${root}/${e.path}`), '_blank'))}><ExternalLink />{t('open')}</Button>}
+        {canOpen && <Button size="sm" variant="ghost" onClick={() => void run(() => call('open', { path: e.path, reveal: true }))}><FolderOpen />{t('reveal')}</Button>}
         <Button size="sm" variant="ghost" className="text-destructive" onMouseLeave={() => setConfirmDel(false)} onClick={() => { if (!confirmDel) { setConfirmDel(true); return } void run(async () => { await call('remove', { path: e.path }); onSelect(''); await reload() }) }}><Trash2 />{confirmDel ? t('delete_confirm') : t('delete')}</Button>
       </div>
       {error && <div className="p-3"><Notice tone="error">{error}</Notice></div>}

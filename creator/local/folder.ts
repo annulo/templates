@@ -9,7 +9,7 @@ import { check } from '../plugins/social/local/social'
 // 页面预览图片、视频用 /_annulo/work-files/<root 下的路径>（components/Folder.tsx），不经过这里。
 //
 //   folder.create({ article_id })                → { dir, path }  没有就建（带一个空的 稿子.md），有就返回；在对话里跑的会记下这段对话（「继续对话」回到它）
-//   folder.list({ article_id })                  → { dir, path, entries: [{ path, dir, size, mtime }] }  entries 相对这条内容的文件夹
+//   folder.list({ article_id })                  → { dir, path, entries: [{ path, dir, size, mtime }], can_open }  entries 相对这条内容的文件夹
 //   folder.read({ article_id, path })            → { text }
 //   folder.write({ article_id, path, text })
 //   folder.mkdir / remove / rename({ article_id, path, to? })
@@ -18,6 +18,9 @@ import { check } from '../plugins/social/local/social'
 //   folder.retitle({ article_id, title })        改这条内容的名字；文件夹是按老名字建的就跟着改
 //   folder.publish({ article_id, kind, title, body, tags, images, video, channel_ids, scheduled_at? })
 //                                                → { ready, problems }  发布时挑好的内容发到几个账号（每次新建帖子，见下面）
+
+// 只读角色（服务端部署）能看文件夹、读文件，不能改
+export const readonly = ['list', 'read']
 
 const TEXT_EXT = /\.(md|markdown|txt|json|ya?ml|csv|srt|vtt|html?|css|tsx?|jsx?|py|sh)$/i
 
@@ -79,8 +82,10 @@ export function create(input: { article_id: string }, ctx: any) {
 export function list(input: { article_id: string }, ctx: any) {
   need(ctx)
   const dir = folderOf(ctx, article(ctx, input.article_id), false)
-  if (!dir || !ctx.fs.stat(dir)) return { dir: '', path: dir, entries: [] }
-  return { dir: `${ctx.fs.root}/${dir}`, path: dir, entries: ctx.fs.list(dir) }
+  // can_open：本机版能用系统程序打开、在访达里显示；服务端部署不能，页面在新标签页打开预览地址
+  const can_open = !!ctx.fs.canOpen
+  if (!dir || !ctx.fs.stat(dir)) return { dir: '', path: dir, entries: [], can_open }
+  return { dir: `${ctx.fs.root}/${dir}`, path: dir, entries: ctx.fs.list(dir), can_open }
 }
 
 export function read(input: { article_id: string; path: string }, ctx: any) {
