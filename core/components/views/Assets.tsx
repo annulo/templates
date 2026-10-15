@@ -80,7 +80,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
   }
 
   return (
-    <div className={cx('relative space-y-6', dragging && 'rounded-xl outline-2 outline-offset-8 outline-primary/60 outline-dashed')} onDragOver={onDragOver} onDragLeave={(e) => e.currentTarget === e.target && setDragging(false)} onDrop={onDrop}>
+    <div className={cx('@container relative space-y-6', dragging && 'rounded-xl outline-2 outline-offset-8 outline-primary/60 outline-dashed')} onDragOver={onDragOver} onDragLeave={(e) => e.currentTarget === e.target && setDragging(false)} onDrop={onDrop}>
       <PageHeader
         title={tr('assets.title')}
         desc={tr('assets.desc')}
@@ -130,7 +130,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
       )}
 
       {list === null ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-3">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="aspect-[4/5] rounded-xl" />
           ))}
@@ -140,7 +140,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
       ) : !shown.length ? (
         <Notice>{tr('assets.no_match')}</Notice>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-3">
           {shown.map((a) => (
             <AssetCard key={a.id} a={a} disabled={false} onEdit={() => setEditing(a)} onChanged={load} onTag={(t) => setParam('tag', t)} />
           ))}
