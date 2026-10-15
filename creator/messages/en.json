@@ -1609,7 +1609,7 @@
     "ask_new_hint": "The chat that made it is gone: start a new one and say what to change. Each change is saved as a new artifact.",
     "ask_new_title": "Change video: {title}",
     "ask_new_text": "I want to keep changing the artifacts of {ref} (\"{title}\"). Follow step 5 of the project task tasks/work-on-article.md: look at its artifacts and notes, then ask me what to change.",
-    "in_use": "Used for publishing",
+    "in_use": "In use",
     "no_note": "No note",
     "note_ph": "What this is and what changed from the previous one",
     "edit_note": "Edit note",
