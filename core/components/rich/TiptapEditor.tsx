@@ -45,8 +45,8 @@ const Image = ImageBase.extend({
 
 /**
  * 正文里的视频：存成 <video src controls>，一个整块（不能在里面打字）。
- * 编辑器里先不用原生播放器：点击会被播放控件吃掉，选不中、拖不动。显示成一个能选中的块（第一帧 + 角上「视频」），点别处选中、能删能拖；
- * 中间的播放按钮点了才变成正常的播放器（这时点视频是在控制播放，编辑器不管）。预览、发出去的是正常的播放器
+ * 编辑器里不用原生播放器：点击会被播放控件吃掉，选不中、拖不动。显示成一个能选中的块（第一帧 + 角上「视频」），点了选中、能删能拖；
+ * 中间的播放按钮弹出播放窗口（openPlayer）。预览、发出去的是正常的播放器
  */
 const Video = Node.create({
   name: 'video',
@@ -62,7 +62,7 @@ const Video = Node.create({
   }),
   parseHTML: () => [{ tag: 'video[src]' }],
   renderHTML: ({ HTMLAttributes }) => ['video', mergeAttributes(HTMLAttributes, { controls: 'true', preload: 'metadata', style: 'max-width:100%;height:auto' })],
-  addNodeView: () => ({ node, getPos, editor }) => {
+  addNodeView: () => ({ node }) => {
     const dom = document.createElement('div')
     dom.className = 'rich-video'
     dom.contentEditable = 'false'
@@ -72,55 +72,52 @@ const Video = Node.create({
     v.style.aspectRatio = node.attrs.width && node.attrs.height ? `${node.attrs.width} / ${node.attrs.height}` : '16 / 9'
     v.preload = 'metadata'
     v.muted = true
-    // 左上角「视频」：一直能点，点了暂停并选中这一块（播放的时候视频本身的点击归播放器）
-    const tag = document.createElement('button')
-    tag.type = 'button'
+    const tag = document.createElement('span')
     tag.className = 'rich-video-tag'
     tag.textContent = tr('editor.video_tag')
-    tag.title = tr('editor.video_select')
     const play = document.createElement('button')
     play.type = 'button'
     play.className = 'rich-video-play'
     play.title = tr('editor.video_play')
     play.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
-    let playing = false
-    // 暂停、放完了回到能选中的样子（第一帧 + 播放按钮），点视频就是选中
-    const idle = () => {
-      playing = false
-      dom.classList.remove('playing')
-      dom.removeAttribute('draggable') // 回到能整块拖动（ProseMirror 按节点的 draggable 处理）
-      v.controls = false
-    }
-    // 暂停了控件留着（还能拖进度）；点到这一块外面、而且停着，才回到能选中的样子；放完了也回去
-    const outside = (e: MouseEvent) => { if (playing && v.paused && !dom.contains(e.target as globalThis.Node)) idle() }
-    document.addEventListener('mousedown', outside)
-    v.addEventListener('ended', idle)
-    tag.addEventListener('click', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      v.pause()
-      idle()
-      const pos = typeof getPos === 'function' ? getPos() : undefined
-      if (typeof pos === 'number') editor.chain().focus().setNodeSelection(pos).run()
-    })
     play.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
-      playing = true
-      dom.classList.add('playing')
-      // 播放时不能整块拖动：在视频上按住拖是拖进度条
-      dom.setAttribute('draggable', 'false')
-      v.src = shown(node.attrs.src)
-      v.controls = true
-      v.muted = false
-      // 放不了（文件没了、格式不支持）不要冒成页面报错：播放器自己会显示放不了
-      v.play().catch(() => {})
+      openPlayer(shown(node.attrs.src))
     })
     dom.append(v, tag, play)
-    // 播放起来以后，视频上的点击、拖进度条交给播放器，编辑器不当成选中、拖动
-    return { dom, stopEvent: (e: Event) => e.target === play || e.target === tag || (playing && (e.target === v || e.type.startsWith('drag'))), ignoreMutation: () => true, destroy: () => document.removeEventListener('mousedown', outside) }
+    return { dom, stopEvent: (e: Event) => e.target === play, ignoreMutation: () => true }
   },
 })
+
+/**
+ * 编辑器里的视频在弹出的播放窗口里放：放在可编辑区域里的原生播放器，点击、拖进度条会被编辑器截走。
+ * 窗口挂在 body 上，是正常的播放器；Esc、点外面、点关闭就关
+ */
+function openPlayer(src: string) {
+  const back = document.createElement('div')
+  back.className = 'rich-video-player'
+  const v = document.createElement('video')
+  v.src = src
+  v.controls = true
+  v.autoplay = true
+  const close = document.createElement('button')
+  close.type = 'button'
+  close.setAttribute('aria-label', tr('common.close'))
+  close.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>'
+  const done = () => {
+    v.pause()
+    back.remove()
+    document.removeEventListener('keydown', onKey, true)
+  }
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); done() } }
+  back.addEventListener('click', (e) => { if (e.target === back) done() })
+  close.addEventListener('click', done)
+  document.addEventListener('keydown', onKey, true)
+  back.append(v, close)
+  document.body.append(back)
+  v.play().catch(() => {}) // 放不了（文件没了、格式不支持）播放器自己会显示
+}
 
 const isMedia = (f: File) => f.type.startsWith('image/') || f.type.startsWith('video/')
 

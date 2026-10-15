@@ -213,13 +213,10 @@
 /* 编辑器里的视频块（TiptapEditor 的 Video）：能选中、能拖，不是可点的播放器 */
 .rich-content .rich-video { position: relative; width: 100%; margin: 0.75em 0; cursor: pointer; border-radius: 8px; }
 .rich-content .rich-video video { display: block; width: 100%; height: auto; border-radius: 8px; background: #000; pointer-events: none; }
-.rich-content .rich-video-tag { position: absolute; top: 8px; left: 8px; z-index: 1; border-radius: 4px; background: rgb(0 0 0 / 0.6); padding: 1px 6px; font-size: 11px; color: #fff; cursor: pointer; }
-.rich-content .rich-video-tag:hover { background: rgb(0 0 0 / 0.8); }
+.rich-content .rich-video-tag { position: absolute; top: 8px; left: 8px; border-radius: 4px; background: rgb(0 0 0 / 0.6); padding: 1px 6px; font-size: 11px; color: #fff; pointer-events: none; }
 .rich-content .rich-video.ProseMirror-selectednode { outline: 2px solid var(--ring); outline-offset: 2px; }
 .rich-content .rich-video-play { position: absolute; top: 50%; left: 50%; display: flex; width: 52px; height: 52px; transform: translate(-50%, -50%); align-items: center; justify-content: center; border-radius: 9999px; background: rgb(0 0 0 / 0.55); color: #fff; cursor: pointer; }
 .rich-content .rich-video-play:hover { background: rgb(0 0 0 / 0.75); }
-.rich-content .rich-video.playing video { pointer-events: auto; }
-.rich-content .rich-video.playing .rich-video-play { display: none; }
 .rich-content .is-empty::before { content: attr(data-placeholder); color: var(--muted-foreground); opacity: 0.6; float: left; height: 0; pointer-events: none; }
 
 /* 运营后台在 Shuttle 里用，不要平台角落的「Made by Creght」标记 */
@@ -237,3 +234,9 @@
   &::-webkit-progress-value { background: var(--primary); border-radius: 999px; }
   &::-moz-progress-bar { background: var(--primary); border-radius: 999px; }
 }
+
+/* 编辑器里视频的播放窗口（TiptapEditor 的 openPlayer）：挂在 body 上，正常的播放器 */
+.rich-video-player { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 48px 24px 24px; background: rgb(0 0 0 / 0.8); }
+.rich-video-player video { max-width: 100%; max-height: 100%; border-radius: 8px; background: #000; }
+.rich-video-player button { position: absolute; top: 12px; right: 12px; display: flex; width: 36px; height: 36px; align-items: center; justify-content: center; border-radius: 9999px; background: rgb(255 255 255 / 0.12); color: #fff; cursor: pointer; }
+.rich-video-player button:hover { background: rgb(255 255 255 / 0.24); }
