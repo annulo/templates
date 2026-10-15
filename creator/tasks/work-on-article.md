@@ -44,9 +44,21 @@ annulo run content.update --input @/tmp/article-update.json
 存进项目，再存成这篇的产物（**一次做出来的一组存一条**，比如 6 张图一条；`note` 是备注：做了什么、用了什么工具，不写路径）：
 
 ```bash
-annulo upload --local 1.png 2.png 3.png        # 每个文件打印一个 local:<name>，按顺序
-annulo run assets.add --input '{"urls":["local:<1>","local:<2>","local:<3>"],"article_id":"<article_id>","note":"<备注>","use":true}'
+annulo upload --local --json cover.png step1.png step2.png    # 每个文件给出 ref（local:<name>）和 content_type，按顺序
+cat > /tmp/assets-add.json <<'JSON'
+{
+  "files": [
+    { "url": "local:<1>", "mime": "image/png", "name": "封面" },
+    { "url": "local:<2>", "mime": "image/png", "name": "步骤 1" },
+    { "url": "local:<3>", "mime": "image/png", "name": "步骤 2" }
+  ],
+  "article_id": "<article_id>", "note": "<备注>", "use": true
+}
+JSON
+annulo run assets.add --input @/tmp/assets-add.json
 ```
+
+`files` 每个是 `{ url, mime, name }`：`mime` 用 `--json` 打印的 `content_type`（不给就按扩展名推），`name` 写这一个是什么（封面、步骤 1、片头…），页面和引用里会显示。只有一个文件可以写成 `"url": "local:<name>", "mime": "video/mp4"`。
 
 `use: true` 把它用到这篇上：视频文章设成发布用的视频，图文把这组图换成配图。长文的图不用 `use`：要插进正文，用 `annulo upload <图>`（不加 `--local`）拿地址，再用第 2 步的 `content.update` 写进正文的 `<img>`，产物里也照样存一份。
 
@@ -63,7 +75,7 @@ annulo run assets.add --input '{"urls":["local:<1>","local:<2>","local:<3>"],"ar
 
   ```bash
   annulo upload --local new-3.png
-  annulo run assets.replace --input '{"asset_id":"<id>","n":3,"url":"local:<name>","note":"第 3 张背景改成白色"}'
+  annulo run assets.replace --input '{"asset_id":"<id>","n":3,"url":"local:<name>","mime":"image/png","note":"第 3 张背景改成白色"}'
   ```
 
   这篇里用着旧那张的地方（配图、视频）会一起换。

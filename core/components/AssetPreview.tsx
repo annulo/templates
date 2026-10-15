@@ -82,12 +82,12 @@ export function AssetGroup({ a, table, id, onZoom, className, actionsClassName }
     <div className="min-w-0">
       <div className="relative">
         <AssetPreview a={{ ...cur, kind: a.kind }} className={className} onZoom={onZoom && cur.mime.startsWith('image/') ? () => onZoom(fileSrc(cur.url)) : undefined} />
-        {many && <span className="pointer-events-none absolute top-2 right-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">{i + 1} / {files.length}</span>}
+        {many && <span className="pointer-events-none absolute top-2 right-2 max-w-[80%] truncate rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">{i + 1} / {files.length}{cur.name ? ` · ${cur.name}` : ''}</span>}
       </div>
       {many && (
         <div className={cx('scroll-thin mt-1.5 flex gap-1 overflow-x-auto pb-0.5', actionsClassName)}>
           {files.map((f, k) => (
-            <button key={f.url + k} type="button" onClick={() => setI(k)} aria-label={`#${k + 1}`} className={cx('relative size-10 shrink-0 cursor-pointer overflow-hidden rounded border bg-muted', k === i ? 'border-primary ring-1 ring-primary' : 'border-border')}>
+            <button key={f.url + k} type="button" onClick={() => setI(k)} aria-label={f.name || `#${k + 1}`} title={f.name || `#${k + 1}`} className={cx('relative size-10 shrink-0 cursor-pointer overflow-hidden rounded border bg-muted', k === i ? 'border-primary ring-1 ring-primary' : 'border-border')}>
               {f.mime.startsWith('image/') ? <img src={fileSrc(f.url)} alt="" loading="lazy" className="size-full object-cover" /> : <span className="flex size-full items-center justify-center text-[10px] text-muted-foreground">{k + 1}</span>}
             </button>
           ))}
