@@ -32,7 +32,10 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const [dragging, setDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // AI 给文章做的产物（带 article_id）：卡片上能点回那篇文章，这里记下每篇的标题
+  const [articles, setArticles] = useState<Record<string, string>>({})
   const load = useCallback(() => {
+    dbList('articles').then((l) => setArticles(Object.fromEntries(l.map((x) => [x.id, x.title || tr('versions.untitled')])))).catch(() => {})
     dbList('assets')
       .then((l) => setList([...l].sort((a, b) => (Date.parse(b.created_at ?? '') || 0) - (Date.parse(a.created_at ?? '') || 0))))
       .catch((e) => {
@@ -142,7 +145,8 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
       ) : (
         <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-3 @5xl:grid-cols-4">
           {shown.map((a) => (
-            <AssetCard key={a.id} a={a} disabled={false} onEdit={() => setEditing(a)} onChanged={load} onTag={(t) => setParam('tag', t)} />
+            <AssetCard key={a.id} a={a} disabled={false} onEdit={() => setEditing(a)} onChanged={load} onTag={(t) => setParam('tag', t)}
+              article={articleOf(a, articles)} onOpenArticle={(id) => ctx.go('content', { article: id })} />
           ))}
         </div>
       )}
@@ -153,7 +157,13 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
   )
 }
 
-function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabled: boolean; onEdit: () => void; onChanged: () => void; onTag: (t: string) => void }) {
+/** 这条是哪篇文章的产物（article_id 指的文章还在才算） */
+function articleOf(a: Asset, titles: Record<string, string>) {
+  const id = (a as Asset & { article_id?: string }).article_id
+  return id && titles[id] ? { id, title: titles[id] } : undefined
+}
+
+function AssetCard({ a, disabled, onEdit, onChanged, onTag, article, onOpenArticle }: { a: Asset; disabled: boolean; onEdit: () => void; onChanged: () => void; onTag: (t: string) => void; article?: { id: string; title: string }; onOpenArticle: (id: string) => void }) {
   const [confirmDel, setConfirmDel] = useState(false)
   const [zoom, setZoom] = useState('')
   const [err, setErr] = useState('')
@@ -198,6 +208,12 @@ function AssetCard({ a, disabled, onEdit, onChanged, onTag }: { a: Asset; disabl
           </span>
           {a.source === 'agent' && <Badge>{tr('assets.by_agent')}</Badge>}
         </div>
+        {article && (
+          <button type="button" onClick={() => onOpenArticle(article.id)} title={article.title} className="inline-flex min-w-0 cursor-pointer items-center gap-1 text-left text-xs text-primary-text hover:underline">
+            <FileText className="size-3.5 shrink-0" />
+            <span className="truncate">{tr('assets.from_article', { title: article.title })}</span>
+          </button>
+        )}
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1 text-xs text-primary-text">
             {tags.map((t) => (
