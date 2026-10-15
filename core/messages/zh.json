@@ -164,7 +164,12 @@
     "work_hint": "在「{title}」上做：改它的正文、照稿子写正文，或者做图、做视频挂在它下面，照下面的要求做。做好了在右侧对话里接着说就能改。",
     "work_note": "要求",
     "work_note_hint": "写你要 AI 做什么、做成什么样：几张图、什么风格、多长、用什么工具……",
-    "preset_save_here": "存为预设"
+    "preset_save_here": "存为预设",
+    "video_cover": "视频封面",
+    "video_cover_hint": "上传一张图片或从资料库选择，用于小红书和抖音视频封面；未设置时使用平台默认封面。",
+    "replace_cover": "更换封面",
+    "remove_cover": "移除封面",
+    "image_required": "请选择图片文件。"
   },
   "ui": {
     "watch_show": "打开看",

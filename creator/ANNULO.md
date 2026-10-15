@@ -89,3 +89,5 @@
 ## 浏览器窗口
 
 「打开主页」执行 `social/social.openProfile({ channel_id })`，用账号的 `browser_profile`，窗口留给用户看。你要检查或修的时候，在本机函数里用同一个 `browser_profile` 调 `ctx.browser.open({ profile })` 接管原窗口，不要另开默认浏览器或换 profile（登录状态不同）。
+
+视频可用 `articles.video_cover` 指定封面图片（资料库地址或本机上传地址），编辑器支持上传、粘贴、选择、替换、移除；复制保留封面。小红书和抖音的即时、定时发布使用该封面，其他平台使用默认封面。模板与社媒插件需要一起更新；封面上传失败时停止发布，不静默改用默认封面。

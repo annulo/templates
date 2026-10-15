@@ -115,6 +115,10 @@
       "unread": {
         "type": "boolean",
         "description": "新文章：AI 写好、改写好（content.save）时为 true，用户在页面上打开这篇就清掉。左侧「内容中心」的数字数它"
+      },
+      "video_cover": {
+        "type": "string",
+        "description": "视频封面图片地址：从资料库选择或上传；独立于图文配图和封面大字。小红书、抖音发布使用，留空沿用平台默认封面。"
       }
     },
     "required": [

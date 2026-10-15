@@ -627,6 +627,7 @@ export type Article = {
   title: string;
   summary?: string;
   body?: string;
+  video_cover?: string;
   video?: string;
   keywords?: string;
   /** 话题，JSON 数组字符串，不带 # */
@@ -1072,6 +1073,7 @@ export type SocialPostStatus =
   | "removed";
 export type SocialPost = {
   /** YouTube：要上传的视频（素材库里 kind=video 的地址） */
+  video_cover?: string;
   video?: string;
   id: string;
   channel_id: string;

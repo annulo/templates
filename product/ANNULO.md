@@ -35,3 +35,7 @@
 - **产物（artifacts）**是资料库里带 `article_id` 的一条，可以是一组文件（`files: [{ url, mime, name }]`，6 张图一条），带 `chat_id`、`note`（备注，文章页和资料库显示同一条）。`assets.add({ files, article_id, note, use })`；整组重做存新的，只改其中一个用 `assets.replace({ asset_id, n, url, mime, note })` 改原来那组。`use: true`：视频文章设成发布用的视频，图文换成配图。
 - **要改就回到做它的那段对话**：用户在对话里接着说，照 `work-on-article` 第 5 步做。
 - **引用** `@表:id#n`：用户从页面「复制引用」贴进对话（文章 `@articles:<id>`，产物 `@assets:<id>`，组里第 3 个 `@assets:<id>#3`），消息后面有 `<references>`。资料库 `#n` 数 `files`，图文文章数 `images`。
+
+## 视频封面
+
+视频可用 `articles.video_cover` 指定封面图片（资料库地址或本机上传地址），编辑器支持上传、粘贴、选择、替换、移除；复制保留封面。小红书和抖音的即时、定时发布使用该封面，其他平台使用默认封面。模板与社媒插件需要一起更新；封面上传失败时停止发布，不静默改用默认封面。

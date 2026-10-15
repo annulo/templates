@@ -164,7 +164,12 @@
     "work_hint": "Work on \"{title}\": revise or write its content, or make images or a video attached to it, following the instructions below. To change the result, keep talking in the chat on the right.",
     "work_note": "Instructions",
     "work_note_hint": "Say what AI should make and how: how many images, what style, how long, which tool…",
-    "preset_save_here": "Save as preset"
+    "preset_save_here": "Save as preset",
+    "video_cover": "Video cover",
+    "video_cover_hint": "Upload an image or choose one from the Library for Xiaohongshu and Douyin. Leave empty to use the platform default.",
+    "replace_cover": "Replace cover",
+    "remove_cover": "Remove cover",
+    "image_required": "Choose an image file."
   },
   "ui": {
     "watch_show": "Watch",
