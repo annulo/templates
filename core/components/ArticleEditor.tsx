@@ -156,7 +156,7 @@ export function BodyPreview({ html }: { html: string }) {
   const doc = `<!doctype html><meta charset="utf-8"><style>
   html{color-scheme:${dark ? 'dark' : 'light'}} body{margin:0;padding:4px 0;font:15px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:${dark ? '#e7e7e7' : '#1f1f1f'};background:transparent}
   h1,h2,h3{line-height:1.35;margin:1.4em 0 .5em} h2{font-size:1.25em} h3{font-size:1.08em}
-  p{margin:.7em 0} a{color:${dark ? '#8fb6ff' : '#2455d6'}} img,video{max-width:100%;border-radius:8px} video{display:block;width:100%;max-height:480px;object-fit:contain;background:#000}
+  p{margin:.7em 0} a{color:${dark ? '#8fb6ff' : '#2455d6'}} img,video{max-width:100%;height:auto;border-radius:8px} video{display:block;background:#000}
   ul,ol{padding-left:1.4em} blockquote{margin:1em 0;padding-left:1em;border-left:3px solid ${dark ? '#444' : '#ddd'};color:${dark ? '#aaa' : '#666'}}
   code{background:${dark ? '#2a2a2a' : '#f2f2f2'};padding:.1em .35em;border-radius:4px}
   table{border-collapse:collapse} td,th{border:1px solid ${dark ? '#3a3a3a' : '#ddd'};padding:.3em .6em}

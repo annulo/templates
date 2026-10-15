@@ -212,7 +212,7 @@
 .rich-content img.ProseMirror-selectednode { outline: 2px solid var(--ring); outline-offset: 2px; }
 /* 编辑器里的视频块（TiptapEditor 的 Video）：能选中、能拖，不是可点的播放器 */
 .rich-content .rich-video { position: relative; width: 100%; margin: 0.75em 0; cursor: pointer; border-radius: 8px; }
-.rich-content .rich-video video { display: block; width: 100%; height: auto; max-height: 480px; object-fit: contain; border-radius: 8px; background: #000; pointer-events: none; }
+.rich-content .rich-video video { display: block; width: 100%; height: auto; border-radius: 8px; background: #000; pointer-events: none; }
 .rich-content .rich-video span { position: absolute; top: 8px; left: 8px; border-radius: 4px; background: rgb(0 0 0 / 0.6); padding: 1px 6px; font-size: 11px; color: #fff; pointer-events: none; }
 .rich-content .rich-video.ProseMirror-selectednode { outline: 2px solid var(--ring); outline-offset: 2px; }
 .rich-content .rich-video-play { position: absolute; top: 50%; left: 50%; display: flex; width: 52px; height: 52px; transform: translate(-50%, -50%); align-items: center; justify-content: center; border-radius: 9999px; background: rgb(0 0 0 / 0.55); color: #fff; cursor: pointer; }

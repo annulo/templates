@@ -19,6 +19,19 @@ import type { RichEditorProps } from '../RichEditor'
 /** 正文里存的地址可以是 AI 做的本机文件 local:<name>（发布时 b.upload 直接认），编辑器里显示时换成 Annulo 的地址 */
 const shown = (u?: string | null) => fileSrc(u ?? '')
 
+/** 插入视频时读一次它的宽高（写进正文），读不到（超时、格式不认）就不写 */
+function videoSize(src: string): Promise<{ width?: number; height?: number }> {
+  return new Promise((resolve) => {
+    const v = document.createElement('video')
+    const done = (r: { width?: number; height?: number }) => { clearTimeout(t); v.removeAttribute('src'); resolve(r) }
+    const t = setTimeout(() => done({}), 8000)
+    v.preload = 'metadata'
+    v.onloadedmetadata = () => done(v.videoWidth && v.videoHeight ? { width: v.videoWidth, height: v.videoHeight } : {})
+    v.onerror = () => done({})
+    v.src = shown(src)
+  })
+}
+
 /** 图片：存的还是原地址，显示用 shown（本机文件） */
 const Image = ImageBase.extend({
   addNodeView: () => ({ node }) => {
@@ -41,18 +54,22 @@ const Video = Node.create({
   atom: true,
   selectable: true,
   draggable: true,
-  addAttributes: () => ({ src: { default: null } }),
+  // 宽高是正文的一部分（插入时读一次写进去，<video width height>）：发出去的内容按它显示比例，编辑器也按它，不在显示时现读
+  addAttributes: () => ({
+    src: { default: null },
+    width: { default: null, parseHTML: (el: HTMLElement) => Number(el.getAttribute('width')) || null },
+    height: { default: null, parseHTML: (el: HTMLElement) => Number(el.getAttribute('height')) || null },
+  }),
   parseHTML: () => [{ tag: 'video[src]' }],
-  renderHTML: ({ HTMLAttributes }) => ['video', mergeAttributes(HTMLAttributes, { controls: 'true', preload: 'metadata', style: 'max-width:100%' })],
+  renderHTML: ({ HTMLAttributes }) => ['video', mergeAttributes(HTMLAttributes, { controls: 'true', preload: 'metadata', style: 'max-width:100%;height:auto' })],
   addNodeView: () => ({ node }) => {
     const dom = document.createElement('div')
     dom.className = 'rich-video'
     dom.contentEditable = 'false'
     const v = document.createElement('video')
-    // #t=0.1：停在第一帧，不然只有黑框。比例：读到视频尺寸前先按 16:9，读到了按它自己的（竖屏的限高，两边黑边）
+    // #t=0.1：停在第一帧，不然只有黑框。比例按正文里存的宽高，没存的（老内容）按 16:9
     v.src = node.attrs.src ? `${shown(node.attrs.src)}#t=0.1` : ''
-    v.style.aspectRatio = '16 / 9'
-    v.addEventListener('loadedmetadata', () => { if (v.videoWidth && v.videoHeight) v.style.aspectRatio = `${v.videoWidth} / ${v.videoHeight}` })
+    v.style.aspectRatio = node.attrs.width && node.attrs.height ? `${node.attrs.width} / ${node.attrs.height}` : '16 / 9'
     v.preload = 'metadata'
     v.muted = true
     const tag = document.createElement('span')
@@ -133,7 +150,7 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
       setUploading((n) => n + 1)
       try {
         const r = await uploadFile(f)
-        insertNodes([f.type.startsWith('video/') ? { type: 'video', attrs: { src: r.url } } : { type: 'image', attrs: { src: r.url, alt: f.name.replace(/\.[^.]+$/, '') } }])
+        insertNodes([f.type.startsWith('video/') ? { type: 'video', attrs: { src: r.url, ...(await videoSize(r.url)) } } : { type: 'image', attrs: { src: r.url, alt: f.name.replace(/\.[^.]+$/, '') } }])
       } catch (e) {
         setError(tr('editor.upload_failed', { error: (e as Error).message }))
       } finally {
@@ -247,7 +264,7 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
         onClose={() => setPicking(false)}
         onPick={(urls, assets) => {
           setPicking(false)
-          insertNodes(urls.map((u) => (assets.find((a) => a.url === u)?.kind === 'video' ? { type: 'video', attrs: { src: u } } : { type: 'image', attrs: { src: u } })))
+          void Promise.all(urls.map(async (u) => (assets.find((a) => a.url === u)?.kind === 'video' ? { type: 'video', attrs: { src: u, ...(await videoSize(u)) } } : { type: 'image', attrs: { src: u } }))).then(insertNodes)
         }}
       />
       {slash && shown.length > 0 && (
