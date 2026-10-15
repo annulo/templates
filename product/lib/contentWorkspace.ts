@@ -9,6 +9,9 @@ export type ContentData = {
 export type ContentEntry = {
   key: string; title: string; article?: any; topic?: any; plan?: any;
   workspaces: ContentWorkspace[]; stage: ContentStage; updatedAt: string;
+  publicationUrls: string[];
+  /** User-confirmed links (publication_links); editable, unlike publication records and receipts. */
+  linkedUrls: string[];
 }
 const parse = (value: any) => {
   if (typeof value !== 'string') return value || {}
@@ -17,6 +20,44 @@ const parse = (value: any) => {
 export const platformWorkspace = (platform?: string): ContentWorkspace | undefined =>
   ['website', 'creght_site', 'wordpress'].includes(platform || '') ? 'website'
     : ['social', 'xiaohongshu', 'douyin', 'x', 'linkedin', 'facebook', 'instagram', 'youtube', 'bilibili', 'zhihu', 'wechat_mp'].includes(platform || '') ? 'social' : undefined
+
+/** Only absolute HTTP(S) URLs may become clickable publication links. */
+export function publishedUrl(value: unknown): string {
+  if (typeof value !== 'string' || value.length > 4000 || !/^https?:\/\//i.test(value.trim())) return ''
+  try {
+    const url = new URL(value.trim())
+    // The local function runtime's URL shim does not expose username/password.
+    if (/^https?:\/\/[^/?#]*@/i.test(url.href)) return ''
+    return url.hostname && !url.username && !url.password ? url.href : ''
+  } catch { return '' }
+}
+
+/** Keep confirmed links with every original record, even after a topic gains a plan or draft. */
+export function entryPublicationUrls(entry: Pick<ContentEntry, 'article' | 'topic' | 'plan'>, data: ContentData, workspace?: ContentWorkspace): string[] {
+  const urls = new Set<string>()
+  const add = (value: unknown) => { const url = publishedUrl(value); if (url) urls.add(url) }
+  for (const scope of workspace ? [workspace] : ['website', 'social'] as const) {
+    for (const row of [entry.plan, entry.article, entry.topic]) {
+      const links = parse(row?.publication_links)?.[scope]
+      if (Array.isArray(links)) links.forEach(add)
+    }
+    if (entry.plan && platformWorkspace(entry.plan.platform) === scope) add(parse(entry.plan.receipt)?.url)
+    const records = scope === 'website' ? data.publications : data.posts
+    for (const record of records)
+      if (entry.article && record.article_id === entry.article.id && record.status === 'published') add(scope === 'website' ? record.url : record.post_url)
+  }
+  return [...urls]
+}
+
+/** Links the user confirmed by hand for one workspace, across the plan, draft and topic of an entry. */
+export function entryLinkedUrls(entry: Pick<ContentEntry, 'article' | 'topic' | 'plan'>, workspace: ContentWorkspace): string[] {
+  const urls = new Set<string>()
+  for (const row of [entry.plan, entry.article, entry.topic]) {
+    const links = parse(row?.publication_links)?.[workspace]
+    if (Array.isArray(links)) links.forEach(v => { const url = publishedUrl(v); if (url) urls.add(url) })
+  }
+  return [...urls]
+}
 
 /** Existing review rows store target_kind/target_id rather than a platform field. */
 export function reviewWorkspace(review: any, data: { plans: any[] }): ContentWorkspace | undefined {
@@ -63,6 +104,10 @@ export function recordWorkspaces(record: any, data: ContentData, visited = new S
       terms.forEach((p: string) => add(p.toLowerCase()))
     }
   }
+  for (const scope of ['website', 'social'] as const) {
+    const links = parse(record.publication_links)?.[scope]
+    if (Array.isArray(links) && links.some(publishedUrl)) result.add(scope)
+  }
   // Actual publications remain visible in both workspaces when one original was reused.
   for (const p of data.publications) if (p.article_id === record.id) result.add('website')
   for (const p of data.posts) if (p.article_id === record.id) result.add('social')
@@ -90,7 +135,7 @@ export function entryStage(entry: Pick<ContentEntry, 'article' | 'topic' | 'plan
   const pubs = article ? data.publications.filter(p => p.article_id === article.id && workspace !== 'social') : []
   const posts = article ? data.posts.filter(p => p.article_id === article.id && workspace !== 'website') : []
   const receipt = plan?.receipt && parse(plan.receipt)
-  if (pubs.some(p => p.status === 'published') || posts.some(p => p.status === 'published') || (receipt?.url && (!workspace || platformWorkspace(plan.platform) === workspace))) return 'published'
+  if (pubs.some(p => p.status === 'published') || posts.some(p => p.status === 'published') || entryPublicationUrls(entry, data, workspace).length) return 'published'
   if (pubs.some(p => p.scheduled_at) || posts.some(p => p.status === 'scheduled')) return 'scheduled'
   if (plan?.stage === 'blocked' || pubs.some(p => p.status === 'failed') || posts.some(p => p.status === 'failed')) return 'blocked'
   if (plan?.stage === 'reported_published' || (plan?.stage === 'published' && !receipt?.url)) return 'verify'
@@ -114,6 +159,8 @@ export function contentEntries(data: ContentData, workspace?: ContentWorkspace):
     for (const item of [plan, topic, article]) for (const scope of recordWorkspaces(item, data)) scopes.add(scope)
     const entry = { key, plan, topic, article, workspaces: [...scopes], title: article?.title || topic?.title || plan?.title || '', updatedAt: article?.updated_at || article?.created_at || plan?.updated_at || topic?.created_at || plan?.created_at || '' } as ContentEntry
     entry.stage = entryStage(entry, data, workspace)
+    entry.publicationUrls = entryPublicationUrls(entry, data, workspace)
+    entry.linkedUrls = workspace ? entryLinkedUrls(entry, workspace) : []
     entries.push(entry)
   }
   for (const plan of data.plans) {

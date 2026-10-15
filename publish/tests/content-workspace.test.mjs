@@ -18,7 +18,7 @@ await build({ stdin: { contents: "export * from './lib/contentWorkspace'; export
     b.onResolve({ filter: /plugins\/social\// }, a => ({ path: a.path, namespace: 'social-fixture' }));
     b.onLoad({ filter: /.*/, namespace: 'social-fixture' }, () => ({ loader: 'ts', contents: "export const FIELDS={}; export const CONTENT_TYPES=['article','post','video']; export const contentType=c=>c?.type || 'article'; export const parseList=v=>Array.isArray(v)?v:JSON.parse(v || '[]'); export const lengthOn=c=>String(c.body || '').length; export const platformsFor=()=>[]; export const htmlImages=()=>[]; export const supports=()=>false; export const fromContent=c=>c; export async function summary(){return []}" }));
   } }] });
-const { contentEntries, entryAccountIds, legacyContentWorkspace, reviewWorkspace, workspace, topics } = await import(pathToFileURL(path.join(temp, 'test.mjs')));
+const { contentEntries, entryAccountIds, legacyContentWorkspace, reviewWorkspace, publishedUrl, workspace, topics } = await import(pathToFileURL(path.join(temp, 'test.mjs')));
 const empty = () => ({ articles: [], topics: [], plans: [], posts: [], publications: [], channels: [] });
 
 test('destination evidence determines ownership, including long social content; format alone stays unassigned', () => {
@@ -207,6 +207,77 @@ test('database rows wrapped afresh by the local runtime do not loop over cyclic 
   assert.equal(tables.articles[0].workspace, 'social');
   assert.equal(tables.topics[0].workspace, 'social');
 });
+test('published task links save atomically, survive reload and status changes, and never fabricate transport receipts', () => {
+  const { ctx, tables, updates } = fixture();
+  tables.articles[0].workspace = 'social';
+  tables.articles[0].publication_links = JSON.stringify({ website: ['https://example.com/site'] });
+  const before = structuredClone(tables.articles[0]);
+  const input = { key: 'topic:topic', workspace: 'social', stage: 'published', published_url: ' https://social.example.com/post/1 ' };
+  workspace.setStage(input, ctx);
+  assert.equal(updates.length, 1);
+  assert.deepEqual(Object.keys(updates[0].patch).sort(), ['publication_links', 'workflow_stages']);
+  assert.deepEqual(JSON.parse(tables.articles[0].publication_links), { website: ['https://example.com/site'], social: ['https://social.example.com/post/1'] });
+  assert.equal(tables.articles[0].body, before.body); assert.equal(tables.articles[0].status, before.status);
+  workspace.setStage(input, ctx); assert.equal(updates.length, 1);
+  workspace.setStage({ ...input, stage: 'draft', published_url: undefined }, ctx);
+  let entry = contentEntries(workspace.context({}, ctx), 'social')[0];
+  assert.equal(entry.stage, 'draft'); assert.deepEqual(entry.publicationUrls, ['https://social.example.com/post/1']);
+  workspace.setStage({ ...input, stage: '', published_url: undefined }, ctx);
+  assert.equal(contentEntries(workspace.context({}, ctx), 'social')[0].stage, 'published');
+  assert.deepEqual(tables.social_posts, []); assert.deepEqual(tables.publications, []); assert.deepEqual(tables.growth_reviews, []);
+});
+test('publication URLs follow original topic, plan and article IDs without leaking between workspaces', () => {
+  const { ctx, tables } = fixture();
+  tables.articles = []; tables.topics = [{ id: 'topic', title: 'Topic', workspace: 'social' }];
+  workspace.setStage({ key: 'topic:topic', workspace: 'social', stage: 'published', published_url: 'https://social.example/topic' }, ctx);
+  tables.articles.push({ id: 'article', title: 'Draft', topic_id: 'topic', publication_links: '{"social":["https://social.example/draft"]}' });
+  tables.marketing_plans.push({ id: 'plan', platform: 'xiaohongshu', topic_id: 'topic', article_id: 'article' });
+  workspace.setStage({ key: 'plan:plan', workspace: 'social', stage: 'published', published_url: 'https://social.example/plan' }, ctx);
+  const entry = contentEntries(workspace.context({}, ctx), 'social')[0];
+  assert.deepEqual(new Set(entry.publicationUrls), new Set(['https://social.example/topic', 'https://social.example/draft', 'https://social.example/plan']));
+  assert.deepEqual(contentEntries(workspace.context({}, ctx), 'website')[0].publicationUrls, []);
+});
+test('credential URLs are rejected with the local runtime URL shim as well as the browser URL class', () => {
+  const OriginalURL = globalThis.URL;
+  try {
+    globalThis.URL = class { constructor(value) { const url = new OriginalURL(value); this.href = url.href; this.hostname = url.hostname; } };
+    assert.equal(publishedUrl('https://u:p@example.com/post'), '');
+    assert.equal(publishedUrl('https://example.com/post'), 'https://example.com/post');
+  } finally { globalThis.URL = OriginalURL; }
+});
+test('invalid publication links and inappropriate status or scope fail before any write', () => {
+  const { ctx, tables, updates } = fixture(); tables.articles[0].workspace = 'social';
+  const input = { key: 'topic:topic', workspace: 'social', stage: 'published' };
+  for (const published_url of ['javascript:alert(1)', '//example.com/post', 'https://user:secret@example.com/post', 'https://', 123, 'https://example.com/' + 'x'.repeat(4000)])
+    assert.throws(() => workspace.setStage({ ...input, published_url }, ctx));
+  assert.throws(() => workspace.setStage({ ...input, stage: 'draft', published_url: 'https://example.com/post' }, ctx));
+  assert.throws(() => workspace.setStage({ ...input, workspace: 'website', published_url: 'https://example.com/post' }, ctx));
+  assert.equal(updates.length, 0);
+});
+test('real native and confirmed plan links are reused and unsafe or unpublished URLs stay hidden', () => {
+  const { ctx, tables, updates } = fixture(); tables.articles[0].workspace = 'social';
+  tables.social_posts = [
+    { id: 'native', article_id: 'article', status: 'published', post_url: 'https://social.example/post' },
+    { id: 'draft', article_id: 'article', status: 'draft', post_url: 'https://social.example/draft' },
+    { id: 'unsafe', article_id: 'article', status: 'published', post_url: 'javascript:alert(1)' },
+  ];
+  tables.marketing_plans = [{ id: 'plan', platform: 'xiaohongshu', article_id: 'article', receipt: JSON.stringify({ url: 'https://social.example/confirmed' }) }];
+  workspace.setStage({ key: 'plan:plan', workspace: 'social', stage: 'published', published_url: 'https://social.example/post' }, ctx);
+  const entry = contentEntries(workspace.context({}, ctx), 'social')[0];
+  assert.deepEqual(new Set(entry.publicationUrls), new Set(['https://social.example/post', 'https://social.example/confirmed']));
+  assert.deepEqual(Object.keys(updates[0].patch), ['workflow_stages']);
+});
+test('standalone articles keep repeated publication links distinct and enforce the append limit', () => {
+  const { ctx, tables, updates } = fixture(); tables.topics = [];
+  tables.articles[0].workspace = 'social'; tables.articles[0].topic_id = '';
+  const urls = Array.from({ length: 20 }, (_, i) => `https://social.example/post/${i}`);
+  tables.articles[0].publication_links = JSON.stringify({ social: urls });
+  const input = { key: 'article:article', workspace: 'social', stage: 'published' };
+  assert.throws(() => workspace.setStage({ ...input, published_url: 'https://social.example/overflow' }, ctx));
+  assert.equal(updates.length, 0);
+  workspace.setStage({ ...input, published_url: urls[0] }, ctx);
+  assert.equal(contentEntries(workspace.context({}, ctx), 'social')[0].publicationUrls.length, 20);
+});
 test('every original ID survives the joined view even with stale links and record cycles', () => {
   const data = empty(); data.plans = [{ id: 'p', topic_id: 't', article_id: 'a', platform: 'website' }, { id: 'stale', topic_id: 'missing' }];
   data.topics = [{ id: 't', marketing_plan_id: 'p', article_id: 'a' }, { id: 'old', article_id: 'missing' }]; data.articles = [{ id: 'a', topic_id: 't', marketing_plan_id: 'p' }, { id: 'orphan' }];
@@ -214,3 +285,33 @@ test('every original ID survives the joined view even with stale links and recor
   for (const [table, field] of [['articles', 'article'], ['topics', 'topic'], ['plans', 'plan']]) for (const original of data[table]) assert.ok(rows.some(row => row[field]?.id === original.id));
 });
 process.on('exit', () => fs.rmSync(temp, { recursive: true, force: true }));
+test('confirmed links can be edited and removed in any workspace; records and receipts stay untouched', () => {
+  const { ctx, tables } = fixture(); tables.articles[0].workspace = 'social';
+  tables.articles[0].publication_links = JSON.stringify({ website: ['https://example.com/site'], social: ['https://social.example/old'] });
+  tables.social_posts = [{ id: 'native', article_id: 'article', status: 'published', post_url: 'https://social.example/native' }];
+  const posts = structuredClone(tables.social_posts);
+  workspace.setStage({ key: 'topic:topic', workspace: 'social', stage: '', links: [' https://social.example/new ', '', 'https://social.example/new'] }, ctx);
+  let entry = contentEntries(workspace.context({}, ctx), 'social')[0];
+  assert.deepEqual(entry.linkedUrls, ['https://social.example/new']);
+  assert.deepEqual(new Set(entry.publicationUrls), new Set(['https://social.example/new', 'https://social.example/native']));
+  assert.deepEqual(JSON.parse(tables.articles[0].publication_links).website, ['https://example.com/site']);
+  workspace.setStage({ key: 'topic:topic', workspace: 'social', stage: 'draft', links: [] }, ctx);
+  entry = contentEntries(workspace.context({}, ctx), 'social')[0];
+  assert.deepEqual(entry.linkedUrls, []); assert.deepEqual(entry.publicationUrls, ['https://social.example/native']);
+  assert.deepEqual(JSON.parse(tables.articles[0].publication_links), { website: ['https://example.com/site'] });
+  assert.deepEqual(tables.social_posts, posts);
+  assert.throws(() => workspace.setStage({ key: 'topic:topic', workspace: 'social', stage: '', links: ['javascript:alert(1)'] }, ctx));
+  assert.throws(() => workspace.setStage({ key: 'topic:topic', workspace: 'social', stage: '', links: Array.from({ length: 21 }, (_, i) => 'https://social.example/' + i) }, ctx));
+});
+test('editing links on a merged entry moves older topic and draft links to the plan, so removed ones stay removed', () => {
+  const { ctx, tables } = fixture();
+  tables.topics = [{ id: 'topic', title: 'Topic', workspace: 'social', publication_links: '{"social":["https://social.example/topic"]}' }];
+  tables.articles = [{ id: 'article', title: 'Draft', topic_id: 'topic', publication_links: '{"social":["https://social.example/draft"],"website":["https://example.com/site"]}' }];
+  tables.marketing_plans = [{ id: 'plan', platform: 'xiaohongshu', topic_id: 'topic', article_id: 'article' }];
+  workspace.setStage({ key: 'plan:plan', workspace: 'social', stage: '', links: ['https://social.example/draft'] }, ctx);
+  const entry = contentEntries(workspace.context({}, ctx), 'social')[0];
+  assert.deepEqual(entry.linkedUrls, ['https://social.example/draft']);
+  assert.deepEqual(JSON.parse(tables.marketing_plans[0].publication_links), { social: ['https://social.example/draft'] });
+  assert.equal(tables.topics[0].publication_links, '');
+  assert.deepEqual(JSON.parse(tables.articles[0].publication_links), { website: ['https://example.com/site'] });
+});

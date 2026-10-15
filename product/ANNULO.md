@@ -18,7 +18,7 @@
 | 自媒体 | 插件 social 的账号、帖子、采集与健康数据；social/social.* |
 | 总览与复盘 | today.list、reports.data/save |
 
-入口 pages/Index.tsx 使用 /?view=；实际视图：overview、company、opportunities、campaigns、metrics、content、calendar、assets、social、site、search、geo、audit、reports、channels、help。内容详情带 article，运营主题详情带 campaign。
+入口 pages/Index.tsx 使用 /?view=。工作台 overview 包含今日任务，每周总结 reports 是同一工作台的另一标签；网站运营使用 website-content、opportunities、search、geo、site、metrics、audit，自媒体运营使用 social-content、inspiration、calendar、social、social-metrics，产品资料使用 company、assets。channels 管理连接，help 查看帮助。旧 content、campaigns 和 reports 链接继续可用；内容详情带 article，运营主题详情带 campaign。
 
 网站和账号管理在 channels；真实社媒操作使用本机浏览器登录状态与插件，需要电脑运行。视频草稿没有实际素材时提示补录屏，不声称成片。
 

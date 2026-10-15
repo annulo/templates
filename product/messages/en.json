@@ -42,7 +42,7 @@
     "content_detail": "Content detail",
     "products": "Products",
     "products_sub": "Models, specs, pricing",
-    "overview": "Today",
+    "overview": "Workbench",
     "reports": "Weekly summary",
     "content": "Content center",
     "calendar": "Publishing calendar",
@@ -58,7 +58,7 @@
     "help": "Help",
     "shuttle_settings": "Annulo settings",
     "usage": "Usage",
-    "overview_sub": "Step-by-step checklist",
+    "overview_sub": "Today's tasks and the weekly summary",
     "reports_sub": "How this week went",
     "content_sub": "Plan, write, review",
     "pending_badge": "{n} new articles",
@@ -124,7 +124,12 @@
     "social-metrics": "Social data and reviews",
     "social-metrics_sub": "Account performance and publication reviews",
     "geo_done_multi": "asked {n} AIs; recommendation answers citing you: {list}",
-    "geo_done_sep": ", "
+    "geo_done_sep": ", ",
+    "g_library": "Product library",
+    "s_content": "Content",
+    "s_performance": "Performance",
+    "s_health": "Site health",
+    "s_accounts": "Accounts and data"
   },
   "ui": {
     "done": "Done",
@@ -2085,7 +2090,15 @@
     "platform_xiaohongshu": "Xiaohongshu",
     "platform_douyin": "Douyin",
     "platform_x": "X",
-    "ga4_note": "GA4 key-event totals are shown separately. Review signup, activation and payment counts with confirmed definitions under Conversion data."
+    "ga4_note": "GA4 key-event totals are shown separately. Review signup, activation and payment counts with confirmed definitions under Conversion data.",
+    "workbench_title": "Workbench",
+    "tab_today": "Today",
+    "tab_weekly": "Weekly summary",
+    "shortcuts": "Shortcuts",
+    "shortcut_website_content": "Website content",
+    "shortcut_social_content": "Social content",
+    "shortcut_calendar": "Publishing calendar",
+    "shortcut_opportunities": "SEO planning"
   },
   "marketing": {
     "plan_tab": "Marketing plans",
@@ -2252,8 +2265,20 @@
     "stage_blocked": "Blocked",
     "stage_archived": "Archived",
     "verified_receipt": "Verified publication record",
-    "edit_status": "Edit status",
+    "edit_status": "Status and links",
     "status_auto": "Automatic",
-    "status_edit_note": "Every status can be edited again. Changing task status does not republish content, cancel scheduling or delete publication records."
+    "status_edit_note": "Every status can be edited again. Changing task status does not republish content, cancel scheduling or delete publication records.",
+    "linked_publications": "Manually linked",
+    "published_url": "Publication URL",
+    "published_url_hint": "Paste the URL of the actual published content; you can change or remove it later. Links from publication records and verified receipts appear automatically and are not edited here.",
+    "publication_links": "Publication links",
+    "add_link": "Add link",
+    "remove_link": "Remove this link",
+    "edit_links": "Edit links",
+    "from_records": "Publication record",
+    "links_empty": "No publication links yet.",
+    "link_invalid": "Enter a valid HTTP or HTTPS URL without login details.",
+    "link_required": "Add at least one actual publication URL before marking social content as published.",
+    "links_empty_manual": "No manually linked URLs yet."
   }
 }

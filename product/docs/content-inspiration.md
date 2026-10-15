@@ -1,6 +1,6 @@
 # 内容中心灵感库
 
-产品模板在内容中心启用灵感库：灵感来源与参考博主。共用 UI 在 core/components/InspirationLibrary.tsx，业务脚本在 templates/product/local/inspiration.ts；其他模板不启用入口。现有素材库与发布账号管理沿用原流程。
+产品模板在内容中心启用灵感库：灵感来源与参考博主。共用 UI 在 core/components/InspirationLibrary.tsx，业务脚本在 product/local/inspiration.ts；其他模板不启用入口。现有素材库与发布账号管理沿用原流程。
 
 来源沿用 research_sources，读取状态 status 与整理状态 library_status 分开；待整理、可参考、归档都不影响既有快照。reference_creators 每条记录保存一个平台账号，同一人物或品牌在确认后用 person_key 归组。指标未知值为 null，已记录数字需要 snapshot_at。
 

@@ -1,6 +1,10 @@
 # 产品运营模板设计
 
-独立模板 product；共用内容 UI 来自 core，网站能力来自按需组装的 core/features/websites，社媒来自 social 插件。trade 的源文件路径调整后，组装产物路径保持原样。公开产品模板通过 publish.py public 导出；没有新增 Annulo 原语。
+独立模板 `product`，源码在公开仓库 `annulo/templates` 的 `main` 分支维护。产品业务页面、脚本、表、任务、文案和增长方法放在 `product/`；共用内容 UI 来自 `core/`，网站能力来自按需组装的 `core/features/websites/`，社媒来自 social 插件。私有外贸模板不在本仓库维护，仍可复用这里的 core；没有新增 Annulo 原语。
+
+`publish/targets.json` 为 product 启用 `websites` 模块。组装时合并 `product/`、`core/` 和网站模块，产物中的 `components/`、`local/` 等路径保持原样；文案按键合并，其他同路径文件不允许覆盖。试用用 `python3 publish/publish.py product --local [项目目录]`；发版用 `python3 publish/publish.py product --note "<English note>" --tag vX.Y.Z`（先 `--dry-run`）。每个模板独立版本，产品成品由脚本写入 `release` 分支并打 `product/vX.Y.Z`，不再从私有仓库运行 `publish.py public` 导出，也不在 release 上修改源码。
+
+导航分为工作台、网站运营、自媒体运营和产品资料。工作台用「今日任务 / 每周总结」标签切换，旧 `view=reports` 链接继续打开总结并高亮工作台。网站与自媒体分组内按内容、表现、健康或账号归类；非当前分组可折叠，折叠偏好只保存在本机浏览器。产品事实与素材归到产品资料，今日任务旁保留增长目标和常用入口。网站与自媒体仍使用各自的内容归属、发布目标和复盘队列。
 
 七项起步：选择网站、确认产品与用户、连接渠道、搜索数据、增长目标、首个机会、首组内容。前两步与外贸助手共用网站选择和解析向导，资料确认后写入产品定位、功能和用户场景。无强制询盘接入或产品目录的外贸字段。SEO 方法参考 Danny 官方公开大纲，公开链接与执行边界在 product-seo skill。
 

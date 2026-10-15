@@ -370,8 +370,9 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
 }
 
 /** 列表每行的删除：悬停时出现，点一下变成「确认删除」，再点才删；点到别处就取消。删不了的（发出去了）顶部提示原因 */
-/** 列表一行右上角的「更多」：改写、复制、删除（删除点两下确认）。点菜单不会打开这篇 */
-export function RowMore({ onRewrite, onCopy, onDelete }: { onRewrite: () => void; onCopy: () => Promise<void>; onDelete: () => Promise<void> }) {
+/** 列表一行右上角的「更多」：改写、复制、删除（删除点两下确认）。点菜单不会打开这篇。
+ * items 是排在改写前面的其他入口（产品运营的计划信息、编辑选题）；没有成品的行不传 onRewrite / onCopy / onDelete */
+export function RowMore({ items = [], onRewrite, onCopy, onDelete }: { items?: { label: string; icon: ReactNode; onSelect: () => void }[]; onRewrite?: () => void; onCopy?: () => Promise<void>; onDelete?: () => Promise<void> }) {
   const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState('')
@@ -417,16 +418,18 @@ export function RowMore({ onRewrite, onCopy, onDelete }: { onRewrite: () => void
     <button ref={anchor} type="button" aria-label={tr('content.more_actions')} title={tr('content.more_actions')} aria-haspopup="menu" aria-expanded={open} onClick={() => { setOpen((v) => !v); setConfirm(false) }}
       className={cx('inline-flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground', open && 'bg-accent text-foreground')}><MoreHorizontal className="size-4" /></button>
     {open && createPortal(<div ref={menu} role="menu" aria-label={tr('content.more_actions')} style={pos ?? { visibility: 'hidden' }} className="fixed z-50 w-40 max-w-[calc(100vw-16px)] overflow-y-auto rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl">
-      <button type="button" role="menuitem" className={item} onClick={() => act('rewrite', onRewrite)}><Repeat2 className="size-4" />{tr('content.row_rewrite')}</button>
-      <button type="button" role="menuitem" className={item} disabled={!!busy} onClick={() => act('copy', onCopy)}>{busy === 'copy' ? <Loader className="size-4 animate-spin" /> : <Copy className="size-4" />}{tr('content.row_copy')}</button>
-      {confirm
+      {items.map((it) => <button key={it.label} type="button" role="menuitem" className={item} onClick={() => act('item', it.onSelect)}>{it.icon}{it.label}</button>)}
+      {!!items.length && (onRewrite || onCopy || onDelete) && <div role="separator" className="my-1 border-t border-border" />}
+      {onRewrite && <button type="button" role="menuitem" className={item} onClick={() => act('rewrite', onRewrite)}><Repeat2 className="size-4" />{tr('content.row_rewrite')}</button>}
+      {onCopy && <button type="button" role="menuitem" className={item} disabled={!!busy} onClick={() => act('copy', onCopy)}>{busy === 'copy' ? <Loader className="size-4 animate-spin" /> : <Copy className="size-4" />}{tr('content.row_copy')}</button>}
+      {onDelete && (confirm
         ? <button type="button" role="menuitem" autoFocus disabled={!!busy} onClick={() => act('del', onDelete)} className={cx(item, 'bg-destructive font-medium text-white hover:bg-destructive/90 focus-visible:bg-destructive/90')}>{busy === 'del' ? <Loader className="size-4 animate-spin" /> : <Trash2 className="size-4" />}{tr('article.delete_confirm')}</button>
-        : <button type="button" role="menuitem" onClick={() => setConfirm(true)} className={cx(item, 'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10')}><Trash2 className="size-4" />{tr('content.del')}</button>}
+        : <button type="button" role="menuitem" onClick={() => setConfirm(true)} className={cx(item, 'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10')}><Trash2 className="size-4" />{tr('content.del')}</button>)}
     </div>, document.body)}
   </div>
 }
 
-export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope }: { inspiration?: boolean; publishScope?: 'website' | 'social'; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
+export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks }: { inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
   const type = typeOf(a)
   const [moreOpen, setMoreOpen] = useState(false)
   // 菜单往哪边展开：宽屏时按钮在一行最右边，往左；手机上按钮换到下一行的左边，往左会伸出屏幕，改往右。按打开时按钮的实际位置算
@@ -575,7 +578,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
           <div className="flex min-w-0 items-center gap-2">
             <Button variant="ghost" size="icon-sm" onClick={onBack} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
             <TypeBadge type={type} />
-            <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />
+            {statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {editing ? <><Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => setEditing(false)}>{tr('common.cancel')}</Button><Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !dirty}>{tr('common.save')}</Button></> : <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
@@ -652,7 +655,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
       </article>
 
       {inspiration && <InspirationReferences ctx={ctx} targetType="article" targetId={a.id} onChanged={onChanged} />}
-      <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} />
+      <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} linkedRecords={publicationLinks} />
 
       <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} scope={publishScope} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
       <RewriteDialog open={rewritingOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setRewritingOpen(false)} onStart={startRewrite} onConvert={convertTo} />
