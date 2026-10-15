@@ -168,7 +168,8 @@
   },
   "ui": {
     "watch_show": "打开看",
-    "watch_stop": "停止"
+    "watch_stop": "停止",
+    "picker_none_media": "资料库里还没有图片或视频：点「上传」加一些。"
   },
   "choose_accounts": {
     "empty": "没有找到可添加的主页。请确认授权时允许访问目标主页，且该账号拥有发布权限。",
@@ -357,5 +358,12 @@
     "to_body_confirm": "替换现在的正文？",
     "ai_write": "AI 写成正文",
     "rewrite": "改写成…"
+  },
+  "editor": {
+    "upload_media": "上传媒体",
+    "pick_media": "从资料库选",
+    "media": "图片、视频",
+    "media_desc": "上传图片或视频",
+    "ph_media": "输入正文。插图片、视频：点上面的「上传媒体」「从资料库选」，或者直接粘贴、拖进来；输入 / 插入标题、列表…"
   }
 }

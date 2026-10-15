@@ -1,6 +1,7 @@
 // 文章正文编辑器（Tiptap）。第三方包只在浏览器里有（talizen.config.ts 的 importMap，SSR 没有），
 // 所以这个文件只能经 components/RichEditor.tsx 在 useEffect 里 await import()，不要在别处静态引入。
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { Node, mergeAttributes } from '@tiptap/core'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
@@ -13,6 +14,19 @@ import { cx } from '../ui'
 import AssetPicker from '../AssetPicker'
 import type { RichEditorProps } from '../RichEditor'
 
+
+/** 正文里的视频：<video src controls>，一个整块（不能在里面打字） */
+const Video = Node.create({
+  name: 'video',
+  group: 'block',
+  atom: true,
+  draggable: true,
+  addAttributes: () => ({ src: { default: null } }),
+  parseHTML: () => [{ tag: 'video[src]' }],
+  renderHTML: ({ HTMLAttributes }) => ['video', mergeAttributes(HTMLAttributes, { controls: 'true', preload: 'metadata', style: 'max-width:100%' })],
+})
+
+const isMedia = (f: File) => f.type.startsWith('image/') || f.type.startsWith('video/')
 
 type SlashItem = { key: string; icon: LucideIcon; label: string; desc: string; words: string; run: (e: Editor) => void }
 /** 光标位置（视口坐标）：菜单放在光标下方，下面放不下就放上方 */
@@ -29,7 +43,7 @@ function slashItems(pickImage: () => void): SlashItem[] {
     { key: 'quote', icon: Quote, label: tr('editor.quote'), desc: tr('editor.quote_desc'), words: 'quote blockquote yinyong 引用', run: (e) => e.chain().focus().toggleBlockquote().run() },
     { key: 'code', icon: SquareCode, label: tr('editor.code_block'), desc: tr('editor.code_block_desc'), words: 'code block daima 代码', run: (e) => e.chain().focus().toggleCodeBlock().run() },
     { key: 'hr', icon: Minus, label: tr('editor.hr'), desc: tr('editor.hr_desc'), words: 'hr divider line fengexian 分割线', run: (e) => e.chain().focus().setHorizontalRule().run() },
-    { key: 'img', icon: ImageIcon, label: tr('editor.image'), desc: tr('editor.image_desc'), words: 'image picture tupian 图片 配图', run: () => pickImage() },
+    { key: 'img', icon: ImageIcon, label: tr('editor.media'), desc: tr('editor.media_desc'), words: 'image picture video tupian shipin 图片 配图 视频 媒体', run: () => pickImage() },
   ]
 }
 
@@ -56,16 +70,18 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const edRef = useRef<Editor | null>(null)
 
-  // 上传图片（素材库同一套：传到运营后台站点的 creght 素材拿公开地址），插在光标处
+  // 上传图片、视频（素材库同一套：传到运营后台站点的 creght 素材拿地址，离线项目存本机），插在光标处
   const insertImages = async (files: File[]) => {
-    const imgs = files.filter((f) => f.type.startsWith('image/'))
-    if (!imgs.length) return false
+    const media = files.filter(isMedia)
+    if (!media.length) return false
     setError('')
-    for (const f of imgs) {
+    for (const f of media) {
       setUploading((n) => n + 1)
       try {
         const r = await uploadFile(f)
-        edRef.current?.chain().focus().setImage({ src: r.url, alt: f.name.replace(/\.[^.]+$/, '') }).run()
+        const c = edRef.current?.chain().focus()
+        if (f.type.startsWith('video/')) c?.insertContent({ type: 'video', attrs: { src: r.url } }).run()
+        else c?.setImage({ src: r.url, alt: f.name.replace(/\.[^.]+$/, '') }).run()
       } catch (e) {
         setError(tr('editor.upload_failed', { error: (e as Error).message }))
       } finally {
@@ -111,8 +127,9 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
     extensions: [
       // 链接不加 nofollow、不强制新窗口：文章里多是站内链接，nofollow 影响 SEO
       StarterKit.configure({ heading: { levels: [2, 3] }, link: { openOnClick: false, autolink: true, defaultProtocol: 'https', HTMLAttributes: { target: null, rel: null } } }),
-      Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? tr('editor.ph_heading') : tr('editor.ph')) }),
+      Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? tr('editor.ph_heading') : tr('editor.ph_media')) }),
       Image,
+      Video,
     ],
     content: value,
     editorProps: {
@@ -137,13 +154,13 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
       },
       handlePaste: (_view, ev) => {
         const files = [...(ev.clipboardData?.files ?? [])]
-        if (!files.some((f) => f.type.startsWith('image/'))) return false
+        if (!files.some(isMedia)) return false
         insertImages(files)
         return true
       },
       handleDrop: (_view, ev) => {
         const files = [...((ev as DragEvent).dataTransfer?.files ?? [])]
-        if (!files.some((f) => f.type.startsWith('image/'))) return false
+        if (!files.some(isMedia)) return false
         insertImages(files)
         return true
       },
@@ -168,13 +185,14 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
       <EditorContent editor={editor} />
       <AssetPicker
         open={picking}
+        kind="media"
         onClose={() => setPicking(false)}
-        onPick={(urls) => {
+        onPick={(urls, assets) => {
           setPicking(false)
           const e = edRef.current
           if (!e) return
           let c = e.chain().focus()
-          for (const u of urls) c = c.setImage({ src: u })
+          for (const u of urls) c = assets.find((a) => a.url === u)?.kind === 'video' ? c.insertContent({ type: 'video', attrs: { src: u } }) : c.setImage({ src: u })
           c.run()
         }}
       />
@@ -212,7 +230,7 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
       <input
         ref={fileInput}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
         hidden
         onChange={(e) => {
@@ -273,8 +291,8 @@ function Toolbar({ editor, uploading, onUpload, onPick }: { editor: Editor; uplo
       {btn(editor.isActive('orderedList'), tr('editor.ol'), <ListOrdered />, () => editor.chain().focus().toggleOrderedList().run())}
       {btn(editor.isActive('blockquote'), tr('editor.quote'), <Quote />, () => editor.chain().focus().toggleBlockquote().run())}
       <span className="mx-1 h-4 w-px bg-border" />
-      {text(uploading ? tr('editor.uploading') : tr('editor.upload_image'), <Upload />, onUpload, uploading)}
-      {text(tr('editor.pick_image'), <Images />, onPick)}
+      {text(uploading ? tr('editor.uploading') : tr('editor.upload_media'), <Upload />, onUpload, uploading)}
+      {text(tr('editor.pick_media'), <Images />, onPick)}
     </div>
   )
 }
