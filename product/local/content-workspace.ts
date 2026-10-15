@@ -1,5 +1,6 @@
 import { context as marketingContext } from './marketing'
-import { contentEntries, editableContentStages, type ContentData, type EditableContentStage, type ContentWorkspace } from '../lib/contentWorkspace'
+import { L } from './_i18n'
+import { contentEntries, editableContentStages, publishedUrl, type ContentData, type EditableContentStage, type ContentWorkspace } from '../lib/contentWorkspace'
 export const cloud = ['context']
 
 export function context(_input: {}, ctx: any) {
@@ -24,8 +25,9 @@ export function assign(input: { key: string; workspace: ContentWorkspace }, ctx:
   return { workspace: input.workspace, key: entry.key }
 }
 
-/** Save task progress without altering content, creation status or publication receipts. */
-export function setStage(input: { key: string; workspace: ContentWorkspace; stage: EditableContentStage | '' }, ctx: any) {
+/** Save progress and the user-confirmed links together, preserving transport receipts and content.
+ * `links` replaces this workspace's confirmed links (so they can be edited or removed); `published_url` is the older append-only form. */
+export function setStage(input: { key: string; workspace: ContentWorkspace; stage: EditableContentStage | ''; links?: string[]; published_url?: string }, ctx: any) {
   if (!['website', 'social'].includes(input.workspace)) throw new Error('Invalid content workspace')
   if (input.stage !== '' && !editableContentStages.includes(input.stage)) throw new Error('Invalid content stage')
   // Editing one task does not need SEO, assets, reviews or every historical social post.
@@ -40,15 +42,58 @@ export function setStage(input: { key: string; workspace: ContentWorkspace; stag
   }
   if (!entry) throw new Error('Content no longer exists')
   if (entry.workspaces.length && !entry.workspaces.includes(input.workspace)) throw new Error('Content belongs to another workspace')
+  const primary = entry.plan || entry.article || entry.topic
   const table = entry.plan ? 'marketing_plans' : entry.article ? 'articles' : 'topics'
-  const row = ctx.db.get(table, (entry.plan || entry.article || entry.topic).id)
+  const row = ctx.db.get(table, primary.id)
+  const patch: Record<string, string> = {}
+  const parseLinks = (value: any) => {
+    let links: any = {}
+    try { links = JSON.parse(value || '{}') } catch {}
+    return links && typeof links === 'object' && !Array.isArray(links) ? links : {}
+  }
+  const valid = (value: unknown) => {
+    const url = publishedUrl(value)
+    if (!url) throw new Error(L(ctx, '请填写有效的 HTTP / HTTPS 发布链接，链接中不能包含登录凭据。', 'Enter a valid HTTP or HTTPS publication URL without credentials.'))
+    return url
+  }
+  const tooMany = () => new Error(L(ctx, '最多关联 20 个发布链接。', 'Link at most 20 publication URLs.'))
+  let linked = entry.linkedUrls
+  if (Array.isArray(input.links)) {
+    linked = [...new Set(input.links.filter(v => typeof v === 'string' && v.trim()).map(v => valid(v.trim())))]
+    if (linked.length > 20) throw tooMany()
+    if (linked.join('\n') !== entry.linkedUrls.join('\n')) {
+      const links = parseLinks(row.publication_links)
+      if (linked.length) links[input.workspace] = linked
+      else delete links[input.workspace]
+      patch.publication_links = Object.keys(links).length ? JSON.stringify(links) : ''
+      // Links kept on the topic or draft before a plan existed belong to this entry too: move them to the primary record.
+      for (const [other, rec] of [['marketing_plans', entry.plan], ['articles', entry.article], ['topics', entry.topic]] as const) {
+        if (!rec || (other === table && rec.id === primary.id)) continue
+        const own = parseLinks(rec.publication_links)
+        if (!(input.workspace in own)) continue
+        delete own[input.workspace]
+        ctx.db.update(other, rec.id, { publication_links: Object.keys(own).length ? JSON.stringify(own) : '' })
+      }
+    }
+  } else if (input.published_url !== undefined && input.published_url !== '') {
+    const url = valid(input.published_url)
+    if (input.workspace !== 'social' || input.stage !== 'published') throw new Error('Only published social content can link a publication URL')
+    if (!entry.publicationUrls.includes(url)) {
+      const links = parseLinks(row.publication_links)
+      const own = Array.isArray(links[input.workspace]) ? links[input.workspace].filter((v: unknown) => typeof v === 'string') : []
+      if (own.length >= 20) throw tooMany()
+      patch.publication_links = JSON.stringify({ ...links, [input.workspace]: [...own, url] })
+      linked = [...linked, url]
+    }
+  }
   let saved: Record<string, string> = {}
   try { saved = JSON.parse(row.workflow_stages || '{}') } catch {}
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {}
   if ((saved[input.workspace] || '') !== input.stage) {
     if (input.stage) saved[input.workspace] = input.stage
     else delete saved[input.workspace]
-    ctx.db.update(table, row.id, { workflow_stages: Object.keys(saved).length ? JSON.stringify(saved) : '' })
+    patch.workflow_stages = Object.keys(saved).length ? JSON.stringify(saved) : ''
   }
-  return { key: entry.key, workspace: input.workspace, stage: input.stage }
+  if (Object.keys(patch).length) ctx.db.update(table, row.id, patch)
+  return { key: entry.key, workspace: input.workspace, stage: input.stage, links: linked }
 }

@@ -1,3 +1,6 @@
+- version: 0.14.7
+  zh: 工作台整合今日任务与每周总结，网站运营、自媒体运营和产品资料分组展示，侧栏支持折叠。内容状态和发布链接合并到同一个弹窗：手动关联的链接可以添加、修改和删除，网站内容也能关联；发布记录里的链接自动带出。列表、选题、计划和正文详情的状态与链接看法、改法一致，列表每行统一为状态和「更多」菜单，链接以站点名显示。
+  en: Combine daily tasks and weekly summaries in the workbench and organize navigation into collapsible operation groups. Edit status and publication links in one dialog: add, change or remove manually linked URLs, for website content too, while links from publication records appear automatically. Lists, topics, plans and drafts now show and edit status and links the same way; each list row has its status and a More menu, with links shown by site.
 - version: 0.14.6
   zh: 网站与自媒体内容的所有任务状态均可再次编辑，包括已发布、已排期和已归档；修改保存后刷新仍保留并用于状态筛选。列表与计划详情同步显示，可恢复自动判断，正文、素材与历史回执保留。
   en: Edit every task status in website and social content, including published, scheduled and archived tasks. Saved progress persists after reload and drives filters, with matching plan details. Restore automatic status at any time; content, assets and publication receipts are preserved.

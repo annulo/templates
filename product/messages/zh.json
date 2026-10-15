@@ -396,7 +396,7 @@
     "content_detail": "内容详情",
     "products": "产品",
     "products_sub": "型号、参数、报价口径",
-    "overview": "今日任务",
+    "overview": "工作台",
     "reports": "每周总结",
     "content": "内容中心",
     "calendar": "发布日历",
@@ -412,7 +412,7 @@
     "help": "帮助",
     "shuttle_settings": "Annulo 设置",
     "usage": "用量",
-    "overview_sub": "一步一步带你做",
+    "overview_sub": "今天要做的事和每周总结",
     "reports_sub": "这周怎么样、下周做什么",
     "content_sub": "选题和审核",
     "pending_badge": "{n} 篇新文章",
@@ -478,7 +478,12 @@
     "social-metrics": "自媒体数据与复盘",
     "social-metrics_sub": "账号表现与发布后复盘",
     "geo_done_multi": "问了 {n} 个 AI，推荐类引用本站：{list}",
-    "geo_done_sep": "，"
+    "geo_done_sep": "，",
+    "g_library": "产品资料",
+    "s_content": "内容",
+    "s_performance": "表现与数据",
+    "s_health": "网站健康",
+    "s_accounts": "账号与数据"
   },
   "meta": {
     "brand": {
@@ -2373,7 +2378,15 @@
     "platform_xiaohongshu": "小红书",
     "platform_douyin": "抖音",
     "platform_x": "X",
-    "ga4_note": "GA4 的关键事件合计独立展示；注册、激活和付费按确认的事件定义在「转化数据」查看。"
+    "ga4_note": "GA4 的关键事件合计独立展示；注册、激活和付费按确认的事件定义在「转化数据」查看。",
+    "workbench_title": "工作台",
+    "tab_today": "今日任务",
+    "tab_weekly": "每周总结",
+    "shortcuts": "常用入口",
+    "shortcut_website_content": "网站内容",
+    "shortcut_social_content": "自媒体内容",
+    "shortcut_calendar": "发布日历",
+    "shortcut_opportunities": "SEO 规划"
   },
   "marketing": {
     "plan_tab": "营销计划",
@@ -2540,8 +2553,20 @@
     "stage_blocked": "有卡点",
     "stage_archived": "已归档",
     "verified_receipt": "已核对发布记录",
-    "edit_status": "编辑状态",
+    "edit_status": "状态与发布链接",
     "status_auto": "自动判断",
-    "status_edit_note": "所有状态均可再次修改。修改任务状态不会重新发布、取消排期或删除发布记录。"
+    "status_edit_note": "所有状态均可再次修改。修改任务状态不会重新发布、取消排期或删除发布记录。",
+    "linked_publications": "手动关联的链接",
+    "published_url": "发布链接",
+    "published_url_hint": "粘贴实际已发布内容的链接，可以改、可以删。发布记录和已核对回执里的链接自动带出，不在这里改。",
+    "publication_links": "发布链接",
+    "add_link": "添加链接",
+    "remove_link": "删除这条链接",
+    "edit_links": "编辑链接",
+    "from_records": "发布记录",
+    "links_empty": "还没有发布链接。",
+    "link_invalid": "请填写有效的 HTTP / HTTPS 链接，链接里不能带登录信息。",
+    "link_required": "自媒体内容标为「已发布」时，至少填一个实际发布链接。",
+    "links_empty_manual": "还没有手动关联的链接。"
   }
 }
