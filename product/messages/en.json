@@ -2265,11 +2265,20 @@
     "stage_blocked": "Blocked",
     "stage_archived": "Archived",
     "verified_receipt": "Verified publication record",
-    "edit_status": "Edit status",
+    "edit_status": "Status and links",
     "status_auto": "Automatic",
     "status_edit_note": "Every status can be edited again. Changing task status does not republish content, cancel scheduling or delete publication records.",
-    "linked_publications": "Linked publications",
-    "published_url": "Published content URL",
-    "published_url_hint": "Paste the actual published content URL to open it from publication records. Existing links appear automatically; you can add more."
+    "linked_publications": "Manually linked",
+    "published_url": "Publication URL",
+    "published_url_hint": "Paste the URL of the actual published content; you can change or remove it later. Links from publication records and verified receipts appear automatically and are not edited here.",
+    "publication_links": "Publication links",
+    "add_link": "Add link",
+    "remove_link": "Remove this link",
+    "edit_links": "Edit links",
+    "from_records": "Publication record",
+    "links_empty": "No publication links yet.",
+    "link_invalid": "Enter a valid HTTP or HTTPS URL without login details.",
+    "link_required": "Add at least one actual publication URL before marking social content as published.",
+    "links_empty_manual": "No manually linked URLs yet."
   }
 }

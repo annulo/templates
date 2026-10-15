@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, Loader, Plus, Sparkles } from 'lucide-react'
+import { ClipboardList, Loader, NotebookPen, Plus, Sparkles } from 'lucide-react'
 import { ArticleDetail, RowMore, removeArticle } from './Content'
 import { WritingBriefDialog } from '../ContentEvidence'
 import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { MarketingImport, MarketingPlans } from '../MarketingWorkspace'
-import ContentStatus, { PublicationLinks } from '../ContentStatus'
+import ContentStatus, { LinkChips, PublicationLinks } from '../ContentStatus'
 import { TaskFailed, TaskLaunchButton, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { Button, Dialog, Field, Notice, PageHeader, Skeleton, cx, inputCls, toast } from '../ui'
 import Select from '../Select'
@@ -89,7 +89,15 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
   const selectedArticle = data?.articles.find(a => a.id === params.article)
   const selectedEntry = selectedArticle && entries.find(e => e.article?.id === selectedArticle.id)
   const selectedTopic = !params.article && data?.topics.find(t => t.id === params.topic)
+  const topicEntry = selectedTopic ? entries.find(e => e.topic?.id === selectedTopic.id && !e.article && !e.plan) || entries.find(e => e.topic?.id === selectedTopic.id) : undefined
+  // 计划和选题详情的顶上一条：状态（点了改状态和链接）+ 发布链接，和正文详情的顶栏、发布记录一个样子
+  const entryHeader = (entry: ContentEntry) => <div className="space-y-3">
+    <div className="flex flex-wrap items-center gap-2"><ContentStatus entry={entry} workspace={workspace} onChanged={reload} /></div>
+    <PublicationLinks entry={entry} workspace={workspace} onChanged={reload} />
+  </div>
   const published = selectedArticle && entries.some(e => e.article?.id === selectedArticle.id && e.stage === 'published')
+  // 每一行点标题都进它走得最远的那份记录：有成品进正文，没有成品进计划，只有选题进选题
+  const openEntry = (entry: ContentEntry) => entry.article ? setParam('article', entry.article.id) : entry.plan ? setParam('plan', entry.plan.id) : setParam('topic', entry.topic.id)
   const destination = (entry: ContentEntry) => {
     const name = (id?: string) => ctx.channels.find(c => c.id === id)?.name || data?.channels.find(c => c.id === id)?.name
     const publishedIds = entryAccountIds(entry, data!, workspace, true)
@@ -102,7 +110,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
       posts={data!.posts.filter(p => p.article_id === selectedArticle.id)} pubs={data!.publications.filter(p => p.article_id === selectedArticle.id)}
       focus={params.version} displayStatus={published ? 'published' : 'draft'} inspiration publishScope={workspace}
       statusControl={selectedEntry ? <ContentStatus entry={selectedEntry} workspace={workspace} onChanged={reload} /> : undefined}
-      publicationLinks={selectedEntry?.publicationUrls.length ? <PublicationLinks urls={selectedEntry.publicationUrls} /> : undefined}
+      publicationLinks={selectedEntry ? <PublicationLinks entry={selectedEntry} workspace={workspace} onChanged={reload} recordsShown /> : undefined}
       open={id => setParam('article', id)} onBack={() => { setParam('article', ''); setParam('version', '') }} onChanged={reload} /> : <>
       <PageHeader title={w(workspace + '_content')} desc={w(workspace + '_desc')} actions={<>
         <Button onClick={() => openNew()}><Plus />{w('new_content')}</Button>
@@ -130,22 +138,23 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
         {!rows.length ? <Notice>{w('content_empty')}</Notice> : <div className="divide-y divide-border rounded-xl border border-border bg-background">
           {rows.map(entry => <div key={entry.key} className="flex flex-wrap items-start gap-3 px-4 py-4">
             <div className="min-w-0 flex-1">
-              <button type="button" className="cursor-pointer text-left text-sm font-medium hover:text-primary-text" onClick={() => entry.article ? setParam('article', entry.article.id) : entry.plan ? setParam('plan', entry.plan.id) : setParam('topic', entry.topic.id)}>{entry.title || tr('versions.untitled')}</button>
+              <button type="button" className="cursor-pointer text-left text-sm font-medium hover:text-primary-text" onClick={() => openEntry(entry)}>{entry.title || tr('versions.untitled')}</button>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <TypeBadge type={entry.article?.type || entry.topic?.content_type || entry.plan?.content_type || (workspace === 'website' ? 'article' : 'post')} />
                 <span>{destination(entry)}</span>
                 {entry.plan?.content_id && <span>{entry.plan.content_id}</span>}
                 {entry.workspaces.length > 1 && <span>{w('shared_content')}</span>}
+                <LinkChips urls={entry.publicationUrls} />
               </div>
               {(entry.topic?.angle || entry.plan?.notes) && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{entry.topic?.angle || entry.plan?.notes}</p>}
-              {!!entry.publicationUrls.length && <div className="mt-3"><PublicationLinks urls={entry.publicationUrls} /></div>}
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               <ContentStatus entry={entry} workspace={workspace} onChanged={reload} />
               {!entry.workspaces.length && <Button size="sm" variant="outline" onClick={() => { setAssignmentScope(workspace); setAssignment(entry) }}>{w('assign')}</Button>}
-              {entry.plan && <Button size="sm" variant="ghost" onClick={() => setParam('plan', entry.plan.id)}>{w('plan_details')}</Button>}
-              {entry.topic && <Button size="sm" variant="ghost" onClick={() => setParam('topic', entry.topic.id)}>{w('brief')}</Button>}
-              {entry.article ? <RowMore onRewrite={() => setRewrite(entry.article)} onCopy={() => copy(entry.article)} onDelete={async () => { await removeArticle(entry.article, data.posts, data.publications); reload() }} /> : <ArrowRight aria-hidden="true" className="size-4 text-muted-foreground" />}
+              <RowMore items={[
+                ...(entry.plan ? [{ label: w('plan_details'), icon: <ClipboardList className="size-4" />, onSelect: () => setParam('plan', entry.plan.id) }] : []),
+                ...(entry.topic ? [{ label: w('brief'), icon: <NotebookPen className="size-4" />, onSelect: () => setParam('topic', entry.topic.id) }] : [])]}
+                {...(entry.article ? { onRewrite: () => setRewrite(entry.article), onCopy: () => copy(entry.article), onDelete: async () => { await removeArticle(entry.article, data.posts, data.publications); reload() } } : {})} />
             </div>
           </div>)}
         </div>}
@@ -153,7 +162,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
     </>}
     {params.plan && <MarketingPlans ctx={ctx} params={params} setParam={setParam} detailsOnly
       contentEntry={entries.find(e => e.plan?.id === params.plan)} workspace={workspace} onChanged={reload} />}
-    {selectedTopic && <WritingBriefDialog key={selectedTopic.id} ctx={ctx} topic={selectedTopic} onClose={() => setParam('topic', '')} onChanged={reload} onWrite={async () => {
+    {selectedTopic && <WritingBriefDialog key={selectedTopic.id} ctx={ctx} topic={selectedTopic} header={topicEntry && entryHeader(topicEntry)} onClose={() => setParam('topic', '')} onChanged={reload} onWrite={async () => {
       try {
         const latest = await runLocal<ContentData>('content-workspace.context', {})
         const topic = latest.topics.find(t => t.id === selectedTopic.id)

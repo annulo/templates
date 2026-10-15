@@ -325,6 +325,7 @@ export function MarketingPlans({
               {contentEntry && workspace ? <ContentStatus entry={contentEntry} workspace={workspace} onChanged={() => { reload(); onChanged?.() }} /> : <Badge>{m("stage_" + active.stage)}</Badge>}
               <Badge>{active.role_name || m("account_unconfirmed")}</Badge>
             </div>
+            {contentEntry && workspace && <PublicationLinks entry={contentEntry} workspace={workspace} onChanged={() => { reload(); onChanged?.() }} />}
             <Notice>{m("historical_note")}</Notice>
             <div className="grid gap-4 sm:grid-cols-2">
               <Panel title={m("audience")}>
@@ -419,7 +420,7 @@ export function MarketingPlans({
               <a href={active.receipt.url} target="_blank" rel="noreferrer" className="mt-2 block break-all text-xs text-primary-text">{active.receipt.url}</a>
               <p className="mt-2 text-xs text-muted-foreground">{m('published_time')}：{new Date(active.receipt.published_at).toLocaleString(undefined, { timeZone: 'Asia/Shanghai' })}</p>
             </Panel>}
-            {!!contentEntry?.publicationUrls.length && <Panel title={tr('article.records')}><PublicationLinks urls={contentEntry.publicationUrls} /></Panel>}
+
             <div className="flex flex-wrap items-center gap-2">
               {active.article ? (
                 <Button

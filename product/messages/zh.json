@@ -2265,11 +2265,20 @@
     "stage_blocked": "有卡点",
     "stage_archived": "已归档",
     "verified_receipt": "已核对发布记录",
-    "edit_status": "编辑状态",
+    "edit_status": "状态与发布链接",
     "status_auto": "自动判断",
     "status_edit_note": "所有状态均可再次修改。修改任务状态不会重新发布、取消排期或删除发布记录。",
-    "linked_publications": "已关联发布链接",
-    "published_url": "已发布内容链接",
-    "published_url_hint": "粘贴实际已发布内容的链接，保存后可在发布记录中打开。已有链接会自动带出，也可继续补充。"
+    "linked_publications": "手动关联的链接",
+    "published_url": "发布链接",
+    "published_url_hint": "粘贴实际已发布内容的链接，可以改、可以删。发布记录和已核对回执里的链接自动带出，不在这里改。",
+    "publication_links": "发布链接",
+    "add_link": "添加链接",
+    "remove_link": "删除这条链接",
+    "edit_links": "编辑链接",
+    "from_records": "发布记录",
+    "links_empty": "还没有发布链接。",
+    "link_invalid": "请填写有效的 HTTP / HTTPS 链接，链接里不能带登录信息。",
+    "link_required": "自媒体内容标为「已发布」时，至少填一个实际发布链接。",
+    "links_empty_manual": "还没有手动关联的链接。"
   }
 }

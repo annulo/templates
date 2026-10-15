@@ -10,6 +10,8 @@ export type ContentEntry = {
   key: string; title: string; article?: any; topic?: any; plan?: any;
   workspaces: ContentWorkspace[]; stage: ContentStage; updatedAt: string;
   publicationUrls: string[];
+  /** User-confirmed links (publication_links); editable, unlike publication records and receipts. */
+  linkedUrls: string[];
 }
 const parse = (value: any) => {
   if (typeof value !== 'string') return value || {}
@@ -43,6 +45,16 @@ export function entryPublicationUrls(entry: Pick<ContentEntry, 'article' | 'topi
     const records = scope === 'website' ? data.publications : data.posts
     for (const record of records)
       if (entry.article && record.article_id === entry.article.id && record.status === 'published') add(scope === 'website' ? record.url : record.post_url)
+  }
+  return [...urls]
+}
+
+/** Links the user confirmed by hand for one workspace, across the plan, draft and topic of an entry. */
+export function entryLinkedUrls(entry: Pick<ContentEntry, 'article' | 'topic' | 'plan'>, workspace: ContentWorkspace): string[] {
+  const urls = new Set<string>()
+  for (const row of [entry.plan, entry.article, entry.topic]) {
+    const links = parse(row?.publication_links)?.[workspace]
+    if (Array.isArray(links)) links.forEach(v => { const url = publishedUrl(v); if (url) urls.add(url) })
   }
   return [...urls]
 }
@@ -148,6 +160,7 @@ export function contentEntries(data: ContentData, workspace?: ContentWorkspace):
     const entry = { key, plan, topic, article, workspaces: [...scopes], title: article?.title || topic?.title || plan?.title || '', updatedAt: article?.updated_at || article?.created_at || plan?.updated_at || topic?.created_at || plan?.created_at || '' } as ContentEntry
     entry.stage = entryStage(entry, data, workspace)
     entry.publicationUrls = entryPublicationUrls(entry, data, workspace)
+    entry.linkedUrls = workspace ? entryLinkedUrls(entry, workspace) : []
     entries.push(entry)
   }
   for (const plan of data.plans) {
