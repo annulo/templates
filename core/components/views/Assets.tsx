@@ -130,7 +130,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
       )}
 
       {list === null ? (
-        <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-3 @5xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="aspect-[4/5] rounded-xl" />
           ))}
@@ -140,7 +140,7 @@ export default function Assets({ ctx, params, setParam }: { ctx: Ctx; params: Re
       ) : !shown.length ? (
         <Notice>{tr('assets.no_match')}</Notice>
       ) : (
-        <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-3 @5xl:grid-cols-4">
           {shown.map((a) => (
             <AssetCard key={a.id} a={a} disabled={false} onEdit={() => setEditing(a)} onChanged={load} onTag={(t) => setParam('tag', t)} />
           ))}
