@@ -102,13 +102,20 @@ function VersionCard({ v, all, article, articles, current, onChanged }: { v: Vid
       <div className="w-full shrink-0 sm:w-56">
         {v.file && status === 'done'
           ? <video src={videoSrc(v.file)} controls preload="metadata" className="max-h-80 w-full rounded-lg bg-black object-contain" style={{ aspectRatio: ratio }} />
-          : <div className="flex aspect-video w-full items-center justify-center rounded-lg bg-muted text-muted-foreground">{status === 'making' ? <Loader2 className="size-5 animate-spin" /> : <Clapperboard className="size-5" />}</div>}
+          : status === 'making'
+            // 正在做：说清楚是 AI 在做、能去看过程，不要只有一个转圈（像加载不出来）
+            ? <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 text-center">
+              <Clapperboard className="size-5 animate-pulse text-primary-text" />
+              <span className="text-xs font-medium text-primary-text">{tr('video.making_n', { n: v.n ?? '?' })}</span>
+              {v.chat_id && <button type="button" onClick={() => openChat(v.chat_id!)} className="cursor-pointer text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">{tr('video.watch')}</button>}
+            </div>
+            : <div className="flex aspect-video w-full items-center justify-center rounded-lg bg-muted text-muted-foreground"><Clapperboard className="size-5" /></div>}
       </div>
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold">{tr('video.version_n', { n: v.n ?? '?' })}</span>
           {current && <Badge tone="primary">{tr('video.current')}</Badge>}
-          {status === 'making' && <Badge tone="warn">{tr('video.s_making')}</Badge>}
+          {status === 'making' && <Badge tone="primary"><Loader2 className="size-3 animate-spin" />{tr('video.s_making')}</Badge>}
           {status === 'failed' && <Badge tone="bad">{tr('video.s_failed')}</Badge>}
           {status === 'stalled' && <Badge tone="bad">{tr('video.s_stalled')}</Badge>}
           <span className="text-xs text-muted-foreground">{fmtTime(v.finished_at || v.created_at)}</span>

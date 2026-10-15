@@ -1627,6 +1627,8 @@
     "ask_new": "Change it in a new chat",
     "ask_new_hint": "The chat that made it is gone: start a new one and say what to change. Each change is saved as a new version.",
     "ask_new_title": "Change video: {title}",
-    "ask_new_text": "I want to keep changing the video \"{title}\" (video article {id}, currently v{n}). Follow the project task tasks/revise-video.md: ask me what to change first."
+    "ask_new_text": "I want to keep changing the video \"{title}\" (video article {id}, currently v{n}). Follow the project task tasks/revise-video.md: ask me what to change first.",
+    "making_n": "AI is making v{n}",
+    "watch": "Watch progress"
   }
 }

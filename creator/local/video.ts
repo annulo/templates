@@ -72,12 +72,15 @@ export function start(input: { doc_id?: string; article_id?: string; version_id?
       base = done.find((v) => v.file === video.video) ?? done[done.length - 1] ?? null
     }
   }
+  // 同一段对话里重复开同一个版本（调用重试、脚本跑了两遍）：复用那个还在做的，不多出一版
+  const chatId = String(ctx.chat_id ?? '')
+  const dup = !input?.doc_id && chatId ? versionsOf(ctx, video.id).find((v) => v.status === 'making' && v.chat_id === chatId && (v.parent_id ?? '') === (base?.id ?? '') && (v.prompt ?? '') === note) : null
   const d = doc ? docOf(doc) : null
   // 没有文档（自己新建的视频文章）：照文章的标题和简介做
   const snapshot = d ? snapshotOf(d) : `${video.title ?? ''}\n\n${video.body ?? ''}`.trim()
   const all = versionsOf(ctx, video.id)
-  const n = all.reduce((m, v) => Math.max(m, Number(v.n) || 0), 0) + 1
-  const v = ctx.db.insert('video_versions', { article_id: video.id, n, parent_id: base?.id ?? '', prompt: note, doc_id: doc?.id ?? '', doc_snapshot: snapshot, chat_id: String(ctx.chat_id ?? ''), status: 'making', created_at: now() })
+  const n = dup ? Number(dup.n) : all.reduce((m, v) => Math.max(m, Number(v.n) || 0), 0) + 1
+  const v = dup ?? ctx.db.insert('video_versions', { article_id: video.id, n, parent_id: base?.id ?? '', prompt: note, doc_id: doc?.id ?? '', doc_snapshot: snapshot, chat_id: chatId, status: 'making', created_at: now() })
   // 从第 1 版到 base 这一串改过来的要求，助手看得出这条视频是怎么一步步改成现在这样的
   const chain: any[] = []
   for (let p = base; p; p = all.find((x) => x.id === p.parent_id)) chain.unshift({ n: p.n, prompt: p.prompt ?? '', notes: p.notes ?? '' })
