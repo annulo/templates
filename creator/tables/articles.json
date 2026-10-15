@@ -115,6 +115,14 @@
       "unread": {
         "type": "boolean",
         "description": "新文章：AI 写好、改写好（content.save）时为 true，用户在页面上打开这篇就清掉。左侧「内容中心」的数字数它"
+      },
+      "folder": {
+        "type": "string",
+        "description": "这条内容的文件夹，相对项目工作目录（ctx.fs.root）的路径，比如「内容/宣传片」；local/folder.ts 建、改名时维护"
+      },
+      "chat_id": {
+        "type": "string",
+        "description": "最近一次在对话里改这条内容的文件夹的对话 id（folder.create / write 时记 ctx.chat_id），页面上「继续对话」回到它"
       }
     },
     "required": [

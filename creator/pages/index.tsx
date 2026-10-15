@@ -4,8 +4,8 @@ import Wizard from '../components/wizard/Wizard'
 import { runLocal } from '../lib/shuttle'
 import type { ChecklistData } from '../lib/useChecklist'
 import Overview from '../components/views/Overview'
-import Content from '../components/views/Content'
-import { aiWork } from '../components/Artifacts'
+// 自媒体有自己的内容中心（内容文件夹，docs/content-model.md）；别的模板用 core 的 components/views/Content
+import Content from '../components/views/CreatorContent'
 import Reports from '../components/views/Reports'
 import Calendar from '../components/views/Calendar'
 import Assets from '../components/views/Assets'
@@ -322,7 +322,7 @@ export default function Index() {
           ) : view === 'reports' ? (
             <Reports ctx={ctx} params={params} setParam={setParam} />
           ) : view === 'content' ? (
-            <Content ctx={ctx} params={params} setParam={setParam} work={aiWork} />
+            <Content ctx={ctx} params={params} setParam={setParam} />
           ) : view === 'calendar' ? (
             <Calendar ctx={ctx} params={params} setParam={setParam} />
           ) : view === 'assets' ? (
