@@ -15,15 +15,32 @@ import AssetPicker from '../AssetPicker'
 import type { RichEditorProps } from '../RichEditor'
 
 
-/** 正文里的视频：<video src controls>，一个整块（不能在里面打字） */
+/**
+ * 正文里的视频：存成 <video src controls>，一个整块（不能在里面打字）。
+ * 编辑器里不用原生播放器：点击会被播放控件吃掉，选不中、拖不动。显示成一个能选中的块（画面 + 角上「视频」），选中了能删、能拖；预览、发出去的是正常的播放器
+ */
 const Video = Node.create({
   name: 'video',
   group: 'block',
   atom: true,
+  selectable: true,
   draggable: true,
   addAttributes: () => ({ src: { default: null } }),
   parseHTML: () => [{ tag: 'video[src]' }],
   renderHTML: ({ HTMLAttributes }) => ['video', mergeAttributes(HTMLAttributes, { controls: 'true', preload: 'metadata', style: 'max-width:100%' })],
+  addNodeView: () => ({ node }) => {
+    const dom = document.createElement('div')
+    dom.className = 'rich-video'
+    dom.contentEditable = 'false'
+    const v = document.createElement('video')
+    v.src = node.attrs.src ?? ''
+    v.preload = 'metadata'
+    v.muted = true
+    const tag = document.createElement('span')
+    tag.textContent = tr('editor.video_tag')
+    dom.append(v, tag)
+    return { dom }
+  },
 })
 
 const isMedia = (f: File) => f.type.startsWith('image/') || f.type.startsWith('video/')
@@ -79,9 +96,7 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
       setUploading((n) => n + 1)
       try {
         const r = await uploadFile(f)
-        const c = edRef.current?.chain().focus()
-        if (f.type.startsWith('video/')) c?.insertContent({ type: 'video', attrs: { src: r.url } }).run()
-        else c?.setImage({ src: r.url, alt: f.name.replace(/\.[^.]+$/, '') }).run()
+        insertNodes([f.type.startsWith('video/') ? { type: 'video', attrs: { src: r.url } } : { type: 'image', attrs: { src: r.url, alt: f.name.replace(/\.[^.]+$/, '') } }])
       } catch (e) {
         setError(tr('editor.upload_failed', { error: (e as Error).message }))
       } finally {
@@ -89,6 +104,12 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
       }
     }
     return true
+  }
+  // 插在当前选中内容的后面：刚插进去的图片、视频是选中的，直接 setImage / insertContent 会把它换掉（连着插几个只剩最后一个）
+  const insertNodes = (nodes: { type: string; attrs: Record<string, unknown> }[]) => {
+    const e = edRef.current
+    if (!e || !nodes.length) return
+    e.chain().focus().insertContentAt(e.state.selection.to, nodes).run()
   }
   const items = slashItems(() => fileInput.current?.click())
   const shown = slash ? items.filter((i) => !slash.query || i.words.includes(slash.query) || i.label.toLowerCase().includes(slash.query)) : []
@@ -189,11 +210,7 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
         onClose={() => setPicking(false)}
         onPick={(urls, assets) => {
           setPicking(false)
-          const e = edRef.current
-          if (!e) return
-          let c = e.chain().focus()
-          for (const u of urls) c = assets.find((a) => a.url === u)?.kind === 'video' ? c.insertContent({ type: 'video', attrs: { src: u } }) : c.setImage({ src: u })
-          c.run()
+          insertNodes(urls.map((u) => (assets.find((a) => a.url === u)?.kind === 'video' ? { type: 'video', attrs: { src: u } } : { type: 'image', attrs: { src: u } })))
         }}
       />
       {slash && shown.length > 0 && (

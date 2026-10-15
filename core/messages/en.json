@@ -365,6 +365,7 @@
     "pick_media": "From library",
     "media": "Image or video",
     "media_desc": "Upload images or videos",
-    "ph_media": "Write here. Add images or videos with \"Upload media\" or \"From library\" above, or paste or drop them in; type / for headings, lists…"
+    "ph_media": "Write here. Add images or videos with \"Upload media\" or \"From library\" above, or paste or drop them in; type / for headings, lists…",
+    "video_tag": "Video"
   }
 }
