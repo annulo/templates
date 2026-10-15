@@ -106,11 +106,13 @@ export default function InspirationLibrary({
   params,
   setParam,
   onChanged,
+  workspace,
 }: {
   ctx: Ctx;
   params: Record<string, string>;
   setParam: (k: string, v: string) => void;
   onChanged: () => void;
+  workspace?: 'website' | 'social';
 }) {
   const [data, setData] = useState<Library | null>(null);
   const [error, setError] = useState("");
@@ -326,7 +328,7 @@ export default function InspirationLibrary({
                       {...taskProps}
                       task="suggest-topics"
                       reqKey="topic_requirements"
-                      input={{ source_ids: [source.id] }}
+                      input={{ source_ids: [source.id], ...(workspace ? { workspace } : {}) }}
                       match={(run) =>
                         run.input?.source_ids?.includes(source.id)
                       }

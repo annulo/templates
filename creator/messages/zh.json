@@ -1,4 +1,14 @@
 {
+  "content_status": {
+    "title": "修改内容状态",
+    "change": "修改「{title}」的内容状态",
+    "auto": "恢复自动更新",
+    "auto_short": "自动",
+    "auto_hint": "根据文章和发布记录自动更新",
+    "draft_hint": "手动标记为草稿，继续修改内容",
+    "published_hint": "手动标记为已发布，包括在其他渠道发布",
+    "saved": "内容状态已更新"
+  },
   "facebook_comments": {
     "view": "查看评论",
     "title": "Facebook 评论",
@@ -145,6 +155,8 @@
     "open_account_data": "去「数据表现」看这个账号：打开主页、重新采集",
     "paste_hint": "也可以直接粘贴图片",
     "preset_prompt": "改写要求",
+    "pub_target_account": "本稿目标账号：{name}。请核对正文、素材和已勾选账号后发布。",
+    "pub_target_missing": "账号已变更，请重新核对",
     "t_article_desc": "标题 + 富文本正文，小标题、列表、图片插在正文里。",
     "pub_hint": "勾选要发的账号（可以多选）。文章原样发出去；发出去以后再改文章，不影响已经发出去的。",
     "pub_rewrite_hint": "灰掉的账号不发{type}，可以先改写成它支持的类型。",

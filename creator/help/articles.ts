@@ -338,6 +338,7 @@ export const content: Article = {
 ## 编辑文章
 
 点开一篇：
+- 点击顶部的状态，手动标记「草稿」或「已发布」，也可以「恢复自动更新」，按文章与发布记录判断。列表右侧也能直接修改，保存后刷新仍保留，状态筛选同步更新；平台上的帖子和历史发布记录不受影响。
 - 「修改」：按类型改。长文改标题、摘要、正文（能插小标题、列表、图片，也能直接粘贴、拖进图片，输入 / 选要插入的块）；图文笔记改正文和配图（「从资料库选」，拖动调整顺序，没配图时填「封面大字」生成文字封面）；视频选资料库的视频或「上传本机视频」（只存在这台电脑上，最多 8 GB，90 天后清理），再写简介。三种都有话题；
 - 「AI 修改」：写清楚哪里要改，它在当前内容上只改你说到的部分，类型不变；「更多 → 改写要求」是它每次改都要遵守的写法；
 - 「更多 → 删除这篇」：已经发出去或排了期的不能直接删。
@@ -412,6 +413,7 @@ The assistant only uses personal stories you wrote in My profile and doesn't mak
 ## Editing an article
 
 Open one:
+- Click the status at the top to mark the content as Draft or Published, or restore automatic status based on the article and publishing records. You can also change it directly in the list. Saved choices survive reloads and update status filters; platform posts and publishing history remain intact.
 - "Edit": fields depend on the type. Long-form: title, summary and body (headings, lists, images; paste or drop images, type / to insert a block). Image post: text and images ("Pick from library", drag to reorder; without images, "Cover text" becomes a text cover). Video: pick a library video or "Upload from this computer" (stays on this computer, up to 8 GB, cleaned up after 90 days), then the description. All three have hashtags;
 - "Ask AI to revise": say what to change; it edits the current content, touches only what you mention, and keeps the type. "More → Revision instructions" is what it follows every time;
 - "More → Delete": articles that have been posted or scheduled can't be deleted.
