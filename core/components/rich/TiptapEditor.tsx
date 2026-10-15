@@ -6,14 +6,29 @@ import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
-import Image from '@tiptap/extension-image'
+import ImageBase from '@tiptap/extension-image'
 import { Bold, Code, Heading2, Heading3, ImageIcon, Images, Italic, Link2, List, ListOrdered, Minus, Pilcrow, Quote, SquareCode, Strikethrough, Unlink, Upload, type LucideIcon } from 'lucide-react'
 import { uploadFile } from '../../lib/shuttle'
+import { fileSrc } from '../../lib/files'
 import { tr } from '../../lib/i18n'
 import { cx } from '../ui'
 import AssetPicker from '../AssetPicker'
 import type { RichEditorProps } from '../RichEditor'
 
+
+/** 正文里存的地址可以是 AI 做的本机文件 local:<name>（发布时 b.upload 直接认），编辑器里显示时换成 Annulo 的地址 */
+const shown = (u?: string | null) => fileSrc(u ?? '')
+
+/** 图片：存的还是原地址，显示用 shown（本机文件） */
+const Image = ImageBase.extend({
+  addNodeView: () => ({ node }) => {
+    const img = document.createElement('img')
+    img.src = shown(node.attrs.src)
+    if (node.attrs.alt) img.alt = node.attrs.alt
+    if (node.attrs.title) img.title = node.attrs.title
+    return { dom: img }
+  },
+})
 
 /**
  * 正文里的视频：存成 <video src controls>，一个整块（不能在里面打字）。
@@ -34,8 +49,10 @@ const Video = Node.create({
     dom.className = 'rich-video'
     dom.contentEditable = 'false'
     const v = document.createElement('video')
-    // #t=0.1：停在第一帧，不然只有黑框
-    v.src = node.attrs.src ? `${node.attrs.src}#t=0.1` : ''
+    // #t=0.1：停在第一帧，不然只有黑框。比例：读到视频尺寸前先按 16:9，读到了按它自己的（竖屏的限高，两边黑边）
+    v.src = node.attrs.src ? `${shown(node.attrs.src)}#t=0.1` : ''
+    v.style.aspectRatio = '16 / 9'
+    v.addEventListener('loadedmetadata', () => { if (v.videoWidth && v.videoHeight) v.style.aspectRatio = `${v.videoWidth} / ${v.videoHeight}` })
     v.preload = 'metadata'
     v.muted = true
     const tag = document.createElement('span')
@@ -51,10 +68,11 @@ const Video = Node.create({
       e.stopPropagation()
       playing = true
       dom.classList.add('playing')
-      v.src = node.attrs.src ?? ''
+      v.src = shown(node.attrs.src)
       v.controls = true
       v.muted = false
-      void v.play()
+      // 放不了（文件没了、格式不支持）不要冒成页面报错：播放器自己会显示放不了
+      v.play().catch(() => {})
     })
     dom.append(v, tag, play)
     // 播放起来以后，视频上的点击、拖进度条交给播放器，编辑器不当成选中、拖动
