@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ArrowUpRight, ClipboardList, Eye, Heart, Link2, Loader, MessageCircle, NotebookPen, Plus, Sparkles, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, ClipboardList, Link2, Loader, NotebookPen, Plus, Sparkles } from 'lucide-react'
 import { ArticleDetail, RowMore, removeArticle } from './Content'
 import { WritingBriefDialog } from '../ContentEvidence'
 import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { GrowthReviews, MarketingImport, MarketingPlans } from '../MarketingWorkspace'
+import ContentPerformance, { MetricsLine } from '../ContentPerformance'
 import ContentStatus, { LinkChips, PublicationLinks, StageBadge } from '../ContentStatus'
 import { TaskFailed, TaskLaunchButton, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { Button, Dialog, Field, Notice, PageHeader, Skeleton, cx, inputCls, toast } from '../ui'
@@ -122,7 +123,10 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
       focus={params.version} displayStatus={published ? 'published' : 'draft'} inspiration publishScope={workspace}
       statusControl={selectedEntry ? <ContentStatus entry={selectedEntry} workspace={workspace} onChanged={reload} /> : undefined}
       publicationLinks={selectedEntry ? <PublicationLinks entry={selectedEntry} workspace={workspace} onChanged={reload} recordsShown /> : undefined}
-      open={id => setParam('article', id)} onBack={() => { setParam('article', ''); setParam('version', '') }} onChanged={reload} /> : <>
+      open={id => setParam('article', id)} onBack={() => { setParam('article', ''); setParam('version', '') }} onChanged={reload} />
+      : null}
+    {selectedArticle && workspace === 'social' && selectedEntry && <ContentPerformance ctx={ctx} entry={selectedEntry} data={data!} />}
+    {!selectedArticle && <>
       <PageHeader title={w(workspace + '_content')} desc={w(workspace + '_desc')} actions={<>
         <Button onClick={() => openNew()}><Plus />{w('new_content')}</Button>
         <TaskLaunchButton task="suggest-topics" input={{ workspace }} match={r => r.input?.workspace === workspace} reqKey="topic_requirements" onFinished={reload}
@@ -186,7 +190,8 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
       </>}
     </>}
     {params.plan && <MarketingPlans ctx={ctx} params={params} setParam={setParam} detailsOnly
-      contentEntry={entries.find(e => e.plan?.id === params.plan)} workspace={workspace} onChanged={reload} />}
+      contentEntry={entries.find(e => e.plan?.id === params.plan)} workspace={workspace} onChanged={reload}
+      performance={workspace === 'social' && data && entries.find(e => e.plan?.id === params.plan) ? <ContentPerformance ctx={ctx} entry={entries.find(e => e.plan?.id === params.plan)!} data={data} /> : undefined} />}
     {params.post && data && entries.find(e => e.post?.id === params.post) && <AdoptPostDialog entry={entries.find(e => e.post?.id === params.post)!}
       metrics={metrics.get('post:' + params.post)} account={destination(entries.find(e => e.post?.id === params.post)!)}
       articles={entries.filter(e => e.article && e.workspaces.includes('social')).map(e => e.article)}
@@ -225,21 +230,6 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
     {rewrite && <RewriteDialog open article={rewrite} starting={rewriter.starting} error={rewriter.error} onClose={() => setRewrite(null)}
       onStart={async (type, note) => { if (await rewriter.run({ article_id: rewrite.id, type, note })) setRewrite(null) }}
       onConvert={async type => { const result = await runLocal<{ article_id: string }>('convert.toType', { article_id: rewrite.id, type }); setRewrite(null); reload(); setParam('article', result.article_id) }} />}
-  </div>
-}
-
-const compact = (n: number) => new Intl.NumberFormat(isEn() ? 'en' : 'zh-CN', { notation: 'compact', maximumFractionDigits: 1 }).format(n)
-
-/** 一行内容发出去以后的数据：各账号累计的浏览、点赞、评论，近 7 天浏览涨了多少（还没有每天的记录就不显示） */
-function MetricsLine({ m }: { m?: ReturnType<typeof entryMetrics> }) {
-  if (!m) return null
-  return <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
-    <span className="inline-flex items-center gap-1" title={w('metric_views')}><Eye className="size-3.5" />{compact(m.views)}</span>
-    <span className="inline-flex items-center gap-1" title={w('metric_likes')}><Heart className="size-3.5" />{compact(m.likes)}</span>
-    <span className="inline-flex items-center gap-1" title={w('metric_comments')}><MessageCircle className="size-3.5" />{compact(m.comments)}</span>
-    {m.gain && <span className={cx('inline-flex items-center gap-1', m.gain.views > 0 && 'text-primary-text')} title={w('metric_gain_hint')}>
-      <TrendingUp className="size-3.5" />{w('metric_gain', { n: (m.gain.views > 0 ? '+' : '') + compact(m.gain.views) })}</span>}
-    {m.posts > 1 && <span>{w('metric_posts', { n: m.posts })}</span>}
   </div>
 }
 

@@ -2301,6 +2301,15 @@
     "metric_posts": "发到 {n} 个账号",
     "platform_count": "在平台上发的 {n}",
     "platform_note": "这些是直接在平台上发、采集时发现的帖子，还不属于任何内容。点「并入内容」关联到已有内容或存为一条内容，它的数据就算进那条内容。",
-    "show_more": "显示更多（还有 {n} 条）"
+    "show_more": "显示更多（还有 {n} 条）",
+    "performance": "发布后的效果",
+    "performance_note": "每个平台版本一张图，各用自己的刻度（平台之间的量级差得多）。数字是最近一次采集的累计值，每 6 小时采集一次。",
+    "metric_short_views": "浏览",
+    "metric_short_likes": "点赞",
+    "metric_short_collects": "收藏",
+    "metric_short_comments": "评论",
+    "trend_label": "累计{m}的走势",
+    "trend_one_day": "每天的数据从 {day} 开始记，再采集几天就能看到走势。",
+    "trend_none": "还没有每天的数据，采集后这里显示走势。"
   }
 }

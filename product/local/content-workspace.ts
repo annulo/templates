@@ -1,6 +1,6 @@
 import { context as marketingContext } from './marketing'
 import { L } from './_i18n'
-import { contentEntries, editableContentStages, metricKeys, publishedUrl, type ContentData, type EditableContentStage, type ContentWorkspace, type PostMetrics } from '../lib/contentWorkspace'
+import { contentEntries, editableContentStages, entryPosts, postsMetrics, metricKeys, publishedUrl, type ContentData, type EditableContentStage, type ContentWorkspace, type PostMetrics } from '../lib/contentWorkspace'
 export const cloud = ['context']
 
 export function context(_input: {}, ctx: any) {
@@ -35,6 +35,66 @@ function postGains(posts: any[], days: number, ctx: any): Record<string, PostMet
     gains[p.id] = Object.fromEntries(metricKeys.map(k => [k, (Number(now[k]) || 0) - (Number(before?.[k]) || 0)])) as PostMetrics
   }
   return gains
+}
+
+/** 内容详情的「效果」：这几篇帖子每天的累计数据（social_post_daily，按日期从早到晚） */
+export function performance(input: { post_ids: string[] }, ctx: any) {
+  const ids = [...new Set((Array.isArray(input?.post_ids) ? input.post_ids : []).filter((id: unknown) => typeof id === 'string' && id))].slice(0, 50)
+  const days: Record<string, any[]> = {}
+  for (const id of ids) {
+    let list: any[] = []
+    try { list = ctx.db.query('social_post_daily', { where: { post_id: id }, order_by: 'date asc', limit: 1000 }).list } catch {}
+    days[id] = list.map(r => ({ date: r.date, ...Object.fromEntries(metricKeys.map(k => [k, Number(r[k]) || 0])) }))
+  }
+  return { days }
+}
+
+/**
+ * 自媒体内容的表现排行，出选题时参考（topics.context 的 performance）：只看近 days 天（默认 180）发的，
+ * 每个平台分开排（各平台的浏览量不在一个量级）：top 浏览最多，rising 近 7 天涨得最快，low 发出去一周以上、浏览最少。
+ * 一条内容发到同一平台的几个账号，数字是这几个账号加起来的；发到几个平台的，每个平台各算一次。
+ */
+export function ranking(input: { limit?: number; days?: number }, ctx: any) {
+  const limit = Math.min(Math.max(Number(input?.limit) || 3, 1), 20)
+  const days = Math.min(Math.max(Number(input?.days) || 180, 7), 3650), since = Date.now() - days * 86400_000
+  const data: ContentData = JSON.parse(JSON.stringify(context({}, ctx)))
+  const account = (id: string) => data.channels.find(c => c.id === id)
+  const rows = contentEntries(data, 'social').flatMap(entry => {
+    const all = entryPosts(entry, data), platformOf = (p: any) => account(p.channel_id)?.type || ''
+    return [...new Set(all.map(platformOf))].flatMap(platform => {
+      const posts = all.filter(p => platformOf(p) === platform), m = postsMetrics(posts, data)
+      const published = posts.map(p => p.published_at).filter(Boolean).sort()[0] || ''
+      if (!m || !(Date.parse(published) >= since)) return []
+      const interactions = m.likes + m.comments + m.collects + m.shares
+      return [{
+        platform,
+        title: entry.title,
+        angle: entry.topic?.angle || entry.plan?.notes || '',
+        // 平台上直接发的没有选题，给一段正文看它讲了什么
+        excerpt: entry.post ? String(entry.post.body || '').slice(0, 200) : '',
+        type: entry.article?.type || (entry.post?.video ? 'video' : 'post'),
+        accounts: [...new Set(posts.map(p => account(p.channel_id)?.name || p.channel_id))],
+        published_at: published,
+        views: m.views, likes: m.likes, comments: m.comments, collects: m.collects, shares: m.shares,
+        engagement_rate: m.views ? Math.round(interactions / m.views * 1000) / 10 : null,
+        views_7d: m.gain ? m.gain.views : null,
+      }]
+    })
+  })
+  const weekAgo = Date.now() - 7 * 86400_000
+  const platforms: Record<string, any> = {}
+  for (const platform of [...new Set(rows.map(r => r.platform))]) {
+    const mine = rows.filter(r => r.platform === platform), byViews = [...mine].sort((a, b) => b.views - a.views)
+    const top = byViews.slice(0, limit)
+    const rising = mine.filter(r => r.views_7d && r.views_7d > 0 && !top.includes(r)).sort((a, b) => b.views_7d! - a.views_7d!).slice(0, limit)
+    const low = byViews.filter(r => !top.includes(r) && !rising.includes(r) && Date.parse(r.published_at) < weekAgo).slice(-limit).reverse()
+    platforms[platform || 'unknown'] = { published: mine.length, top, rising, low }
+  }
+  return {
+    published: rows.length, days, platforms,
+    note: L(ctx, `近 ${days} 天发的内容。数字是各账号帖子最近一次采集的累计值；engagement_rate 是（点赞+评论+收藏+分享）/ 浏览，单位 %；platforms 按平台分开排（各平台的浏览量不在一个量级，不要跨平台比）；views_7d 是近 7 天浏览涨了多少，null 是还没有每天的记录。`,
+      `Content published in the last ${days} days. Numbers are the latest collected totals across accounts; engagement_rate is (likes + comments + collects + shares) / views in %; platforms are ranked separately (view counts differ greatly across platforms, so don't compare them); views_7d is view growth over 7 days, null when daily records are missing.`),
+  }
 }
 
 /** 没有出处的社媒帖子（多是在平台上直接发的）并进内容：给了 article_id 就关联到那条内容，没给就用帖子存一条内容。只写帖子的 article_id，不改帖子本身和它的数据 */

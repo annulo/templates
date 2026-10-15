@@ -376,3 +376,29 @@ test('collected posts behind a confirmed link count toward that content by platf
   assert.deepEqual(entryAccountIds(plan, data, 'social', true), ['xhs']);
   assert.deepEqual(rows.filter(r => r.post).map(r => r.post.id), ['partial']);
 });
+test('ranking compares content within each platform, only recent posts, and topics.context carries it for social topics', () => {
+  const { ctx, tables } = fixture();
+  const ago = d => new Date(Date.now() - d * 86400000).toISOString();
+  tables.social_accounts = [{ id: 'xhs', name: 'XHS', type: 'xiaohongshu' }, { id: 'dy', name: 'DY', type: 'douyin' }];
+  tables.social_posts = [
+    { id: 'a', article_id: 'article', channel_id: 'xhs', status: 'published', published_at: ago(20), views: 900, likes: 90 },
+    { id: 'b', article_id: 'article', channel_id: 'dy', status: 'published', published_at: ago(20), views: 50000 },
+    { id: 'c', channel_id: 'xhs', status: 'published', published_at: ago(30), views: 10, body: 'Quiet post' },
+    { id: 'd', channel_id: 'xhs', status: 'published', published_at: ago(400), views: 99999 },
+    { id: 'e', channel_id: 'xhs', status: 'draft', views: 5 },
+  ];
+  const r = workspace.ranking({}, ctx);
+  assert.equal(r.published, 3);
+  assert.deepEqual(r.platforms.xiaohongshu.top.map(x => x.views), [900, 10]);
+  assert.equal(r.platforms.xiaohongshu.top[0].engagement_rate, 10);
+  assert.equal(r.platforms.douyin.top[0].views, 50000);
+  assert.equal(r.platforms.xiaohongshu.top[1].excerpt, 'Quiet post');
+  assert.ok(topics.context({ workspace: 'social' }, ctx).performance.platforms.douyin);
+  assert.equal(topics.context({ workspace: 'website' }, ctx).performance, undefined);
+});
+test('performance returns each post\'s daily totals in date order, capped and de-duplicated', () => {
+  const { ctx } = fixture(); const asked = [];
+  ctx.db.query = (table, q) => { asked.push(q.where.post_id); return { list: table === 'social_post_daily' ? [{ post_id: q.where.post_id, date: '2026-10-01', views: '5' }] : [] } };
+  const r = workspace.performance({ post_ids: ['p', 'p', 'q', 3] }, ctx);
+  assert.deepEqual(asked, ['p', 'q']); assert.equal(r.days.p[0].views, 5); assert.equal(r.days.q[0].likes, 0);
+});

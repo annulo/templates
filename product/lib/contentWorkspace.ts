@@ -215,8 +215,12 @@ export function entryPosts(entry: ContentEntry, data: ContentData): any[] {
 }
 
 /** 一条内容在各账号的累计数据，加近 7 天涨了多少（gain 为 null：还没有每天的记录，算不出来）；没发出去的是 null */
-export function entryMetrics(entry: ContentEntry, data: ContentData): (PostMetrics & { gain: PostMetrics | null; posts: number }) | null {
-  const posts = entryPosts(entry, data)
+export function entryMetrics(entry: ContentEntry, data: ContentData) {
+  return postsMetrics(entryPosts(entry, data), data)
+}
+
+/** 几篇已发帖子的数据合计，近 7 天的增长同上；没有帖子是 null */
+export function postsMetrics(posts: any[], data: ContentData): (PostMetrics & { gain: PostMetrics | null; posts: number }) | null {
   if (!posts.length) return null
   const sum = (rows: any[]) => Object.fromEntries(metricKeys.map(k => [k, rows.reduce((s, r) => s + (Number(r?.[k]) || 0), 0)])) as PostMetrics
   const gains = posts.map(p => data.post_gains?.[p.id]).filter(Boolean)

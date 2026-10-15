@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ArrowRight, Check, ExternalLink, Upload } from "lucide-react";
 import {
   Badge,
@@ -244,12 +244,15 @@ export function MarketingPlans({
   contentEntry,
   workspace,
   onChanged,
+  performance,
 }: {
   ctx: Ctx;
   params: Record<string, string>;
   setParam: (k: string, v: string) => void;
   detailsOnly?: boolean;
   contentEntry?: ContentEntry;
+  /** 计划详情里「发布后的效果」（自媒体内容页给） */
+  performance?: ReactNode;
   workspace?: ContentWorkspace;
   onChanged?: () => void;
 }) {
@@ -326,6 +329,7 @@ export function MarketingPlans({
               <Badge>{active.role_name || m("account_unconfirmed")}</Badge>
             </div>
             {contentEntry && workspace && <PublicationLinks entry={contentEntry} workspace={workspace} onChanged={() => { reload(); onChanged?.() }} />}
+            {performance}
             <Notice>{m("historical_note")}</Notice>
             <div className="grid gap-4 sm:grid-cols-2">
               <Panel title={m("audience")}>
@@ -833,11 +837,12 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
     </div>
   );
 }
-export function GrowthReviews({ ctx, workspace }: { ctx: Ctx; workspace?: ContentWorkspace }) {
+/** targets 给了就只列这几条记录（计划、正文的 id）的复盘，不显示流程统计：内容详情的「效果」里用；没有复盘时什么都不显示 */
+export function GrowthReviews({ ctx, workspace, targets }: { ctx: Ctx; workspace?: ContentWorkspace; targets?: string[] }) {
   const { data: original, error, reload } = useMarketing(ctx);
   const data = original && workspace ? { ...original,
     plans: original.plans.filter((p: any) => (p.workspace || platformWorkspace(p.platform)) === workspace),
-    reviews: original.reviews.filter((r: any) => !reviewWorkspace(r, original) || reviewWorkspace(r, original) === workspace),
+    reviews: original.reviews.filter((r: any) => (!reviewWorkspace(r, original) || reviewWorkspace(r, original) === workspace) && (!targets || targets.includes(r.target_id))),
   } : original;
   const [edit, setEdit] = useState<any>(null);
   const pipeline = data
@@ -856,9 +861,10 @@ export function GrowthReviews({ ctx, workspace }: { ctx: Ctx; workspace?: Conten
     "pipeline_receipt",
     "pipeline_review",
   ];
+  if (targets && !data?.reviews.length) return null;
   return (
     <div className="space-y-4">
-      <Panel
+      {!targets && <Panel
         title={m("pipeline")}
         aside={
           <Button
@@ -897,7 +903,7 @@ export function GrowthReviews({ ctx, workspace }: { ctx: Ctx; workspace?: Conten
         <p className="mt-3 text-xs text-muted-foreground">
           {m("pipeline_note")}
         </p>
-      </Panel>
+      </Panel>}
       <Panel title={m("review_queue")}>
         <p className="mb-3 text-xs text-muted-foreground">{m("review_rule")}</p>
         {data && !data.reviews.length && <Notice>{m("review_empty")}</Notice>}
