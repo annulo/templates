@@ -211,7 +211,22 @@ function DialogInner({ onClose, title, children, footer, width }: { onClose: () 
   const ref = useRefD<HTMLDialogElement>(null)
   const edited = useRefD(false)
   useEffectD(() => {
-    ref.current?.showModal()
+    const d = ref.current
+    d?.showModal()
+    // 弹出来光标就在第一个输入框里（放在末尾），直接就能写。showModal 默认聚焦第一个能聚焦的（常常是一个按钮）；
+    // 里面已经有输入框拿到焦点（autoFocus）就不动；内容晚一点才出来（读数据）的，等一下再看一次
+    const focusInput = () => {
+      if (!d) return
+      const cur = d.ownerDocument.activeElement as HTMLElement | null
+      if (cur && d.contains(cur) && cur.matches('input, textarea, select, [contenteditable="true"]')) return
+      const el = d.querySelector<HTMLInputElement | HTMLTextAreaElement>('textarea:not([disabled]):not([readonly]), input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([disabled]):not([readonly])')
+      if (!el) return
+      el.focus()
+      try { el.setSelectionRange(el.value.length, el.value.length) } catch { /* 有的 input 类型不支持选区 */ }
+    }
+    focusInput()
+    const t = setTimeout(focusInput, 150)
+    return () => clearTimeout(t)
   }, [])
   const nudge = () => ref.current?.animate?.([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 220 })
   return (
