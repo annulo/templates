@@ -20,6 +20,10 @@
         "type": "string",
         "description": "标题"
       },
+      "draft": {
+        "type": "string",
+        "description": "稿子（HTML，可选）：作者的工作稿，为什么写这篇、大纲、草稿、剧本、分镜。不发出去：发布、平台字数检查都不看它。AI 改写、做产物时可以读，用户没让写就不改它"
+      },
       "summary": {
         "type": "string",
         "description": "摘要"

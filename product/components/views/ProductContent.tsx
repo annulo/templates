@@ -4,6 +4,7 @@ import { ArticleDetail, RowMore, removeArticle } from './Content'
 import { WritingBriefDialog } from '../ContentEvidence'
 import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
+import { aiWork } from '../Artifacts'
 import { MarketingImport, MarketingPlans } from '../MarketingWorkspace'
 import ContentStatus, { LinkChips, PublicationLinks } from '../ContentStatus'
 import { TaskFailed, TaskLaunchButton, TaskRequirements, TaskRunning, useTask } from '../Task'
@@ -106,7 +107,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
     return name(id) || entry.plan?.role_name || (entry.workspaces.length ? w('destination_pending') : w('unassigned'))
   }
   return <div className="space-y-5">
-    {selectedArticle ? <ArticleDetail key={selectedArticle.id} ctx={ctx} a={selectedArticle} all={data!.articles}
+    {selectedArticle ? <ArticleDetail key={selectedArticle.id} work={aiWork} ctx={ctx} a={selectedArticle} all={data!.articles}
       posts={data!.posts.filter(p => p.article_id === selectedArticle.id)} pubs={data!.publications.filter(p => p.article_id === selectedArticle.id)}
       focus={params.version} displayStatus={published ? 'published' : 'draft'} inspiration publishScope={workspace}
       statusControl={selectedEntry ? <ContentStatus entry={selectedEntry} workspace={workspace} onChanged={reload} /> : undefined}

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, Copy, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, AtSign, Boxes, Copy, Wand2, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import InspirationLibrary, { InspirationReferences } from '../InspirationLibrary'
 import { WritingBriefDialog } from '../ContentEvidence'
 import { NotionLogo } from '../BrandIcons'
@@ -10,10 +10,15 @@ import { articleStatus, type ContentStatus } from '../../lib/articleStatus'
 import { ARTICLE_TYPES, PICKER_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleType } from '../ArticleTypes'
 import { PublishDialog, PublishRecords } from '../ArticlePublish'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
+import Draft, { type DraftControl } from '../Draft'
+import type { PresetMode } from '../../lib/presets'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls, toast, type Tone } from '../ui'
 import { TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { CHANNEL_TYPES } from '../../lib/channels'
-import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, runLocal, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
+import { useTables } from '../../lib/useTables'
+import { copyRefs, refOf } from '../../lib/refs'
+import { clearUnsaved, readUnsaved, writeUnsaved } from '../../lib/unsaved'
+import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, runLocal, runTask, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
 import type { Ctx } from './types'
 import { numLocale, tr } from '../../lib/i18n'
 
@@ -40,6 +45,18 @@ const REVISE_TASK = 'revise-article'
 /** 任务 id（tasks/suggest-topics.md）：「出一批选题」，GEO 页「写成选题」也是它 */
 export const TOPICS_TASK = 'suggest-topics'
 type Writer = ReturnType<typeof useTask>
+
+/**
+ * 能「在这篇上做」的模板（creator）传进来（creator/docs/artifacts.md）：task 是「在这篇上做」的任务（参数 { article_id, note }：
+ * 照稿子写正文、配图、做视频…），Panel 是文章页正文下面的产物（artifacts）。传了才有稿子、「在这篇上做」和产物；没传就和以前一样只有改写。
+ */
+export type AIWork = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void }> }
+
+/** 交给「在这篇上做」的任务：开一段对话、在右侧打开 */
+async function startWork(work: AIWork, articleId: string, note: string) {
+  const r = await runTask(work.task, { article_id: articleId, note })
+  openChat(r.chat_id)
+}
 type WriteInput = { topic_id?: string; subject?: string; channel_id?: string }
 
 /**
@@ -57,7 +74,7 @@ export async function removeArticle(a: Article, posts: SocialPost[], pubs: Publi
 }
 
 /** 内容：文章（一篇一种类型，直接发到支持它的账号）和选题池 */
-export default function Content({ ctx, params, setParam, inspiration = false, planning }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; inspiration?: boolean; planning?: ReactNode }) {
+export default function Content({ ctx, params, setParam, inspiration = false, planning, work }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; inspiration?: boolean; planning?: ReactNode; work?: AIWork }) {
   const tab: Tab = planning && params.tab === 'marketing' ? 'marketing' : inspiration && params.tab === 'inspiration' ? 'inspiration' : params.tab === 'topics' ? 'topics' : 'articles'
   const [articles, setArticles] = useState<Article[] | null>(null)
   const [topics, setTopics] = useState<Topic[] | null>(null)
@@ -72,11 +89,16 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   // 「写作要求」在页头的「更多」里
   const [reqOpen, setReqOpen] = useState(false)
 
+  // 每篇文章有几个产物（artifacts：资料库里带 article_id 的，AI 给这篇做的视频、图片、网页…）。没有这个字段的模板都是 0，不显示
+  const [artifacts, setArtifacts] = useState<Record<string, number>>({})
   const load = useCallback(() => {
-    return Promise.all([dbList('articles'), dbList('topics'), dbList('social_posts').catch(() => []), dbList('publications').catch(() => [])])
-      .then(([a, t, p, pb]) => {
+    return Promise.all([dbList('articles'), dbList('topics'), dbList('social_posts').catch(() => []), dbList('publications').catch(() => []), dbList('assets').catch(() => [])])
+      .then(([a, t, p, pb, as]) => {
         setPosts(p.filter((x) => !!x.article_id))
         setPubs(pb)
+        const n: Record<string, number> = {}
+        for (const x of as as { article_id?: string }[]) if (x.article_id) n[x.article_id] = (n[x.article_id] ?? 0) + 1
+        setArtifacts(n)
         setArticles(a)
         setTopics(t)
       })
@@ -87,16 +109,8 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
     setTopics(null)
     load()
   }, [load])
-  // 助手改了数据：静默重拉，不清空
-  useEffect(() => {
-    if (ctx.rev) load()
-  }, [ctx.rev])
-  // 后台发布（lib/publishQueue）发完一条、页面里改了文章或发布记录：静默重拉，发布记录和「已发布」跟着变
-  useEffect(() => {
-    const f = (e: Event) => { const t = (e as CustomEvent<{ table?: string }>).detail?.table; if (t === 'social_posts' || t === 'publications' || t === 'articles') load() }
-    window.addEventListener('db:changed', f)
-    return () => window.removeEventListener('db:changed', f)
-  }, [load])
+  // 用到的表变了（助手、本机函数、后台发布、别的页面写的，或者这里自己改的）：静默重拉，不清空
+  useTables(['articles', 'topics', 'social_posts', 'publications', 'assets'], load, ctx.rev)
   // 每篇发到了哪些网站和账号（只算发出去的）：列表里显示成标签，也决定「已发布」
   const publishedTo = useMemo(() => {
     const to: Record<string, { id: string; channel_id: string }[]> = {}
@@ -174,7 +188,7 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const writingTitle = topicTitle(writingInput?.topic_id) || writingInput?.subject
   const writerBusy = !writer.shuttle || !writer.task || writer.starting || !!writer.task.running.length
 
-  if (openArticle) return <ArticleDetail key={openArticle.id} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
+  if (openArticle) return <ArticleDetail key={openArticle.id} work={work} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
 
   return (
     <div className="space-y-6">
@@ -208,12 +222,13 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
       />
       <TaskFailed task={writer.task} />
       {tab === 'marketing' ? planning : tab === 'inspiration' ? <InspirationLibrary ctx={ctx} params={params} setParam={setParam} onChanged={load} /> : tab === 'articles' ? (
-        <Articles onChanged={load} onRewrite={setRewriting} onCopy={copyArticle} ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
+        <Articles artifacts={artifacts} onChanged={load} onRewrite={setRewriting} onCopy={copyArticle} ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
       ) : (
         <Topics inspiration={inspiration} initialTopic={params.topic} onTopicClose={() => setParam('topic', '')} ctx={ctx} list={topics} onChanged={load} writer={writer} suggester={suggester} onWrite={openWriter} />
       )}
       <TaskRequirements task={writer.task} onSaved={writer.setTask} title={tr('content.req_title')} hint={tr('content.req_hint')} open={reqOpen} onOpenChange={setReqOpen} />
       {rewriting && <RewriteDialog open article={rewriting} starting={listRewriter.starting} error={listRewriter.error} onClose={() => setRewriting(null)}
+        onWork={work ? async (note) => { await startWork(work, rewriting.id, note); setRewriting(null) } : undefined}
         onStart={async (to, note) => { if (await listRewriter.run({ article_id: rewriting.id, type: to, note })) setRewriting(null) }}
         onConvert={async (to) => { const r = await runLocal<{ article_id: string }>('convert.toType', { article_id: rewriting.id, type: to }); setRewriting(null); load(); setParam('article', r.article_id) }} />}
       <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingTitle ? `${tr('content.new_article')} · ${writingTitle}` : tr('content.new_article')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button>{!writingInput?.topic_id && !docUrl && <Button variant="outline" onClick={writeSelf} disabled={savingSelf || writer.starting}>{savingSelf ? <Loader className="animate-spin" /> : <Pencil />}{tr('content.write_self')}</Button>}<Button variant={docUrl ? 'outline' : 'default'} onClick={startWriting} disabled={writerBusy || savingSelf || importing}>{writer.starting ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.ai_write_this')}</Button>{docUrl && <Button onClick={importDoc} disabled={importing}>{importing ? <Loader className="animate-spin" /> : <Download />}{tr('content.import_doc')}</Button>}</>}>
@@ -295,7 +310,7 @@ function HeaderMore({ items }: { items: { label: string; icon: typeof SlidersHor
   </div>
 }
 
-function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, onWrite, onDelete, onRewrite, onCopy, onChanged }: { onChanged: () => void | Promise<void>; onDelete: (a: Article) => Promise<void>; onRewrite: (a: Article) => void; onCopy: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; onWrite: () => void }) {
+function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type, setType, open, onWrite, onDelete, onRewrite, onCopy, onChanged, artifacts = {} }: { artifacts?: Record<string, number>; onChanged: () => void | Promise<void>; onDelete: (a: Article) => Promise<void>; onRewrite: (a: Article) => void; onCopy: (a: Article) => Promise<void>; ctx: Ctx; publishedTo: Record<string, { id: string; channel_id: string }[]>; openVersion: (id: string, version: string) => void; list: Article[] | null; status: string; setStatus: (s: string) => void; type: string; setType: (t: string) => void; open: (id: string) => void; onWrite: () => void }) {
   const [query, setQuery] = useState('')
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
@@ -349,13 +364,14 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
               {sub && <div className="mt-1 line-clamp-1 text-xs leading-relaxed text-muted-foreground">{sub}</div>}
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
                 <TypeBadge type={t} />
+                {!!artifacts[a.id] && <span className="inline-flex items-center gap-1 whitespace-nowrap"><Boxes className="size-3.5" />{tr('article.artifacts_n', { n: artifacts[a.id] })}</span>}
                 <span className="whitespace-nowrap">{tr('content.updated')} {fmtTime(a.updated_at || a.created_at)}</span>
               </div>
               {chips && <div className="mt-2 flex flex-wrap items-center gap-1.5 md:hidden">{chips}</div>}
             </div>
             <div className="flex shrink-0 flex-col items-end justify-between gap-2 self-stretch">
               <span className="flex items-center gap-1">
-                <RowMore onRewrite={() => onRewrite(a)} onCopy={() => onCopy(a)} onDelete={() => onDelete(a)} />
+                <RowMore items={[{ label: tr('files.copy_ref'), icon: <AtSign className="size-4" />, onSelect: () => void copyRefs([refOf('articles', a.id)]) }]} onRewrite={() => onRewrite(a)} onCopy={() => onCopy(a)} onDelete={() => onDelete(a)} />
                 <ArticleStatusControl article={a} status={a.status as ContentStatus} onChanged={onChanged} />
               </span>
               {chips && <span className="hidden max-w-md flex-wrap items-center justify-end gap-1.5 md:flex">{chips}</span>}
@@ -429,7 +445,7 @@ export function RowMore({ items = [], onRewrite, onCopy, onDelete }: { items?: {
   </div>
 }
 
-export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks }: { inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
+export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks, work }: { work?: AIWork; inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
   const type = typeOf(a)
   const [moreOpen, setMoreOpen] = useState(false)
   // 菜单往哪边展开：宽屏时按钮在一行最右边，往左；手机上按钮换到下一行的左边，往左会伸出屏幕，改往右。按打开时按钮的实际位置算
@@ -473,7 +489,9 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
   const [asking, setAsking] = useState(false)
   const [note, setNote] = useState('')
   const [publishing, setPublishing] = useState(false)
-  const [rewritingOpen, setRewritingOpen] = useState(false)
+  // 交给 AI 的弹窗：打开时停在哪种做法、预先选哪条模板自带的预设（稿子的「AI 写成正文」是 from_draft）
+  const [aiOpen, setAiOpen] = useState<{ mode?: PresetMode; preset?: string } | null>(null)
+  const setRewritingOpen = (v: boolean) => setAiOpen(v ? { mode: 'new' } : null)
   // AI 修改：交给助手按任务 tasks/revise-article.md 改，它读的是表里现在的内容（包括手动改过的）
   const reviser = useTask(REVISE_TASK, onChanged)
   const revising = (reviser.task?.running ?? []).filter((r) => r.input?.article_id === a.id)
@@ -502,7 +520,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
   // 打开了就不再是新文章（左侧的数字跟着少一个）。只改这个字段，不动 updated_at
   useEffect(() => { if (a.unread) void dbPatch('articles', a.id, { unread: false }).then(onChanged).catch(() => {}) }, [a.id])
   // 空文章（刚新建的）直接进编辑
-  useEffect(() => { if (!a.body && !a.video && !draftOf(a).images.length) { loadDraft(fromRow()); setEditing(true) } }, [a.id])
+  useEffect(() => { if (!a.body && !a.video && !draftOf(a).images.length && !(a as Article & { draft?: string }).draft) { loadDraft(fromRow()); setEditing(true) } }, [a.id])
   useEffect(() => {
     if (!editing) return
     const now = fromRow()
@@ -531,12 +549,47 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     setEditing(true)
   }
   const dirty = editing && !sameDraft(draft, fromRow())
+  // 稿子的改动也由顶部的「保存」「取消」管（Draft 交上来的）
+  const draftCtl = useRef<DraftControl | null>(null)
+  const [draftDirty, setDraftDirty] = useState(false)
+  const [draftRestoredAt, setDraftRestoredAt] = useState(0)
+  const onDraftControl = useCallback((c: DraftControl) => { draftCtl.current = c; setDraftDirty(c.dirty); setDraftRestoredAt(c.restoredAt) }, [])
+  const anyDirty = dirty || draftDirty
+  // 没保存的修改存在这台电脑上（core/lib/unsaved.ts）：离开、刷新都不丢，下次打开这篇自动恢复。保存、取消（退出编辑）后删掉
+  const unsavedKey = `article:${a.id}`
+  const [restored, setRestored] = useState<{ at: number; changed: boolean } | null>(null)
+  const wasEditing = useRef(false)
+  useEffect(() => {
+    const u = readUnsaved<ArticleDraft>(unsavedKey)
+    if (!u || sameDraft(u.value, fromRow())) return clearUnsaved(unsavedKey)
+    setBase(fromRow())
+    setDraft(u.value)
+    setStale(false)
+    setEditorKey((k) => k + 1)
+    setEditing(true)
+    setRestored({ at: u.at, changed: u.base !== (a.updated_at ?? '') })
+  }, [a.id])
+  useEffect(() => {
+    if (editing) {
+      wasEditing.current = true
+      if (!dirty) return clearUnsaved(unsavedKey)
+      const t = setTimeout(() => writeUnsaved(unsavedKey, draft, a.updated_at ?? ''), 500)
+      return () => clearTimeout(t)
+    }
+    // 只在从编辑里出来时删（打开页面那一刻还没进编辑，不能删，恢复要读它）
+    if (wasEditing.current) { wasEditing.current = false; clearUnsaved(unsavedKey); setRestored(null) }
+  }, [editing, draft, dirty])
+  const discardRestored = () => { clearUnsaved(unsavedKey); setRestored(null); loadDraft(fromRow()); setEditing(false) }
   const saveEdit = () =>
     run('save', async () => {
+      if (draftCtl.current?.dirty && !(await draftCtl.current.save())) throw new Error(tr('content.draft_save_failed'))
+      if (!editing) return
       if (!draft.title.trim()) throw new Error(tr('content.need_title'))
       await dbPatch('articles', a.id, { ...patchOf(draft, type), updated_at: new Date().toISOString() })
-      setEditing(false)
+      // 保存了还在编辑：存的就是现在的底稿（表里刷新回来和它一样，编辑框不重载、光标不丢）
+      setBase(draft)
       setStale(false)
+      setRestored(null)
     })
 
   // 有没保存的手动修改：先存再交给 AI，AI 才看得到
@@ -581,9 +634,13 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
             {statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {editing ? <><Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => setEditing(false)}>{tr('common.cancel')}</Button><Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !dirty}>{tr('common.save')}</Button></> : <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
-            <Button size="sm" variant="outline" onClick={() => setAsking(true)} disabled={locked || !reviser.shuttle}><Sparkles />{tr('content.ask_ai')}</Button>
-            <Button size="sm" variant="outline" onClick={() => setRewritingOpen(true)} disabled={locked || !rewriter.shuttle}><Repeat2 />{tr('article.rewrite')}</Button>
+            {/* 编辑中：取消（有没存的）/ 完成、保存；没在编辑但稿子改了：编辑、保存。保存一次存正文和稿子 */}
+            {editing && <Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => { draftCtl.current?.discard(); setEditing(false) }}>{anyDirty ? tr('common.cancel') : tr('content.edit_done')}</Button>}
+            {!editing && <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
+            {(editing || draftDirty) && <Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !anyDirty}>{tr('common.save')}</Button>}
+            {/* 能「在这篇上做」的模板：改正文也在「交给 AI」里说，不单独一个「AI 修改」 */}
+            {!work && <Button size="sm" variant="outline" onClick={() => setAsking(true)} disabled={locked || !reviser.shuttle}><Sparkles />{tr('content.ask_ai')}</Button>}
+            <Button size="sm" variant="outline" onClick={() => setAiOpen(work ? {} : { mode: 'new' })} disabled={locked || !rewriter.shuttle}>{work ? <Wand2 /> : <Repeat2 />}{work ? tr('article.ai') : tr('article.rewrite')}</Button>
             <Button size="sm" feedback={false} onClick={() => void openPublish()} disabled={locked}><Send />{tr('article.publish')}</Button>
             <div ref={moreRef} className="relative">
               <Button size="sm" variant="ghost" onClick={() => { const r = moreRef.current?.getBoundingClientRect(); setMoreLeft(!!r && r.right < 224 + 8); setMoreOpen((v) => !v); setConfirmDel(false) }} aria-haspopup="menu" aria-expanded={moreOpen} aria-controls={`article-more-${a.id}`}>
@@ -625,6 +682,18 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
       </div>}
 
       {/* 和顶上的按钮左右对齐，不居中限宽；顶上那条吸在 -1rem（抵掉滚动区的上内边距），露出来的高度是它的高度减 1rem */}
+      {/* 恢复了上次没保存的修改：放在最上面的横幅 */}
+      {((restored && editing) || draftRestoredAt > 0) && (
+        <Notice tone="info">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 flex-1">{tr('content.restored', { ago: fmtTime(new Date(Math.min(...[restored && editing ? restored.at : 0, draftRestoredAt].filter(Boolean))).toISOString()) })}{restored?.changed && editing && ` ${tr('content.restored_changed')}`}</span>
+            <Button size="sm" variant="outline" onClick={() => { draftCtl.current?.discard(); if (restored) discardRestored() }}>{tr('content.restored_discard')}</Button>
+          </div>
+        </Notice>
+      )}
+      {/* 稿子：能「在这篇上做」的模板才有（文章表有 draft 字段） */}
+      {/* 稿子的编辑条和正文的一样吸在顶上那条下面（--sticky-top） */}
+      {work && <div style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><Draft a={a} locked={locked} onChanged={onChanged} control={onDraftControl} onAIWrite={() => setAiOpen({ mode: 'here', preset: 'from_draft' })} onRewrite={() => setAiOpen({ mode: 'new' })} /></div>}
       <article className="w-full min-w-0" style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}>
         {editing ? (
           <div className="space-y-3">
@@ -654,11 +723,14 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
         <footer className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4"><ArticleTime label={tr('content.created')} value={a.created_at} /><ArticleTime label={tr('content.updated')} value={a.updated_at || a.created_at} /></footer>
       </article>
 
+      {work && <work.Panel article={a} all={all} open={open} onChanged={onChanged} />}
       {inspiration && <InspirationReferences ctx={ctx} targetType="article" targetId={a.id} onChanged={onChanged} />}
       <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} linkedRecords={publicationLinks} />
 
       <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} scope={publishScope} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
-      <RewriteDialog open={rewritingOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setRewritingOpen(false)} onStart={startRewrite} onConvert={convertTo} />
+      <RewriteDialog open={!!aiOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setAiOpen(null)} onStart={startRewrite} onConvert={convertTo}
+        initialMode={aiOpen?.mode} initialPreset={aiOpen?.preset}
+        onWork={work ? async (note) => { if (dirty && !(await saveEdit())) return; await startWork(work, a.id, note); setAiOpen(null) } : undefined} />
       <TaskRequirements task={reviser.task} onSaved={reviser.setTask} title={tr('content.revise_req_title')} hint={tr('content.revise_req_hint')} open={requirementsOpen} onOpenChange={(o) => { setRequirementsOpen(o); if (!o) moreRef.current?.querySelector('button')?.focus() }} />
       <Dialog
         open={asking}

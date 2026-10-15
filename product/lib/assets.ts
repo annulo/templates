@@ -82,7 +82,7 @@ export async function uploadAssets(files: File[], existing: Asset[], onChange: (
     try {
       const r = await uploadFile(f)
       const had = existing.find((a) => a.url === r.url)
-      const asset = had ?? (await dbCreate('assets', { url: r.url, kind: kindOfType(r.content_type || f.type, f.name), name: f.name, source: 'upload', created_at: new Date().toISOString() }))
+      const asset = had ?? (await dbCreate('assets', { url: r.url, kind: kindOfType(r.content_type || f.type, f.name), mime: r.content_type || f.type || undefined, name: f.name, source: 'upload', created_at: new Date().toISOString() } as Partial<Asset>))
       if (!had) existing = [...existing, asset]
       items[i] = { ...items[i], status: 'done', asset }
     } catch (e) {

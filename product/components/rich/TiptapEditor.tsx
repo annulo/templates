@@ -1,18 +1,125 @@
 // 文章正文编辑器（Tiptap）。第三方包只在浏览器里有（talizen.config.ts 的 importMap，SSR 没有），
 // 所以这个文件只能经 components/RichEditor.tsx 在 useEffect 里 await import()，不要在别处静态引入。
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { Node, mergeAttributes } from '@tiptap/core'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
-import Image from '@tiptap/extension-image'
+import ImageBase from '@tiptap/extension-image'
 import { Bold, Code, Heading2, Heading3, ImageIcon, Images, Italic, Link2, List, ListOrdered, Minus, Pilcrow, Quote, SquareCode, Strikethrough, Unlink, Upload, type LucideIcon } from 'lucide-react'
 import { uploadFile } from '../../lib/shuttle'
+import { fileSrc } from '../../lib/files'
 import { tr } from '../../lib/i18n'
 import { cx } from '../ui'
 import AssetPicker from '../AssetPicker'
 import type { RichEditorProps } from '../RichEditor'
 
+
+/** 正文里存的地址可以是 AI 做的本机文件 local:<name>（发布时 b.upload 直接认），编辑器里显示时换成 Annulo 的地址 */
+const shown = (u?: string | null) => fileSrc(u ?? '')
+
+/** 插入视频时读一次它的宽高（写进正文），读不到（超时、格式不认）就不写 */
+function videoSize(src: string): Promise<{ width?: number; height?: number }> {
+  return new Promise((resolve) => {
+    const v = document.createElement('video')
+    const done = (r: { width?: number; height?: number }) => { clearTimeout(t); v.removeAttribute('src'); resolve(r) }
+    const t = setTimeout(() => done({}), 8000)
+    v.preload = 'metadata'
+    v.onloadedmetadata = () => done(v.videoWidth && v.videoHeight ? { width: v.videoWidth, height: v.videoHeight } : {})
+    v.onerror = () => done({})
+    v.src = shown(src)
+  })
+}
+
+/** 图片：存的还是原地址，显示用 shown（本机文件） */
+const Image = ImageBase.extend({
+  addNodeView: () => ({ node }) => {
+    const img = document.createElement('img')
+    img.src = shown(node.attrs.src)
+    if (node.attrs.alt) img.alt = node.attrs.alt
+    if (node.attrs.title) img.title = node.attrs.title
+    return { dom: img }
+  },
+})
+
+/**
+ * 正文里的视频：存成 <video src controls>，一个整块（不能在里面打字）。
+ * 编辑器里不用原生播放器：点击会被播放控件吃掉，选不中、拖不动。显示成一个能选中的块（第一帧 + 角上「视频」），点了选中、能删能拖；
+ * 中间的播放按钮弹出播放窗口（openPlayer）。预览、发出去的是正常的播放器
+ */
+const Video = Node.create({
+  name: 'video',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  // 宽高是正文的一部分（插入时读一次写进去，<video width height>）：发出去的内容按它显示比例，编辑器也按它，不在显示时现读
+  addAttributes: () => ({
+    src: { default: null },
+    width: { default: null, parseHTML: (el: HTMLElement) => Number(el.getAttribute('width')) || null },
+    height: { default: null, parseHTML: (el: HTMLElement) => Number(el.getAttribute('height')) || null },
+  }),
+  parseHTML: () => [{ tag: 'video[src]' }],
+  renderHTML: ({ HTMLAttributes }) => ['video', mergeAttributes(HTMLAttributes, { controls: 'true', preload: 'metadata', style: 'max-width:100%;height:auto' })],
+  addNodeView: () => ({ node }) => {
+    const dom = document.createElement('div')
+    dom.className = 'rich-video'
+    dom.contentEditable = 'false'
+    const v = document.createElement('video')
+    // #t=0.1：停在第一帧，不然只有黑框。比例按正文里存的宽高，没存的（老内容）按 16:9
+    v.src = node.attrs.src ? `${shown(node.attrs.src)}#t=0.1` : ''
+    v.style.aspectRatio = node.attrs.width && node.attrs.height ? `${node.attrs.width} / ${node.attrs.height}` : '16 / 9'
+    v.preload = 'metadata'
+    v.muted = true
+    const tag = document.createElement('span')
+    tag.className = 'rich-video-tag'
+    tag.textContent = tr('editor.video_tag')
+    const play = document.createElement('button')
+    play.type = 'button'
+    play.className = 'rich-video-play'
+    play.title = tr('editor.video_play')
+    play.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+    play.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      openPlayer(shown(node.attrs.src))
+    })
+    dom.append(v, tag, play)
+    return { dom, stopEvent: (e: Event) => e.target === play, ignoreMutation: () => true }
+  },
+})
+
+/**
+ * 编辑器里的视频在弹出的播放窗口里放：放在可编辑区域里的原生播放器，点击、拖进度条会被编辑器截走。
+ * 窗口挂在 body 上，是正常的播放器；Esc、点外面、点关闭就关
+ */
+function openPlayer(src: string) {
+  const back = document.createElement('div')
+  back.className = 'rich-video-player'
+  const v = document.createElement('video')
+  v.src = src
+  v.controls = true
+  v.autoplay = true
+  const close = document.createElement('button')
+  close.type = 'button'
+  close.setAttribute('aria-label', tr('common.close'))
+  close.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>'
+  const done = () => {
+    v.pause()
+    back.remove()
+    document.removeEventListener('keydown', onKey, true)
+  }
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); done() } }
+  back.addEventListener('click', (e) => { if (e.target === back) done() })
+  close.addEventListener('click', done)
+  document.addEventListener('keydown', onKey, true)
+  back.append(v, close)
+  document.body.append(back)
+  v.play().catch(() => {}) // 放不了（文件没了、格式不支持）播放器自己会显示
+}
+
+const isMedia = (f: File) => f.type.startsWith('image/') || f.type.startsWith('video/')
 
 type SlashItem = { key: string; icon: LucideIcon; label: string; desc: string; words: string; run: (e: Editor) => void }
 /** 光标位置（视口坐标）：菜单放在光标下方，下面放不下就放上方 */
@@ -29,7 +136,7 @@ function slashItems(pickImage: () => void): SlashItem[] {
     { key: 'quote', icon: Quote, label: tr('editor.quote'), desc: tr('editor.quote_desc'), words: 'quote blockquote yinyong 引用', run: (e) => e.chain().focus().toggleBlockquote().run() },
     { key: 'code', icon: SquareCode, label: tr('editor.code_block'), desc: tr('editor.code_block_desc'), words: 'code block daima 代码', run: (e) => e.chain().focus().toggleCodeBlock().run() },
     { key: 'hr', icon: Minus, label: tr('editor.hr'), desc: tr('editor.hr_desc'), words: 'hr divider line fengexian 分割线', run: (e) => e.chain().focus().setHorizontalRule().run() },
-    { key: 'img', icon: ImageIcon, label: tr('editor.image'), desc: tr('editor.image_desc'), words: 'image picture tupian 图片 配图', run: () => pickImage() },
+    { key: 'img', icon: ImageIcon, label: tr('editor.media'), desc: tr('editor.media_desc'), words: 'image picture video tupian shipin 图片 配图 视频 媒体', run: () => pickImage() },
   ]
 }
 
@@ -56,16 +163,16 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const edRef = useRef<Editor | null>(null)
 
-  // 上传图片（素材库同一套：传到运营后台站点的 creght 素材拿公开地址），插在光标处
+  // 上传图片、视频（素材库同一套：传到运营后台站点的 creght 素材拿地址，离线项目存本机），插在光标处
   const insertImages = async (files: File[]) => {
-    const imgs = files.filter((f) => f.type.startsWith('image/'))
-    if (!imgs.length) return false
+    const media = files.filter(isMedia)
+    if (!media.length) return false
     setError('')
-    for (const f of imgs) {
+    for (const f of media) {
       setUploading((n) => n + 1)
       try {
         const r = await uploadFile(f)
-        edRef.current?.chain().focus().setImage({ src: r.url, alt: f.name.replace(/\.[^.]+$/, '') }).run()
+        insertNodes([f.type.startsWith('video/') ? { type: 'video', attrs: { src: r.url, ...(await videoSize(r.url)) } } : { type: 'image', attrs: { src: r.url, alt: f.name.replace(/\.[^.]+$/, '') } }])
       } catch (e) {
         setError(tr('editor.upload_failed', { error: (e as Error).message }))
       } finally {
@@ -73,6 +180,12 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
       }
     }
     return true
+  }
+  // 插在当前选中内容的后面：刚插进去的图片、视频是选中的，直接 setImage / insertContent 会把它换掉（连着插几个只剩最后一个）
+  const insertNodes = (nodes: { type: string; attrs: Record<string, unknown> }[]) => {
+    const e = edRef.current
+    if (!e || !nodes.length) return
+    e.chain().focus().insertContentAt(e.state.selection.to, nodes).run()
   }
   const items = slashItems(() => fileInput.current?.click())
   const shown = slash ? items.filter((i) => !slash.query || i.words.includes(slash.query) || i.label.toLowerCase().includes(slash.query)) : []
@@ -111,8 +224,9 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
     extensions: [
       // 链接不加 nofollow、不强制新窗口：文章里多是站内链接，nofollow 影响 SEO
       StarterKit.configure({ heading: { levels: [2, 3] }, link: { openOnClick: false, autolink: true, defaultProtocol: 'https', HTMLAttributes: { target: null, rel: null } } }),
-      Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? tr('editor.ph_heading') : tr('editor.ph')) }),
+      Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? tr('editor.ph_heading') : tr('editor.ph_media')) }),
       Image,
+      Video,
     ],
     content: value,
     editorProps: {
@@ -137,13 +251,13 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
       },
       handlePaste: (_view, ev) => {
         const files = [...(ev.clipboardData?.files ?? [])]
-        if (!files.some((f) => f.type.startsWith('image/'))) return false
+        if (!files.some(isMedia)) return false
         insertImages(files)
         return true
       },
       handleDrop: (_view, ev) => {
         const files = [...((ev as DragEvent).dataTransfer?.files ?? [])]
-        if (!files.some((f) => f.type.startsWith('image/'))) return false
+        if (!files.some(isMedia)) return false
         insertImages(files)
         return true
       },
@@ -168,14 +282,11 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
       <EditorContent editor={editor} />
       <AssetPicker
         open={picking}
+        kind="media"
         onClose={() => setPicking(false)}
-        onPick={(urls) => {
+        onPick={(urls, assets) => {
           setPicking(false)
-          const e = edRef.current
-          if (!e) return
-          let c = e.chain().focus()
-          for (const u of urls) c = c.setImage({ src: u })
-          c.run()
+          void Promise.all(urls.map(async (u) => (assets.find((a) => a.url === u)?.kind === 'video' ? { type: 'video', attrs: { src: u, ...(await videoSize(u)) } } : { type: 'image', attrs: { src: u } }))).then(insertNodes)
         }}
       />
       {slash && shown.length > 0 && (
@@ -212,7 +323,7 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
       <input
         ref={fileInput}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
         hidden
         onChange={(e) => {
@@ -273,8 +384,8 @@ function Toolbar({ editor, uploading, onUpload, onPick }: { editor: Editor; uplo
       {btn(editor.isActive('orderedList'), tr('editor.ol'), <ListOrdered />, () => editor.chain().focus().toggleOrderedList().run())}
       {btn(editor.isActive('blockquote'), tr('editor.quote'), <Quote />, () => editor.chain().focus().toggleBlockquote().run())}
       <span className="mx-1 h-4 w-px bg-border" />
-      {text(uploading ? tr('editor.uploading') : tr('editor.upload_image'), <Upload />, onUpload, uploading)}
-      {text(tr('editor.pick_image'), <Images />, onPick)}
+      {text(uploading ? tr('editor.uploading') : tr('editor.upload_media'), <Upload />, onUpload, uploading)}
+      {text(tr('editor.pick_media'), <Images />, onPick)}
     </div>
   )
 }
@@ -304,7 +415,7 @@ function SelectionMenu({ editor }: { editor: Editor }) {
   }
   return (
     // z-30：要盖过吸顶的工具条（z-10）和文章页顶上那条（z-20），选中第一行时浮条才不会被挡住
-    <BubbleMenu editor={editor} className="z-30" options={{ placement: 'top' }} shouldShow={({ editor: e, state }) => !state.selection.empty && !e.isActive('image') && !e.isActive('codeBlock')}>
+    <BubbleMenu editor={editor} className="z-30" options={{ placement: 'top' }} shouldShow={({ editor: e, state }) => !state.selection.empty && !(state.selection as { node?: unknown }).node && !e.isActive('codeBlock')}>
       <div className="flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
         {linking ? (
           <>
