@@ -37,7 +37,7 @@ const BUILTINS: { id: string; mode: PresetMode; type: ArticleType; types: Articl
   { id: 'from_draft', mode: 'here', type: 'article', types: ALL_TYPES },
   { id: 'post_images', mode: 'here', type: 'post', types: ['post'] },
   { id: 'cover', mode: 'here', type: 'post', types: ['post', 'article'] },
-  { id: 'make_video', mode: 'here', type: 'video', types: ['video'] },
+  { id: 'make_video', mode: 'here', type: 'video', types: ALL_TYPES },
   { id: 'to_video', mode: 'new', type: 'video', types: [] },
 ]
 

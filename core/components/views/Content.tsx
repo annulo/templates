@@ -599,7 +599,8 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {editing ? <><Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => setEditing(false)}>{tr('common.cancel')}</Button><Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !dirty}>{tr('common.save')}</Button></> : <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
-            <Button size="sm" variant="outline" onClick={() => setAsking(true)} disabled={locked || !reviser.shuttle}><Sparkles />{tr('content.ask_ai')}</Button>
+            {/* 能「在这篇上做」的模板：改正文也在「交给 AI」里说，不单独一个「AI 修改」 */}
+            {!work && <Button size="sm" variant="outline" onClick={() => setAsking(true)} disabled={locked || !reviser.shuttle}><Sparkles />{tr('content.ask_ai')}</Button>}
             <Button size="sm" variant="outline" onClick={() => setAiOpen(work ? {} : { mode: 'new' })} disabled={locked || !rewriter.shuttle}>{work ? <Wand2 /> : <Repeat2 />}{work ? tr('article.ai') : tr('article.rewrite')}</Button>
             <Button size="sm" feedback={false} onClick={() => void openPublish()} disabled={locked}><Send />{tr('article.publish')}</Button>
             <div ref={moreRef} className="relative">

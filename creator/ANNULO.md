@@ -58,7 +58,7 @@
 
 - **稿子**（`articles.draft`，可选，默认折叠）：作者的工作稿（为什么写这篇、大纲、草稿、剧本），**不发出去**；正文才发。读哪个、怎么用你自己定；用户没让写稿子就不改稿子。
 - **交给 AI** 两种做法，都是预设（`rewrite_presets`，`mode`）：
-  - **在这篇上做**：任务 `work-on-article`（参数 `article_id`、`note`）：`work.context` 拿这篇的稿子、正文、产物、平台；写正文用 `content.update`，做文件 `annulo upload --local` 后 `assets.add` 存成这篇的产物；
+  - **在这篇上做**：任务 `work-on-article`（参数 `article_id`、`note`），改这篇的正文（原来的「AI 修改」）也走它：`work.context` 拿这篇的稿子、正文、产物、平台；写正文用 `content.update`，做文件 `annulo upload --local` 后 `assets.add` 存成这篇的产物；
   - **另写一篇**：任务 `rewrite-article`，只生成新文章的正文。
 - **产物（artifacts）**是资料库里带 `article_id` 的一条，可以是一组文件（`files`，6 张图一条），带 `chat_id`、`note`（备注，文章页和资料库显示同一条）。`assets.add({ files: [{ url, mime, name }], article_id, note, use })`；整组重做存新的，只改其中一个用 `assets.replace({ asset_id, n, url, note })` 改原来那组。`use: true`：视频文章设成发布用的视频，图文换成配图。
 - **要改就回到做它的那段对话**：用户在对话里接着说，照 `work-on-article` 第 5 步做。

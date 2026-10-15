@@ -161,7 +161,7 @@
     "ai": "Ask AI",
     "ai_title": "Ask AI",
     "work_go": "Start",
-    "work_hint": "Work on \"{title}\": write its content, or make images or a video attached to it, following the instructions below. To change the result, keep talking in the chat on the right.",
+    "work_hint": "Work on \"{title}\": revise or write its content, or make images or a video attached to it, following the instructions below. To change the result, keep talking in the chat on the right.",
     "work_note": "Instructions",
     "work_note_hint": "Say what AI should make and how: how many images, what style, how long, which tool…",
     "preset_save_here": "Save as preset"
@@ -310,7 +310,7 @@
     "builtin": {
       "make_video": {
         "name": "Make the video",
-        "prompt": "Turn this into a video: portrait or landscape for the platforms it goes to (9:16 for Douyin and Xiaohongshu, 16:9 for YouTube and Bilibili), about 60 seconds. Say what it's about in the first 3 seconds, follow the structure of the draft (or the description if there's no draft), get the key points across in voice-over or captions, and end with a line inviting people to follow. Use it as the video to publish and write the title, description and tags."
+        "prompt": "Make a video from this piece: portrait or landscape for the platforms it goes to (9:16 for Douyin and Xiaohongshu, 16:9 for YouTube and Bilibili), about 60 seconds. Say what it's about in the first 3 seconds, follow the structure of the draft (or the content if there's no draft), get the key points across in voice-over or captions, and end with a line inviting people to follow. If this is a video piece, use it as the video to publish and write the title, description and tags."
       },
       "from_draft": {
         "name": "Write from the draft",
@@ -334,7 +334,7 @@
     "mode_new": "Write a new one",
     "types": "Use on",
     "types_hint": "Leave all off to use it on every type",
-    "here_ph": "e.g. Make 6 Xiaohongshu images from the draft, 3:4 portrait, big headline text, colors that match my positioning"
+    "here_ph": "e.g. Make it more conversational with a shorter opening; or make 6 Xiaohongshu images from the draft, 3:4 portrait"
   },
   "assets": {
     "note": "Note",
