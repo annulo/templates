@@ -102,7 +102,7 @@ export function context(input: { topic_id?: string; subject?: string; type?: str
   }
 }
 
-type Fields = { title?: string; summary?: string; slug?: string; keywords?: string; body?: string; tags?: string[]; images?: string[]; cover_text?: string; video?: string; category?: string }
+type Fields = { title?: string; summary?: string; slug?: string; keywords?: string; body?: string; tags?: string[]; images?: string[]; cover_text?: string; video?: string; video_cover?: string; category?: string }
 type SaveInput = Fields & { type?: string; topic_id?: string; source_id?: string; title: string; body: string }
 
 const cleanSlug = (v: unknown) => String(v ?? '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
@@ -111,6 +111,7 @@ const cleanTags = (v: unknown) => [...new Set(parseList(v).map((x) => x.replace(
 
 /** 文章字段的校验（按类型）：标题不能空；长文正文是 HTML、像写完的文章；图文笔记、视频正文是纯文字。只校验传了的字段 */
 function checkFields(f: Fields, t: ArticleType, ctx: any) {
+  if (f.video_cover && !isAsset(f.video_cover)) throw new Error(L(ctx, "视频封面只能用资料库里的图片地址", "Video covers must use image URLs from the Library"))
   if (f.title !== undefined && !String(f.title).trim()) throw new Error(L(ctx, '缺标题（title）', 'Missing title'))
   if (f.body !== undefined) {
     const body = String(f.body).trim()
@@ -140,6 +141,7 @@ function pick(input: any, t: ArticleType): Record<string, any> {
   }
   if (t === 'video') {
     if (input.video !== undefined) f.video = String(input.video ?? '').trim()
+    if (input.video_cover !== undefined) f.video_cover = String(input.video_cover ?? '').trim()
     if (input.category !== undefined) f.category = String(input.category ?? '').trim()
   }
   return f
@@ -191,7 +193,7 @@ export function rewriteContext(input: { article_id: string; type: string }, ctx:
     source: {
       id: a.id, type: from, title: a.title, summary: a.summary ?? '',
       ...(from === 'article' ? { html: body.slice(0, 60000), text: htmlText(body).slice(0, 12000), images: htmlImages(body) } : { text: body, images: parseList(a.images) }),
-      tags: tagsOf(a), video: a.video ?? '',
+      tags: tagsOf(a), video: a.video ?? '', video_cover: a.video_cover ?? '',
     },
     type: input.type,
     type_note: TYPE_NOTE[input.type],
@@ -222,6 +224,7 @@ export function socialSource(input: { id: string }, ctx: any) {
     url: /^https?:\/\//.test(a.url ?? '') ? a.url : '',
     // 公开地址，或离线项目传到本机的 /_annulo/uploaded/…（发帖时 b.upload 认它）
     images: (rich ? htmlImages(body) : parseList(a.images)).filter(isAsset),
+    video_cover: a.video_cover || '',
     videos: a.video ? [{ url: a.video, name: a.title }, ...videosOf(ctx)] : videosOf(ctx),
     project: projectBrief(profile(ctx)),
   }

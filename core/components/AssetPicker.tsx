@@ -8,7 +8,7 @@ import { usePasteFiles } from '../lib/usePasteFiles'
 import { tr } from '../lib/i18n'
 
 /** 从素材库选图片（或视频）：多选，确定后把地址交给 onPick。也能当场上传，传完直接选中 */
-export default function AssetPicker({ open, kind = 'image', max, onClose, onPick }: { open: boolean; kind?: AssetKind; max?: number; onClose: () => void; onPick: (urls: string[]) => void }) {
+export default function AssetPicker({ open, kind = 'image', max, onClose, onPick, onUploadingChange }: { open: boolean; kind?: AssetKind; max?: number; onClose: () => void; onPick: (urls: string[]) => void; onUploadingChange?: (busy: boolean) => void }) {
   const [list, setList] = useState<Asset[] | null>(null)
   const [error, setError] = useState('')
   const [q, setQ] = useState('')
@@ -36,7 +36,7 @@ export default function AssetPicker({ open, kind = 'image', max, onClose, onPick
 
   const upload = async (files: File[]) => {
     if (!files.length) return
-    setUploading(true)
+    setUploading(true); onUploadingChange?.(true)
     try {
       const done = (await uploadAssets(files, list ?? [], setUploads)).flatMap((x) => (x.asset?.url && x.asset.kind === kind ? [x.asset] : []))
       // 传完放到最前面并选中（不超过上限）
@@ -47,7 +47,7 @@ export default function AssetPicker({ open, kind = 'image', max, onClose, onPick
         return out
       })
     } finally {
-      setUploading(false)
+      setUploading(false); onUploadingChange?.(false)
     }
   }
   // 打开时能直接粘贴截图、复制的图片：上传进资料库并选上（同上传按钮）
@@ -56,15 +56,15 @@ export default function AssetPicker({ open, kind = 'image', max, onClose, onPick
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={() => { if (!uploading) onClose() }}
       title={tr('ui.picker_title')}
       width={720}
       footer={
         <>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button variant="ghost" size="sm" disabled={uploading} onClick={onClose}>
             {tr('common.cancel')}
           </Button>
-          <Button size="sm" disabled={!picked.length} onClick={() => onPick(picked)}>
+          <Button size="sm" disabled={uploading || !picked.length} onClick={() => onPick(picked)}>
             {picked.length ? tr('ui.picker_done_n', { n: picked.length }) : tr('ui.picker_done')}
           </Button>
         </>

@@ -59,3 +59,7 @@ content.save 报错就按报错改了再存。存完回复用户：改写成了�
 先读 skills/product-growth/SKILL.md。campaign 和 opportunity 提供运营目标；target_platform 指定平台表达，简报的语言优先。产品功能、边界、价格和案例只使用 products 与 research 的真实事实，use_cases 的空白成果不能补成数字。小红书、抖音需要的导流方式与限制按社媒插件的当前规格和任务处理；X 按账号定位和语言写。所有草稿保留 topic_id，content.save 会记录运营主题与产品关联。
 
 rewriteContext 返回 evidence_id 时，content.save 必须传入同一个 evidence_id 与 source_id，以保留本次改写的来源快照。不要在保存前重新读取来替换依据。
+
+## 视频封面
+
+视频的独立封面用 `video_cover` 保存，图片必须来自资料库或本机上传。沿用同一视频时保留原封面；换了视频要重新核对封面。没有合适的图片就留空，不编造图片地址，不用 `cover_text` 代替。只修改文案时不要清空已有封面。

@@ -5,6 +5,7 @@ import UploadProgress from './UploadProgress'
 import Lightbox from './Lightbox'
 import RichEditor from './RichEditor'
 import VideoField from './VideoField'
+import VideoCoverField from './VideoCoverField'
 import { TextCover } from './views/Social'
 import { Field, cx, inputCls } from './ui'
 import { typePlatforms } from './ArticleTypes'
@@ -19,9 +20,9 @@ import { parseList, tagsOf, typeOf, type ArticleType } from '../local/_types'
 // 一篇文章的编辑框和阅读视图，按文章类型显示字段（local/_types.ts）：
 //   长文：标题、摘要、富文本正文（图在正文里）；图文笔记：标题、纯文字正文、一组配图、封面大字；视频：标题、视频、简介、分区。都有话题。
 
-export type ArticleDraft = { title: string; summary: string; body: string; tags: string; images: string[]; cover_text: string; video: string; category: string }
+export type ArticleDraft = { title: string; summary: string; body: string; tags: string; images: string[]; cover_text: string; video: string; video_cover: string; category: string }
 
-export const draftOf = (a: Partial<Article>): ArticleDraft => ({ title: a.title ?? '', summary: a.summary ?? '', body: a.body ?? '', tags: tagsOf(a).join(' '), images: parseList(a.images), cover_text: a.cover_text ?? '', video: a.video ?? '', category: a.category ?? '' })
+export const draftOf = (a: Partial<Article>): ArticleDraft => ({ title: a.title ?? '', summary: a.summary ?? '', body: a.body ?? '', tags: tagsOf(a).join(' '), images: parseList(a.images), cover_text: a.cover_text ?? '', video: a.video ?? '', video_cover: a.video_cover ?? '', category: a.category ?? '' })
 const splitTags = (s: string) => [...new Set(s.split(/[\s,，#]+/).map((x) => x.trim()).filter(Boolean))]
 export const sameDraft = (x: ArticleDraft, y: ArticleDraft) => JSON.stringify({ ...x, tags: splitTags(x.tags) }) === JSON.stringify({ ...y, tags: splitTags(y.tags) })
 
@@ -30,7 +31,7 @@ export function patchOf(d: ArticleDraft, t: ArticleType): Partial<Article> {
   const base: Partial<Article> = { title: d.title.trim(), body: t === 'article' ? d.body : d.body.trim(), tags: JSON.stringify(splitTags(d.tags)) }
   if (t === 'article') return { ...base, summary: d.summary.trim() }
   if (t === 'post') return { ...base, images: JSON.stringify(d.images), cover_text: d.cover_text.trim() }
-  return { ...base, video: d.video, category: d.category.trim() }
+  return { ...base, video: d.video, video_cover: d.video_cover, category: d.category.trim() }
 }
 
 /** 这种类型在各平台的上限：「X 280 · 小红书 1000」 */
@@ -40,7 +41,7 @@ function limitLine(t: ArticleType, pick: (f: (typeof FIELDS)[string]) => number)
 const maxOf = (t: ArticleType, pick: (f: (typeof FIELDS)[string]) => number) => Math.max(0, ...typePlatforms(t).map((p) => pick(FIELDS[p])))
 const chars = (s: string) => [...s].length
 
-export function ArticleEditor({ type, draft, setDraft, editorKey }: { type: ArticleType; draft: ArticleDraft; setDraft: (f: (d: ArticleDraft) => ArticleDraft) => void; editorKey: number }) {
+export function ArticleEditor({ type, draft, setDraft, editorKey, onUploadingChange }: { type: ArticleType; draft: ArticleDraft; setDraft: (f: (d: ArticleDraft) => ArticleDraft) => void; editorKey: number; onUploadingChange?: (busy: boolean) => void }) {
   const set = <K extends keyof ArticleDraft>(k: K, v: ArticleDraft[K]) => setDraft((d) => ({ ...d, [k]: v }))
   const imagesMax = maxOf('post', (f) => f.images)
   const tagsMax = maxOf(type, (f) => f.tags)
@@ -52,7 +53,10 @@ export function ArticleEditor({ type, draft, setDraft, editorKey }: { type: Arti
       <textarea value={draft.summary} onChange={(e) => set('summary', e.target.value)} rows={2} aria-label={tr('content.new_summary')} placeholder={tr('content.summary_ph')} className={cx(inputCls, 'py-2')} />
       <RichEditor key={editorKey} value={draft.body} onChange={(body) => set('body', body)} />
     </>}
-    {type === 'video' && <VideoField video={draft.video} onChange={(v) => set('video', v)} />}
+    {type === 'video' && <>
+      <VideoField video={draft.video} cover={draft.video_cover} onChange={(v) => set('video', v)} />
+      <VideoCoverField value={draft.video_cover} onChange={(v) => set('video_cover', v)} onUploadingChange={onUploadingChange} />
+    </>}
     {type !== 'article' && <Field label={type === 'video' ? tr('article.f_desc') : tr('social.f_body')} hint={`${chars(draft.body)} · ${tr('article.limit_body', { list: limitLine(type, (f) => f.bodyMax) })}`}>
       <textarea className={cx(inputCls, 'py-3 leading-relaxed', type === 'post' ? 'min-h-64' : 'min-h-32')} value={draft.body} onChange={(e) => set('body', e.target.value)} placeholder={type === 'video' ? tr('article.desc_ph') : tr('article.post_ph')} />
     </Field>}
@@ -121,11 +125,11 @@ export function ArticleView({ a }: { a: Article }) {
   const tagLine = !!tags.length && <div className="mt-4 flex flex-wrap gap-1.5">{tags.map((x) => <span key={x} className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">#{x}</span>)}</div>
   if (t === 'article') return <>
     {a.summary && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a.summary}</p>}
-    <div className="mt-5 border-t border-border pt-4">{a.video && <video src={videoSrc(a.video)} controls className="mb-4 w-full rounded-lg bg-black" />}{a.body ? <BodyPreview key={a.updated_at} html={a.body} /> : <p className="text-sm text-muted-foreground">{tr('content.no_body')}</p>}</div>
+    <div className="mt-5 border-t border-border pt-4">{a.video && <video src={videoSrc(a.video)} poster={a.video_cover || undefined} controls className="mb-4 w-full rounded-lg bg-black" />}{a.body ? <BodyPreview key={a.updated_at} html={a.body} /> : <p className="text-sm text-muted-foreground">{tr('content.no_body')}</p>}</div>
     {tagLine}
   </>
   if (t === 'video') return <div className="mt-5 space-y-4 border-t border-border pt-4">
-    {a.video ? <video src={videoSrc(a.video)} controls className="max-h-[60vh] w-full rounded-lg bg-black" /> : <p className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">{tr('article.no_video')}</p>}
+    {a.video ? <video src={videoSrc(a.video)} poster={a.video_cover || undefined} controls className="max-h-[60vh] w-full rounded-lg bg-black" /> : <p className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">{tr('article.no_video')}</p>}
     {a.body ? <p className="text-[15px] leading-[1.75] whitespace-pre-wrap">{a.body}</p> : <p className="text-sm text-muted-foreground">{tr('article.no_desc')}</p>}
     {a.category && <p className="text-xs text-muted-foreground">{tr('social.category')}：{a.category}</p>}
     {tagLine}

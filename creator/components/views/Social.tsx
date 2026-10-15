@@ -6,6 +6,7 @@ import FacebookComments from '../FacebookComments'
 import { facebookPublishRecovery } from '../../lib/facebookPublishRecovery'
 import { FacebookConnectionButton } from '../FacebookAccountFlow'
 import VideoField from '../VideoField'
+import VideoCoverField from '../VideoCoverField'
 import { showRun, stopRun } from '../../lib/runs'
 import SocialOverview from '../SocialOverview'
 import WorkspaceTabs from '../WorkspaceTabs'
@@ -388,7 +389,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
     <div ref={rowRef} className={cx('flex gap-4 border-b border-border p-4 last:border-b-0', focus && 'bg-primary/5')}>
       <button type="button" onClick={() => setPreviewing(true)} title={tr('social.preview')} className="w-20 shrink-0 self-start cursor-pointer rounded-lg transition-opacity hover:opacity-80">
         {isVideoPost(pf, p) && p.video ? (
-          <video src={videoSrc(p.video)} muted preload="metadata" className="aspect-[3/4] w-20 rounded-lg bg-black object-cover" />
+          <video poster={p.video_cover || undefined} src={videoSrc(p.video)} muted preload="metadata" className="aspect-[3/4] w-20 rounded-lg bg-black object-cover" />
         ) : images[0] ? (
           <img src={shuttleImage(images[0])} alt="" className="aspect-[3/4] w-20 rounded-lg object-cover" />
         ) : isRich(pf) ? (
@@ -531,6 +532,8 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
   const [cover, setCover] = useState(p.cover_text ?? '')
   const [images, setImages] = useState<string[]>(parse<string[]>(p.images, []))
   const [video, setVideo] = useState(p.video ?? '')
+  const [videoCover, setVideoCover] = useState(p.video_cover ?? '')
+  const [uploadingCover, setUploadingCover] = useState(false)
   const [picking, setPicking] = useState(false)
   // 只发视频的平台（YouTube、B 站）一直是视频；图文、视频都能发的（小红书、X…）用户切换，这条带了视频就按视频发
   const [mode, setMode] = useState<'images' | 'video'>(isVideoPost(pf, p) ? 'video' : 'images')
@@ -538,6 +541,7 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
   useEffect(() => {
     if (!open) return
     setVideo(p.video ?? '')
+    setVideoCover(p.video_cover ?? '')
     setMode(isVideoPost(pf, p) ? 'video' : 'images')
     setTitle(p.title)
     setBody(bodyOf(p))
@@ -551,15 +555,15 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={() => { if (!uploadingCover) onClose() }}
       title={tr('social.edit_title', { noun: pf.noun })}
       width={560}
       footer={
         <>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button variant="ghost" size="sm" disabled={uploadingCover} onClick={onClose}>
             {tr('common.cancel')}
           </Button>
-          <Button size="sm" onClick={() => onSave({ title: title.trim(), body: body.trim(), cover_text: cover.trim(), tags: JSON.stringify(tagList), images: JSON.stringify(isRich(pf) ? richImages(body) : images), ...(pf.video ? { video: isVideo ? video : '' } : {}) })} disabled={isVideo && !video}>
+          <Button size="sm" onClick={() => onSave({ title: title.trim(), body: body.trim(), cover_text: cover.trim(), tags: JSON.stringify(tagList), images: JSON.stringify(isRich(pf) ? richImages(body) : images), ...(pf.video ? { video: isVideo ? video : '', video_cover: isVideo && fieldsOf(pf).videoCover ? videoCover : '' } : {}) })} disabled={uploadingCover || (isVideo && !video)}>
             {tr('social.save_review')}
           </Button>
         </>
@@ -576,9 +580,10 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
           <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} />
         </Field>
         {pf.video === 'optional' && (
-          <Segmented<'images' | 'video'> value={mode} onChange={setMode} options={[{ value: 'images', label: tr('social.mode_images') }, { value: 'video', label: tr('social.mode_video') }]} />
+          <Segmented<'images' | 'video'> value={mode} onChange={v => { if (!uploadingCover) setMode(v) }} options={[{ value: 'images', label: tr('social.mode_images') }, { value: 'video', label: tr('social.mode_video') }]} />
         )}
-        {isVideo && <VideoField video={video} onChange={setVideo} />}
+        {isVideo && <VideoField video={video} cover={videoCover} onChange={setVideo} />}
+        {open && isVideo && fieldsOf(pf).videoCover && <VideoCoverField value={videoCover} onChange={setVideoCover} onUploadingChange={setUploadingCover} />}
         {!isVideo && fieldsOf(pf).images > 0 && <div className="grid gap-2">
           <div className="flex items-center justify-between">
             <span className="text-sm leading-none font-medium">{tr('social.f_images')}</span>
@@ -770,7 +775,7 @@ function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReje
 function VideoCard({ p, owner, tags }: { p: SocialPost; owner?: Channel; tags: string[] }) {
   return (
     <div className="mx-auto w-[380px] shrink-0 self-start overflow-hidden rounded-2xl border border-neutral-200 bg-white text-neutral-900 shadow-lg">
-      {p.video ? <video src={videoSrc(p.video)} controls className="aspect-video w-full bg-black" /> : <div className="flex aspect-video w-full items-center justify-center bg-neutral-900 text-sm text-neutral-400">{tr('social.no_video')}</div>}
+      {p.video ? <video poster={p.video_cover || undefined} src={videoSrc(p.video)} controls className="aspect-video w-full bg-black" /> : <div className="flex aspect-video w-full items-center justify-center bg-neutral-900 text-sm text-neutral-400">{tr('social.no_video')}</div>}
       <div className="space-y-2 p-3">
         <div className="text-[15px] leading-snug font-semibold">{p.title}</div>
         <div className="flex items-center gap-2 text-[13px] text-neutral-600">

@@ -417,6 +417,7 @@ type Fields = {
   tags?: string[];
   images?: string[];
   cover_text?: string;
+  video_cover?: string;
   video?: string;
   category?: string;
 };
@@ -447,6 +448,7 @@ const cleanTags = (v: unknown) => [
 
 /** 文章字段的校验（按类型）：标题不能空；长文正文是 HTML、像写完的文章；图文笔记、视频正文是纯文字。只校验传了的字段 */
 function checkFields(f: Fields, t: ArticleType, ctx: any) {
+  if (f.video_cover && !isAsset(f.video_cover)) throw new Error(L(ctx, "视频封面只能用资料库里的图片地址", "Video covers must use image URLs from the Library"));
   if (f.title !== undefined && !String(f.title).trim())
     throw new Error(L(ctx, "缺标题（title）", "Missing title"));
   if (f.body !== undefined) {
@@ -521,6 +523,7 @@ function pick(input: any, t: ArticleType): Record<string, any> {
   }
   if (t === "video") {
     if (input.video !== undefined) f.video = String(input.video ?? "").trim();
+    if (input.video_cover !== undefined) f.video_cover = String(input.video_cover ?? "").trim();
     if (input.category !== undefined)
       f.category = String(input.category ?? "").trim();
   }
@@ -805,6 +808,7 @@ export function rewriteContext(
         : { text: body, images: parseList(a.images) }),
       tags: tagsOf(a),
       video: a.video ?? "",
+      video_cover: a.video_cover ?? "",
     },
     type: to,
     type_note: TYPE_NOTE[to],
@@ -869,6 +873,7 @@ export function socialSource(input: { id: string }, ctx: any) {
     url: /^https?:\/\//.test(a.url ?? "") ? a.url : "",
     // 公开地址，或离线项目传到本机的 /_annulo/uploaded/…（发帖时 b.upload 认它）
     images: (rich ? htmlImages(body) : parseList(a.images)).filter(isAsset),
+    video_cover: a.video_cover || '',
     videos: a.video
       ? [{ url: a.video, name: a.title }, ...videosOf(ctx)]
       : videosOf(ctx),
