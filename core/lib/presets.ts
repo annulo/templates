@@ -1,7 +1,7 @@
 import { tr } from './i18n'
 import type { ArticleType, RewritePreset } from './shuttle'
 
-// AI 预设：交给 AI 做的事都是「做法 + 一段要求（Prompt）」（creator/docs/artifacts.md「交给 AI」）：
+// AI 预设：交给 AI 做的事都是「做法 + 一段要求（Prompt）」（docs/artifacts.md「交给 AI」）：
 //   here 在这篇上做：写这篇的正文、做产物挂在这篇上（照稿子写正文、配图、做视频…），types 是能用在哪些类型的文章上；
 //   new  另写一篇：改写成 type 那种类型的一篇新文章。
 // 用户的存在 rewrite_presets 表；模板自带的写在这里（名字、要求在 core/messages 的 presets.builtin.<id>），

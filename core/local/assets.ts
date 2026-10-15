@@ -1,4 +1,4 @@
-// 资料库（本机函数，Annulo 在用户电脑上执行，不经过模型）。产物（artifacts）是资料库里带 article_id 的一条，可以是一组文件（creator/docs/artifacts.md）。
+// 资料库（本机函数，Annulo 在用户电脑上执行，不经过模型）。产物（artifacts）是资料库里带 article_id 的一条，可以是一组文件（docs/artifacts.md）。
 //
 //   assets.add({ files | urls | url, mime?, article_id?, note?, name?, use? })
 //        把助手做出来的东西放进资料库。地址是 annulo upload --local 给的 local:<name>（或 annulo upload 给的地址）：

@@ -7,7 +7,7 @@ import { dbPatch, type Article } from '../lib/shuttle'
 import { htmlImages, htmlText, parseList, typeOf } from '../local/_types'
 import { clearUnsaved, readUnsaved, writeUnsaved } from '../lib/unsaved'
 
-// 稿子（articles.draft）：每篇文章可选的工作稿，默认折叠（creator/docs/artifacts.md「稿子」）。写为什么写这篇、大纲、草稿、剧本，不发出去。
+// 稿子（articles.draft）：每篇文章可选的工作稿，默认折叠（docs/artifacts.md「稿子」）。写为什么写这篇、大纲、草稿、剧本，不发出去。
 // 下面两个入口：放进正文（不经过 AI，按类型换格式）、AI 写成正文（「在这篇上做」的预设，onAIWrite）。改写成别的类型在顶部「交给 AI → 另写一篇」。
 
 const draftOf = (a: Article) => String((a as Article & { draft?: string }).draft ?? '')

@@ -42,3 +42,4 @@ core 里的代码要在每个带 core 的模板里都能跑：某个模板才有
 模板用到了某个 Annulo 能力版本才有的原语，把模板的 `annulo.json` 里 `min_annulo_api` 调到那个版本。模板缺 Annulo 本身的能力（原语、系统提示、界面），到 Annulo 仓库提 issue 商量，不在模板里绕过去。
 
 改某块功能前，先看 `<模板>/docs/` 里有没有它的设计文档（比如起步向导 `onboarding-wizard.md`），照着做；改了设计就同步改文档。
+几个模板共用的设计（内容中心、产物、发布这类 core 的东西）写在仓库根目录的 `docs/`（不发进项目），比如 `docs/content-model.md`、`docs/artifacts.md`。

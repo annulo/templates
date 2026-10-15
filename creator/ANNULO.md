@@ -54,8 +54,6 @@
 
 ## 稿子、交给 AI、产物、引用
 
-设计见 `docs/artifacts.md`。
-
 - **稿子**（`articles.draft`，可选，默认折叠）：作者的工作稿（为什么写这篇、大纲、草稿、剧本），**不发出去**；正文才发。读哪个、怎么用你自己定；用户没让写稿子就不改稿子。
 - **交给 AI** 两种做法，都是预设（`rewrite_presets`，`mode`）：
   - **在这篇上做**：任务 `work-on-article`（参数 `article_id`、`note`），改这篇的正文（原来的「AI 修改」）也走它：`work.context` 拿这篇的稿子、正文、产物、平台；写正文用 `content.update`，做文件 `annulo upload --local` 后 `assets.add` 存成这篇的产物；

@@ -47,7 +47,7 @@ export const TOPICS_TASK = 'suggest-topics'
 type Writer = ReturnType<typeof useTask>
 
 /**
- * 能「在这篇上做」的模板（creator）传进来（creator/docs/artifacts.md）：task 是「在这篇上做」的任务（参数 { article_id, note }：
+ * 能「在这篇上做」的模板（creator）传进来（docs/artifacts.md）：task 是「在这篇上做」的任务（参数 { article_id, note }：
  * 照稿子写正文、配图、做视频…），Panel 是文章页正文下面的产物（artifacts）。传了才有稿子、「在这篇上做」和产物；没传就和以前一样只有改写。
  */
 export type AIWork = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void }> }

@@ -16,7 +16,7 @@ import { askInNewChat, dbDelete, dbList, dbPatch, openChat, type Article, type A
 /** 资料库的一条，带产物的字段（几个模板的 lib/shuttle.ts 不一定都声明了这几个） */
 type Asset = LibAsset & { article_id?: string; chat_id?: string; note?: string; files?: string; mime?: string }
 
-// 产物（artifacts，creator/docs/artifacts.md；三个模板共用，文章页传 aiWork 才有）：AI 在一篇文章上做出来的东西（一条视频、小红书的 6 张图、一个网页…）就是资料库里的一条，带 article_id，
+// 产物（artifacts，docs/artifacts.md；三个模板共用，文章页传 aiWork 才有）：AI 在一篇文章上做出来的东西（一条视频、小红书的 6 张图、一个网页…）就是资料库里的一条，带 article_id，
 // 可以是一组文件（files）。文章页列出这篇的产物，最新的在前；一组显示成当前这个 + 一排缩略图（core/components/AssetPreview.tsx）。
 // 「交给 AI → 在这篇上做」交给 tasks/work-on-article.md（新任务，新开对话）。要改就回到做它的那段对话接着说（「继续对话」），
 // 整组重做存新的、只改一个改原来那组（assets.replace），不在页面上弹框收意见（AGENTS.md「接着改 AI 做出来的东西」）；那段对话找不到才新开一段。
