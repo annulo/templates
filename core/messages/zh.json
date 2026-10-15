@@ -164,7 +164,15 @@
     "work_hint": "在「{title}」上做：改它的正文、照稿子写正文，或者做图、做视频挂在它下面，照下面的要求做。做好了在右侧对话里接着说就能改。",
     "work_note": "要求",
     "work_note_hint": "写你要 AI 做什么、做成什么样：几张图、什么风格、多长、用什么工具……",
-    "preset_save_here": "存为预设"
+    "preset_save_here": "存为预设",
+    "metric_views": "阅读",
+    "metric_likes": "点赞",
+    "metric_comments": "评论",
+    "metric_collects": "收藏",
+    "metric_shares": "分享",
+    "metrics_at": "数据更新于 {when}",
+    "metrics_none": "还没采集到数据",
+    "metrics_refresh": "更新数据"
   },
   "ui": {
     "watch_show": "打开看",

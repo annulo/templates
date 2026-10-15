@@ -164,7 +164,15 @@
     "work_hint": "Work on \"{title}\": revise or write its content, or make images or a video attached to it, following the instructions below. To change the result, keep talking in the chat on the right.",
     "work_note": "Instructions",
     "work_note_hint": "Say what AI should make and how: how many images, what style, how long, which tool…",
-    "preset_save_here": "Save as preset"
+    "preset_save_here": "Save as preset",
+    "metric_views": "Views",
+    "metric_likes": "Likes",
+    "metric_comments": "Comments",
+    "metric_collects": "Saves",
+    "metric_shares": "Shares",
+    "metrics_at": "Updated {when}",
+    "metrics_none": "No data collected yet",
+    "metrics_refresh": "Refresh data"
   },
   "ui": {
     "watch_show": "Watch",

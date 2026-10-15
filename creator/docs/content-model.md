@@ -25,7 +25,8 @@
 - **文案**是名字带「文案」的 `.md`（英文 `copy.md`）：开头 `---` 包住 `title:`、`tags:`，下面是正文或视频简介。
 - **长文**是 Markdown：图片放旁边目录、用相对路径（`![](图/1.png)`），视频写成 `<video src width height>`。页面上用富文本编辑器改，存回去还是 md（`lib/mdhtml.ts`：marked + turndown）；能切到源码。编辑器只有二、三级标题，表格这类它不支持的格式在富文本里存一次会丢，要用源码改。
 - **产物**就是文件夹里的文件，不再是资料库里带 `article_id` 的一条。资料库只放几条内容都会用到的素材。
-- **发布是挑选**：点「发布」先挑这次发哪个视频、哪份文案，再选账号。每发一次一条发布记录；同一条内容可以挑不同的文件发好几次（A、B 两支各发一次）。没有「正在使用」。
+- **内容没有类型**，**发布是挑选**：点「发布」挑这次发成什么（图文 / 视频 / 长文），文字从文件夹里挑一份 `.md`（标题、话题当场能改），图文挑一组图、视频挑一个视频（文件夹里的直接点选，也能从资料库选），再选账号。打开时按文件夹里有什么猜发成什么（有视频发视频，有图发图文，否则长文）；挑了文案，同一个目录里的图、视频自动配上（自己点过的不动）。每个账号新建一条帖子，**存什么发什么**：排期到点照帖子发，不再按文章重新生成。同一条内容可以发好几次（A、B 两支各发一次），没有「正在使用」。
+- **发布记录**：每条显示这次发的是什么（第一张图或视频、标题），阅读、点赞、评论、收藏、分享一个个列出来，能马上「更新数据」（重新采集这个账号）。
 - **继续对话**：在对话里跑 `folder.create` / `folder.write` 会把这段对话记到这条内容上（`articles.chat_id`），页面上「继续对话」回到它；没有就用老产物上记的，再没有就新开一段。
 - 交给 AI「在这条上做」是自媒体自己的任务 `tasks/work-on-content.md`：做出来的都放进文件夹，不 `annulo upload`、不 `assets.add`。
 
@@ -44,12 +45,10 @@
 
 - **Annulo 原语**（能力版本 46，`internal/localfn/fs.go`、`internal/server/workfiles.go`）：本机函数的 `ctx.fs` 读写项目工作目录（`list / stat / read / write / mkdir / move / trash / copy / toLocal / open`），`ctx.workspace.work_dir` 是这个目录；页面用 `/_annulo/work-files/<路径>` 显示里面的图片、视频。`creator/annulo.json` 的 `min_annulo_api` 是 46。
 - **模板**：自媒体的内容中心是从 core 分出来的一份 `components/views/CreatorContent.tsx`（`pages/index.tsx` 用它），文件夹在 `components/Folder.tsx`，本机函数 `local/folder.ts`，md 转换 `lib/mdhtml.ts`（`talizen.config.ts` 的 importMap 加了 marked、turndown）。
-- 发布框和社媒插件现在读文章字段：`folder.prepare` 把挑的视频（存成本机文件 `local:<name>`）和文案填进 `video`、`title`、`body`、`tags`，发布框关了把名字改回去。
+- 发布：`components/FolderPublish.tsx` 挑内容，`folder.publish` 把文件夹里的文件存成本机文件（`local:<name>`），按插件的 `fromContent` 生成每个账号的帖子、过平台检查，页面放进发布队列。发布记录用 core 的 `PublishRecords`（`detailed`）。社媒插件 0.8.3 起排期到点照帖子发。
 
 ## 还没做的
 
-1. **社媒插件**：发布框挑好的内容直接交给插件，不经过文章字段；一条内容在一个账号上能有好几条帖子（现在 `existing()` 按 `article_id + channel_id` 只找一条没发的），发布记录记下用了哪些文件。
-2. **选题**并进内容（状态「想法」）：选题就是还没开始做的内容，要迁移 `topics`。
-3. 界面上「文章」改叫「内容」。
-4. 列表上的摘要还是读 `body`：发过一次以后是那次挑的文案。
-5. 「让 AI 写」（`write-article`）还是写进正文，打开时才搬进 `文案.md`；以后直接写进文件夹。
+1. **选题**并进内容（状态「想法」）：选题就是还没开始做的内容，要迁移 `topics`。
+2. 界面上「文章」改叫「内容」。
+3. 「让 AI 写」（`write-article`）还是写进正文、要选类型，打开时才搬进 `文案.md`；以后直接写进文件夹。

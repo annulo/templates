@@ -1,4 +1,7 @@
 import { L } from './_i18n'
+import { fromContent, supports } from './_types'
+import { FIELDS } from '../plugins/social/local/_fields'
+import { check } from '../plugins/social/local/social'
 
 // 内容文件夹（本机函数，Annulo 在用户电脑上执行，不经过模型；设计见 docs/content-model.md）：
 // 每条内容一个文件夹，在项目工作目录（ctx.fs.root，本机是 ~/Annulo/<项目名>）的「内容/」下，文章表 folder 字段记它相对工作目录的路径。
@@ -13,7 +16,8 @@ import { L } from './_i18n'
 //   folder.importLocal({ article_id, url, to })  把本机文件（local:<name>，上传的、资料库里的）复制进文件夹
 //   folder.open({ article_id, path?, reveal? })  用系统程序打开 / 在访达里显示
 //   folder.retitle({ article_id, title })        改这条内容的名字；文件夹是按老名字建的就跟着改
-//   folder.prepare({ article_id, video?, copy? }) → { title }  发布时挑的视频和文案填进文章的发布字段（发布框和社媒插件读这些字段）
+//   folder.publish({ article_id, kind, title, body, tags, images, video, channel_ids, scheduled_at? })
+//                                                → { ready, problems }  发布时挑好的内容发到几个账号（每次新建帖子，见下面）
 
 const TEXT_EXT = /\.(md|markdown|txt|json|ya?ml|csv|srt|vtt|html?|css|tsx?|jsx?|py|sh)$/i
 
@@ -150,41 +154,47 @@ export function retitle(input: { article_id: string; title: string }, ctx: any) 
   return { folder: patch.folder ?? dir }
 }
 
-/** 文案 md：开头可以有 --- 包住的 title / tags，或者第一行 # 标题，剩下的是正文 */
-function parseCopy(text: string) {
-  let title = '', tags: string[] = [], body = text
-  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/)
-  if (m) {
-    body = text.slice(m[0].length)
-    for (const line of m[1].split(/\r?\n/)) {
-      const kv = line.match(/^(\w+):\s*(.*)$/)
-      if (!kv) continue
-      if (kv[1] === 'title') title = kv[2].trim()
-      if (kv[1] === 'tags') tags = kv[2].replace(/^\[|\]$/g, '').split(/[,，\s]+/).map((t) => t.replace(/^#/, '').trim()).filter(Boolean)
-    }
-  } else {
-    const h = text.match(/^#\s+(.+)\r?\n/)
-    if (h) { title = h[1].trim(); body = text.slice(h[0].length) }
-  }
-  return { title, tags, body: body.trim() }
-}
+const isRef = (u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/|local:)/.test(u)
 
 /**
- * 发布时挑：把挑的视频和文案填进这条内容的发布字段（发布框、社媒插件现在读文章字段）；发出去的是什么记在发布记录里。
- * 视频存成本机文件（local:<name>）。文案的 title 要临时填进 title（发布框读它），返回原来的名字，发布框关了页面改回去。
+ * 发布时挑好的内容发到几个账号：每个账号新建一条帖子（社媒插件的 social_posts，存的就是挑好的内容，排期到点照它发），
+ * 过一遍平台检查；通过的是 approved（给了 scheduled_at 就是 scheduled，到点由插件的定时任务发），没通过的不留记录、把问题带回去。
+ * 同一条内容在同一个账号可以发好几次。返回 { ready: [{ channel_id, post_id }], problems: [{ channel_id, problems }] }，页面接着把 ready 的放进发布队列。
+ *
+ *   kind     发成什么：post 图文（纯文字 + 配图）/ video 视频（简介 + 视频）/ article 长文（HTML 正文，图在正文里）
+ *   images   配图：文件夹里的路径（相对这条内容的文件夹）或资料库的地址；video 同样。长文正文里 <img> 的相对路径也换成本机文件
  */
-export function prepare(input: { article_id: string; video?: string; copy?: string }, ctx: any) {
-  if (!input.video && !input.copy) throw new Error(L(ctx, '至少挑一个视频或一份文案', 'Pick at least a video or a copy file'))
+export function publish(input: { article_id: string; kind: 'post' | 'video' | 'article'; title?: string; body?: string; tags?: string[]; images?: string[]; video?: string; cover_text?: string; category?: string; channel_ids: string[]; scheduled_at?: string }, ctx: any) {
   const a = article(ctx, input.article_id)
   const dir = dirOf(ctx, a.id)
-  const patch: any = { updated_at: new Date().toISOString() }
-  if (input.video) patch.video = ctx.fs.toLocal(join(dir, rel(ctx, input.video)))
-  if (input.copy) {
-    const c = parseCopy(ctx.fs.read(join(dir, rel(ctx, input.copy))))
-    if (c.title) patch.title = c.title
-    patch.body = c.body
-    patch.tags = JSON.stringify(c.tags)
+  const kind = input.kind
+  if (!['post', 'video', 'article'].includes(kind)) throw new Error(L(ctx, '要选发成图文、视频还是长文', 'Choose image post, video or article'))
+  const ids = [...new Set(input.channel_ids ?? [])]
+  if (!ids.length) throw new Error(L(ctx, '要选至少一个账号', 'Pick at least one account'))
+  const at = String(input.scheduled_at ?? '').trim()
+  if (at && !(Date.parse(at) > Date.now() - 60_000)) throw new Error(L(ctx, '排期时间要选将来的时间', 'Pick a time in the future'))
+  // 文件夹里的文件存成本机文件（local:<name>，同一个文件没改过是同一个名字），资料库的地址原样用
+  const ref = (u: string) => (isRef(u) ? u : ctx.fs.toLocal(join(dir, rel(ctx, u))))
+  let body = String(input.body ?? '')
+  if (kind === 'article') body = body.replace(/(<(?:img|video|source)\b[^>]*?\ssrc=")([^"]+)(")/gi, (_m, x, src, y) => x + ref(decodeURI(src)) + y)
+  const content = {
+    type: kind, title: String(input.title ?? '').trim() || a.title, body, tags: JSON.stringify(input.tags ?? []),
+    images: JSON.stringify(kind === 'post' ? (input.images ?? []).map(ref) : []),
+    video: kind === 'video' && input.video ? ref(input.video) : '',
+    cover_text: String(input.cover_text ?? ''), category: String(input.category ?? ''),
   }
-  ctx.db.update('articles', a.id, patch)
-  return { title: a.title }
+  const ready: { channel_id: string; post_id: string }[] = []
+  const problems: { channel_id: string; problems: string[] }[] = []
+  const now = new Date().toISOString()
+  for (const id of ids) {
+    const ch = ctx.db.get('social_accounts', id)
+    if (!ch) { problems.push({ channel_id: id, problems: [L(ctx, '没有这个账号', 'No such account')] }); continue }
+    if (!supports(FIELDS[ch.type], kind)) { problems.push({ channel_id: id, problems: [L(ctx, '这个平台不发这种内容', "This platform doesn't take this kind of post")] }); continue }
+    const postId = ctx.db.insert('social_posts', { ...fromContent(content, ch.type), channel_id: id, article_id: a.id, source: 'shuttle', status: at ? 'scheduled' : 'approved', scheduled_at: at, created_at: now, updated_at: now }).id
+    let found: string[] = []
+    try { found = check({ post_id: postId }, ctx)?.problems ?? [] } catch (e: any) { found = [e?.message ?? String(e)] }
+    if (found.length) { ctx.db.delete('social_posts', postId); problems.push({ channel_id: id, problems: found }); continue }
+    ready.push({ channel_id: id, post_id: postId })
+  }
+  return { ready, problems, scheduled: !!at }
 }

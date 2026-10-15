@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { MessageSquareText, ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Image as ImageIcon, LayoutGrid, ListTree, Loader2, RefreshCw, Send, Trash2 } from 'lucide-react'
+import { MessageSquareText, ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Image as ImageIcon, LayoutGrid, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
-import { Button, Dialog, Notice, Segmented, cx, inputCls } from './ui'
+import { Button, Notice, Segmented, cx, inputCls } from './ui'
 import { filesOf } from '../lib/files'
 import { isEn, useT } from '../lib/i18n'
 import { askInNewChat, dbList, openChat, runLocal, type Article } from '../lib/shuttle'
@@ -12,23 +12,23 @@ import { TaskRunning, useTaskRuns } from './Task'
 // 文件夹在项目的工作目录里（本机 ~/Annulo/<项目名>/内容/<名字>），读写走本机函数 local/folder.ts（Annulo 的 ctx.fs），
 // 图片、视频直接用 /_annulo/work-files/<路径> 显示。默认网格（所有文件铺平），可以切成树；文本在页面里改，md 用富文本编辑器。
 // 打开时还没有文件夹就建一个，老文章的稿子、正文、配图、视频、产物搬进去（表里的留着不动）。
-// AI 在对话里改文件不经过表，没有推送：看得见时每 4 秒重读。发布时在 PublishPicker 里挑这次发哪个视频、哪份文案。
+// AI 在对话里改文件不经过表，没有推送：看得见时每 4 秒重读。发布在 FolderPublish.tsx：挑这次发成什么、用哪些文件。
 
-type Entry = { path: string; dir: boolean; size: number; mtime: number }
+export type Entry = { path: string; dir: boolean; size: number; mtime: number }
 type Call = <T>(fn: string, input?: Record<string, unknown>) => Promise<T>
 
-const TEXT = /\.(md|markdown|txt|json|ya?ml|csv|srt|vtt|html?|css|tsx?|jsx?|py|sh)$/i
-const VIDEO = /\.(mp4|mov|webm|m4v)$/i
-const IMAGE = /\.(png|jpe?g|gif|webp|svg|avif)$/i
-const MD = /\.(md|markdown)$/i
+export const TEXT = /\.(md|markdown|txt|json|ya?ml|csv|srt|vtt|html?|css|tsx?|jsx?|py|sh)$/i
+export const VIDEO = /\.(mp4|mov|webm|m4v)$/i
+export const IMAGE = /\.(png|jpe?g|gif|webp|svg|avif)$/i
+export const MD = /\.(md|markdown)$/i
 /** 稿子：最外层的 稿子.md（英文界面建的是 brief.md） */
-const isDraft = (p: string) => p === '稿子.md' || p === 'brief.md'
+export const isDraft = (p: string) => p === '稿子.md' || p === 'brief.md'
 
-const base = (p: string) => p.split('/').pop() ?? p
-const parent = (p: string) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '')
-const fmtSize = (n: number) => (n > 1 << 20 ? `${(n / (1 << 20)).toFixed(1)} MB` : n > 1024 ? `${Math.round(n / 1024)} KB` : `${n} B`)
+export const base = (p: string) => p.split('/').pop() ?? p
+export const parent = (p: string) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '')
+export const fmtSize = (n: number) => (n > 1 << 20 ? `${(n / (1 << 20)).toFixed(1)} MB` : n > 1024 ? `${Math.round(n / 1024)} KB` : `${n} B`)
 /** 工作目录里的文件给 <img>、<video> 的地址（Annulo 能力版本 46） */
-const workSrc = (p: string) => '/_shuttle/work-files/' + p.split('/').map(encodeURIComponent).join('/')
+export const workSrc = (p: string) => '/_shuttle/work-files/' + p.split('/').map(encodeURIComponent).join('/')
 
 function iconOf(e: Entry, open: boolean) {
   if (e.dir) return open ? FolderOpen : FolderIcon
@@ -364,7 +364,7 @@ function RawText({ path, call, reload, onBar }: { path: string; call: Call; relo
 }
 
 const isRelative = (src: string) => !!src && !/^(https?:|data:|local:|blob:|\/)/i.test(src)
-const joinPath = (dir: string, p: string) => {
+export const joinPath = (dir: string, p: string) => {
   const out: string[] = []
   for (const x of (dir ? dir + '/' + p : p).split('/')) { if (x === '..') out.pop(); else if (x && x !== '.') out.push(x) }
   return out.join('/')
@@ -430,60 +430,4 @@ function RichMd({ root, path, call, reload, onBar }: { root: string; path: strin
 
 function MediaView({ src, video }: { src: string; video: boolean }) {
   return <div className="flex justify-center bg-black/40 p-3">{video ? <video src={src} controls className="max-h-[520px] max-w-full rounded" /> : <img src={src} alt="" className="max-h-[520px] max-w-full rounded object-contain" />}</div>
-}
-
-/**
- * 发布时挑：这次发哪个视频、用哪份文案（.md，开头可以写 --- 包住的 title、tags）。
- * 挑好了 folder.prepare 填进发布字段，接着打开发布框选账号；onReady 带上原来的名字，发布框关了改回去
- */
-export function PublishPicker({ article, open, onClose, onReady }: { article: Article; open: boolean; onClose: () => void; onReady: (title: string) => void }) {
-  const { t } = useT('folder')
-  const [entries, setEntries] = useState<Entry[] | null>(null)
-  const [video, setVideo] = useState('')
-  const [copy, setCopy] = useState('')
-  const [copyText, setCopyText] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  useEffect(() => {
-    if (!open) return
-    setError(''); setEntries(null)
-    runLocal<{ entries: Entry[] }>('folder.list', { article_id: article.id }).then((r) => {
-      const files = r.entries.filter((e) => !e.dir)
-      setEntries(files)
-      const vids = files.filter((e) => VIDEO.test(e.path)).sort((x, y) => y.mtime - x.mtime)
-      const mds = files.filter((e) => MD.test(e.path) && !isDraft(e.path))
-      setVideo(vids[0]?.path ?? '')
-      setCopy((mds.find((e) => /文案|copy/i.test(base(e.path))) ?? mds[0])?.path ?? '')
-    }).catch((e) => setError((e as Error).message))
-  }, [open, article.id])
-  useEffect(() => {
-    if (!copy) { setCopyText(''); return }
-    runLocal<{ text: string }>('folder.read', { article_id: article.id, path: copy }).then((r) => setCopyText(r.text)).catch(() => setCopyText(''))
-  }, [copy, article.id])
-  const videos = (entries ?? []).filter((e) => VIDEO.test(e.path))
-  const mds = (entries ?? []).filter((e) => MD.test(e.path) && !isDraft(e.path))
-  const next = async () => {
-    setBusy(true); setError('')
-    try { const r = await runLocal<{ title: string }>('folder.prepare', { article_id: article.id, video, copy }); onReady(r.title) } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
-  }
-  const pick = (list: Entry[], value: string, set: (v: string) => void, none: string) => (
-    <div className="max-h-48 space-y-0.5 overflow-auto rounded-md border border-border p-1">
-      <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted"><input type="radio" checked={!value} onChange={() => set('')} /><span className="text-muted-foreground">{none}</span></label>
-      {list.map((e) => <label key={e.path} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted"><input type="radio" checked={value === e.path} onChange={() => set(e.path)} /><span className="min-w-0 flex-1 truncate">{e.path}</span><span className="shrink-0 text-xs text-muted-foreground">{fmtSize(e.size)}</span></label>)}
-    </div>
-  )
-  return (
-    <Dialog open={open} onClose={onClose} title={t('pick_title')} width={620}
-      footer={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={busy || (!video && !copy)} onClick={() => void next()}>{busy ? <Loader2 className="animate-spin" /> : <Send />}{t('pick_next')}</Button></>}>
-      {!entries ? (error ? <Notice tone="error">{error}</Notice> : <Loader2 className="size-4 animate-spin text-muted-foreground" />) : (
-        <div className="space-y-4">
-          <div><p className="mb-1.5 text-sm font-medium">{t('pick_video')}</p>{pick(videos, video, setVideo, t('pick_no_video'))}</div>
-          <div><p className="mb-1.5 text-sm font-medium">{t('pick_copy')}</p>{pick(mds, copy, setCopy, t('pick_no_copy'))}
-            {copyText && <pre className="mt-2 max-h-40 overflow-auto rounded-md bg-muted/50 p-2 text-xs whitespace-pre-wrap">{copyText}</pre>}</div>
-          <p className="text-xs text-muted-foreground">{t('pick_hint')}</p>
-          {error && <Notice tone="error">{error}</Notice>}
-        </div>
-      )}
-    </Dialog>
-  )
 }

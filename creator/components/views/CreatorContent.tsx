@@ -11,7 +11,8 @@ import { ARTICLE_TYPES, PICKER_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, 
 import { PublishDialog, PublishRecords } from '../ArticlePublish'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import type { DraftControl } from '../Draft'
-import Folder, { PublishPicker, RenameInput } from '../Folder'
+import Folder, { RenameInput } from '../Folder'
+import FolderPublish from '../FolderPublish'
 import type { PresetMode } from '../../lib/presets'
 import { Badge, Button, Dialog, Field, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, inputCls, toast, type Tone } from '../ui'
 import { TaskFailed, TaskRequirements, TaskRunning, useTask } from '../Task'
@@ -346,8 +347,6 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
         {[['', tr('common.all'), list.length] as const, ...(Object.keys(ARTICLE_STATUS) as ArticleStatus[]).map((k) => [k, ARTICLE_STATUS[k]!.label, counts[k] ?? 0] as const)].map(([k, label, n]) =>
           k && !n ? null : <button key={k || 'all'} onClick={() => setStatus(k)} className={chip(status === k)}>{label}<span className="tabular-nums opacity-70">{n}</span></button>,
         )}
-        <span className="mx-1 h-4 border-l border-border" />
-        {ARTICLE_TYPES.map((t) => !counts['t:' + t] ? null : <button key={t} onClick={() => setType(type === t ? '' : t)} className={chip(type === t)}>{(() => { const I = TYPE_META[t].icon; return <I className="size-3" /> })()}{TYPE_META[t].label}<span className="tabular-nums opacity-70">{counts['t:' + t]}</span></button>)}
       </div>
       <div className="overflow-hidden rounded-xl border border-border bg-background">
         {shown.map((a) => {
@@ -359,16 +358,14 @@ function Articles({ ctx, publishedTo, openVersion, list, status, setStatus, type
             const full = ch ? `${CHANNEL_TYPES[ch.type]?.label ?? ''} · ${ch.name}` : label
             return <button key={v.id} type="button" onClick={(e) => { e.stopPropagation(); openVersion(a.id, v.id) }} title={tr('content.open_version', { name: full })} className="inline-flex h-5 max-w-56 cursor-pointer items-center gap-1 rounded border border-border bg-muted/40 px-1.5 text-[11px] text-muted-foreground hover:border-primary/40 hover:text-primary-text">{Icon && <Icon size={11} />}<span className="truncate">{label}</span></button>
           })
-          const t = typeOf(a)
-          const sub = t === 'article' ? a.summary : a.body
+          // 内容没有类型（发的时候才挑发成图文、视频还是长文）；正文是上次发的那份文案，不显示
+          const sub = a.summary
           return (
           <div key={a.id} role="button" tabIndex={0} onClick={() => open(a.id)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(a.id) } }} className={cx('group flex w-full cursor-pointer items-start gap-4 border-b border-border px-4 py-4 text-left last:border-b-0 hover:bg-accent/50', a.unread && 'bg-primary/5 shadow-[inset_3px_0_0_var(--color-primary)]', 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring')}>
             <div className="min-w-0 flex-1">
               <div className="line-clamp-2 text-sm font-medium leading-relaxed [overflow-wrap:anywhere] group-hover:text-primary-text">{a.unread && <span className="mr-1.5 inline-flex h-5 items-center rounded bg-primary px-1.5 align-[1px] text-[11px] font-semibold text-primary-foreground">{tr('article.new_badge')}</span>}{a.title || tr('versions.untitled')}</div>
               {sub && <div className="mt-1 line-clamp-1 text-xs leading-relaxed text-muted-foreground">{sub}</div>}
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-                <TypeBadge type={t} />
-                {!!artifacts[a.id] && <span className="inline-flex items-center gap-1 whitespace-nowrap"><Boxes className="size-3.5" />{tr('article.artifacts_n', { n: artifacts[a.id] })}</span>}
                 <span className="whitespace-nowrap">{tr('content.updated')} {fmtTime(a.updated_at || a.created_at)}</span>
               </div>
               {chips && <div className="mt-2 flex flex-wrap items-center gap-1.5 md:hidden">{chips}</div>}
@@ -619,11 +616,9 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     onChanged()
     open(r.article_id)
   }
-  // 有文件夹的（自媒体的内容都有）：没有「要发的内容」这一块，发布时从文件夹里挑（Folder.tsx PublishPicker）。
-  // 挑的文案的标题要临时填进 title（发布框读它），发布框关了改回内容自己的名字
+  // 有文件夹的（自媒体的内容都有）：没有「要发的内容」这一块，发布时挑发成什么、用文件夹里的哪些文件（FolderPublish）
   const hasFolder = !!work
   const [picking, setPicking] = useState(false)
-  const restoreTitle = useRef('')
   const [renaming, setRenaming] = useState(false)
   const retitle = async (title: string) => {
     setRenaming(false)
@@ -646,7 +641,6 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
             <Button variant="ghost" size="icon-sm" onClick={onBack} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
-            <TypeBadge type={type} />
             {statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -744,16 +738,10 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
       </article>}
 
       {inspiration && <InspirationReferences ctx={ctx} targetType="article" targetId={a.id} onChanged={onChanged} />}
-      <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} linkedRecords={publicationLinks} />
+      <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} linkedRecords={publicationLinks} detailed={hasFolder} />
 
-      <PublishPicker article={a} open={picking} onClose={() => setPicking(false)} onReady={(title) => { restoreTitle.current = title; setPicking(false); onChanged(); setPublishing(true) }} />
-      <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} scope={publishScope} onRewrite={() => setRewritingOpen(true)} onClose={async () => {
-        setPublishing(false)
-        const t = restoreTitle.current
-        restoreTitle.current = ''
-        if (t) await dbPatch('articles', a.id, { title: t }).catch(() => {})
-        onChanged()
-      }} />
+      {hasFolder && <FolderPublish open={picking} ctx={ctx} article={a} onClose={() => { setPicking(false); onChanged() }} />}
+      <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} scope={publishScope} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
       <RewriteDialog open={!!aiOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setAiOpen(null)} onStart={startRewrite} onConvert={convertTo}
         initialMode={aiOpen?.mode} initialPreset={aiOpen?.preset}
         onWork={work ? async (note) => { if (dirty && !(await saveEdit())) return; await startWork(work, a.id, note); setAiOpen(null) } : undefined} />

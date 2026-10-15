@@ -3,7 +3,9 @@ import { facebookPublishRecovery } from '../lib/facebookPublishRecovery'
 import FacebookPublishRecovery from './FacebookPublishRecovery'
 import FacebookComments from './FacebookComments'
 import { useEffect, useState, type ReactNode } from 'react'
-import { AlertTriangle, ArrowUpRight, Loader2, Send, Trash2 } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, Bookmark, Eye, Film, Heart, Loader2, MessageCircle, RefreshCw, Send, Share2, Trash2 } from 'lucide-react'
+import RunButton from './RunButton'
+import { fileSrc } from '../lib/files'
 import SchedulePopover, { ScheduledLine } from './SchedulePopover'
 import { TYPE_META, typeOf } from './ArticleTypes'
 import { Badge, Button, Dialog, Notice, cx, fmtTime, inputCls, toast } from './ui'
@@ -150,8 +152,35 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
   </Dialog>
 }
 
-/** 发布记录：这篇发到了哪些账号、发没发出去。失败的重发、排期的改时间或马上发、没发出去的删记录 */
-export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, onPublish, linkedRecords }: { ctx: Ctx; article: Article; posts: SocialPost[]; pubs: Publication[]; focus?: string; onChanged: () => void; onPublish: () => void; linkedRecords?: ReactNode }) {
+/** detailed 的发布记录：这次发出去的是什么（第一张图或视频、标题），一条内容能发好几次、每次发的不一样 */
+function PostSnapshot({ p }: { p: SocialPost }) {
+  const img = (() => { try { return (JSON.parse(String(p.images || '[]')) as string[])[0] ?? '' } catch { return '' } })()
+  const video = String((p as SocialPost & { video?: string }).video ?? '')
+  if (!img && !video && !p.title) return null
+  return <div className="flex min-w-0 items-center gap-2.5 rounded-md bg-muted/40 p-1.5">
+    {video ? <span className="relative size-10 shrink-0 overflow-hidden rounded bg-black/40"><video src={`${fileSrc(video)}#t=0.5`} preload="metadata" muted playsInline className="size-full object-cover" /><Film className="absolute right-0.5 bottom-0.5 size-3 text-white" /></span>
+      : img ? <img src={fileSrc(img)} alt="" loading="lazy" className="size-10 shrink-0 rounded object-cover" /> : null}
+    <span className="min-w-0 flex-1 truncate text-xs">{p.title || String(p.body ?? '').slice(0, 60)}</span>
+  </div>
+}
+
+/** detailed 的发布记录：互动数据一个个列出来（阅读、点赞、评论、收藏、分享），旁边能马上重新采集这个账号 */
+function PostMetrics({ p, onChanged }: { p: SocialPost; onChanged: () => void }) {
+  const items: [typeof Eye, 'views' | 'likes' | 'comments' | 'collects' | 'shares'][] = [[Eye, 'views'], [Heart, 'likes'], [MessageCircle, 'comments'], [Bookmark, 'collects'], [Share2, 'shares']]
+  return <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+    {items.map(([Icon, k]) => <span key={k} className="inline-flex items-center gap-1.5 text-sm tabular-nums" title={tr(`article.metric_${k}`)}><Icon className="size-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">{tr(`article.metric_${k}`)}</span>{metricText(p, k)}</span>)}
+    <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
+      {p.metrics_at ? tr('article.metrics_at', { when: fmtTime(p.metrics_at) }) : tr('article.metrics_none')}
+      <RunButton inline watch fn="social/social.collect" input={{ channel_id: p.channel_id }} icon={RefreshCw} variant="ghost" onDone={onChanged}>{tr('article.metrics_refresh')}</RunButton>
+    </span>
+  </div>
+}
+
+/**
+ * 发布记录：这篇发到了哪些账号、发没发出去。失败的重发、排期的改时间或马上发、没发出去的删记录。
+ * detailed（自媒体的内容文件夹）：每条还显示这次发的是什么，互动数据一个个列出来、能马上更新
+ */
+export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, onPublish, linkedRecords, detailed = false }: { ctx: Ctx; article: Article; posts: SocialPost[]; pubs: Publication[]; focus?: string; onChanged: () => void; onPublish: () => void; linkedRecords?: ReactNode; detailed?: boolean }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
   const queue = usePublishQueue()
@@ -213,12 +242,14 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
               {ch ? <button type="button" onClick={() => ctx.go('social', { section: 'data', account: ch.id })} title={tr('article.open_account_data')} className="block max-w-full cursor-pointer truncate text-left text-sm font-medium hover:text-primary-text hover:underline">{ch.name}</button>
                 : <span className="block truncate text-sm font-medium">{tr('content.removed_channel')}</span>}
               <span className="block truncate text-xs text-muted-foreground">
-                {p.status === 'published' ? <>{fmtTime(p.published_at)}{p.metrics_at ? ` · ${metricsLine(p)}` : ''}</> : p.status === 'removed' ? tr('social.removed_from', { when: fmtTime(p.removed_at), p: ch ? CHANNEL_TYPES[ch.type]?.label : '' }) : legacy ? tr('article.legacy_version') : ch ? CHANNEL_TYPES[ch.type]?.label : ''}
+                {p.status === 'published' ? <>{fmtTime(p.published_at)}{p.metrics_at && !detailed ? ` · ${metricsLine(p)}` : ''}</> : p.status === 'removed' ? tr('social.removed_from', { when: fmtTime(p.removed_at), p: ch ? CHANNEL_TYPES[ch.type]?.label : '' }) : legacy ? tr('article.legacy_version') : ch ? CHANNEL_TYPES[ch.type]?.label : ''}
               </span>
             </span>
             {p.post_url && p.status === 'published' && <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text">{tr('content.view_live')}<ArrowUpRight className="size-3" /></a>}
             {jobOf(p.id) ? <Badge tone="primary">{jobOf(p.id)!.state === 'running' ? tr('meta.social_status.publishing') : tr('article.pub_queued')}</Badge> : <Badge tone={statusTone(p.status)}>{tr(`meta.social_status.${p.status}`)}</Badge>}
           </div>
+          {detailed && <PostSnapshot p={p} />}
+          {detailed && p.status === 'published' && <PostMetrics p={p} onChanged={onChanged} />}
           {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} fromArticle />}
           <JobLine job={jobOf(p.id)} />
           <FacebookComments post={p} channel={ch} />
