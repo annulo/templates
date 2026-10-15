@@ -62,7 +62,7 @@ const Video = Node.create({
   }),
   parseHTML: () => [{ tag: 'video[src]' }],
   renderHTML: ({ HTMLAttributes }) => ['video', mergeAttributes(HTMLAttributes, { controls: 'true', preload: 'metadata', style: 'max-width:100%;height:auto' })],
-  addNodeView: () => ({ node }) => {
+  addNodeView: () => ({ node, getPos, editor }) => {
     const dom = document.createElement('div')
     dom.className = 'rich-video'
     dom.contentEditable = 'false'
@@ -72,14 +72,34 @@ const Video = Node.create({
     v.style.aspectRatio = node.attrs.width && node.attrs.height ? `${node.attrs.width} / ${node.attrs.height}` : '16 / 9'
     v.preload = 'metadata'
     v.muted = true
-    const tag = document.createElement('span')
+    // 左上角「视频」：一直能点，点了暂停并选中这一块（播放的时候视频本身的点击归播放器）
+    const tag = document.createElement('button')
+    tag.type = 'button'
+    tag.className = 'rich-video-tag'
     tag.textContent = tr('editor.video_tag')
+    tag.title = tr('editor.video_select')
     const play = document.createElement('button')
     play.type = 'button'
     play.className = 'rich-video-play'
     play.title = tr('editor.video_play')
     play.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
     let playing = false
+    // 暂停、放完了回到能选中的样子（第一帧 + 播放按钮），点视频就是选中
+    const idle = () => {
+      playing = false
+      dom.classList.remove('playing')
+      v.controls = false
+    }
+    v.addEventListener('pause', idle)
+    v.addEventListener('ended', idle)
+    tag.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      v.pause()
+      idle()
+      const pos = typeof getPos === 'function' ? getPos() : undefined
+      if (typeof pos === 'number') editor.chain().focus().setNodeSelection(pos).run()
+    })
     play.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
@@ -93,7 +113,7 @@ const Video = Node.create({
     })
     dom.append(v, tag, play)
     // 播放起来以后，视频上的点击、拖进度条交给播放器，编辑器不当成选中、拖动
-    return { dom, stopEvent: (e: Event) => e.target === play || (playing && e.target === v), ignoreMutation: () => true }
+    return { dom, stopEvent: (e: Event) => e.target === play || e.target === tag || (playing && e.target === v), ignoreMutation: () => true }
   },
 })
 
