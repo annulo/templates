@@ -728,8 +728,8 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
       key: "reviews:" + workspace,
       title: cw(workspace + '_reviews'),
       why: m("review_rule"),
-      view: workspace === 'website' ? 'metrics' : 'social-metrics',
-      extra: {},
+      view: workspace === 'website' ? 'metrics' : 'social-content',
+      extra: workspace === 'website' ? {} : { ownership: 'reviews' },
       label: m("record_review"),
     });
   for (const r of data?.roles || [])
@@ -814,7 +814,7 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
       </Panel>
       <Panel title={cw('social_ops')}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <MetricCard label={cw('social_content')} value={data ? entries.filter(e => e.workspaces.includes('social')).length : undefined} onClick={() => ctx.go('social-content')}
+        <MetricCard label={cw('social_content')} value={data ? entries.filter(e => e.workspaces.includes('social') && !e.post).length : undefined} onClick={() => ctx.go('social-content')}
         />
         <MetricCard
           label={m("account_gaps")}
@@ -824,7 +824,7 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
         <MetricCard
           label={m("due_reviews")}
           value={due('social')}
-          onClick={() => ctx.go("social-metrics")}
+          onClick={() => ctx.go("social-content", { ownership: "reviews" })}
         />
       </div>
       </Panel>

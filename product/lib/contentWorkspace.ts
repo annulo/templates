@@ -4,10 +4,18 @@ export const editableContentStages = ['planned', 'creating', 'draft', 'ready', '
 export type EditableContentStage = typeof editableContentStages[number]
 export type ContentData = {
   articles: any[]; topics: any[]; plans: any[]; posts: any[]; publications: any[];
-  channels: any[]; roles?: any[]; accounts?: any[]; [key: string]: any
+  channels: any[]; roles?: any[]; accounts?: any[];
+  /** 每篇社媒帖子（social_posts 的 id）近 7 天涨了多少，content-workspace.context 从 social_post_daily 算 */
+  post_gains?: Record<string, Partial<PostMetrics>>; [key: string]: any
 }
+export const metricKeys = ['views', 'likes', 'comments', 'collects', 'shares'] as const
+export type PostMetrics = Record<typeof metricKeys[number], number>
 export type ContentEntry = {
   key: string; title: string; article?: any; topic?: any; plan?: any;
+  /** 没有出处的社媒帖子（多是在平台上直接发、采集时发现的）：自己一行，关联到内容或存为内容后并进那一行 */
+  post?: any;
+  /** 没有出处、但平台上的 id 和这条内容确认过的发布链接对得上的帖子：数据算进这条内容 */
+  linkedPosts?: any[];
   workspaces: ContentWorkspace[]; stage: ContentStage; updatedAt: string;
   publicationUrls: string[];
   /** User-confirmed links (publication_links); editable, unlike publication records and receipts. */
@@ -75,6 +83,8 @@ export function legacyContentWorkspace(params: Record<string, string>, entries: 
 export function entryAccountIds(entry: ContentEntry, data: ContentData, workspace: ContentWorkspace, publishedOnly = false): string[] {
   const ids = new Set<string>()
   const add = (id?: string) => { if (id) ids.add(id) }
+  if (entry.post) add(entry.post.channel_id)
+  if (workspace === 'social') entry.linkedPosts?.forEach(p => add(p.channel_id))
   if (!publishedOnly) {
     [entry.article?.target_account_id, entry.article?.channel_id, entry.topic?.target_account_id, entry.plan?.target_account_id, entry.plan?.target_account?.id].forEach(add)
   }
@@ -174,5 +184,41 @@ export function contentEntries(data: ContentData, workspace?: ContentWorkspace):
     push('topic:' + topic.id, undefined, topic, article)
   }
   for (const article of data.articles) if (!usedArticles.has(article.id)) push('article:' + article.id, undefined, data.topics.find(t => t.id === article.topic_id), article)
+  // 用户确认过的发布链接（手动关联的、核对过的回执）指向的帖子，按平台上的 id 对：数据算进这条内容，不再单独成行
+  const matched = new Set<string>()
+  if (workspace !== 'website') for (const entry of entries) {
+    const urls = [...entryLinkedUrls(entry, 'social'), ...(entry.plan && platformWorkspace(entry.plan.platform) === 'social' ? [publishedUrl(parse(entry.plan.receipt)?.url)] : [])].filter(Boolean)
+    if (!urls.length) continue
+    const segments = new Set(urls.flatMap(u => { try { return new URL(u).pathname.split('/').filter(Boolean) } catch { return [] } }))
+    const posts = data.posts.filter(p => !p.article_id && p.post_id && segments.has(String(p.post_id)))
+    if (posts.length) { entry.linkedPosts = posts; posts.forEach(p => matched.add(p.id)) }
+  }
+  if (workspace !== 'website') for (const post of data.posts) if (!post.article_id && !matched.has(post.id)) {
+    const url = publishedUrl(post.post_url)
+    entries.push({ key: 'post:' + post.id, post, workspaces: ['social'], stage: postStage(post.status),
+      title: post.title || String(post.body || '').split('\n')[0].slice(0, 80),
+      updatedAt: post.published_at || post.updated_at || post.created_at || '',
+      publicationUrls: url && post.status === 'published' ? [url] : [], linkedUrls: [] })
+  }
   return entries.sort((a, b) => (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0))
+}
+
+const postStage = (status?: string): ContentStage =>
+  status === 'published' ? 'published' : status === 'scheduled' || status === 'publishing' ? 'scheduled'
+    : status === 'failed' ? 'blocked' : status === 'removed' ? 'archived' : status === 'approved' ? 'ready' : 'draft'
+
+/** 一条内容发出去的社媒帖子；没发出去的不算数据 */
+export function entryPosts(entry: ContentEntry, data: ContentData): any[] {
+  if (entry.post) return entry.post.status === 'published' ? [entry.post] : []
+  const own = entry.article ? data.posts.filter(p => p.article_id === entry.article.id) : []
+  return [...own, ...(entry.linkedPosts || [])].filter(p => p.status === 'published')
+}
+
+/** 一条内容在各账号的累计数据，加近 7 天涨了多少（gain 为 null：还没有每天的记录，算不出来）；没发出去的是 null */
+export function entryMetrics(entry: ContentEntry, data: ContentData): (PostMetrics & { gain: PostMetrics | null; posts: number }) | null {
+  const posts = entryPosts(entry, data)
+  if (!posts.length) return null
+  const sum = (rows: any[]) => Object.fromEntries(metricKeys.map(k => [k, rows.reduce((s, r) => s + (Number(r?.[k]) || 0), 0)])) as PostMetrics
+  const gains = posts.map(p => data.post_gains?.[p.id]).filter(Boolean)
+  return { ...sum(posts), gain: gains.length ? sum(gains) : null, posts: posts.length }
 }

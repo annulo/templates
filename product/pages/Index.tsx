@@ -4,7 +4,7 @@ import ProductOverview from "../components/views/ProductOverview";
 import Wizard from "../components/wizard/Wizard";
 import ProductFacts from "../components/views/ProductFacts";
 import GrowthPlanning from "../components/views/GrowthPlanning";
-import { AccountStrategies, GrowthReviews, useMarketing } from "../components/MarketingWorkspace";
+import { AccountStrategies, useMarketing } from "../components/MarketingWorkspace";
 import Campaigns from "../components/views/Campaigns";
 import ProductMetrics from "../components/views/ProductMetrics";
 import ProductContent from "../components/views/ProductContent";
@@ -230,11 +230,9 @@ export default function Index() {
     if (view === "reports")
       return <ProductOverview ctx={ctx} tab="weekly" onTab={(v) => go(v === "weekly" ? "reports" : "overview")}
         weekly={<Reports ctx={ctx} params={params} setParam={setParam} embedded />} />;
-    if (view === "social")
-      return <SocialAccounts ctx={ctx} params={params} setParam={setParam} />;
-    if (view === "social-metrics")
-      return <div className="space-y-6"><Social ctx={ctx} params={{ ...params, section: "data" }} setParam={setParam} hideTabs
-        title={tr('workspace.social_reviews')} onSectionChange={(section, extra) => ctx.go(section === 'data' ? 'social-metrics' : 'social', extra)} /><GrowthReviews ctx={ctx} workspace="social" /></div>;
+    // 老的「自媒体数据与复盘」并进了账号页的「数据」（复盘在自媒体内容的「待复盘」），旧链接打开账号数据
+    if (view === "social" || view === "social-metrics")
+      return <SocialAccounts ctx={ctx} params={view === "social-metrics" ? { ...params, section: "data" } : params} setParam={setParam} />;
     if (view === "channels")
       return (
         <Channels
@@ -258,7 +256,7 @@ export default function Index() {
     return <ProductOverview ctx={ctx} tab="today" onTab={(v) => go(v === "weekly" ? "reports" : "overview")} />;
   };
   // 每周总结并进了工作台：旧的 view=reports 链接仍然能打开，侧栏高亮工作台
-  const navView: View = view === "reports" ? "overview" : view;
+  const navView: View = view === "reports" ? "overview" : view === "social-metrics" ? "social" : view;
   const groupActive = (group: (typeof NAV)[number]) =>
     group.sections.some((s) => s.items.some((n) => n.view === navView));
   const navClass = (active: boolean) =>
@@ -478,10 +476,12 @@ export default function Index() {
 function SocialAccounts({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
   const { data, error, reload } = useMarketing(ctx);
   return <div className="space-y-6">
-    <Social ctx={ctx} params={{ ...params, section: 'overview' }} setParam={setParam} hideTabs title={tr('workspace.account_position')}
-      onSectionChange={(section, extra) => ctx.go(section === 'data' ? 'social-metrics' : 'social', extra)} />
-    {error && <Notice tone="error">{error}</Notice>}
-    <h2 className="text-lg font-semibold">{tr('workspace.account_strategies')}</h2>
-    <AccountStrategies ctx={ctx} data={data} reload={reload} />
+    <Social ctx={ctx} params={params} setParam={setParam} title={tr('nav.social')}
+      onSectionChange={(section, extra) => ctx.go('social', { ...(section === 'data' ? { section } : {}), ...extra })} />
+    {params.section !== 'data' && <>
+      {error && <Notice tone="error">{error}</Notice>}
+      <h2 className="text-lg font-semibold">{tr('workspace.account_strategies')}</h2>
+      <AccountStrategies ctx={ctx} data={data} reload={reload} />
+    </>}
   </div>;
 }

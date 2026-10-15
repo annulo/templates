@@ -1,6 +1,6 @@
 import { context as marketingContext } from './marketing'
 import { L } from './_i18n'
-import { contentEntries, editableContentStages, publishedUrl, type ContentData, type EditableContentStage, type ContentWorkspace } from '../lib/contentWorkspace'
+import { contentEntries, editableContentStages, metricKeys, publishedUrl, type ContentData, type EditableContentStage, type ContentWorkspace, type PostMetrics } from '../lib/contentWorkspace'
 export const cloud = ['context']
 
 export function context(_input: {}, ctx: any) {
@@ -9,8 +9,56 @@ export function context(_input: {}, ctx: any) {
   let posts = [], publications = []
   try { posts = read('social_posts') } catch {}
   try { publications = read('publications') } catch {}
-  return { ...marketing, articles: read('articles'), topics: read('topics'), posts, publications,
+  let post_gains = {}
+  try { post_gains = postGains(posts, 7, ctx) } catch {}
+  return { ...marketing, articles: read('articles'), topics: read('topics'), posts, publications, post_gains,
     channels: [...read('channels'), ...marketing.accounts] }
+}
+
+/** 本机时区的日期 YYYY-MM-DD（和社媒插件采集时记的日期一致） */
+function localDay(d: Date) {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/** 每篇帖子近 days 天涨了多少，口径和社媒插件的 social/stats 一样：最新一天 − 期初前最后一天；期初前没记录、又是这段时间发的从 0 算，否则算不出来、不返回 */
+function postGains(posts: any[], days: number, ctx: any): Record<string, PostMetrics> {
+  const start = localDay(new Date(Date.now() - (days - 1) * 86400_000))
+  const metrics = metricKeys.map(k => ({ op: 'last', field: k, order_by: 'date', as: k }))
+  const byPost = (list: any[]) => Object.fromEntries(list.map(r => [r.post_id, r]))
+  const last = byPost(ctx.db.aggregate('social_post_daily', { group_by: ['post_id'], metrics, limit: 10000 }).list)
+  const base = byPost(ctx.db.aggregate('social_post_daily', { filter: [{ field: 'date', op: 'lt', value: start }], group_by: ['post_id'], metrics, limit: 10000 }).list)
+  const gains: Record<string, PostMetrics> = {}
+  for (const p of posts) {
+    const now = last[p.id], before = base[p.id]
+    if (!now || (!before && !(Date.parse(p.published_at || '') >= Date.parse(start + 'T00:00:00')))) continue
+    gains[p.id] = Object.fromEntries(metricKeys.map(k => [k, (Number(now[k]) || 0) - (Number(before?.[k]) || 0)])) as PostMetrics
+  }
+  return gains
+}
+
+/** 没有出处的社媒帖子（多是在平台上直接发的）并进内容：给了 article_id 就关联到那条内容，没给就用帖子存一条内容。只写帖子的 article_id，不改帖子本身和它的数据 */
+export function adoptPost(input: { post_id: string; article_id?: string }, ctx: any) {
+  const post = ctx.db.get('social_posts', input?.post_id)
+  if (!post) throw new Error(L(ctx, '没有这条帖子', 'No such post'))
+  if (post.article_id) throw new Error(L(ctx, '这条帖子已经属于一条内容', 'This post already belongs to a content item'))
+  let id = input.article_id
+  if (id) {
+    if (!ctx.db.get('articles', id)) throw new Error(L(ctx, '没有这条内容', 'No such content'))
+  } else {
+    const account = ctx.db.get('social_accounts', post.channel_id)
+    const now = new Date().toISOString(), body = String(post.body || '')
+    id = ctx.db.insert('articles', {
+      title: String(post.title || body.split('\n')[0] || L(ctx, '未命名内容', 'Untitled')).slice(0, 120),
+      type: post.video ? 'video' : 'post', body, summary: '', tags: post.tags || '[]', images: post.images || '[]', cover_text: post.cover_text || '',
+      ...(post.video ? { video: post.video } : {}),
+      status: post.status === 'published' ? 'published' : 'draft', workspace: 'social',
+      target_platform: account?.type || '', target_account_id: post.channel_id || '',
+      published_at: post.published_at || '', created_at: post.published_at || post.created_at || now, updated_at: now,
+    }).id
+  }
+  ctx.db.update('social_posts', post.id, { article_id: id })
+  return { article_id: id, post_id: post.id }
 }
 
 /** Ownership is an explicit, reversible metadata edit; no content or publication is moved or copied. */
@@ -19,6 +67,7 @@ export function assign(input: { key: string; workspace: ContentWorkspace }, ctx:
   // Goja wraps a database row again on each access; normalize it before following cyclic links.
   const entry = contentEntries(JSON.parse(JSON.stringify(context({}, ctx)))).find(e => e.key === input.key)
   if (!entry) throw new Error('Content no longer exists')
+  if (entry.post) throw new Error('A platform post is linked with content-workspace.adoptPost')
   if (entry.workspaces.some(w => w !== input.workspace)) throw new Error('This content already has a destination. Keep its existing publication history and create a linked version for another workspace.')
   for (const [table, row] of [['marketing_plans', entry.plan], ['topics', entry.topic], ['articles', entry.article]] as const)
     if (row && row.workspace !== input.workspace) ctx.db.update(table, row.id, { workspace: input.workspace })
