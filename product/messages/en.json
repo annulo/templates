@@ -2267,6 +2267,9 @@
     "verified_receipt": "Verified publication record",
     "edit_status": "Edit status",
     "status_auto": "Automatic",
-    "status_edit_note": "Every status can be edited again. Changing task status does not republish content, cancel scheduling or delete publication records."
+    "status_edit_note": "Every status can be edited again. Changing task status does not republish content, cancel scheduling or delete publication records.",
+    "linked_publications": "Linked publications",
+    "published_url": "Published content URL",
+    "published_url_hint": "Paste the actual published content URL to open it from publication records. Existing links appear automatically; you can add more."
   }
 }

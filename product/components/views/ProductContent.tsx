@@ -5,7 +5,7 @@ import { WritingBriefDialog } from '../ContentEvidence'
 import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { MarketingImport, MarketingPlans } from '../MarketingWorkspace'
-import ContentStatus from '../ContentStatus'
+import ContentStatus, { PublicationLinks } from '../ContentStatus'
 import { TaskFailed, TaskLaunchButton, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { Button, Dialog, Field, Notice, PageHeader, Skeleton, cx, inputCls, toast } from '../ui'
 import Select from '../Select'
@@ -87,6 +87,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
     reload(); setParam('article', result.article_id)
   }
   const selectedArticle = data?.articles.find(a => a.id === params.article)
+  const selectedEntry = selectedArticle && entries.find(e => e.article?.id === selectedArticle.id)
   const selectedTopic = !params.article && data?.topics.find(t => t.id === params.topic)
   const published = selectedArticle && entries.some(e => e.article?.id === selectedArticle.id && e.stage === 'published')
   const destination = (entry: ContentEntry) => {
@@ -100,6 +101,8 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
     {selectedArticle ? <ArticleDetail key={selectedArticle.id} ctx={ctx} a={selectedArticle} all={data!.articles}
       posts={data!.posts.filter(p => p.article_id === selectedArticle.id)} pubs={data!.publications.filter(p => p.article_id === selectedArticle.id)}
       focus={params.version} displayStatus={published ? 'published' : 'draft'} inspiration publishScope={workspace}
+      statusControl={selectedEntry ? <ContentStatus entry={selectedEntry} workspace={workspace} onChanged={reload} /> : undefined}
+      publicationLinks={selectedEntry?.publicationUrls.length ? <PublicationLinks urls={selectedEntry.publicationUrls} /> : undefined}
       open={id => setParam('article', id)} onBack={() => { setParam('article', ''); setParam('version', '') }} onChanged={reload} /> : <>
       <PageHeader title={w(workspace + '_content')} desc={w(workspace + '_desc')} actions={<>
         <Button onClick={() => openNew()}><Plus />{w('new_content')}</Button>
@@ -135,6 +138,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
                 {entry.workspaces.length > 1 && <span>{w('shared_content')}</span>}
               </div>
               {(entry.topic?.angle || entry.plan?.notes) && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{entry.topic?.angle || entry.plan?.notes}</p>}
+              {!!entry.publicationUrls.length && <div className="mt-3"><PublicationLinks urls={entry.publicationUrls} /></div>}
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               <ContentStatus entry={entry} workspace={workspace} onChanged={reload} />

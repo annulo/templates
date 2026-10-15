@@ -21,7 +21,7 @@ import { runLocal } from "../lib/shuttle";
 import { tr } from "../lib/i18n";
 import type { Ctx } from "./views/types";
 import { contentEntries, platformWorkspace, reviewWorkspace, type ContentData, type ContentEntry, type ContentWorkspace } from "../lib/contentWorkspace";
-import ContentStatus from './ContentStatus';
+import ContentStatus, { PublicationLinks } from './ContentStatus';
 
 export const m = (key: string, vars?: Record<string, unknown>) =>
   tr("marketing." + key, vars);
@@ -419,6 +419,7 @@ export function MarketingPlans({
               <a href={active.receipt.url} target="_blank" rel="noreferrer" className="mt-2 block break-all text-xs text-primary-text">{active.receipt.url}</a>
               <p className="mt-2 text-xs text-muted-foreground">{m('published_time')}：{new Date(active.receipt.published_at).toLocaleString(undefined, { timeZone: 'Asia/Shanghai' })}</p>
             </Panel>}
+            {!!contentEntry?.publicationUrls.length && <Panel title={tr('article.records')}><PublicationLinks urls={contentEntry.publicationUrls} /></Panel>}
             <div className="flex flex-wrap items-center gap-2">
               {active.article ? (
                 <Button
