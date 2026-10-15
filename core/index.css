@@ -215,6 +215,10 @@
 .rich-content .rich-video video { display: block; width: 100%; height: auto; border-radius: 8px; background: #000; pointer-events: none; }
 .rich-content .rich-video span { position: absolute; top: 8px; left: 8px; border-radius: 4px; background: rgb(0 0 0 / 0.6); padding: 1px 6px; font-size: 11px; color: #fff; pointer-events: none; }
 .rich-content .rich-video.ProseMirror-selectednode { outline: 2px solid var(--ring); outline-offset: 2px; }
+.rich-content .rich-video-play { position: absolute; top: 50%; left: 50%; display: flex; width: 52px; height: 52px; transform: translate(-50%, -50%); align-items: center; justify-content: center; border-radius: 9999px; background: rgb(0 0 0 / 0.55); color: #fff; cursor: pointer; }
+.rich-content .rich-video-play:hover { background: rgb(0 0 0 / 0.75); }
+.rich-content .rich-video.playing video { pointer-events: auto; }
+.rich-content .rich-video.playing .rich-video-play, .rich-content .rich-video.playing span { display: none; }
 .rich-content .is-empty::before { content: attr(data-placeholder); color: var(--muted-foreground); opacity: 0.6; float: left; height: 0; pointer-events: none; }
 
 /* 运营后台在 Shuttle 里用，不要平台角落的「Made by Creght」标记 */

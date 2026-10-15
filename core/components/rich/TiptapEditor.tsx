@@ -17,7 +17,8 @@ import type { RichEditorProps } from '../RichEditor'
 
 /**
  * 正文里的视频：存成 <video src controls>，一个整块（不能在里面打字）。
- * 编辑器里不用原生播放器：点击会被播放控件吃掉，选不中、拖不动。显示成一个能选中的块（画面 + 角上「视频」），选中了能删、能拖；预览、发出去的是正常的播放器
+ * 编辑器里先不用原生播放器：点击会被播放控件吃掉，选不中、拖不动。显示成一个能选中的块（第一帧 + 角上「视频」），点别处选中、能删能拖；
+ * 中间的播放按钮点了才变成正常的播放器（这时点视频是在控制播放，编辑器不管）。预览、发出去的是正常的播放器
  */
 const Video = Node.create({
   name: 'video',
@@ -39,8 +40,25 @@ const Video = Node.create({
     v.muted = true
     const tag = document.createElement('span')
     tag.textContent = tr('editor.video_tag')
-    dom.append(v, tag)
-    return { dom }
+    const play = document.createElement('button')
+    play.type = 'button'
+    play.className = 'rich-video-play'
+    play.title = tr('editor.video_play')
+    play.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+    let playing = false
+    play.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      playing = true
+      dom.classList.add('playing')
+      v.src = node.attrs.src ?? ''
+      v.controls = true
+      v.muted = false
+      void v.play()
+    })
+    dom.append(v, tag, play)
+    // 播放起来以后，视频上的点击、拖进度条交给播放器，编辑器不当成选中、拖动
+    return { dom, stopEvent: (e: Event) => e.target === play || (playing && e.target === v), ignoreMutation: () => true }
   },
 })
 
