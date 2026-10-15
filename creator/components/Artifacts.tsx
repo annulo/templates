@@ -52,7 +52,7 @@ function Artifacts({ article: a, all, onChanged }: { article: Article; all: Arti
     } catch (e) { setError((e as Error).message) } finally { setAsking(false) }
   }
   return (
-    <section className="mt-6 space-y-3">
+    <section className="@container mt-6 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-base font-semibold">{tr('artifacts.title')}<span className="ml-1.5 text-sm font-normal text-muted-foreground">{items.length}</span></h2>
@@ -64,7 +64,10 @@ function Artifacts({ article: a, all, onChanged }: { article: Article; all: Arti
       </div>
       <TaskRunning runs={runs} title={() => tr('artifacts.making_from_doc')} desc={tr('artifacts.making_desc')} />
       {error && <Notice tone="error">{error}</Notice>}
-      {items.map((x) => <ArtifactCard key={x.id} x={x} article={a} articles={all} current={x === current} onChanged={changed} />)}
+      {/* 按面板宽度（不是窗口宽度：右边还有助手）排 1 / 2 / 3 列 */}
+      <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @3xl:grid-cols-3">
+        {items.map((x) => <ArtifactCard key={x.id} x={x} article={a} articles={all} current={x === current} onChanged={changed} />)}
+      </div>
     </section>
   )
 }
@@ -91,12 +94,12 @@ function ArtifactCard({ x, article, articles, current, onChanged }: { x: Asset; 
     await deleteLocalFile(x.url)
   })
   return (
-    <div className={cx('flex flex-col gap-4 rounded-xl border p-3 sm:flex-row', current ? 'border-primary/40 bg-primary/5' : 'border-border')}>
-      <div className="w-full shrink-0 sm:w-56 [&>:first-child]:overflow-hidden [&>:first-child]:rounded-lg">
+    <div className={cx('flex min-w-0 flex-col gap-3 rounded-xl border p-3', current ? 'border-primary/40 bg-primary/5' : 'border-border')}>
+      <div className="w-full [&>:first-child]:overflow-hidden [&>:first-child]:rounded-lg">
         <AssetPreview a={x} className="aspect-video" />
         <FileActions url={x.url} className="mt-1" />
       </div>
-      <div className="min-w-0 flex-1 space-y-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           {current && <Badge tone="primary">{tr('artifacts.in_use')}</Badge>}
           <span className="text-xs text-muted-foreground">{fmtTime(x.created_at)}</span>
@@ -111,11 +114,11 @@ function ArtifactCard({ x, article, articles, current, onChanged }: { x: Asset; 
           </div>
         ) : x.note?.trim() ? (
           <div>
-            <p className={cx('text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]', !full && 'line-clamp-4')}>{x.note}</p>
-            {x.note.length > 160 && <button type="button" onClick={() => setFull((v) => !v)} className="cursor-pointer text-xs text-primary-text hover:underline">{full ? tr('artifacts.collapse') : tr('artifacts.expand')}</button>}
+            <p className={cx('text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]', !full && 'line-clamp-3')}>{x.note}</p>
+            {x.note.length > 90 && <button type="button" onClick={() => setFull((v) => !v)} className="cursor-pointer text-xs text-primary-text hover:underline">{full ? tr('artifacts.collapse') : tr('artifacts.expand')}</button>}
           </div>
         ) : <p className="text-sm text-muted-foreground">{tr('artifacts.no_note')}</p>}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
           {canUse && <Button size="sm" variant="outline" disabled={busy} onClick={use}><Check />{tr('artifacts.use')}</Button>}
           {!editing && <Button size="sm" variant="ghost" onClick={() => setEditing(true)}><Pencil />{tr('artifacts.edit_note')}</Button>}
           {x.chat_id && <Button size="sm" variant="ghost" onClick={() => openChat(x.chat_id!)}><MessageSquareText />{tr('artifacts.open_chat')}</Button>}
