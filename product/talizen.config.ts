@@ -8,6 +8,10 @@ const themeScript = `<script>(function(){
   try{var s=localStorage.getItem('shuttle.theme');if(s==='light'||s==='dark')t=s;else if(matchMedia('(prefers-color-scheme: light)').matches)t='light'}catch(e){}
   apply(t);
   addEventListener('message',function(e){if(e.origin===location.origin&&e.data&&e.data.type==='shuttle:theme')apply(e.data.theme)});
+  // 后退前进从缓存里拿回来的页面不重跑脚本、错过了切主题的消息；别的窗口切了主题这里收不到消息：都按记住的重新设一次
+  function saved(){try{var s=localStorage.getItem('shuttle.theme');if(s==='light'||s==='dark')apply(s)}catch(e){}}
+  addEventListener('pageshow',function(e){if(e.persisted)saved()});
+  addEventListener('storage',function(e){if(e.key==='shuttle.theme')saved()});
 })()</script>`;
 
 export default {
