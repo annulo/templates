@@ -403,6 +403,8 @@
     "prev": "Previous month",
     "next": "Next month",
     "future_only": "Pick a time in the future",
-    "ok": "Done"
+    "ok": "Done",
+    "clear": "Publish now instead",
+    "schedule": "Schedule"
   }
 }

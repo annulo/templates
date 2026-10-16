@@ -1710,8 +1710,6 @@
     "expired": "登录过期了，先重新登录",
     "too_long": "正文 {n} 字，超过上限 {max}",
     "not_passed": "没通过",
-    "now": "现在发",
-    "later": "定个时间",
     "need_images": "图文要至少一张图",
     "need_video": "要选一个视频",
     "need_text": "要有正文：挑一份 .md",

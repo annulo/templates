@@ -1710,8 +1710,6 @@
     "expired": "Login expired; log in again first",
     "too_long": "Text is {n} characters, over the {max} limit",
     "not_passed": "Didn't pass",
-    "now": "Publish now",
-    "later": "Schedule",
     "need_images": "An image post needs at least one image",
     "need_video": "Pick a video",
     "need_text": "Needs text: pick a .md file",

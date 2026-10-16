@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Popover } from 'radix-ui'
 import { DayPicker, getDefaultClassNames } from 'react-day-picker'
 import { zhCN } from 'date-fns/locale/zh-CN'
-import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarClock, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button, cx, fmtUntil } from './ui'
 import { isEn, numLocale, tr } from '../lib/i18n'
 
@@ -32,6 +32,39 @@ export default function DateTimeField({ value, onChange, disabled, className }: 
       </Popover.Trigger>
       <Popover.Portal container={container ?? undefined}>
         <Popover.Content align="start" sideOffset={6} collisionPadding={8}
+          className="z-50 max-h-(--radix-popover-content-available-height) overflow-y-auto rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg outline-none">
+          <Picker value={value} onDone={(v) => { if (v) onChange(v); setOpen(false) }} />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
+
+/**
+ * 排期的小标签（照 X、LinkedIn 发帖框的做法，放在弹窗底栏发布按钮旁边）：没定时间是一个日历图标按钮，默认「现在发」；
+ * 点开选好时间后变成「10月16日周五 14:00 · 15 分钟后 ×」，点标签改时间，点 × 改回现在发（onChange('')）。
+ */
+export function DateTimeChip({ value, onChange, disabled, label: hint }: { value: string; onChange: (v: string) => void; disabled?: boolean; /** 没定时间时图标的提示 */ label?: string }) {
+  const [open, setOpen] = useState(false)
+  const btn = useRef<HTMLButtonElement>(null)
+  const [container, setContainer] = useState<HTMLElement | null>(null)
+  const d = parse(value)
+  const until = d ? fmtUntil(d.toISOString()) : null
+  return (
+    <Popover.Root open={open} onOpenChange={(o) => { if (o) setContainer(btn.current?.closest('dialog') ?? null); setOpen(o) }}>
+      <span className="inline-flex min-w-0 items-center">
+        <Popover.Trigger asChild disabled={disabled}>
+          <button ref={btn} type="button" title={d ? undefined : hint} aria-label={d ? undefined : hint}
+            className={cx('inline-flex h-8 min-w-0 cursor-pointer items-center gap-1.5 rounded-md text-sm disabled:cursor-default disabled:opacity-50',
+              d ? 'border border-primary/40 bg-primary/10 pl-2.5 pr-1 text-primary-text hover:bg-primary/15' : 'w-8 justify-center text-muted-foreground hover:bg-accent hover:text-foreground')}>
+            <CalendarClock className="size-4 shrink-0" />
+            {d && <span className="truncate">{label(d)}{until && <span className={cx('ml-1.5 text-xs', until.due ? 'text-destructive' : 'opacity-70')}>{until.due ? tr('datetime.past') : until.rel}</span>}</span>}
+            {d && <span role="button" aria-label={tr('datetime.clear')} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onChange('') }} className="ml-0.5 rounded p-0.5 hover:bg-primary/20"><X className="size-3.5" /></span>}
+          </button>
+        </Popover.Trigger>
+      </span>
+      <Popover.Portal container={container ?? undefined}>
+        <Popover.Content align="start" side="top" sideOffset={6} collisionPadding={8}
           className="z-50 max-h-(--radix-popover-content-available-height) overflow-y-auto rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg outline-none">
           <Picker value={value} onDone={(v) => { if (v) onChange(v); setOpen(false) }} />
         </Popover.Content>
@@ -114,7 +147,8 @@ function Picker({ value, onDone }: { value: string; onDone: (v: string | null) =
             day: 'flex-1 p-px text-center',
             day_button: 'flex h-(--cell) w-full cursor-pointer items-center justify-center rounded-md text-sm hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent',
             selected: '[&>button]:bg-primary [&>button]:font-medium [&>button]:text-primary-foreground [&>button]:hover:bg-primary',
-            today: '[&>button]:font-semibold [&>button]:text-primary-text',
+            // 今天用主色字；今天又被选中时让选中的白字（data-selected 是 react-day-picker 给格子加的）
+            today: '[&:not([data-selected=true])>button]:text-primary-text [&>button]:font-semibold',
             outside: 'text-muted-foreground/60',
             disabled: 'opacity-30',
             hidden: 'invisible',

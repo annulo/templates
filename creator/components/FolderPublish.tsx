@@ -4,11 +4,11 @@ import AssetPicker from './AssetPicker'
 import RichEditor from './RichEditor'
 import { ChannelAvatar } from './ArticlePublish'
 import { Badge, Button, Dialog, Notice, Segmented, cx, inputCls, toast } from './ui'
-import DateTimeField from './DateTimePicker'
+import { DateTimeChip } from './DateTimePicker'
 import { IMAGE, MD, VIDEO, base, fmtSize, isDraft, joinPath, parent, workSrc, type Entry } from './Folder'
 import { enqueue } from '../lib/publishQueue'
 import { fileSrc } from '../lib/files'
-import { useT } from '../lib/i18n'
+import { tr, useT } from '../lib/i18n'
 import { CHANNEL_TYPES } from '../lib/channels'
 import { runLocal, type Article } from '../lib/shuttle'
 import { SOCIAL, loggedInElsewhere, useElsewhere } from '../lib/social'
@@ -24,13 +24,6 @@ import type { Ctx } from './views/types'
 
 type Kind = 'post' | 'video' | 'article'
 
-/** 排期默认：下一个整点（datetime-local 的格式） */
-function nextHour() {
-  const d = new Date(Date.now() + 3600_000)
-  d.setMinutes(0, 0, 0)
-  const pad = (x: number) => String(x).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 /** 选中的图片、视频：文件夹里的是相对路径，资料库的是地址 */
 type Media = { ref: string; src: string; name: string }
 
@@ -93,7 +86,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   const [touched, setTouched] = useState({ images: false, video: false })
   const [picker, setPicker] = useState<'image' | 'video' | null>(null)
   const [picked, setPicked] = useState<string[]>([])
-  const [when, setWhen] = useState<'now' | 'later'>('now')
+  // 定时发布的时间（本地时间 'YYYY-MM-DDTHH:mm'），空的是现在发
   const [at, setAt] = useState('')
   const [result, setResult] = useState<Record<string, string>>({})
   const [running, setRunning] = useState(false)
@@ -107,7 +100,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   // 打开时：读文件夹，猜发成什么，挑文案（名字带「文案 / copy」的优先，再是离视频近的），配好图、视频
   useEffect(() => {
     if (!open) return
-    setFiles(null); setError(''); setResult({}); setPicked([]); setWhen('now'); setAt(nextHour()); setTouched({ images: false, video: false })
+    setFiles(null); setError(''); setResult({}); setPicked([]); setAt(''); setTouched({ images: false, video: false })
     runLocal<{ path: string; entries: Entry[] }>('folder.list', { article_id: article.id }).then((r) => {
       const fs = r.entries.filter((e) => !e.dir)
       setRoot(r.path)
@@ -171,8 +164,8 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   const missing = kind === 'post' && !images.length ? t('need_images') : kind === 'video' && !video ? t('need_video') : !body.trim() && kind !== 'video' ? t('need_text') : ''
   const go = async () => {
     setRunning(true); setError('')
-    const ts = when === 'later' ? Date.parse(at) : 0
-    if (when === 'later' && !(ts > Date.now())) { setError(t('future_time')); setRunning(false); return }
+    const ts = at ? Date.parse(at) : 0
+    if (at && !(ts > Date.now())) { setError(t('future_time')); setRunning(false); return }
     try {
       const r = await runLocal<{ ready: { channel_id: string; post_id: string }[]; problems: { channel_id: string; problems: string[] }[] }>('folder.publish', {
         article_id: article.id, kind, title, body, tags: tagList, images: images.map((i) => i.ref), video: video?.ref ?? '', channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}),
@@ -193,8 +186,10 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
 
   return (
     <Dialog open={open} onClose={onClose} title={t('title')} width={760} footer={<>
+      {/* 什么时候发放在发布按钮旁边（照 X、LinkedIn）：默认现在发，点日历图标定时间，定了显示成标签、点 × 改回现在发 */}
+      <span className="mr-auto min-w-0"><DateTimeChip value={at} onChange={setAt} disabled={running} label={tr('datetime.schedule')} /></span>
       <Button variant="ghost" size="sm" onClick={onClose}>{Object.keys(result).length ? t('close') : t('cancel')}</Button>
-      <Button size="sm" disabled={running || !picked.length || !!missing} title={missing || undefined} onClick={() => void go()}>{running ? <Loader2 className="animate-spin" /> : <Send />}{when === 'later' ? t('schedule_go', { n: picked.length }) : t('go', { n: picked.length })}</Button>
+      <Button size="sm" disabled={running || !picked.length || !!missing} title={missing || undefined} onClick={() => void go()}>{running ? <Loader2 className="animate-spin" /> : <Send />}{at ? t('schedule_go', { n: picked.length }) : t('go', { n: picked.length })}</Button>
     </>}>
       {!files ? (error ? <Notice tone="error">{error}</Notice> : <Loader2 className="size-4 animate-spin text-muted-foreground" />) : (
         <div className="space-y-5">
@@ -274,13 +269,6 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
               })}</div>}
           </div>
 
-          <div className="space-y-2 border-t border-border pt-3">
-            <div className="flex flex-wrap gap-4 text-sm">
-              <label className="inline-flex cursor-pointer items-center gap-2"><input type="radio" checked={when === 'now'} disabled={running} onChange={() => setWhen('now')} className="accent-primary" />{t('now')}</label>
-              <label className="inline-flex cursor-pointer items-center gap-2"><input type="radio" checked={when === 'later'} disabled={running} onChange={() => setWhen('later')} className="accent-primary" />{t('later')}</label>
-            </div>
-            {when === 'later' && <DateTimeField value={at} disabled={running} onChange={setAt} />}
-          </div>
           {missing && <p className="text-xs text-amber-700 dark:text-amber-400">{missing}</p>}
           {error && <Notice tone="error">{error}</Notice>}
         </div>
