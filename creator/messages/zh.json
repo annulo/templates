@@ -1653,6 +1653,8 @@
     "empty_tree": "还是空的。新建文件、文件夹，或者让 AI 往里放。",
     "pick_one": "选一个文件看或改。",
     "empty_dir": "空文件夹。",
+    "rename": "重命名",
+    "open_system": "用系统程序打开",
     "rename_hint": "双击改名",
     "open": "打开",
     "reveal": "在文件夹中显示",

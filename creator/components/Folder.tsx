@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
-import { ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Image as ImageIcon, LayoutGrid, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, inputCls } from './ui'
 import { fileSrc, filesOf } from '../lib/files'
@@ -48,6 +48,9 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
   const [view, setView] = useState<'grid' | 'tree'>(() => { try { return localStorage.getItem('folder:view') === 'tree' ? 'tree' : 'grid' } catch { return 'grid' } })
   const switchView = (v: 'grid' | 'tree') => { setView(v); try { localStorage.setItem('folder:view', v) } catch {} }
   const [creating, setCreating] = useState(false)
+  // 右键菜单（网格、树里的文件和文件夹）和就地改名
+  const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null)
+  const [renaming, setRenaming] = useState('')
   const call: Call = (fn, input = {}) => runLocal(`folder.${fn}`, { article_id: id, ...input })
 
   const { runs } = useTaskRuns(['work-on-content', 'work-on-article'], (r) => r.input?.article_id === id, () => { void load(); onChanged() })
@@ -103,18 +106,31 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
       </section>
     )
   }
+  const onMenu = (ev: MouseEvent, e: Entry) => { ev.preventDefault(); setMenu({ e, x: ev.clientX, y: ev.clientY }) }
+  const act = (f: () => Promise<unknown>) => { void f().then(() => load()).catch((err) => setError((err as Error).message)) }
+  const renameTo = (e: Entry, name: string) => {
+    setRenaming('')
+    const n = name.trim()
+    const to = parent(e.path) ? `${parent(e.path)}/${n}` : n
+    if (!n || to === e.path) return
+    act(async () => { await call('rename', { path: e.path, to }); if (sel === e.path || sel.startsWith(e.path + '/')) setSel(to + sel.slice(e.path.length)) })
+  }
+  const nameOf = (e: Entry, className?: string) => renaming === e.path
+    ? <RenameInput value={base(e.path)} onDone={(v) => renameTo(e, v)} onCancel={() => setRenaming('')} className={className} />
+    : <span className="min-w-0 truncate">{base(e.path)}</span>
   const viewer = (e: Entry) => <Viewer key={e.path} root={state.path} canOpen={!!state.can_open} e={e} kids={children[e.path] ?? []} call={call} reload={load} onSelect={setSel} />
 
   const row = (e: Entry, depth: number) => {
     const Icon = iconOf(e, isOpen(e.path))
     return (
       <div key={e.path}>
-        <div className={cx('flex items-center gap-1 rounded-md pr-1 text-sm', sel === e.path ? 'bg-primary/10 text-primary-text' : 'hover:bg-muted')} style={{ paddingLeft: 4 + depth * 14 }}>
-          <button type="button" className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-left" onClick={() => { setSel(e.path); if (e.dir) setOpenDirs((o) => ({ ...o, [e.path]: !isOpen(e.path) })) }}>
+        <div onContextMenu={(ev) => onMenu(ev, e)} className={cx('flex items-center gap-1 rounded-md pr-1 text-sm', sel === e.path || menu?.e.path === e.path ? 'bg-primary/10 text-primary-text' : 'hover:bg-muted')} style={{ paddingLeft: 4 + depth * 14 }}>
+          {/* 改名时不能是 button：输入框放在 button 里，按空格会点到按钮 */}
+          {renaming === e.path ? <div className="flex min-w-0 flex-1 items-center gap-1.5 py-1"><span className="w-3.5 shrink-0" />{nameOf(e, 'h-6')}</div> : <button type="button" className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-left" onClick={() => { setSel(e.path); if (e.dir) setOpenDirs((o) => ({ ...o, [e.path]: !isOpen(e.path) })) }}>
             {e.dir ? (isOpen(e.path) ? <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />) : <span className="w-3.5 shrink-0" />}
             <Icon className="size-4 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 truncate">{base(e.path)}</span>
-          </button>
+            {nameOf(e, 'h-6')}
+          </button>}
         </div>
         {e.dir && isOpen(e.path) && (children[e.path] ?? []).map((k) => row(k, depth + 1))}
       </div>
@@ -157,7 +173,7 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
                 {files.length > 1 && <div className="border-b border-border bg-muted/30 px-2 py-1.5"><button type="button" onClick={() => setSel('')} className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-sm hover:bg-muted"><ChevronLeft className="size-4" />{t('all_files')}</button></div>}
                 {viewer(selected)}
               </>
-            : files.length ? <Grid root={state.path} files={files} onSelect={setSel} /> : <p className="p-4 text-sm text-muted-foreground">{t('empty_grid')}</p>}
+            : files.length ? <Grid root={state.path} files={files} onSelect={setSel} onMenu={onMenu} active={menu?.e.path} renaming={renaming} nameOf={nameOf} /> : <p className="p-4 text-sm text-muted-foreground">{t('empty_grid')}</p>}
         </div>
       ) : (
         <div className="grid min-h-[360px] grid-cols-1 overflow-clip rounded-lg border border-border md:grid-cols-[240px_1fr]">
@@ -167,6 +183,12 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
           <div className="min-w-0">{selected ? viewer(selected) : <p className="p-4 text-sm text-muted-foreground">{t('pick_one')}</p>}</div>
         </div>
       )}
+      {menu && <FileMenu e={menu.e} x={menu.x} y={menu.y} canOpen={!!state.can_open} onClose={() => setMenu(null)}
+        onOpen={() => setSel(menu.e.path)}
+        onRename={() => setRenaming(menu.e.path)}
+        onSystemOpen={() => act(() => call('open', { path: menu.e.path }))}
+        onReveal={() => act(() => call('open', { path: menu.e.path, reveal: true }))}
+        onDelete={() => act(async () => { await call('remove', { path: menu.e.path }); if (sel === menu.e.path || sel.startsWith(menu.e.path + '/')) setSel('') })} />}
     </section>
   )
 }
@@ -262,15 +284,17 @@ async function moveOld(a: Article, call: Call) {
 }
 
 /** 网格：所有文件铺平，图片、视频显示缩略图，名字下面写在哪个目录里；点开看或改 */
-function Grid({ root, files, onSelect }: { root: string; files: Entry[]; onSelect: (p: string) => void }) {
-  const { t } = useT('folder')
+function Grid({ root, files, onSelect, onMenu, active, renaming, nameOf }: { root: string; files: Entry[]; onSelect: (p: string) => void; onMenu: (ev: MouseEvent, e: Entry) => void; active?: string; renaming: string; nameOf: (e: Entry, className?: string) => ReactNode }) {
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-3 p-3">
       {files.map((k) => {
         const Icon = iconOf(k, false)
         const src = workSrc(`${root}/${k.path}`)
+        // 改名时不能是 button：输入框放在 button 里，按空格会点到按钮
+        const Tag = renaming === k.path ? 'div' : 'button'
         return (
-          <button key={k.path} type="button" onClick={() => onSelect(k.path)} title={k.path} className="flex cursor-pointer flex-col gap-1.5 rounded-lg p-1.5 text-left hover:bg-muted">
+          <Tag key={k.path} {...(Tag === 'button' ? { type: 'button' as const, onClick: () => onSelect(k.path) } : {})} onContextMenu={(ev: MouseEvent) => onMenu(ev, k)} title={k.path}
+            className={cx('flex cursor-pointer flex-col gap-1.5 rounded-lg p-1.5 text-left hover:bg-muted', active === k.path && 'bg-muted')}>
             <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-md border border-border bg-muted/40">
               {VIDEO.test(k.path)
                 ? <div className="relative size-full"><video src={`${src}?v=${k.mtime}#t=0.5`} preload="metadata" muted playsInline className="size-full object-cover" /><Film className="absolute right-1.5 bottom-1.5 size-4 text-white drop-shadow" /></div>
@@ -278,12 +302,53 @@ function Grid({ root, files, onSelect }: { root: string; files: Entry[]; onSelec
                 : <Icon className="size-10 text-muted-foreground" strokeWidth={1.25} />}
             </div>
             <div className="min-w-0 px-0.5">
-              <div className="truncate text-sm">{base(k.path)}</div>
+              <div className="flex truncate text-sm">{nameOf(k, 'h-7 text-sm')}</div>
               <div className="truncate text-[11px] text-muted-foreground">{parent(k.path) ? `${parent(k.path)} · ` : ''}{fmtSize(k.size)}</div>
             </div>
-          </button>
+          </Tag>
         )
       })}
+    </div>
+  )
+}
+
+/**
+ * 文件、文件夹的右键菜单：打开、重命名、用系统程序打开、在文件夹中显示、删除（再点一次才删，进废纸篓）。
+ * 点外面、按 Esc、滚动就收起；贴着鼠标出现，放不下就往左、往上挪
+ */
+function FileMenu({ e, x, y, canOpen, onClose, onOpen, onRename, onSystemOpen, onReveal, onDelete }: { e: Entry; x: number; y: number; canOpen: boolean; onClose: () => void; onOpen: () => void; onRename: () => void; onSystemOpen: () => void; onReveal: () => void; onDelete: () => void }) {
+  const { t } = useT('folder')
+  const ref = useRef<HTMLDivElement>(null)
+  const [confirm, setConfirm] = useState(false)
+  const [pos, setPos] = useState({ left: x, top: y })
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    setPos({ left: Math.max(4, Math.min(x, window.innerWidth - el.offsetWidth - 4)), top: Math.max(4, Math.min(y, window.innerHeight - el.offsetHeight - 4)) })
+  }, [x, y])
+  useEffect(() => {
+    const away = (ev: Event) => { if (!ref.current?.contains(ev.target as Node)) onClose() }
+    const esc = (ev: globalThis.KeyboardEvent) => { if (ev.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', away, true)
+    document.addEventListener('contextmenu', away, true)
+    document.addEventListener('keydown', esc)
+    window.addEventListener('scroll', onClose, true)
+    window.addEventListener('blur', onClose)
+    return () => { document.removeEventListener('mousedown', away, true); document.removeEventListener('contextmenu', away, true); document.removeEventListener('keydown', esc); window.removeEventListener('scroll', onClose, true); window.removeEventListener('blur', onClose) }
+  }, [])
+  const item = (label: string, Icon: typeof File, run: () => void, danger?: boolean) => (
+    <button type="button" onClick={() => { run(); onClose() }} className={cx('flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-accent', danger && 'text-destructive')}><Icon className="size-4 shrink-0" />{label}</button>
+  )
+  return (
+    <div ref={ref} role="menu" style={pos} onContextMenu={(ev) => ev.preventDefault()} className="fixed z-50 min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+      {item(t('open'), e.dir ? FolderOpen : Eye, onOpen)}
+      {item(t('rename'), Pencil, onRename)}
+      {canOpen && !e.dir && item(t('open_system'), ExternalLink, onSystemOpen)}
+      {canOpen && item(t('reveal'), FolderOpen, onReveal)}
+      <div className="my-1 h-px bg-border" />
+      {confirm
+        ? item(t('delete_confirm'), Trash2, onDelete, true)
+        : <button type="button" onClick={() => setConfirm(true)} className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-destructive hover:bg-accent"><Trash2 className="size-4 shrink-0" />{t('delete')}</button>}
     </div>
   )
 }

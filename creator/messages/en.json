@@ -1653,6 +1653,8 @@
     "empty_tree": "Empty. Create a file or folder, or let the AI put things here.",
     "pick_one": "Pick a file to view or edit.",
     "empty_dir": "Empty folder.",
+    "rename": "Rename",
+    "open_system": "Open in app",
     "rename_hint": "Double-click to rename",
     "open": "Open",
     "reveal": "Show in folder",
