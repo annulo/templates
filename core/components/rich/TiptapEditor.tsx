@@ -153,7 +153,7 @@ function findSlash(editor: Editor): Slash | null {
   return { from: $from.pos - m[1].length - 1, to: $from.pos, query: m[1].toLowerCase(), top: c.top, bottom: c.bottom, left: c.left }
 }
 
-export default function TiptapEditor({ value, onChange }: RichEditorProps) {
+export default function TiptapEditor({ value, onChange, placeholder }: RichEditorProps) {
   const [slash, setSlash] = useState<Slash | null>(null)
   const [active, setActive] = useState(0)
   const [uploading, setUploading] = useState(0)
@@ -224,7 +224,7 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
     extensions: [
       // 链接不加 nofollow、不强制新窗口：文章里多是站内链接，nofollow 影响 SEO
       StarterKit.configure({ heading: { levels: [2, 3] }, link: { openOnClick: false, autolink: true, defaultProtocol: 'https', HTMLAttributes: { target: null, rel: null } } }),
-      Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? tr('editor.ph_heading') : tr('editor.ph_media')) }),
+      Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? tr('editor.ph_heading') : placeholder || tr('editor.ph_media')) }),
       Image,
       Video,
     ],

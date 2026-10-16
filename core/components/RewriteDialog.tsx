@@ -11,7 +11,7 @@ import type { Article } from '../lib/shuttle'
 export const REWRITE_TASK = 'rewrite-article'
 
 /**
- * 交给 AI（creator/docs/artifacts.md「交给 AI」），两种做法：
+ * 交给 AI（docs/artifacts.md「交给 AI」），两种做法：
  *   在这篇上做（onWork，项目有「在这篇上做」的任务时才有）：写这篇的正文、做产物挂在这篇上，照 Prompt 做；
  *   另写一篇（onStart）：选改成哪种类型、写这次的要求，交给助手另写一篇（原文不动）。「转换」不经过 AI，只按类型换格式（onConvert）。
  * 常用的要求存成「AI 预设」（core/lib/presets.ts，模板也自带几条）：点一下就填好，改、删、加在「管理预设」里。

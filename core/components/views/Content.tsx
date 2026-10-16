@@ -47,7 +47,7 @@ export const TOPICS_TASK = 'suggest-topics'
 type Writer = ReturnType<typeof useTask>
 
 /**
- * 能「在这篇上做」的模板（creator）传进来（creator/docs/artifacts.md）：task 是「在这篇上做」的任务（参数 { article_id, note }：
+ * 能「在这篇上做」的模板（creator）传进来（docs/artifacts.md）：task 是「在这篇上做」的任务（参数 { article_id, note }：
  * 照稿子写正文、配图、做视频…），Panel 是文章页正文下面的产物（artifacts）。传了才有稿子、「在这篇上做」和产物；没传就和以前一样只有改写。
  */
 export type AIWork = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void }> }
@@ -657,7 +657,9 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
                   const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (current + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
                   items[next]?.focus()
                 }}>
-                {(reviser.task?.prompt_file || reviser.task?.prompt_has_default) && <><button type="button" role="menuitem" className={item} onClick={() => { setMoreOpen(false); setRequirementsOpen(true) }}><SlidersHorizontal className="size-4" />{tr('content.revise_req_btn')}</button><div role="separator" className="my-1 border-t border-border" /></>}
+                <button type="button" role="menuitem" className={item} onClick={() => { setMoreOpen(false); void copyRefs([refOf('articles', a.id)]) }}><AtSign className="size-4" />{tr('files.copy_ref')}</button>
+                {(reviser.task?.prompt_file || reviser.task?.prompt_has_default) && <><button type="button" role="menuitem" className={item} onClick={() => { setMoreOpen(false); setRequirementsOpen(true) }}><SlidersHorizontal className="size-4" />{tr('content.revise_req_btn')}</button></>}
+                <div role="separator" className="my-1 border-t border-border" />
                 <button type="button" role="menuitem" disabled={locked} className={cx(item, 'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10 disabled:cursor-default disabled:opacity-50')} onClick={() => {
                   if (!confirmDel) { setConfirmDel(true); return }
                   void run('del', async () => {
@@ -694,7 +696,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
       )}
       {/* 稿子：能「在这篇上做」的模板才有（文章表有 draft 字段） */}
       {/* 稿子的编辑条和正文的一样吸在顶上那条下面（--sticky-top） */}
-      {work && <div style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><Draft a={a} locked={locked} onChanged={onChanged} control={onDraftControl} onAIWrite={() => setAiOpen({ mode: 'here', preset: 'from_draft' })} onRewrite={() => setAiOpen({ mode: 'new' })} /></div>}
+      {work && <div style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><Draft a={a} locked={locked} onChanged={onChanged} control={onDraftControl} onAIWrite={() => setAiOpen({ mode: 'here', preset: 'from_draft' })} /></div>}
       <article className="w-full min-w-0" style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}>
         {editing ? (
           <div className="space-y-3">

@@ -169,7 +169,15 @@
     "video_cover_hint": "Upload an image or choose one from the Library for Xiaohongshu and Douyin. Leave empty to use the platform default.",
     "replace_cover": "Replace cover",
     "remove_cover": "Remove cover",
-    "image_required": "Choose an image file."
+    "image_required": "Choose an image file.",
+    "metric_views": "Views",
+    "metric_likes": "Likes",
+    "metric_comments": "Comments",
+    "metric_collects": "Saves",
+    "metric_shares": "Shares",
+    "metrics_at": "Updated {when}",
+    "metrics_none": "No data collected yet",
+    "metrics_refresh": "Refresh data"
   },
   "ui": {
     "watch_show": "Watch",

@@ -26,6 +26,10 @@ export default {
       "@tiptap/starter-kit": "https://esm.talizen.com/@tiptap/starter-kit@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
       "@tiptap/extensions": "https://esm.talizen.com/@tiptap/extensions@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
       "@tiptap/extension-image": "https://esm.talizen.com/@tiptap/extension-image@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
+      // 内容文件夹里的 .md 用富文本编辑器改：md → HTML 用 marked，HTML → md 用 turndown（lib/mdhtml.ts）
+      "marked": "https://esm.talizen.com/marked@15.0.12?bundle",
+      "turndown": "https://esm.talizen.com/turndown@7.2.0?bundle",
+      "turndown-plugin-gfm": "https://esm.talizen.com/turndown-plugin-gfm@1.0.2?bundle",
     },
   },
   // 中英双语：默认中文，英文地址带 /en。Shuttle 外壳切语言时写 cookie CREGHT_LOCALE
