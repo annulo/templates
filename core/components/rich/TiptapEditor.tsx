@@ -417,7 +417,8 @@ function Toolbar({ editor, uploading, onUpload, onPick }: { editor: Editor; uplo
     </button>
   )
   return (
-    <div className="sticky top-[var(--sticky-top,0px)] z-10 flex flex-wrap items-center gap-0.5 rounded-t-lg border-b border-border bg-background/95 px-2 py-1 backdrop-blur">
+    // 吸顶时外框已经滚走了：工具条自己带一圈圆角边框（-mx-px -mt-px 压在外框上，没吸顶时和外框重合）
+    <div className="sticky top-[var(--sticky-top,0px)] z-10 -mx-px -mt-px flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-background px-2 py-1">
       {btn(editor.isActive('heading', { level: 2 }), tr('editor.h2'), <Heading2 />, () => editor.chain().focus().toggleHeading({ level: 2 }).run())}
       {btn(editor.isActive('heading', { level: 3 }), tr('editor.h3'), <Heading3 />, () => editor.chain().focus().toggleHeading({ level: 3 }).run())}
       {btn(editor.isActive('bulletList'), tr('editor.ul'), <List />, () => editor.chain().focus().toggleBulletList().run())}
