@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
-import { ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, inputCls } from './ui'
 import { fileSrc, filesOf } from '../lib/files'
@@ -183,7 +183,7 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
             ? <>
                 {/* 面包屑：全部文件 / 目录 / 目录，点哪一级回到哪一级（目录显示里面的东西）；文件名在下面看文件的那一栏 */}
                 {(files.length > 1 || parent(selected.path)) && <div className="flex min-w-0 flex-wrap items-center gap-0.5 border-b border-border bg-muted/30 px-2 py-1.5 text-sm">
-                  <button type="button" onClick={() => setSel('')} className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 hover:bg-muted"><ChevronLeft className="size-4" />{t('all_files')}</button>
+                  <button type="button" onClick={() => setSel('')} className="cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted">{t('all_files')}</button>
                   {crumbs(selected.dir ? selected.path : parent(selected.path)).map((c) => <span key={c} className="flex min-w-0 items-center gap-0.5"><ChevronRight className="size-3.5 shrink-0 text-muted-foreground" /><button type="button" onClick={() => setSel(c)} className={cx('max-w-48 cursor-pointer truncate rounded px-1.5 py-0.5 hover:bg-muted', c === selected.path && 'font-medium')}>{base(c)}</button></span>)}
                 </div>}
                 {viewer(selected)}
