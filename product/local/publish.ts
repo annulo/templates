@@ -29,7 +29,7 @@ const OVERRIDES = { title: '', summary: '', body: '', video: '', keywords: '' }
 export function prepare(input: { article_id: string; channel_ids: string[]; scheduled_at?: string }, ctx: any) {
   let a = ctx.db.get('articles', input?.article_id)
   if (!a) throw new Error(L(ctx, '没有这篇文章：', 'No such article: ') + input?.article_id)
-  // 老文章补成插件认的格式再发：排期到点时插件按文章重新生成帖子，读的是表里的
+  // 老文章补成插件认的格式再发（帖子按补好的生成）
   const fix = articleFixes(a)
   if (fix) { ctx.db.update('articles', a.id, fix); a = { ...a, ...fix } }
   const ids = [...new Set(input?.channel_ids ?? [])]

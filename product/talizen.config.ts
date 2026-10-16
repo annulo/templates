@@ -8,6 +8,10 @@ const themeScript = `<script>(function(){
   try{var s=localStorage.getItem('shuttle.theme');if(s==='light'||s==='dark')t=s;else if(matchMedia('(prefers-color-scheme: light)').matches)t='light'}catch(e){}
   apply(t);
   addEventListener('message',function(e){if(e.origin===location.origin&&e.data&&e.data.type==='shuttle:theme')apply(e.data.theme)});
+  // 后退前进从缓存里拿回来的页面不重跑脚本、错过了切主题的消息；别的窗口切了主题这里收不到消息：都按记住的重新设一次
+  function saved(){try{var s=localStorage.getItem('shuttle.theme');if(s==='light'||s==='dark')apply(s)}catch(e){}}
+  addEventListener('pageshow',function(e){if(e.persisted)saved()});
+  addEventListener('storage',function(e){if(e.key==='shuttle.theme')saved()});
 })()</script>`;
 
 export default {
@@ -16,6 +20,9 @@ export default {
   // 不然各包各带一份 ProseMirror，编辑器会报错。
   importMap: {
     imports: {
+      // core 的日期时间选择（components/DateTimePicker.tsx，shadcn 的月历）：react-day-picker 和它的中文
+      "react-day-picker": "https://esm.talizen.com/react-day-picker@9.14.0?bundle&external=react,react-dom",
+      "date-fns/locale/zh-CN": "https://esm.talizen.com/date-fns@4.1.0/locale/zh-CN?bundle",
       "@tiptap/core":
         "https://esm.talizen.com/@tiptap/core@3.31.3?bundle&external=@tiptap/pm",
       // 平台会把 importMap 里别的包加进 external，子路径连自己的包也被标成 external、import 不到自己的文件；

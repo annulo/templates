@@ -1,13 +1,13 @@
 // 文章正文编辑器（Tiptap）。第三方包只在浏览器里有（talizen.config.ts 的 importMap，SSR 没有），
 // 所以这个文件只能经 components/RichEditor.tsx 在 useEffect 里 await import()，不要在别处静态引入。
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Node, mergeAttributes } from '@tiptap/core'
+import { Node, mergeAttributes, type AnyExtension } from '@tiptap/core'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
 import ImageBase from '@tiptap/extension-image'
-import { Bold, Code, Heading2, Heading3, ImageIcon, Images, Italic, Link2, List, ListOrdered, Minus, Pilcrow, Quote, SquareCode, Strikethrough, Unlink, Upload, type LucideIcon } from 'lucide-react'
+import { Bold, Code, Heading2, Heading3, ImageIcon, Images, Italic, Link2, List, ListOrdered, Minus, Pilcrow, Quote, SquareCode, Strikethrough, Table2, Unlink, Upload, type LucideIcon } from 'lucide-react'
 import { uploadFile } from '../../lib/shuttle'
 import { fileSrc } from '../../lib/files'
 import { tr } from '../../lib/i18n'
@@ -32,14 +32,23 @@ function videoSize(src: string): Promise<{ width?: number; height?: number }> {
   })
 }
 
+/** 显示时怎么把存的地址换成能看的地址：默认 shown；改 .md 时相对路径由页面换（RichEditor 的 resolveSrc），存的还是相对路径 */
+type SrcOptions = { resolve?: (src: string) => string }
+
 /** 图片：存的还是原地址，显示用 shown（本机文件） */
-const Image = ImageBase.extend({
-  addNodeView: () => ({ node }) => {
+const Image = ImageBase.extend<SrcOptions>({
+  addOptions() {
+    return { ...this.parent?.(), resolve: undefined } as ReturnType<NonNullable<typeof this.parent>> & SrcOptions
+  },
+  addNodeView() {
+    const show = this.options.resolve ?? shown
+    return ({ node }) => {
     const img = document.createElement('img')
-    img.src = shown(node.attrs.src)
+    img.src = show(node.attrs.src)
     if (node.attrs.alt) img.alt = node.attrs.alt
     if (node.attrs.title) img.title = node.attrs.title
     return { dom: img }
+    }
   },
 })
 
@@ -48,8 +57,9 @@ const Image = ImageBase.extend({
  * 编辑器里不用原生播放器：点击会被播放控件吃掉，选不中、拖不动。显示成一个能选中的块（第一帧 + 角上「视频」），点了选中、能删能拖；
  * 中间的播放按钮弹出播放窗口（openPlayer）。预览、发出去的是正常的播放器
  */
-const Video = Node.create({
+const Video = Node.create<SrcOptions>({
   name: 'video',
+  addOptions: () => ({ resolve: undefined }),
   group: 'block',
   atom: true,
   selectable: true,
@@ -61,14 +71,35 @@ const Video = Node.create({
     height: { default: null, parseHTML: (el: HTMLElement) => Number(el.getAttribute('height')) || null },
   }),
   parseHTML: () => [{ tag: 'video[src]' }],
+  // 在 md 里（RichEditor 的 markdown 模式，模板加了 @tiptap/markdown）写成单独一行的 <video src width height controls></video>。
+  // marked 不把 <video> 当块级 HTML，会塞进段落、读丢，所以自己认这一行
+  markdownTokenName: 'video',
+  markdownTokenizer: {
+    name: 'video',
+    level: 'block',
+    start: (src: string) => src.search(/^<video\b/m),
+    tokenize: (src: string) => {
+      const m = /^<video\b([^>]*)>(?:\s*<\/video>)?[ \t]*(?:\n|$)/.exec(src)
+      if (!m) return undefined
+      const attr = (k: string) => new RegExp(`\\s${k}="([^"]*)"`).exec(m[1])?.[1]
+      return { type: 'video', raw: m[0], src: attr('src') ?? '', width: Number(attr('width')) || null, height: Number(attr('height')) || null }
+    },
+  },
+  parseMarkdown: (token: { src: string; width: number | null; height: number | null }, h: { createNode: (type: string, attrs: Record<string, unknown>) => unknown }) => h.createNode('video', { src: token.src, width: token.width, height: token.height }),
+  renderMarkdown: (node: { attrs?: { src?: string; width?: number | null; height?: number | null } }) => {
+    const a = node.attrs ?? {}
+    return `<video src="${a.src ?? ''}"${a.width ? ` width="${a.width}"` : ''}${a.height ? ` height="${a.height}"` : ''} controls></video>`
+  },
   renderHTML: ({ HTMLAttributes }) => ['video', mergeAttributes(HTMLAttributes, { controls: 'true', preload: 'metadata', style: 'max-width:100%;height:auto' })],
-  addNodeView: () => ({ node }) => {
+  addNodeView() {
+    const show = this.options.resolve ?? shown
+    return ({ node }) => {
     const dom = document.createElement('div')
     dom.className = 'rich-video'
     dom.contentEditable = 'false'
     const v = document.createElement('video')
     // #t=0.1：停在第一帧，不然只有黑框。比例按正文里存的宽高，没存的（老内容）按 16:9
-    v.src = node.attrs.src ? `${shown(node.attrs.src)}#t=0.1` : ''
+    v.src = node.attrs.src ? `${show(node.attrs.src)}#t=0.1` : ''
     v.style.aspectRatio = node.attrs.width && node.attrs.height ? `${node.attrs.width} / ${node.attrs.height}` : '16 / 9'
     v.preload = 'metadata'
     v.muted = true
@@ -83,10 +114,11 @@ const Video = Node.create({
     play.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
-      openPlayer(shown(node.attrs.src))
+      openPlayer(show(node.attrs.src))
     })
     dom.append(v, tag, play)
     return { dom, stopEvent: (e: Event) => e.target === play, ignoreMutation: () => true }
+    }
   },
 })
 
@@ -119,6 +151,8 @@ function openPlayer(src: string) {
   v.play().catch(() => {}) // 放不了（文件没了、格式不支持）播放器自己会显示
 }
 
+const mdOf = (e: Editor) => (e as Editor & { getMarkdown: () => string }).getMarkdown()
+
 const isMedia = (f: File) => f.type.startsWith('image/') || f.type.startsWith('video/')
 
 type SlashItem = { key: string; icon: LucideIcon; label: string; desc: string; words: string; run: (e: Editor) => void }
@@ -126,8 +160,9 @@ type SlashItem = { key: string; icon: LucideIcon; label: string; desc: string; w
 type Slash = { from: number; to: number; query: string; top: number; bottom: number; left: number }
 
 /** 斜杠菜单：输入 / 弹出，像飞书、Notion 一样插入块 */
-function slashItems(pickImage: () => void): SlashItem[] {
+function slashItems(pickImage: () => void, markdown?: boolean): SlashItem[] {
   return [
+    ...(markdown ? [{ key: 'table', icon: Table2, label: tr('editor.table'), desc: tr('editor.table_desc'), words: 'table biaoge 表格', run: (e: Editor) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() }] : []),
     { key: 'p', icon: Pilcrow, label: tr('editor.p'), desc: tr('editor.p_desc'), words: 'text paragraph zhengwen 正文 段落', run: (e) => e.chain().focus().setParagraph().run() },
     { key: 'h2', icon: Heading2, label: tr('editor.h2'), desc: tr('editor.h2_desc'), words: 'h2 heading biaoti 标题 小标题', run: (e) => e.chain().focus().setHeading({ level: 2 }).run() },
     { key: 'h3', icon: Heading3, label: tr('editor.h3'), desc: tr('editor.h3_desc'), words: 'h3 heading biaoti 标题 三级', run: (e) => e.chain().focus().setHeading({ level: 3 }).run() },
@@ -153,7 +188,7 @@ function findSlash(editor: Editor): Slash | null {
   return { from: $from.pos - m[1].length - 1, to: $from.pos, query: m[1].toLowerCase(), top: c.top, bottom: c.bottom, left: c.left }
 }
 
-export default function TiptapEditor({ value, onChange }: RichEditorProps) {
+export default function TiptapEditor({ value, onChange, placeholder, markdown, extensions, resolveSrc }: RichEditorProps) {
   const [slash, setSlash] = useState<Slash | null>(null)
   const [active, setActive] = useState(0)
   const [uploading, setUploading] = useState(0)
@@ -187,7 +222,7 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
     if (!e || !nodes.length) return
     e.chain().focus().insertContentAt(e.state.selection.to, nodes).run()
   }
-  const items = slashItems(() => fileInput.current?.click())
+  const items = slashItems(() => fileInput.current?.click(), markdown)
   const shown = slash ? items.filter((i) => !slash.query || i.words.includes(slash.query) || i.label.toLowerCase().includes(slash.query)) : []
   // 菜单放光标下方；下方不够放（不到 240px）而上方更宽，就翻到上方，用 bottom 贴住光标上沿往上长。
   // 高度限制在那一侧剩下的空间里，放不下就在菜单里滚动；横向不超出窗口
@@ -223,12 +258,15 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
     immediatelyRender: false,
     extensions: [
       // 链接不加 nofollow、不强制新窗口：文章里多是站内链接，nofollow 影响 SEO
-      StarterKit.configure({ heading: { levels: [2, 3] }, link: { openOnClick: false, autolink: true, defaultProtocol: 'https', HTMLAttributes: { target: null, rel: null } } }),
-      Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? tr('editor.ph_heading') : tr('editor.ph_media')) }),
-      Image,
-      Video,
+      StarterKit.configure({ heading: { levels: markdown ? [1, 2, 3, 4, 5, 6] : [2, 3] }, link: { openOnClick: false, autolink: true, defaultProtocol: 'https', HTMLAttributes: { target: null, rel: null } } }),
+      Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? tr('editor.ph_heading') : placeholder || tr('editor.ph_media')) }),
+      Image.configure({ resolve: resolveSrc }),
+      Video.configure({ resolve: resolveSrc }),
+      ...((extensions ?? []) as AnyExtension[]),
     ],
     content: value,
+    // markdown 模式：value、onChange 都是 md（要模板在 extensions 里加 @tiptap/markdown 的 Markdown）
+    ...(markdown ? { contentType: 'markdown' } : {}),
     editorProps: {
       attributes: { class: 'rich-content min-h-80 px-5 py-4 outline-none' },
       handleKeyDown: (_view, ev) => {
@@ -262,8 +300,10 @@ export default function TiptapEditor({ value, onChange }: RichEditorProps) {
         return true
       },
     },
+    // markdown 模式下建好先报一次规范化后的 md：页面拿它当「没改过」的样子比较
+    onCreate: ({ editor }) => { if (markdown) onChange(mdOf(editor)) },
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML())
+      onChange(markdown ? mdOf(editor) : editor.getHTML())
       const s = findSlash(editor)
       setSlash(s)
       if (!s || s.query !== menu.current.slash?.query) setActive(0)
@@ -377,7 +417,10 @@ function Toolbar({ editor, uploading, onUpload, onPick }: { editor: Editor; uplo
     </button>
   )
   return (
-    <div className="sticky top-[var(--sticky-top,0px)] z-10 flex flex-wrap items-center gap-0.5 rounded-t-lg border-b border-border bg-background/95 px-2 py-1 backdrop-blur">
+    // 吸顶时外框已经滚走了：工具条自己带上面的圆角边框（-mx-px -mt-px 压在外框上，没吸顶时和外框重合）。
+    // 外面这层是不透明的直角底：盖住圆角外侧露出来的外框竖线、正文
+    <div className="sticky top-[var(--sticky-top,0px)] z-10 -mx-px -mt-px bg-background">
+    <div className="flex flex-wrap items-center gap-0.5 rounded-t-lg border border-border px-2 py-1">
       {btn(editor.isActive('heading', { level: 2 }), tr('editor.h2'), <Heading2 />, () => editor.chain().focus().toggleHeading({ level: 2 }).run())}
       {btn(editor.isActive('heading', { level: 3 }), tr('editor.h3'), <Heading3 />, () => editor.chain().focus().toggleHeading({ level: 3 }).run())}
       {btn(editor.isActive('bulletList'), tr('editor.ul'), <List />, () => editor.chain().focus().toggleBulletList().run())}
@@ -386,6 +429,7 @@ function Toolbar({ editor, uploading, onUpload, onPick }: { editor: Editor; uplo
       <span className="mx-1 h-4 w-px bg-border" />
       {text(uploading ? tr('editor.uploading') : tr('editor.upload_media'), <Upload />, onUpload, uploading)}
       {text(tr('editor.pick_media'), <Images />, onPick)}
+    </div>
     </div>
   )
 }

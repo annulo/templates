@@ -6,7 +6,7 @@ import { uploadLocalFile, videoSrc } from '../lib/shuttle'
 import { tr } from '../lib/i18n'
 
 /** 视频：从资料库选，或上传这台电脑上的视频（存成 local:<name>，发布时由这台电脑直接传给平台） */
-export default function VideoField({ video, onChange }: { video: string; onChange: (v: string) => void }) {
+export default function VideoField({ video, cover, onChange }: { video: string; cover?: string; onChange: (v: string) => void }) {
   const [picking, setPicking] = useState(false)
   const [progress, setProgress] = useState<number | null>(null)
   const [err, setErr] = useState('')
@@ -44,7 +44,7 @@ export default function VideoField({ video, onChange }: { video: string; onChang
           </Button>
         </div>
       </div>
-      {video ? <video src={videoSrc(video)} controls className="max-h-48 w-full rounded-md border border-border bg-black" /> : <span className="text-xs text-muted-foreground">{tr('social.no_video')}</span>}
+      {video ? <video src={videoSrc(video)} poster={cover || undefined} controls className="max-h-48 w-full rounded-md border border-border bg-black" /> : <span className="text-xs text-muted-foreground">{tr('social.no_video')}</span>}
       {err && <Notice tone="error">{err}</Notice>}
       <span className="text-xs leading-relaxed text-muted-foreground">{tr('social.local_hint')}</span>
       <AssetPicker open={picking} kind="video" max={1} onClose={() => setPicking(false)} onPick={(urls) => { if (urls[0]) onChange(urls[0]); setPicking(false) }} />

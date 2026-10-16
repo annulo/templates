@@ -14,6 +14,7 @@ import { PublishSetup } from "../PublishTargets";
 import AddChannelDialog from "../AddChannelDialog";
 import WpCredential from "../WpCredential";
 import RunButton from "../RunButton";
+import EditSiteButton from "../EditSiteButton";
 import AskButton from "../AskButton";
 import {
   brokenOf,
@@ -274,6 +275,9 @@ export default function Channels({
                   confirm={confirmBox}
                   actions={
                     <>
+                      {selected.type === "creght_site" && (
+                        <EditSiteButton channelId={selected.id} />
+                      )}
                       {selected.type === "creght_site" && (
                         <Button
                           variant="outline"
