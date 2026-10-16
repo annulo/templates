@@ -1659,7 +1659,6 @@
     "delete": "Delete",
     "delete_confirm": "Move to trash?",
     "cant_view": "This kind of file can't be shown here. Click \"Open\" to use another app.",
-    "draft_badge": "brief",
     "draft_placeholder": "What is this piece about: why, requirements, outline, references… The AI reads this before it starts.",
     "save_first": "Save before switching",
     "rich": "Rich text",

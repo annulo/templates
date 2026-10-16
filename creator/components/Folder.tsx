@@ -278,7 +278,7 @@ function Grid({ root, files, onSelect }: { root: string; files: Entry[]; onSelec
                 : <Icon className="size-10 text-muted-foreground" strokeWidth={1.25} />}
             </div>
             <div className="min-w-0 px-0.5">
-              <div className="truncate text-sm">{base(k.path)}{isDraft(k.path) && <span className="ml-1.5 rounded bg-primary/10 px-1 py-px text-[10px] text-primary-text">{t('draft_badge')}</span>}</div>
+              <div className="truncate text-sm">{base(k.path)}</div>
               <div className="truncate text-[11px] text-muted-foreground">{parent(k.path) ? `${parent(k.path)} · ` : ''}{fmtSize(k.size)}</div>
             </div>
           </button>

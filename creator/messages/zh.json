@@ -1659,7 +1659,6 @@
     "delete": "删除",
     "delete_confirm": "挪进废纸篓？",
     "cant_view": "这种文件不能在这里看，点「打开」用别的程序打开。",
-    "draft_badge": "要求、大纲",
     "draft_placeholder": "写下这条内容要做什么：为什么做、要求、大纲、参考……AI 动手前会先读这里。",
     "save_first": "先保存再切换",
     "rich": "富文本",
