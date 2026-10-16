@@ -11,6 +11,8 @@
 //                                         没连 creght MCP、站点不在这个账号下也照样加，渠道页再提示（access）
 //   channels.match({ url })              这个网址已经是哪个网站渠道（域名一样，或者是同一个 creght 站点、自定义域名也认得），返回渠道；没有返回 null。不写数据
 //   channels.access({ id })               creght 站点渠道现在能不能读写：ok / no_mcp（没加或关掉了）/ needs_auth / not_in_account / failed
+//   channels.adminLink({ id, target? })   creght 站点渠道的后台（target：editor 默认 / cms / forms / domains / analytics / settings）的一次性登录链接，
+//                                         页面拿到马上打开（60 秒、一次有效），打开就是登录状态
 //   channels.remove({ id })               删掉一个渠道（网站在 channels 表，社媒账号在社媒插件的 social_accounts 表）
 //   channels.stats({ days })              各渠道近 days 天的汇总：list 是网站（pv / uv / ip），social 是社媒（社媒插件的 social/stats.summary：粉丝和互动），
 //                                         no_stats 是没有访问统计的网站（WordPress），读失败的在 failed
@@ -19,7 +21,7 @@
 // 页面用 lib/shuttle.ts 里的封装（listCreghtSites / addSiteChannel / removeChannel / channelStats / visitOverview）。
 
 import { L } from './_i18n'
-import { sites as allSites, status as siteStatus, visits } from './_creght'
+import { adminLink as creghtAdminLink, sites as allSites, status as siteStatus, visits } from './_creght'
 // 社媒的数据由社媒插件算（github.com/annulo/plugins 的 social，装在 plugins/social/）：和社媒页显示的是同一份
 import { summary as socialSummary } from '../plugins/social/local/stats'
 import { normalizeURL, secretName, wp } from './_wp'
@@ -28,7 +30,7 @@ import { normalizeURL, secretName, wp } from './_wp'
 export const cloud = ['stats', 'overview']
 
 // 要电脑的（浏览器、本机授权、密钥、外部接口）：手机上点了转给电脑上开着的 Shuttle 跑（设置 → 远程访问）
-export const remote = ['access', 'add', 'fromURL', 'match', 'remove', 'sites', 'wpPrepare', 'wpVerify']
+export const remote = ['access', 'add', 'adminLink', 'fromURL', 'match', 'remove', 'sites', 'wpPrepare', 'wpVerify']
 
 type Channel = { id: string; type: string; name: string; project_id?: string; site_id?: string; preview_url?: string; wp_user?: string; wp_secret?: string; created_at?: string }
 
@@ -162,6 +164,13 @@ export async function access(input: { id: string }, ctx: any) {
   } catch (e) {
     return { state: 'failed', error: (e as Error).message }
   }
+}
+
+export async function adminLink(input: { id: string; target?: string }, ctx: any) {
+  const ch: Channel | null = ctx.db.get('channels', input?.id)
+  if (!ch || ch.type !== 'creght_site') throw new Error(L(ctx, '不是 creght 站点', 'Not a creght site'))
+  const r = await creghtAdminLink(ctx, ch.project_id!, ch.site_id!, input.target || 'editor')
+  return { url: r.url }
 }
 
 export function remove(input: { id: string }, ctx: any) {

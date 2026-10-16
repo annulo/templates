@@ -389,5 +389,9 @@
     "restored_discard": "丢弃，用已保存的",
     "edit_done": "完成",
     "draft_save_failed": "稿子没存上，再试一次"
+  },
+  "site_admin": {
+    "edit": "去编辑",
+    "open_blocked": "浏览器拦住了新窗口，点这里打开（1 分钟内有效）"
   }
 }

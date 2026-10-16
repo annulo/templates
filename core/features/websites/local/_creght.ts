@@ -15,6 +15,12 @@ export function status(ctx: any, projectID: string, siteID: string) {
   return ctx.mcp('creght', 'site_status', { project_id: projectID, site_id: siteID })
 }
 
+/** 站点后台（editor / cms / forms / domains / analytics / settings）的一次性登录跳转链接：60 秒内打开一次有效，打开就是登录状态。
+ *  链接等于临时登录凭证：只给用户本人当场打开，不存表、不写进页面 */
+export function adminLink(ctx: any, projectID: string, siteID: string, target = 'editor'): Promise<{ url: string; target_url: string; expires_at: string }> {
+  return ctx.mcp('creght', 'admin_link', { project_id: projectID, site_id: siteID, target })
+}
+
 /** 把站点当前的远端版本（预览里看到的）发布上线，返回发布后的状态（字段同 status） */
 export function sitePublish(ctx: any, projectID: string, siteID: string, note?: string) {
   return ctx.mcp('creght', 'site_publish', { project_id: projectID, site_id: siteID, note: note ?? '' })

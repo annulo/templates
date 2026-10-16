@@ -1,3 +1,6 @@
+- version: 0.15.2
+  zh: 渠道页的 creght 站点多了「去编辑」：一点就打开这个站点在 creght 里的编辑器，已经是登录状态，不用再登录一次。
+  en: "creght sites on the Channels page get an \"Edit site\" button: it opens the site's editor in creght, already signed in."
 - version: 0.15.1
   zh: 视频内容支持独立封面：上传、粘贴、从资料库选择、更换和移除；封面随草稿保存，复制与沿用视频的转换保留，内容详情和媒体版本同步预览。小红书、抖音发布传递封面，定时发布读取最新封面；需要 social 插件 0.8.5。
   en: "Add independent video covers with upload, paste, Library selection, replacement and removal. Persist covers with drafts, copies and conversions that retain the video, and show them in content and social previews. Pass covers to Xiaohongshu and Douyin, including the latest cover at scheduled publication. Requires social 0.8.5."

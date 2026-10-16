@@ -389,5 +389,9 @@
     "restored_discard": "Discard, use the saved version",
     "edit_done": "Done",
     "draft_save_failed": "The draft wasn't saved; try again"
+  },
+  "site_admin": {
+    "edit": "Edit site",
+    "open_blocked": "The browser blocked the new window. Click here to open it (valid for 1 minute)"
   }
 }
