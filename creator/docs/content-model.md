@@ -27,7 +27,7 @@
 - **产物**就是文件夹里的文件，不再是资料库里带 `article_id` 的一条。资料库只放几条内容都会用到的素材。
 - **内容没有类型**，**发布是挑选**：点「发布」挑这次发成什么（图文 / 视频 / 长文），文字从文件夹里挑一份 `.md`（标题、话题当场能改），图文挑一组图、视频挑一个视频（文件夹里的直接点选，也能从资料库选），再选账号。打开时按文件夹里有什么猜发成什么（有视频发视频，有图发图文，否则长文）；挑了文案，同一个目录里的图、视频自动配上（自己点过的不动）。每个账号新建一条帖子，**存什么发什么**：排期到点照帖子发，不再按文章重新生成。同一条内容可以发好几次（A、B 两支各发一次），没有「正在使用」。
 - **发布记录**：每条显示这次发的是什么（第一张图或视频、标题），阅读、点赞、评论、收藏、分享一个个列出来，能马上「更新数据」（重新采集这个账号）。
-- **继续对话**：在对话里跑 `folder.create` / `folder.write` 会把这段对话记到这条内容上（`articles.chat_id`），页面上「继续对话」回到它；没有就用老产物上记的，再没有就新开一段、输入框里放好这条内容的引用（`annulo:compose`，不替用户发话）。
+- **交给 AI 只有一个入口**：顶上的「交给 AI」。文件夹那排不放「继续对话」「在对话里改」（和它重复）；要接着改，在右侧对话历史里回到那段对话，或者引用这条内容新开一段。在对话里跑 `folder.create` / `folder.write` 仍会把对话记到 `articles.chat_id`。
 - 交给 AI「在这条上做」是自媒体自己的任务 `tasks/work-on-content.md`：做出来的都放进文件夹，不 `annulo upload`、不 `assets.add`。
 
 宣传片的例子：一条内容「Annulo 宣传片（重做）」，`稿子.md` 写要求；助手在同一段对话里做出 `A 外贸版/`、`B 开源版/` 两个目录，各有脚本、文案、成片；要发时点两次「发布」，一次挑 A 的视频和文案，一次挑 B 的。助手不用停下来问拆不拆。
@@ -43,7 +43,7 @@
 
 ## 实现
 
-- **Annulo 原语**（能力版本 46，`internal/localfn/fs.go`、`internal/server/workfiles.go`）：本机函数的 `ctx.fs` 读写项目工作目录（`list / stat / read / write / mkdir / move / trash / copy / toLocal / open`），`ctx.workspace.work_dir` 是这个目录；页面用 `/_annulo/work-files/<路径>` 显示里面的图片、视频。`creator/annulo.json` 的 `min_annulo_api` 是 47（47 加了页面让右侧新开对话、只填输入框的 `annulo:compose`）。
+- **Annulo 原语**（能力版本 46，`internal/localfn/fs.go`、`internal/server/workfiles.go`）：本机函数的 `ctx.fs` 读写项目工作目录（`list / stat / read / write / mkdir / move / trash / copy / toLocal / open`），`ctx.workspace.work_dir` 是这个目录；页面用 `/_annulo/work-files/<路径>` 显示里面的图片、视频。`creator/annulo.json` 的 `min_annulo_api` 是 46。
 - **模板**：自媒体的内容中心是从 core 分出来的一份 `components/views/CreatorContent.tsx`（`pages/index.tsx` 用它），文件夹在 `components/Folder.tsx`，本机函数 `local/folder.ts`，md 转换 `lib/mdhtml.ts`（`talizen.config.ts` 的 importMap 加了 marked、turndown）。
 - 发布：`components/FolderPublish.tsx` 挑内容，`folder.publish` 把文件夹里的文件存成本机文件（`local:<name>`），按插件的 `fromContent` 生成每个账号的帖子、过平台检查，页面放进发布队列。发布记录用 core 的 `PublishRecords`（`detailed`）。社媒插件 0.8.3 起排期到点照帖子发。
 

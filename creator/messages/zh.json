@@ -1628,12 +1628,6 @@
   "folder": {
     "title": "文件夹",
     "preparing": "正在准备文件夹…",
-    "continue": "继续对话",
-    "continue_hint": "回到改这些文件的那段对话，在里面说要改什么",
-    "ask": "在对话里改",
-    "ask_hint": "还没有对话：新开一段",
-    "ask_prompt": "接着改 {ref}「{title}」文件夹里的东西。先读一下文件夹（annulo run folder.create 拿路径），然后问我要改什么。",
-    "ask_title": "改「{title}」",
     "new_file": "新建文件",
     "new_dir": "新建文件夹",
     "new_file_default": "脚本.md",

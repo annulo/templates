@@ -1628,12 +1628,6 @@
   "folder": {
     "title": "Folder",
     "preparing": "Preparing the folder…",
-    "continue": "Continue chat",
-    "continue_hint": "Go back to the chat that worked on these files and say what to change",
-    "ask": "Edit in chat",
-    "ask_hint": "No chat yet: start one",
-    "ask_prompt": "Keep working on the files in the folder of {ref} \"{title}\". Read the folder first (annulo run folder.create gives the path), then ask me what to change.",
-    "ask_title": "Edit \"{title}\"",
     "new_file": "New file",
     "new_dir": "New folder",
     "new_file_default": "script.md",

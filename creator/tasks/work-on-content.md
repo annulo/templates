@@ -10,7 +10,7 @@ description: 在一条内容的文件夹里照用户的要求做事：照稿子�
 ## 1. 拿文件夹和上下文
 
 ```bash
-annulo run folder.create --input '{"article_id":"<article_id>"}'   # → { dir }：文件夹的绝对路径，没有就建；同时记下这段对话（页面上「继续对话」回到这里）
+annulo run folder.create --input '{"article_id":"<article_id>"}'   # → { dir }：文件夹的绝对路径，没有就建；同时把这段对话记到这条内容上
 annulo run work.context --input '{"article_id":"<article_id>"}'
 ```
 
@@ -38,7 +38,7 @@ annulo run work.context --input '{"article_id":"<article_id>"}'
 
 ## 4. 用户在这段对话里接着改
 
-用户看完会回到这段对话里接着说（内容页的「继续对话」打开的就是这里），也可能在别的对话里引用这条内容（`@articles:<id>`）。
+用户看完会回到这段对话里接着说，也可能在别的对话里引用这条内容（`@articles:<id>`）。
 
 - 先 `annulo run folder.create` 一次（记下这段对话），再看文件夹现在的样子：用户可能在页面上改过、删过、加过文件。
 - **改一处**（「第 2 段短一点」「封面字大一点」）：直接改那个文件，别的不动。

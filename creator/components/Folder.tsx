@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { MessageSquareText, ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Image as ImageIcon, LayoutGrid, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Image as ImageIcon, LayoutGrid, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, inputCls } from './ui'
 import { filesOf } from '../lib/files'
 import { isEn, useT } from '../lib/i18n'
-import { askInNewChat, composeInChat, dbList, openChat, runLocal, type Article } from '../lib/shuttle'
-import { refOf } from '../lib/refs'
+import { dbList, runLocal, type Article } from '../lib/shuttle'
 import { TaskRunning, useTaskRuns } from './Task'
 
 // 内容文件夹（docs/content-model.md）：一条内容的稿子、脚本、文案、视频都是它文件夹里的文件，可以分目录。
@@ -51,23 +50,6 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
   const [creating, setCreating] = useState(false)
   const call: Call = (fn, input = {}) => runLocal(`folder.${fn}`, { article_id: id, ...input })
 
-  // 继续对话：回到改这条内容的那段对话（folder.create / write 记的 chat_id）；没有就用老产物上记的；都没有新开一段
-  const [assetChat, setAssetChat] = useState('')
-  useEffect(() => {
-    dbList('assets').then((l) => {
-      const mine = (l as unknown as { article_id?: string; chat_id?: string; created_at?: string }[]).filter((x) => x.article_id === id && x.chat_id).sort((x, y) => String(y.created_at ?? '').localeCompare(String(x.created_at ?? '')))
-      setAssetChat(mine[0]?.chat_id ?? '')
-    }).catch(() => {})
-  }, [id])
-  const chat = String((a as Article & { chat_id?: string }).chat_id ?? '') || assetChat
-  const [asking, setAsking] = useState(false)
-  const continueChat = async () => {
-    if (chat) { openChat(chat); return }
-    // 还没有对话：新开一段，输入框里放这条内容的引用，用户说要改什么再发
-    if (composeInChat(`${refOf('articles', id)} `)) return
-    setAsking(true)
-    try { const r = await askInNewChat(t('ask_prompt', { ref: refOf('articles', id), title: a.title }), t('ask_title', { title: a.title })); openChat(r.chat_id) } catch (e) { setError((e as Error).message) } finally { setAsking(false) }
-  }
   const { runs } = useTaskRuns(['work-on-content', 'work-on-article'], (r) => r.input?.article_id === id, () => { void load(); onChanged() })
 
   const load = useCallback(async () => {
@@ -148,7 +130,6 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
           {state.can_open && <p className="mt-0.5 truncate text-xs text-muted-foreground" title={state.dir}>{state.dir.replace(/^(\/Users\/[^/]+|\/home\/[^/]+|[A-Z]:\\Users\\[^\\]+)/, '~')}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <Button size="sm" needsShuttle disabled={asking} onClick={() => void continueChat()} title={chat ? t('continue_hint') : t('ask_hint')}>{asking ? <Loader2 className="animate-spin" /> : <MessageSquareText />}{chat ? t('continue') : t('ask')}</Button>
           <Button size="sm" variant="outline" onClick={() => startAdd('file')}><FilePlus />{t('new_file')}</Button>
           {view === 'tree' && <Button size="sm" variant="outline" onClick={() => startAdd('dir')}><FolderPlus />{t('new_dir')}</Button>}
           {state.can_open && <Button size="sm" variant="ghost" onClick={() => void call('open', {}).catch((e) => setError((e as Error).message))}><FolderOpen />{t('open_folder')}</Button>}

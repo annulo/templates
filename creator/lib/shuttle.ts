@@ -531,16 +531,6 @@ export function openChat(chatId: string) {
   return true
 }
 
-/**
- * 在右侧新开一段空对话，把 text（比如一个引用）填进输入框，不发送，用户自己接着写（Annulo 能力版本 47）。
- * 不在 Annulo 里时返回 false
- */
-export function composeInChat(text: string) {
-  if (!inShuttle()) return false
-  window.parent.postMessage({ type: 'annulo:compose', text }, window.location.origin)
-  return true
-}
-
 export type ChatSummary = { id: string; title: string; updated_at: number; messages: number; status?: '' | 'running' | 'asking' }
 /** 一段对话（手机上）：from 之后的消息、正在跑的这一轮的快照 live、状态 */
 export type RemoteChat = { id: string; title: string; total: number; from: number; messages: any[]; live?: any; status?: '' | 'running' | 'asking' }
