@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, inputCls } from './ui'
@@ -50,6 +50,17 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
   const [creating, setCreating] = useState(false)
   // 右键菜单（网格、树里的文件和文件夹）和就地改名
   const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null)
+  // 树的左栏宽度：拖中间那条线调，记在这台电脑上
+  const [treeW, setTreeW] = useState(() => { try { return Number(localStorage.getItem('folder:tree-w')) || 260 } catch { return 260 } })
+  const dragTree = (ev: PointerEvent<HTMLDivElement>) => {
+    ev.preventDefault()
+    const x0 = ev.clientX, w0 = treeW
+    let w = w0
+    const move = (m: globalThis.PointerEvent) => { w = Math.max(180, Math.min(560, w0 + m.clientX - x0)); setTreeW(w) }
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); try { localStorage.setItem('folder:tree-w', String(w)) } catch {} }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
   const [renaming, setRenaming] = useState('')
   const call: Call = (fn, input = {}) => runLocal(`folder.${fn}`, { article_id: id, ...input })
 
@@ -115,16 +126,16 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
     if (!n || to === e.path) return
     act(async () => { await call('rename', { path: e.path, to }); if (sel === e.path || sel.startsWith(e.path + '/')) setSel(to + sel.slice(e.path.length)) })
   }
-  const nameOf = (e: Entry, className?: string) => renaming === e.path
+  const nameOf = (e: Entry, className?: string, lines?: 1 | 2) => renaming === e.path
     ? <RenameInput value={base(e.path)} onDone={(v) => renameTo(e, v)} onCancel={() => setRenaming('')} className={className} />
-    : <span className="min-w-0 truncate">{base(e.path)}</span>
+    : <span className="flex min-w-0 flex-1"><MidName text={base(e.path)} lines={lines} /></span>
   const viewer = (e: Entry) => <Viewer key={e.path} root={state.path} canOpen={!!state.can_open} e={e} kids={children[e.path] ?? []} call={call} reload={load} onSelect={setSel} />
 
   const row = (e: Entry, depth: number) => {
     const Icon = iconOf(e, isOpen(e.path))
     return (
       <div key={e.path}>
-        <div onContextMenu={(ev) => onMenu(ev, e)} className={cx('flex items-center gap-1 rounded-md pr-1 text-sm', sel === e.path || menu?.e.path === e.path ? 'bg-primary/10 text-primary-text' : 'hover:bg-muted')} style={{ paddingLeft: 4 + depth * 14 }}>
+        <div onContextMenu={(ev) => onMenu(ev, e)} className={cx('flex items-center gap-1 rounded-md pr-1 text-sm', sel === e.path || menu?.e.path === e.path ? 'bg-primary/10 text-primary-text' : 'hover:bg-muted')} style={{ paddingLeft: 4 + depth * 12 }}>
           {/* 改名时不能是 button：输入框放在 button 里，按空格会点到按钮 */}
           {renaming === e.path ? <div className="flex min-w-0 flex-1 items-center gap-1.5 py-1"><span className="w-3.5 shrink-0" />{nameOf(e, 'h-6')}</div> : <button type="button" className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-left" onClick={() => { setSel(e.path); if (e.dir) setOpenDirs((o) => ({ ...o, [e.path]: !isOpen(e.path) })) }}>
             {e.dir ? (isOpen(e.path) ? <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />) : <span className="w-3.5 shrink-0" />}
@@ -176,8 +187,9 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
             : files.length ? <Grid root={state.path} files={files} onSelect={setSel} onMenu={onMenu} active={menu?.e.path} renaming={renaming} nameOf={nameOf} /> : <p className="p-4 text-sm text-muted-foreground">{t('empty_grid')}</p>}
         </div>
       ) : (
-        <div className="grid min-h-[360px] grid-cols-1 overflow-clip rounded-lg border border-border md:grid-cols-[240px_1fr]">
-          <div className="max-h-[640px] overflow-auto border-b border-border p-1.5 md:border-r md:border-b-0">
+        <div className="grid min-h-[360px] grid-cols-1 overflow-clip rounded-lg border border-border md:grid-cols-[var(--tree-w)_1fr]" style={{ '--tree-w': `${treeW}px` } as CSSProperties}>
+          <div className="relative max-h-[640px] overflow-auto border-b border-border p-1.5 md:border-r md:border-b-0">
+            <div onPointerDown={dragTree} title={t('drag_width')} className="absolute inset-y-0 right-0 z-10 hidden w-1.5 cursor-col-resize hover:bg-primary/30 md:block" />
             {entries.length ? (children[''] ?? []).map((e) => row(e, 0)) : <p className="p-3 text-xs text-muted-foreground">{t('empty_tree')}</p>}
           </div>
           <div className="min-w-0">{selected ? viewer(selected) : <p className="p-4 text-sm text-muted-foreground">{t('pick_one')}</p>}</div>
@@ -284,7 +296,43 @@ async function moveOld(a: Article, call: Call) {
 }
 
 /** 网格：所有文件铺平，图片、视频显示缩略图，名字下面写在哪个目录里；点开看或改 */
-function Grid({ root, files, onSelect, onMenu, active, renaming, nameOf }: { root: string; files: Entry[]; onSelect: (p: string) => void; onMenu: (ev: MouseEvent, e: Entry) => void; active?: string; renaming: string; nameOf: (e: Entry, className?: string) => ReactNode }) {
+/**
+ * 放不下时省略中间、留住结尾（扩展名和它前面几个字，比如「问助手 5 秒（hyp…试看）.mp4」）：同名只差结尾的几个版本也分得清。
+ * 按这一格的宽度量字（canvas measureText）：放得下就整个显示（lines=2 时最多两行，按字折行），放不下就从中间删字换成「…」。完整名字在 title 里
+ */
+function MidName({ text, lines = 1, keep = 4 }: { text: string; lines?: 1 | 2; keep?: number }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [shown, setShown] = useState(text)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const fit = () => {
+      const w = el.parentElement?.clientWidth ?? el.clientWidth
+      if (!w) return
+      const ctx = (MidName as unknown as { c?: CanvasRenderingContext2D }).c ??= document.createElement('canvas').getContext('2d')!
+      ctx.font = getComputedStyle(el).font
+      // 两行时按字折行，第二行行尾留一点余量
+      const room = w * lines - (lines > 1 ? 8 : 2)
+      if (ctx.measureText(text).width <= room) { setShown(text); return }
+      const ext = text.match(/\.[^.\s]{1,8}$/)?.[0] ?? ''
+      const tail = text.slice(-Math.min(text.length - 1, ext.length + keep))
+      let lo = 0, hi = text.length - tail.length
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2)
+        if (ctx.measureText(text.slice(0, mid) + '…' + tail).width <= room) lo = mid
+        else hi = mid - 1
+      }
+      setShown(text.slice(0, lo) + '…' + tail)
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    if (el.parentElement) ro.observe(el.parentElement)
+    return () => ro.disconnect()
+  }, [text, lines, keep])
+  return <span ref={ref} title={text} className={cx('min-w-0', lines > 1 ? 'line-clamp-2 break-all' : 'truncate')}>{shown}</span>
+}
+
+function Grid({ root, files, onSelect, onMenu, active, renaming, nameOf }: { root: string; files: Entry[]; onSelect: (p: string) => void; onMenu: (ev: MouseEvent, e: Entry) => void; active?: string; renaming: string; nameOf: (e: Entry, className?: string, lines?: 1 | 2) => ReactNode }) {
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-3 p-3">
       {files.map((k) => {
@@ -302,8 +350,8 @@ function Grid({ root, files, onSelect, onMenu, active, renaming, nameOf }: { roo
                 : <Icon className="size-10 text-muted-foreground" strokeWidth={1.25} />}
             </div>
             <div className="min-w-0 px-0.5">
-              <div className="flex truncate text-sm">{nameOf(k, 'h-7 text-sm')}</div>
-              <div className="truncate text-[11px] text-muted-foreground">{parent(k.path) ? `${parent(k.path)} · ` : ''}{fmtSize(k.size)}</div>
+              <div className="flex text-sm leading-snug">{nameOf(k, 'h-7 text-sm', 2)}</div>
+              <div className="flex text-[11px] text-muted-foreground"><span className="shrink-0">{fmtSize(k.size)}</span>{parent(k.path) && <><span className="shrink-0 px-1">·</span><span className="flex min-w-0 flex-1"><MidName text={parent(k.path)} keep={6} /></span></>}</div>
             </div>
           </Tag>
         )

@@ -1655,6 +1655,7 @@
     "empty_dir": "空文件夹。",
     "rename": "重命名",
     "open_system": "用系统程序打开",
+    "drag_width": "拖动调宽",
     "rename_hint": "双击改名",
     "open": "打开",
     "reveal": "在文件夹中显示",

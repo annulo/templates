@@ -1655,6 +1655,7 @@
     "empty_dir": "Empty folder.",
     "rename": "Rename",
     "open_system": "Open in app",
+    "drag_width": "Drag to resize",
     "rename_hint": "Double-click to rename",
     "open": "Open",
     "reveal": "Show in folder",
