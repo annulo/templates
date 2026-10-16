@@ -4,10 +4,12 @@ import { tr } from '../lib/i18n'
 
 /**
  * placeholder：空的时候段落里的提示，不给用「输入正文……」。
- * markdown：改的是 .md 文件（自媒体的内容文件夹）：一到六级标题都能用，斜杠菜单多一个「表格」（要同时传表格扩展）。
- * extensions：模板自己加的 Tiptap 扩展（比如表格、任务列表），模板在 importMap 里给包、自己动态加载好了再传进来
+ * markdown：改的是 .md 文件（自媒体的内容文件夹）：value、onChange 都是 md（不是 HTML），一到六级标题都能用，斜杠菜单多一个「表格」。
+ *   要在 extensions 里传官方的 Markdown（@tiptap/markdown）和表格扩展；建好时先 onChange 一次规范化后的 md，页面拿它当没改过的样子。
+ * extensions：模板自己加的 Tiptap 扩展，模板在 importMap 里给包、自己动态加载好了再传进来。
+ * resolveSrc：图片、视频显示用的地址（存的还是原地址），比如 md 里的相对路径换成预览地址；不传按资料库的规则（本机文件 local:）
  */
-export type RichEditorProps = { value: string; onChange: (html: string) => void; placeholder?: string; markdown?: boolean; extensions?: unknown[] }
+export type RichEditorProps = { value: string; onChange: (value: string) => void; placeholder?: string; markdown?: boolean; extensions?: unknown[]; resolveSrc?: (src: string) => string }
 
 /**
  * 文章正文的编辑器（飞书 / Notion 式：输入 / 插入块，选中文字浮出格式工具栏，粘贴、拖进图片直接上传）。存的是 HTML。

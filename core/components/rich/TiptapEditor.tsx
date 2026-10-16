@@ -32,14 +32,23 @@ function videoSize(src: string): Promise<{ width?: number; height?: number }> {
   })
 }
 
+/** 显示时怎么把存的地址换成能看的地址：默认 shown；改 .md 时相对路径由页面换（RichEditor 的 resolveSrc），存的还是相对路径 */
+type SrcOptions = { resolve?: (src: string) => string }
+
 /** 图片：存的还是原地址，显示用 shown（本机文件） */
-const Image = ImageBase.extend({
-  addNodeView: () => ({ node }) => {
+const Image = ImageBase.extend<SrcOptions>({
+  addOptions() {
+    return { ...this.parent?.(), resolve: undefined } as ReturnType<NonNullable<typeof this.parent>> & SrcOptions
+  },
+  addNodeView() {
+    const show = this.options.resolve ?? shown
+    return ({ node }) => {
     const img = document.createElement('img')
-    img.src = shown(node.attrs.src)
+    img.src = show(node.attrs.src)
     if (node.attrs.alt) img.alt = node.attrs.alt
     if (node.attrs.title) img.title = node.attrs.title
     return { dom: img }
+    }
   },
 })
 
@@ -48,8 +57,9 @@ const Image = ImageBase.extend({
  * 编辑器里不用原生播放器：点击会被播放控件吃掉，选不中、拖不动。显示成一个能选中的块（第一帧 + 角上「视频」），点了选中、能删能拖；
  * 中间的播放按钮弹出播放窗口（openPlayer）。预览、发出去的是正常的播放器
  */
-const Video = Node.create({
+const Video = Node.create<SrcOptions>({
   name: 'video',
+  addOptions: () => ({ resolve: undefined }),
   group: 'block',
   atom: true,
   selectable: true,
@@ -61,14 +71,35 @@ const Video = Node.create({
     height: { default: null, parseHTML: (el: HTMLElement) => Number(el.getAttribute('height')) || null },
   }),
   parseHTML: () => [{ tag: 'video[src]' }],
+  // 在 md 里（RichEditor 的 markdown 模式，模板加了 @tiptap/markdown）写成单独一行的 <video src width height controls></video>。
+  // marked 不把 <video> 当块级 HTML，会塞进段落、读丢，所以自己认这一行
+  markdownTokenName: 'video',
+  markdownTokenizer: {
+    name: 'video',
+    level: 'block',
+    start: (src: string) => src.search(/^<video\b/m),
+    tokenize: (src: string) => {
+      const m = /^<video\b([^>]*)>(?:\s*<\/video>)?[ \t]*(?:\n|$)/.exec(src)
+      if (!m) return undefined
+      const attr = (k: string) => new RegExp(`\\s${k}="([^"]*)"`).exec(m[1])?.[1]
+      return { type: 'video', raw: m[0], src: attr('src') ?? '', width: Number(attr('width')) || null, height: Number(attr('height')) || null }
+    },
+  },
+  parseMarkdown: (token: { src: string; width: number | null; height: number | null }, h: { createNode: (type: string, attrs: Record<string, unknown>) => unknown }) => h.createNode('video', { src: token.src, width: token.width, height: token.height }),
+  renderMarkdown: (node: { attrs?: { src?: string; width?: number | null; height?: number | null } }) => {
+    const a = node.attrs ?? {}
+    return `<video src="${a.src ?? ''}"${a.width ? ` width="${a.width}"` : ''}${a.height ? ` height="${a.height}"` : ''} controls></video>`
+  },
   renderHTML: ({ HTMLAttributes }) => ['video', mergeAttributes(HTMLAttributes, { controls: 'true', preload: 'metadata', style: 'max-width:100%;height:auto' })],
-  addNodeView: () => ({ node }) => {
+  addNodeView() {
+    const show = this.options.resolve ?? shown
+    return ({ node }) => {
     const dom = document.createElement('div')
     dom.className = 'rich-video'
     dom.contentEditable = 'false'
     const v = document.createElement('video')
     // #t=0.1：停在第一帧，不然只有黑框。比例按正文里存的宽高，没存的（老内容）按 16:9
-    v.src = node.attrs.src ? `${shown(node.attrs.src)}#t=0.1` : ''
+    v.src = node.attrs.src ? `${show(node.attrs.src)}#t=0.1` : ''
     v.style.aspectRatio = node.attrs.width && node.attrs.height ? `${node.attrs.width} / ${node.attrs.height}` : '16 / 9'
     v.preload = 'metadata'
     v.muted = true
@@ -83,10 +114,11 @@ const Video = Node.create({
     play.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
-      openPlayer(shown(node.attrs.src))
+      openPlayer(show(node.attrs.src))
     })
     dom.append(v, tag, play)
     return { dom, stopEvent: (e: Event) => e.target === play, ignoreMutation: () => true }
+    }
   },
 })
 
@@ -118,6 +150,8 @@ function openPlayer(src: string) {
   document.body.append(back)
   v.play().catch(() => {}) // 放不了（文件没了、格式不支持）播放器自己会显示
 }
+
+const mdOf = (e: Editor) => (e as Editor & { getMarkdown: () => string }).getMarkdown()
 
 const isMedia = (f: File) => f.type.startsWith('image/') || f.type.startsWith('video/')
 
@@ -154,7 +188,7 @@ function findSlash(editor: Editor): Slash | null {
   return { from: $from.pos - m[1].length - 1, to: $from.pos, query: m[1].toLowerCase(), top: c.top, bottom: c.bottom, left: c.left }
 }
 
-export default function TiptapEditor({ value, onChange, placeholder, markdown, extensions }: RichEditorProps) {
+export default function TiptapEditor({ value, onChange, placeholder, markdown, extensions, resolveSrc }: RichEditorProps) {
   const [slash, setSlash] = useState<Slash | null>(null)
   const [active, setActive] = useState(0)
   const [uploading, setUploading] = useState(0)
@@ -226,11 +260,13 @@ export default function TiptapEditor({ value, onChange, placeholder, markdown, e
       // 链接不加 nofollow、不强制新窗口：文章里多是站内链接，nofollow 影响 SEO
       StarterKit.configure({ heading: { levels: markdown ? [1, 2, 3, 4, 5, 6] : [2, 3] }, link: { openOnClick: false, autolink: true, defaultProtocol: 'https', HTMLAttributes: { target: null, rel: null } } }),
       Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? tr('editor.ph_heading') : placeholder || tr('editor.ph_media')) }),
-      Image,
-      Video,
+      Image.configure({ resolve: resolveSrc }),
+      Video.configure({ resolve: resolveSrc }),
       ...((extensions ?? []) as AnyExtension[]),
     ],
     content: value,
+    // markdown 模式：value、onChange 都是 md（要模板在 extensions 里加 @tiptap/markdown 的 Markdown）
+    ...(markdown ? { contentType: 'markdown' } : {}),
     editorProps: {
       attributes: { class: 'rich-content min-h-80 px-5 py-4 outline-none' },
       handleKeyDown: (_view, ev) => {
@@ -264,8 +300,10 @@ export default function TiptapEditor({ value, onChange, placeholder, markdown, e
         return true
       },
     },
+    // markdown 模式下建好先报一次规范化后的 md：页面拿它当「没改过」的样子比较
+    onCreate: ({ editor }) => { if (markdown) onChange(mdOf(editor)) },
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML())
+      onChange(markdown ? mdOf(editor) : editor.getHTML())
       const s = findSlash(editor)
       setSlash(s)
       if (!s || s.query !== menu.current.slash?.query) setActive(0)

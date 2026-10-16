@@ -26,11 +26,13 @@ export default {
       "@tiptap/starter-kit": "https://esm.talizen.com/@tiptap/starter-kit@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
       "@tiptap/extensions": "https://esm.talizen.com/@tiptap/extensions@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
       "@tiptap/extension-image": "https://esm.talizen.com/@tiptap/extension-image@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
-      // 编辑器的 markdown 模式（表格、任务列表，components/rich/mdExtensions.ts），只有内容文件夹用
+      // 内容文件夹的 .md 用编辑器直接读写 md：官方的 Markdown 扩展、表格、任务列表（components/rich/mdExtensions.ts）。
+      // @tiptap/markdown 用 marked 解析，和下面 lib/mdhtml.ts 用的是同一份（external=marked），版本要对上它的依赖（marked ^17）
+      "@tiptap/markdown": "https://esm.talizen.com/@tiptap/markdown@3.31.3?bundle&external=@tiptap/core,@tiptap/pm,marked",
       "@tiptap/extension-table": "https://esm.talizen.com/@tiptap/extension-table@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
       "@tiptap/extension-list": "https://esm.talizen.com/@tiptap/extension-list@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
-      // 内容文件夹里的 .md 用富文本编辑器改：md → HTML 用 marked，HTML → md 用 turndown（lib/mdhtml.ts）
-      "marked": "https://esm.talizen.com/marked@15.0.12?bundle",
+      // 发布时 md → HTML 用 marked、老文章搬进文件夹时 HTML → md 用 turndown（lib/mdhtml.ts）
+      "marked": "https://esm.talizen.com/marked@17.0.1?bundle",
       "turndown": "https://esm.talizen.com/turndown@7.2.0?bundle",
       "turndown-plugin-gfm": "https://esm.talizen.com/turndown-plugin-gfm@1.0.2?bundle",
     },

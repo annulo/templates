@@ -1,26 +1,12 @@
-// Markdown ↔ 富文本编辑器的 HTML（components/Folder.tsx 用）：文件夹里的长文存成 .md，页面上用富文本编辑器改。
+// Markdown ↔ HTML：发布长文时 md → HTML（FolderPublish.tsx），老文章搬进文件夹时 HTML → md（Folder.tsx 的 moveOld）。
+// 页面上改 .md 不经过这里：编辑器直接读写 md（官方的 @tiptap/markdown，components/rich/mdExtensions.ts）。
 // md → HTML 用 marked，HTML → md 用 turndown（加 GFM：删除线、表格、任务列表）；视频没有 md 写法，原样留 <video src width height> 标签。
-// 编辑器开的是 markdown 模式（一到六级标题、表格、任务列表，core/components/RichEditor.tsx）。只在浏览器里用（DOMParser）。
+// 只在浏览器里用。
 import { marked } from 'marked'
 import TurndownService from 'turndown'
 import { gfm } from 'turndown-plugin-gfm'
 
-export function mdToHtml(md: string) {
-  const html = marked.parse(md, { async: false, gfm: true })
-  if (!html.includes('type="checkbox"')) return html
-  // 任务列表：marked 出的是 <li><input type=checkbox> 文字</li>，编辑器认 <ul data-type="taskList"><li data-type="taskItem" data-checked>
-  const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
-  for (const box of doc.querySelectorAll('li > input[type="checkbox"], li > p:first-child > input[type="checkbox"]')) {
-    const li = box.closest('li')!
-    li.setAttribute('data-type', 'taskItem')
-    li.setAttribute('data-checked', String((box as HTMLInputElement).hasAttribute('checked')))
-    li.parentElement?.setAttribute('data-type', 'taskList')
-    const next = box.nextSibling
-    if (next?.nodeType === 3) next.textContent = (next.textContent ?? '').replace(/^\s+/, '')
-    box.remove()
-  }
-  return doc.body.innerHTML
-}
+export const mdToHtml = (md: string) => marked.parse(md, { async: false, gfm: true })
 
 // turndown 默认把 * _ [ ] # 这些都转义，存一次源码里就多出一堆反斜杠。只转义会改变意思的：行首的标题、引用、列表记号，和 * `
 const escape = (s: string) => s

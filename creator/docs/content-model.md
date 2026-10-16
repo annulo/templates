@@ -23,7 +23,7 @@
 - **稿子、脚本、文案、视频、参考都是里面的文件**，可以分目录（A 版、B 版各一个目录）。用户和 AI 读写的是同一份文件：用户在页面上改，AI 在对话里直接改目录。脚本不进资料库。
 - **稿子**是最外层的 `稿子.md`（英文界面 `brief.md`）：这条内容要做什么、要求、大纲、参考。没有单独的稿子框。
 - **文案**是名字带「文案」的 `.md`（英文 `copy.md`）：开头 `---` 包住 `title:`、`tags:`，下面是正文或视频简介。
-- **长文**是 Markdown：图片放旁边目录、用相对路径（`![](图/1.png)`），视频写成 `<video src width height>`。页面上用富文本编辑器改，存回去还是 md（`lib/mdhtml.ts`：marked + turndown）；能切到源码。编辑器开的是 markdown 模式（core `RichEditor` 的 `markdown` + 自媒体自己的表格、任务列表扩展 `components/rich/mdExtensions.ts`）：一到六级标题、表格、任务列表、删除线、代码块都能来回转；开头的 `---` 头不进编辑器，原样留着。
+- **长文**是 Markdown：图片放旁边目录、用相对路径（`![](图/1.png)`），视频写成单独一行的 `<video src width height controls></video>`。页面上用富文本编辑器直接读写 md（官方的 `@tiptap/markdown`，不经过 HTML；`components/rich/mdExtensions.ts` 加了表格、任务列表，改了转义和表格的写法，让读进来再存回去尽量不改原文），能切到源码。开头的 `---` 头不进编辑器，原样留着。
 - **产物**就是文件夹里的文件，不再是资料库里带 `article_id` 的一条。资料库只放几条内容都会用到的素材。
 - **内容没有类型**，**发布是挑选**：点「发布」挑这次发成什么（图文 / 视频 / 长文），文字从文件夹里挑一份 `.md`（标题、话题当场能改），图文挑一组图、视频挑一个视频（文件夹里的直接点选，也能从资料库选），再选账号。打开时按文件夹里有什么猜发成什么（有视频发视频，有图发图文，否则长文）；挑了文案，同一个目录里的图、视频自动配上（自己点过的不动）。每个账号新建一条帖子，**存什么发什么**：排期到点照帖子发，不再按文章重新生成。同一条内容可以发好几次（A、B 两支各发一次），没有「正在使用」。
 - **发布记录**：每条显示这次发的是什么（第一张图或视频、标题），阅读、点赞、评论、收藏、分享一个个列出来，能马上「更新数据」（重新采集这个账号）。
@@ -44,7 +44,7 @@
 ## 实现
 
 - **Annulo 原语**（能力版本 46，`internal/localfn/fs.go`、`internal/server/workfiles.go`）：本机函数的 `ctx.fs` 读写项目工作目录（`list / stat / read / write / mkdir / move / trash / copy / toLocal / open`），`ctx.workspace.work_dir` 是这个目录；页面用 `/_annulo/work-files/<路径>` 显示里面的图片、视频。`creator/annulo.json` 的 `min_annulo_api` 是 46。
-- **模板**：自媒体的内容中心是从 core 分出来的一份 `components/views/CreatorContent.tsx`（`pages/index.tsx` 用它），文件夹在 `components/Folder.tsx`，本机函数 `local/folder.ts`，md 转换 `lib/mdhtml.ts`（`talizen.config.ts` 的 importMap 加了 marked、turndown）。
+- **模板**：自媒体的内容中心是从 core 分出来的一份 `components/views/CreatorContent.tsx`（`pages/index.tsx` 用它），文件夹在 `components/Folder.tsx`，本机函数 `local/folder.ts`；编辑器的 md 扩展 `components/rich/mdExtensions.ts`；发布、搬老数据时的 md ↔ HTML 在 `lib/mdhtml.ts`（marked、turndown）。这些包都在 `talizen.config.ts` 的 importMap 里。
 - 发布：`components/FolderPublish.tsx` 挑内容，`folder.publish` 把文件夹里的文件存成本机文件（`local:<name>`），按插件的 `fromContent` 生成每个账号的帖子、过平台检查，页面放进发布队列。发布记录用 core 的 `PublishRecords`（`detailed`）。社媒插件 0.8.3 起排期到点照帖子发。
 
 ## 还没做的

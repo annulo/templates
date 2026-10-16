@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Image as ImageIcon, LayoutGrid, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, inputCls } from './ui'
-import { filesOf } from '../lib/files'
+import { fileSrc, filesOf } from '../lib/files'
 import { isEn, useT } from '../lib/i18n'
 import { dbList, runLocal, type Article } from '../lib/shuttle'
 import { TaskRunning, useTaskRuns } from './Task'
@@ -407,45 +407,36 @@ export const joinPath = (dir: string, p: string) => {
 }
 
 /**
- * md 用富文本编辑器改：读进来 md → HTML，相对路径的图片、视频换成工作目录的预览地址；
- * 存的时候换回相对路径，编辑器里新插的本机文件（上传、从资料库选）复制进 md 旁边的「图」目录，再 HTML → md 写回去
+ * md 用富文本编辑器直接改（官方的 @tiptap/markdown，components/rich/mdExtensions.ts）：读进来、存回去都是 md，不经过 HTML。
+ * 相对路径的图片、视频存的还是相对路径，只在显示时换成工作目录的预览地址（resolveSrc）；
+ * 编辑器里新插的本机文件（上传、从资料库选）存的时候复制进 md 旁边的「图」目录，md 里换成相对路径
  */
 function RichMd({ root, path, mtime, call, reload, onBar }: { root: string; path: string; mtime: string | number; call: Call; reload: () => Promise<void>; onBar: (b: Bar) => void }) {
   const { t } = useT('folder')
-  const [html, setHtml] = useState<string | null>(null)
+  const [md, setMd] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const back = useRef<Record<string, string>>({})
-  // 改没改：把编辑器里的内容转成 md，和打开时（或上次存的）比。不能拿编辑器第一次 onChange 当原样：有的内容加载时不触发
-  const mdRef = useRef<typeof import('../lib/mdhtml') | null>(null)
-  const baseline = useRef('')
-  const mdOf = (h: string) => mdRef.current!.htmlToMd(h)
+  // 没改过的样子：编辑器建好时报的第一份（规范化后的）md，或者上次存进去的。比的时候不管末尾空白：
+  // 编辑器会在末尾的表格、视频后面自动补一个空段落，导出来多两个换行
+  const baseline = useRef<string | null>(null)
   const dir = parent(path)
   // 换内容（别处改了文件）要让编辑器重新挂载：它只在挂载时读 value
   const [ver, setVer] = useState(0)
   // 开头的 --- 头（文案的 title、tags）不进编辑器：富文本会把它当成分隔线和标题。原样留着，存的时候接回去，在源码里改
   const [front, setFront] = useState('')
-  // 表格、任务列表的编辑器扩展：第三方包只在浏览器里有，和 md 转换一起动态加载
-  const [exts, setExts] = useState<unknown[]>([])
+  // 编辑器的 Markdown、表格、任务列表扩展：第三方包只在浏览器里有，动态加载
+  const [exts, setExts] = useState<unknown[] | null>(null)
+  const resolveSrc = (src: string) => (isRelative(src) ? workSrc(`${root}/${joinPath(dir, decodeURI(src))}`) : fileSrc(src))
   const show = async (text: string) => {
-    const [m, x] = await Promise.all([import('../lib/mdhtml'), import('./rich/mdExtensions')])
-    mdRef.current = m
-    setExts(x.default)
+    const x = await import('./rich/mdExtensions')
     const fm = text.match(FRONT)?.[0] ?? ''
+    baseline.current = null
     setDirty(false)
     setFront(fm)
+    setExts(x.default)
     setVer((v) => v + 1)
-    const h = m.mapSrc(m.mdToHtml(text.slice(fm.length)), (src) => {
-          if (!isRelative(src)) return src
-          // marked 会把地址编码（中文、空格），文件里存的是原样的路径
-          const plain = decodeURI(src)
-          const url = workSrc(`${root}/${joinPath(dir, plain)}`)
-          back.current[url] = plain
-          return url
-        })
-    baseline.current = m.htmlToMd(h)
-    setHtml(h)
+    setMd(text.slice(fm.length))
   }
   const ext = useExternal(path, mtime, call, dirty, (x) => void show(x))
   useEffect(() => {
@@ -458,35 +449,35 @@ function RichMd({ root, path, mtime, call, reload, onBar }: { root: string; path
     })()
   }, [path])
   const save = async () => {
-    if (html === null) return
+    if (md === null) return
     setSaving(true); setError('')
     try {
-      const m = await import('../lib/mdhtml')
-      // 新插进来的本机文件：复制进 md 旁边的「图/」
-      for (const src of new Set(m.srcsOf(html))) {
-        if (!src.startsWith('local:') || back.current[src]) continue
+      // 新插进来的本机文件：复制进 md 旁边的「图/」，md 里换成相对路径（空格写成 %20，不然 md 的图片地址断开）
+      let body = md
+      for (const src of new Set(md.match(/local:[^\s)"]+/g) ?? [])) {
         const to = `${t('images_dir')}/${src.slice(6)}`
         await call('importLocal', { url: src, to: joinPath(dir, to) })
-        back.current[src] = to
+        body = body.split(`](${src})`).join(`](${to.replace(/ /g, '%20')})`).split(`"${src}"`).join(`"${to}"`)
       }
-      const body = m.htmlToMd(m.mapSrc(html, (s) => (back.current[s] ? back.current[s].replace(/ /g, '%20') : s)))
-      const text = (front ? front.replace(/\n*$/, '\n\n') : '') + body
+      const text = (front ? front.replace(/\n*$/, '\n\n') : '') + (body.trim() ? body.replace(/\n*$/, '\n') : '')
       await call('write', { path, text })
       ext.last.current = text
       ext.clear()
-      baseline.current = m.htmlToMd(html)
+      baseline.current = md.trimEnd()
       setDirty(false)
+      if (body !== md) await show(text)
       await reload()
     } catch (e) { setError((e as Error).message) } finally { setSaving(false) }
   }
   useBar(onBar, dirty, saving, save)
   if (error) return <div className="p-3"><Notice tone="error">{error}</Notice></div>
-  if (html === null) return <div className="p-4"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>
+  if (md === null || !exts) return <div className="p-4"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>
   return (
     <div className="px-3 pb-3" onKeyDown={(ev) => saveKey(ev, save)}>
       {ext.notice}
       {front && <pre title={t('front_hint')} className="mb-2 overflow-x-auto rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground">{front.trim()}</pre>}
-      <RichEditor key={ver} markdown extensions={exts} value={html} placeholder={isDraft(path) ? t('draft_placeholder') : undefined} onChange={(h) => { setHtml(h); setDirty(mdOf(h) !== baseline.current) }} />
+      <RichEditor key={ver} markdown extensions={exts} resolveSrc={resolveSrc} value={md} placeholder={isDraft(path) ? t('draft_placeholder') : undefined}
+        onChange={(v) => { setMd(v); if (baseline.current === null) baseline.current = v.trimEnd(); else setDirty(v.trimEnd() !== baseline.current) }} />
     </div>
   )
 }
