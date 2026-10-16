@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
-import { ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Image as ImageIcon, LayoutGrid, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
+import { ChevronDown, ChevronRight, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, inputCls } from './ui'
 import { fileSrc, filesOf } from '../lib/files'
@@ -9,7 +9,7 @@ import { TaskRunning, useTaskRuns } from './Task'
 
 // 内容文件夹（docs/content-model.md）：一条内容的稿子、脚本、文案、视频都是它文件夹里的文件，可以分目录。
 // 文件夹在项目的工作目录里（本机 ~/Annulo/<项目名>/内容/<名字>），读写走本机函数 local/folder.ts（Annulo 的 ctx.fs），
-// 图片、视频直接用 /_annulo/work-files/<路径> 显示。默认网格（所有文件铺平），可以切成树；文本在页面里改，md 用富文本编辑器。
+// 图片、视频、音频直接用 /_annulo/work-files/<路径> 显示，PDF 在新标签页打开。默认网格（所有文件铺平），可以切成树；文本在页面里改，md 用富文本编辑器。
 // 打开时还没有文件夹就建一个，老文章的稿子、正文、配图、视频、产物搬进去（表里的留着不动）。
 // AI 在对话里改文件不经过表，没有推送：看得见时每 4 秒重读。发布在 FolderPublish.tsx：挑这次发成什么、用哪些文件。
 
@@ -19,6 +19,8 @@ type Call = <T>(fn: string, input?: Record<string, unknown>) => Promise<T>
 export const TEXT = /\.(md|markdown|txt|json|ya?ml|csv|srt|vtt|html?|css|tsx?|jsx?|py|sh)$/i
 export const VIDEO = /\.(mp4|mov|webm|m4v)$/i
 export const IMAGE = /\.(png|jpe?g|gif|webp|svg|avif)$/i
+export const AUDIO = /\.(mp3|m4a|wav|ogg|oga|opus|aac|flac)$/i
+export const PDF = /\.pdf$/i
 export const MD = /\.(md|markdown)$/i
 /** 稿子：最外层的 稿子.md（英文界面建的是 brief.md） */
 export const isDraft = (p: string) => p === '稿子.md' || p === 'brief.md'
@@ -33,7 +35,8 @@ function iconOf(e: Entry, open: boolean) {
   if (e.dir) return open ? FolderOpen : FolderIcon
   if (VIDEO.test(e.path)) return Film
   if (IMAGE.test(e.path)) return ImageIcon
-  if (TEXT.test(e.path)) return FileText
+  if (AUDIO.test(e.path)) return Music
+  if (TEXT.test(e.path) || PDF.test(e.path)) return FileText
   return File
 }
 
@@ -48,6 +51,20 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
   const [view, setView] = useState<'grid' | 'tree'>(() => { try { return localStorage.getItem('folder:view') === 'tree' ? 'tree' : 'grid' } catch { return 'grid' } })
   const switchView = (v: 'grid' | 'tree') => { setView(v); try { localStorage.setItem('folder:view', v) } catch {} }
   const [creating, setCreating] = useState(false)
+  // 右键菜单（网格、树里的文件和文件夹）和就地改名
+  const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null)
+  // 树的左栏宽度：拖中间那条线调，记在这台电脑上
+  const [treeW, setTreeW] = useState(() => { try { return Number(localStorage.getItem('folder:tree-w')) || 260 } catch { return 260 } })
+  const dragTree = (ev: PointerEvent<HTMLDivElement>) => {
+    ev.preventDefault()
+    const x0 = ev.clientX, w0 = treeW
+    let w = w0
+    const move = (m: globalThis.PointerEvent) => { w = Math.max(180, Math.min(560, w0 + m.clientX - x0)); setTreeW(w) }
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); try { localStorage.setItem('folder:tree-w', String(w)) } catch {} }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+  const [renaming, setRenaming] = useState('')
   const call: Call = (fn, input = {}) => runLocal(`folder.${fn}`, { article_id: id, ...input })
 
   const { runs } = useTaskRuns(['work-on-content', 'work-on-article'], (r) => r.input?.article_id === id, () => { void load(); onChanged() })
@@ -103,18 +120,31 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
       </section>
     )
   }
+  const onMenu = (ev: MouseEvent, e: Entry) => { ev.preventDefault(); setMenu({ e, x: ev.clientX, y: ev.clientY }) }
+  const act = (f: () => Promise<unknown>) => { void f().then(() => load()).catch((err) => setError((err as Error).message)) }
+  const renameTo = (e: Entry, name: string) => {
+    setRenaming('')
+    const n = name.trim()
+    const to = parent(e.path) ? `${parent(e.path)}/${n}` : n
+    if (!n || to === e.path) return
+    act(async () => { await call('rename', { path: e.path, to }); if (sel === e.path || sel.startsWith(e.path + '/')) setSel(to + sel.slice(e.path.length)) })
+  }
+  const nameOf = (e: Entry, className?: string, lines?: 1 | 2) => renaming === e.path
+    ? <RenameInput value={base(e.path)} onDone={(v) => renameTo(e, v)} onCancel={() => setRenaming('')} className={className} />
+    : <span className="flex min-w-0 flex-1"><MidName text={base(e.path)} lines={lines} /></span>
   const viewer = (e: Entry) => <Viewer key={e.path} root={state.path} canOpen={!!state.can_open} e={e} kids={children[e.path] ?? []} call={call} reload={load} onSelect={setSel} />
 
   const row = (e: Entry, depth: number) => {
     const Icon = iconOf(e, isOpen(e.path))
     return (
       <div key={e.path}>
-        <div className={cx('flex items-center gap-1 rounded-md pr-1 text-sm', sel === e.path ? 'bg-primary/10 text-primary-text' : 'hover:bg-muted')} style={{ paddingLeft: 4 + depth * 14 }}>
-          <button type="button" className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-left" onClick={() => { setSel(e.path); if (e.dir) setOpenDirs((o) => ({ ...o, [e.path]: !isOpen(e.path) })) }}>
+        <div onContextMenu={(ev) => onMenu(ev, e)} className={cx('flex items-center gap-1 rounded-md pr-1 text-sm', sel === e.path || menu?.e.path === e.path ? 'bg-primary/10 text-primary-text' : 'hover:bg-muted')} style={{ paddingLeft: 4 + depth * 12 }}>
+          {/* 改名时不能是 button：输入框放在 button 里，按空格会点到按钮 */}
+          {renaming === e.path ? <div className="flex min-w-0 flex-1 items-center gap-1.5 py-1"><span className="w-3.5 shrink-0" />{nameOf(e, 'h-6')}</div> : <button type="button" className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-left" onClick={() => { setSel(e.path); if (e.dir) setOpenDirs((o) => ({ ...o, [e.path]: !isOpen(e.path) })) }}>
             {e.dir ? (isOpen(e.path) ? <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />) : <span className="w-3.5 shrink-0" />}
             <Icon className="size-4 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 truncate">{base(e.path)}</span>
-          </button>
+            {nameOf(e, 'h-6')}
+          </button>}
         </div>
         {e.dir && isOpen(e.path) && (children[e.path] ?? []).map((k) => row(k, depth + 1))}
       </div>
@@ -152,21 +182,32 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
       {error && <Notice tone="error">{error}</Notice>}
       {view === 'grid' ? (
         <div className="min-h-[360px] overflow-clip rounded-lg border border-border">
-          {selected && !selected.dir
+          {selected
             ? <>
-                {files.length > 1 && <div className="border-b border-border bg-muted/30 px-2 py-1.5"><button type="button" onClick={() => setSel('')} className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-sm hover:bg-muted"><ChevronLeft className="size-4" />{t('all_files')}</button></div>}
+                {/* 面包屑：全部文件 / 目录 / 目录，点哪一级回到哪一级（目录显示里面的东西）；文件名在下面看文件的那一栏 */}
+                {(files.length > 1 || parent(selected.path)) && <div className="flex min-w-0 flex-wrap items-center gap-0.5 border-b border-border bg-muted/30 px-2 py-1.5 text-sm">
+                  <button type="button" onClick={() => setSel('')} className="cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted">{t('all_files')}</button>
+                  {crumbs(selected.dir ? selected.path : parent(selected.path)).map((c) => <span key={c} className="flex min-w-0 items-center gap-0.5"><ChevronRight className="size-3.5 shrink-0 text-muted-foreground" /><button type="button" onClick={() => setSel(c)} className={cx('max-w-48 cursor-pointer truncate rounded px-1.5 py-0.5 hover:bg-muted', c === selected.path && 'font-medium')}>{base(c)}</button></span>)}
+                </div>}
                 {viewer(selected)}
               </>
-            : files.length ? <Grid root={state.path} files={files} onSelect={setSel} /> : <p className="p-4 text-sm text-muted-foreground">{t('empty_grid')}</p>}
+            : files.length ? <Grid root={state.path} files={files} onSelect={setSel} onMenu={onMenu} active={menu?.e.path} renaming={renaming} nameOf={nameOf} /> : <p className="p-4 text-sm text-muted-foreground">{t('empty_grid')}</p>}
         </div>
       ) : (
-        <div className="grid min-h-[360px] grid-cols-1 overflow-clip rounded-lg border border-border md:grid-cols-[240px_1fr]">
-          <div className="max-h-[640px] overflow-auto border-b border-border p-1.5 md:border-r md:border-b-0">
+        <div className="grid min-h-[360px] grid-cols-1 overflow-clip rounded-lg border border-border md:grid-cols-[var(--tree-w)_1fr]" style={{ '--tree-w': `${treeW}px` } as CSSProperties}>
+          <div className="relative max-h-[640px] overflow-auto border-b border-border p-1.5 md:border-r md:border-b-0">
+            <div onPointerDown={dragTree} title={t('drag_width')} className="absolute inset-y-0 right-0 z-10 hidden w-1.5 cursor-col-resize hover:bg-primary/30 md:block" />
             {entries.length ? (children[''] ?? []).map((e) => row(e, 0)) : <p className="p-3 text-xs text-muted-foreground">{t('empty_tree')}</p>}
           </div>
           <div className="min-w-0">{selected ? viewer(selected) : <p className="p-4 text-sm text-muted-foreground">{t('pick_one')}</p>}</div>
         </div>
       )}
+      {menu && <FileMenu e={menu.e} x={menu.x} y={menu.y} canOpen={!!state.can_open} onClose={() => setMenu(null)}
+        onOpen={() => setSel(menu.e.path)}
+        onRename={() => setRenaming(menu.e.path)}
+        onSystemOpen={() => act(() => call('open', { path: menu.e.path }))}
+        onReveal={() => act(() => call('open', { path: menu.e.path, reveal: true }))}
+        onDelete={() => act(async () => { await call('remove', { path: menu.e.path }); if (sel === menu.e.path || sel.startsWith(menu.e.path + '/')) setSel('') })} />}
     </section>
   )
 }
@@ -195,7 +236,7 @@ function Viewer({ root, canOpen, e, kids, call, reload, onSelect }: { root: stri
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {renaming
             ? <RenameInput value={base(e.path)} onDone={(v) => void rename(v)} onCancel={() => setRenaming(false)} />
-            : <span className="min-w-0 cursor-text truncate rounded px-1 text-sm font-medium hover:bg-muted" title={t('rename_hint')} onDoubleClick={() => setRenaming(true)}>{e.path}</span>}
+            : <span className="min-w-0 cursor-text truncate rounded px-1 text-sm font-medium hover:bg-muted" title={t('rename_hint')} onDoubleClick={() => setRenaming(true)}>{base(e.path)}</span>}
           {!e.dir && <span className="shrink-0 text-xs text-muted-foreground">{fmtSize(e.size)}</span>}
         </div>
         {/* 服务端部署（canOpen 是 false）：用户不在服务器前面，「打开」在新标签页打开预览地址，没有「在文件夹中显示」 */}
@@ -208,6 +249,8 @@ function Viewer({ root, canOpen, e, kids, call, reload, onSelect }: { root: stri
         {e.dir ? <DirView kids={kids} onSelect={onSelect} />
           : TEXT.test(e.path) ? <TextEditor root={root} path={e.path} mtime={e.mtime} call={call} reload={reload} />
           : VIDEO.test(e.path) || IMAGE.test(e.path) ? <MediaView src={`${workSrc(`${root}/${e.path}`)}?v=${e.mtime}`} video={VIDEO.test(e.path)} />
+          : AUDIO.test(e.path) ? <div className="flex justify-center p-6"><audio src={`${workSrc(`${root}/${e.path}`)}?v=${e.mtime}`} controls preload="metadata" className="w-full max-w-md" /></div>
+          : PDF.test(e.path) ? <div className="flex justify-center p-6"><Button variant="outline" onClick={() => void window.open(`${workSrc(`${root}/${e.path}`)}?v=${e.mtime}`, '_blank')}><ExternalLink />{t('open_tab')}</Button></div>
           : <p className="p-4 text-sm text-muted-foreground">{t('cant_view')}</p>}
       </div>
     </div>
@@ -262,15 +305,53 @@ async function moveOld(a: Article, call: Call) {
 }
 
 /** 网格：所有文件铺平，图片、视频显示缩略图，名字下面写在哪个目录里；点开看或改 */
-function Grid({ root, files, onSelect }: { root: string; files: Entry[]; onSelect: (p: string) => void }) {
-  const { t } = useT('folder')
+/**
+ * 放不下时省略中间、留住结尾（扩展名和它前面几个字，比如「问助手 5 秒（hyp…试看）.mp4」）：同名只差结尾的几个版本也分得清。
+ * 按这一格的宽度量字（canvas measureText）：放得下就整个显示（lines=2 时最多两行，按字折行），放不下就从中间删字换成「…」。完整名字在 title 里
+ */
+function MidName({ text, lines = 1, keep = 4 }: { text: string; lines?: 1 | 2; keep?: number }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [shown, setShown] = useState(text)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const fit = () => {
+      const w = el.parentElement?.clientWidth ?? el.clientWidth
+      if (!w) return
+      const ctx = (MidName as unknown as { c?: CanvasRenderingContext2D }).c ??= document.createElement('canvas').getContext('2d')!
+      ctx.font = getComputedStyle(el).font
+      // 两行时按字折行，第二行行尾留一点余量
+      const room = w * lines - (lines > 1 ? 8 : 2)
+      if (ctx.measureText(text).width <= room) { setShown(text); return }
+      const ext = text.match(/\.[^.\s]{1,8}$/)?.[0] ?? ''
+      const tail = text.slice(-Math.min(text.length - 1, ext.length + keep))
+      let lo = 0, hi = text.length - tail.length
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2)
+        if (ctx.measureText(text.slice(0, mid) + '…' + tail).width <= room) lo = mid
+        else hi = mid - 1
+      }
+      setShown(text.slice(0, lo) + '…' + tail)
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    if (el.parentElement) ro.observe(el.parentElement)
+    return () => ro.disconnect()
+  }, [text, lines, keep])
+  return <span ref={ref} title={text} className={cx('min-w-0', lines > 1 ? 'line-clamp-2 break-all' : 'truncate')}>{shown}</span>
+}
+
+function Grid({ root, files, onSelect, onMenu, active, renaming, nameOf }: { root: string; files: Entry[]; onSelect: (p: string) => void; onMenu: (ev: MouseEvent, e: Entry) => void; active?: string; renaming: string; nameOf: (e: Entry, className?: string, lines?: 1 | 2) => ReactNode }) {
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-3 p-3">
       {files.map((k) => {
         const Icon = iconOf(k, false)
         const src = workSrc(`${root}/${k.path}`)
+        // 改名时不能是 button：输入框放在 button 里，按空格会点到按钮
+        const Tag = renaming === k.path ? 'div' : 'button'
         return (
-          <button key={k.path} type="button" onClick={() => onSelect(k.path)} title={k.path} className="flex cursor-pointer flex-col gap-1.5 rounded-lg p-1.5 text-left hover:bg-muted">
+          <Tag key={k.path} {...(Tag === 'button' ? { type: 'button' as const, onClick: () => onSelect(k.path) } : {})} onContextMenu={(ev: MouseEvent) => onMenu(ev, k)} title={k.path}
+            className={cx('flex cursor-pointer flex-col gap-1.5 rounded-lg p-1.5 text-left hover:bg-muted', active === k.path && 'bg-muted')}>
             <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-md border border-border bg-muted/40">
               {VIDEO.test(k.path)
                 ? <div className="relative size-full"><video src={`${src}?v=${k.mtime}#t=0.5`} preload="metadata" muted playsInline className="size-full object-cover" /><Film className="absolute right-1.5 bottom-1.5 size-4 text-white drop-shadow" /></div>
@@ -278,12 +359,53 @@ function Grid({ root, files, onSelect }: { root: string; files: Entry[]; onSelec
                 : <Icon className="size-10 text-muted-foreground" strokeWidth={1.25} />}
             </div>
             <div className="min-w-0 px-0.5">
-              <div className="truncate text-sm">{base(k.path)}</div>
-              <div className="truncate text-[11px] text-muted-foreground">{parent(k.path) ? `${parent(k.path)} · ` : ''}{fmtSize(k.size)}</div>
+              <div className="flex text-sm leading-snug">{nameOf(k, 'h-7 text-sm', 2)}</div>
+              <div className="flex text-[11px] text-muted-foreground"><span className="shrink-0">{fmtSize(k.size)}</span>{parent(k.path) && <><span className="shrink-0 px-1">·</span><span className="flex min-w-0 flex-1"><MidName text={parent(k.path)} keep={6} /></span></>}</div>
             </div>
-          </button>
+          </Tag>
         )
       })}
+    </div>
+  )
+}
+
+/**
+ * 文件、文件夹的右键菜单：打开、重命名、用系统程序打开、在文件夹中显示、删除（再点一次才删，进废纸篓）。
+ * 点外面、按 Esc、滚动就收起；贴着鼠标出现，放不下就往左、往上挪
+ */
+function FileMenu({ e, x, y, canOpen, onClose, onOpen, onRename, onSystemOpen, onReveal, onDelete }: { e: Entry; x: number; y: number; canOpen: boolean; onClose: () => void; onOpen: () => void; onRename: () => void; onSystemOpen: () => void; onReveal: () => void; onDelete: () => void }) {
+  const { t } = useT('folder')
+  const ref = useRef<HTMLDivElement>(null)
+  const [confirm, setConfirm] = useState(false)
+  const [pos, setPos] = useState({ left: x, top: y })
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    setPos({ left: Math.max(4, Math.min(x, window.innerWidth - el.offsetWidth - 4)), top: Math.max(4, Math.min(y, window.innerHeight - el.offsetHeight - 4)) })
+  }, [x, y])
+  useEffect(() => {
+    const away = (ev: Event) => { if (!ref.current?.contains(ev.target as Node)) onClose() }
+    const esc = (ev: globalThis.KeyboardEvent) => { if (ev.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', away, true)
+    document.addEventListener('contextmenu', away, true)
+    document.addEventListener('keydown', esc)
+    window.addEventListener('scroll', onClose, true)
+    window.addEventListener('blur', onClose)
+    return () => { document.removeEventListener('mousedown', away, true); document.removeEventListener('contextmenu', away, true); document.removeEventListener('keydown', esc); window.removeEventListener('scroll', onClose, true); window.removeEventListener('blur', onClose) }
+  }, [])
+  const item = (label: string, Icon: typeof File, run: () => void, danger?: boolean) => (
+    <button type="button" onClick={() => { run(); onClose() }} className={cx('flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-accent', danger && 'text-destructive')}><Icon className="size-4 shrink-0" />{label}</button>
+  )
+  return (
+    <div ref={ref} role="menu" style={pos} onContextMenu={(ev) => ev.preventDefault()} className="fixed z-50 min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+      {item(t('open'), e.dir ? FolderOpen : Eye, onOpen)}
+      {item(t('rename'), Pencil, onRename)}
+      {canOpen && !e.dir && item(t('open_system'), ExternalLink, onSystemOpen)}
+      {canOpen && item(t('reveal'), FolderOpen, onReveal)}
+      <div className="my-1 h-px bg-border" />
+      {confirm
+        ? item(t('delete_confirm'), Trash2, onDelete, true)
+        : <button type="button" onClick={() => setConfirm(true)} className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-destructive hover:bg-accent"><Trash2 className="size-4 shrink-0" />{t('delete')}</button>}
     </div>
   )
 }
@@ -398,6 +520,9 @@ function RawText({ path, mtime, call, reload, onBar }: { path: string; mtime: st
   if (text === null) return <div className="p-4"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>
   return <>{ext.notice}<textarea value={text} onChange={(ev) => setText(ev.target.value)} onKeyDown={(ev) => saveKey(ev, save)} spellCheck={false} className="m-3 min-h-[480px] flex-1 resize-y rounded-md border border-border bg-transparent p-3 font-mono text-[13px] leading-relaxed outline-none focus:border-primary/50" /></>
 }
+
+/** 'A/B/C' → ['A', 'A/B', 'A/B/C'] */
+const crumbs = (dir: string) => (dir ? dir.split('/').map((_, i, a) => a.slice(0, i + 1).join('/')) : [])
 
 const isRelative = (src: string) => !!src && !/^(https?:|data:|local:|blob:|\/)/i.test(src)
 export const joinPath = (dir: string, p: string) => {
