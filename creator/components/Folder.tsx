@@ -179,9 +179,13 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
       {error && <Notice tone="error">{error}</Notice>}
       {view === 'grid' ? (
         <div className="min-h-[360px] overflow-clip rounded-lg border border-border">
-          {selected && !selected.dir
+          {selected
             ? <>
-                {files.length > 1 && <div className="border-b border-border bg-muted/30 px-2 py-1.5"><button type="button" onClick={() => setSel('')} className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-sm hover:bg-muted"><ChevronLeft className="size-4" />{t('all_files')}</button></div>}
+                {/* 面包屑：全部文件 / 目录 / 目录，点哪一级回到哪一级（目录显示里面的东西）；文件名在下面看文件的那一栏 */}
+                {(files.length > 1 || parent(selected.path)) && <div className="flex min-w-0 flex-wrap items-center gap-0.5 border-b border-border bg-muted/30 px-2 py-1.5 text-sm">
+                  <button type="button" onClick={() => setSel('')} className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 hover:bg-muted"><ChevronLeft className="size-4" />{t('all_files')}</button>
+                  {crumbs(selected.dir ? selected.path : parent(selected.path)).map((c) => <span key={c} className="flex min-w-0 items-center gap-0.5"><ChevronRight className="size-3.5 shrink-0 text-muted-foreground" /><button type="button" onClick={() => setSel(c)} className={cx('max-w-48 cursor-pointer truncate rounded px-1.5 py-0.5 hover:bg-muted', c === selected.path && 'font-medium')}>{base(c)}</button></span>)}
+                </div>}
                 {viewer(selected)}
               </>
             : files.length ? <Grid root={state.path} files={files} onSelect={setSel} onMenu={onMenu} active={menu?.e.path} renaming={renaming} nameOf={nameOf} /> : <p className="p-4 text-sm text-muted-foreground">{t('empty_grid')}</p>}
@@ -229,7 +233,7 @@ function Viewer({ root, canOpen, e, kids, call, reload, onSelect }: { root: stri
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {renaming
             ? <RenameInput value={base(e.path)} onDone={(v) => void rename(v)} onCancel={() => setRenaming(false)} />
-            : <span className="min-w-0 cursor-text truncate rounded px-1 text-sm font-medium hover:bg-muted" title={t('rename_hint')} onDoubleClick={() => setRenaming(true)}>{e.path}</span>}
+            : <span className="min-w-0 cursor-text truncate rounded px-1 text-sm font-medium hover:bg-muted" title={t('rename_hint')} onDoubleClick={() => setRenaming(true)}>{base(e.path)}</span>}
           {!e.dir && <span className="shrink-0 text-xs text-muted-foreground">{fmtSize(e.size)}</span>}
         </div>
         {/* 服务端部署（canOpen 是 false）：用户不在服务器前面，「打开」在新标签页打开预览地址，没有「在文件夹中显示」 */}
@@ -511,6 +515,9 @@ function RawText({ path, mtime, call, reload, onBar }: { path: string; mtime: st
   if (text === null) return <div className="p-4"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>
   return <>{ext.notice}<textarea value={text} onChange={(ev) => setText(ev.target.value)} onKeyDown={(ev) => saveKey(ev, save)} spellCheck={false} className="m-3 min-h-[480px] flex-1 resize-y rounded-md border border-border bg-transparent p-3 font-mono text-[13px] leading-relaxed outline-none focus:border-primary/50" /></>
 }
+
+/** 'A/B/C' → ['A', 'A/B', 'A/B/C'] */
+const crumbs = (dir: string) => (dir ? dir.split('/').map((_, i, a) => a.slice(0, i + 1).join('/')) : [])
 
 const isRelative = (src: string) => !!src && !/^(https?:|data:|local:|blob:|\/)/i.test(src)
 export const joinPath = (dir: string, p: string) => {
