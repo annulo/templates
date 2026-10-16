@@ -82,7 +82,7 @@
     "close_nav": "Close navigation",
     "member_login": "To use the back office on your phone or another computer, sign in with your creght account (only members of this project can see it).",
     "member_login_btn": "Sign in",
-    "remote_hint": "You can see all the data; collecting, publishing, self-tests and AI tasks are greyed out. To use them from here: open Annulo on your computer and turn on Settings → Remote access → \"Allow remote use of this computer\".",
+    "remote_hint": "You can see all the data; collecting, publishing, self-tests and AI tasks are greyed out. To use everything from your phone, turn on Settings → Remote access → \"Open this computer's Annulo on your phone\" in Annulo on your computer, and open the address it gives you.",
     "remote_hint_online": "You can see all the data; publishing and collecting run on your computer ({name}), and AI work goes to the assistant there (see \"Assistant\" on the left).",
     "computer_online": "Computer online: {name}",
     "computer_offline": "Computer offline",
@@ -335,7 +335,7 @@
       "no_shuttle": "Can't reach Annulo on this computer",
       "member_login": "Sign in to see this: the back office is only for members of this project",
       "not_from_shuttle": "This needs the back office opened in Annulo on your computer",
-      "computer_offline": "Can't reach your computer: Annulo must be running there with Settings → Remote access → \"Allow remote use of this computer\" turned on",
+      "computer_offline": "Can't reach your computer: to use this from your phone, turn on Settings → Remote access → \"Open this computer's Annulo on your phone\" in Annulo on your computer and open the address it gives you",
       "req_failed": "Request failed ({status})",
       "run_failed": "Run failed",
       "run_disconnected": "Lost the connection to Annulo. The function may still be running; refresh later to see the result",
@@ -1591,7 +1591,7 @@
     "questions_hint": "Answer in the box below (say which question each answer is for).",
     "aborted": "This reply was stopped",
     "in_shuttle": "In Annulo, the assistant is on the right.",
-    "offline": "The computer is offline: open Annulo on the computer, turn on \"Allow remote calls to this computer\" in Settings → Remote access, and open this project.",
+    "offline": "The computer is offline: turn on Settings → Remote access → \"Open this computer's Annulo on your phone\" in Annulo on your computer, and open this project from the address it gives you.",
     "need_update": "Annulo on the computer is too old, or has another project open: update Annulo and switch to this project on the computer."
   },
   "article": {

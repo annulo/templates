@@ -88,7 +88,7 @@
     "close_nav": "关闭导航",
     "member_login": "在手机或别的电脑上看后台，先用 creght 账号登录（只有这个项目的成员能看）。",
     "member_login_btn": "登录",
-    "remote_hint": "数据都能看；采集、发布、网站检查和交给 AI 的按钮是灰的。要在这里点：打开电脑上的 Annulo，在 设置 → 远程访问 里打开「允许远程调用这台电脑」。",
+    "remote_hint": "数据都能看；采集、发布、网站检查和交给 AI 的按钮是灰的。要在手机上全都能用：在电脑上的 Annulo 里打开 设置 → 远程访问 的「在手机上打开这台电脑的 Annulo」，用那里给的地址打开。",
     "remote_hint_online": "数据都能看；发布、采集、网站检查、同步这些会转到你的电脑（{name}）上跑，交给 AI 的活也会交给电脑上的助手（左侧「助手」看过程）。",
     "computer_online": "电脑在线：{name}",
     "computer_offline": "电脑不在线",
@@ -364,7 +364,7 @@
       "no_shuttle": "连不上本机的 Annulo",
       "member_login": "登录后才能看：这是你的运营后台，只给项目成员看",
       "not_from_shuttle": "这一项要在电脑上的 Annulo 里打开后台才能用",
-      "computer_offline": "调不到你的电脑：电脑上的 Annulo 要开着，并且在 设置 → 远程访问 里打开了「允许远程调用这台电脑」",
+      "computer_offline": "调不到你的电脑：要在手机上用，在电脑上的 Annulo 里打开 设置 → 远程访问 的「在手机上打开这台电脑的 Annulo」，用那里给的地址打开",
       "req_failed": "请求失败（{status}）",
       "run_failed": "执行失败",
       "run_disconnected": "和 Annulo 的连接断了，函数可能还在跑，稍后刷新看结果",
@@ -1898,7 +1898,7 @@
     "questions_hint": "在下面的输入框里直接回答（写清是第几个问题）。",
     "aborted": "这次回复被停止了",
     "in_shuttle": "在 Annulo 里，助手在右侧。",
-    "offline": "电脑不在线：打开电脑上的 Annulo，在 设置 → 远程访问 里打开「允许远程调用这台电脑」，并打开这个项目。",
+    "offline": "电脑不在线：在电脑上的 Annulo 里打开 设置 → 远程访问 的「在手机上打开这台电脑的 Annulo」，用那里给的地址打开这个项目。",
     "need_update": "电脑上的 Annulo 版本太旧，或者打开的是别的项目：更新 Annulo，并在电脑上切到这个项目。"
   },
   "article": {
