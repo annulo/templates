@@ -28,7 +28,7 @@
 | 总览 `overview`（起步步骤 + 今天要做的 + 粉丝、发布数） | `checklist` | `today.list`（用户问「接下来做什么」先跑它照着答）、`channels.stats` |
 | 每周总结 `reports` | `reports` | `reports.data` / `reports.save`；任务 `weekly-report`（每 7 天定时，也能在页面点） |
 | 社媒 `social`（账号概览、数据表现） | 社媒插件的 `social_accounts`、`social_daily`、`social_post_daily`、`social_health` | `social/social.*`、`social/stats.summary` |
-| 内容中心 `content`（选题 → 文章（长文 / 图文笔记 / 视频）→ 发布到支持这种类型的账号 / 排期；改写成别的类型、做成视频） | `topics`、`articles`、`rewrite_presets`（AI 预设）、`assets`（产物）、插件的 `social_posts`（发布记录） | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.rewriteContext` / `save`（任务 `rewrite-article`）、`work.context`、`assets.add` / `replace`（任务 `work-on-article`）、`publish.prepare` |
+| 内容中心 `content`（选题 → 文章（长文 / 图文笔记 / 视频）→ 发布到支持这种类型的账号 / 排期；改写成别的类型、做成视频） | `topics`、`articles`、`rewrite_presets`（AI 预设）、`assets`（资料库）、插件的 `social_posts`（发布记录） | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.rewriteContext` / `save`（任务 `rewrite-article`）、`work.context`、`folder.*`（任务 `work-on-content`，见下面「内容文件夹」）、`publish.prepare` |
 | 发布日历 `calendar`（按天看排期和发布，拖动改排期） | 读 `social_posts`、`articles` | |
 | 我的定位 `company` | `profile` | `profile.get` / `save` |
 | 资料库 `assets` | `assets` | |
@@ -52,17 +52,19 @@
 `content.save` 存的文章带 `unread: true`（新文章），用户打开就清掉；左侧「内容中心」的数字数它，列表里新文章单独标出来。
 用户常用的改写要求存在 `rewrite_presets`（`type` + `prompt`），在改写弹窗里点一下就填好。
 
-## 稿子、交给 AI、产物、引用
+## 内容文件夹、交给 AI、引用
 
-设计见 `docs/artifacts.md`。
+每条内容（文章表 `articles` 的一行）一个**文件夹**，在项目的工作目录里（`~/Annulo/<项目名>/内容/<名字>`，`articles.folder` 记相对工作目录的路径）。稿子、脚本、文案、视频、参考都是里面的文件，可以分目录。内容页上就是这个文件夹：默认网格（所有文件铺平），能切成树，文本和 md 在页面里直接改。设计见 `docs/content-model.md`。
 
-- **稿子**（`articles.draft`，可选，默认折叠）：作者的工作稿（为什么写这篇、大纲、草稿、剧本），**不发出去**；正文才发。读哪个、怎么用你自己定；用户没让写稿子就不改稿子。
-- **交给 AI** 两种做法，都是预设（`rewrite_presets`，`mode`）：
-  - **在这篇上做**：任务 `work-on-article`（参数 `article_id`、`note`），改这篇的正文（原来的「AI 修改」）也走它：`work.context` 拿这篇的稿子、正文、产物、平台；写正文用 `content.update`，做文件 `annulo upload --local` 后 `assets.add` 存成这篇的产物；
+- 拿文件夹：`annulo run folder.create --input '{"article_id":"<id>"}'`，没有就建，返回 `dir`（绝对路径）；**每段对话开始动文件前跑一次**，它会把这段对话记到这条内容上（`articles.chat_id`）。之后直接在 `dir` 里读写文件。
+- **稿子**是最外层的 `稿子.md`（英文界面 `brief.md`）：这条内容要做什么、要求、大纲、参考，用户写的，动手前先读。`articles.draft` 是老数据，内容页打开时会搬进 `稿子.md`。
+- **文案**（要发出去的文字）是名字带「文案」的 `.md`（英文 `copy.md`）：开头 `---` 包住 `title:`、`tags:`，下面是正文或视频简介。**发布是挑选**：内容本身没有类型，用户点「发布」时挑这次发成图文、视频还是长文，用哪份文案、哪些图、哪个视频（文件夹里的或资料库的），选账号；`folder.publish` 每个账号新建一条帖子，存的就是挑好的内容。同一条内容可以挑不同的文件发好几次。所以做几个版本不用问用户拆不拆，每个版本一个目录就行。
+- 做出来的文件**都放进文件夹**：不要 `annulo upload`、`assets.add`，也不用 `content.update` 写正文（用户明确要求的除外）。资料库（`assets`）只放几条内容都会用到的素材。
+- **交给 AI**两种做法，都是预设（`rewrite_presets`，`mode`）：
+  - **在这条上做**：任务 `work-on-content`（参数 `article_id`、`note`），写文案、改文案、做图、做视频都走它；
   - **另写一篇**：任务 `rewrite-article`，只生成新文章的正文。
-- **产物（artifacts）**是资料库里带 `article_id` 的一条，可以是一组文件（`files`，6 张图一条），带 `chat_id`、`note`（备注，文章页和资料库显示同一条）。`assets.add({ files: [{ url, mime, name }], article_id, note, use })`；整组重做存新的，只改其中一个用 `assets.replace({ asset_id, n, url, note })` 改原来那组。`use: true`：视频文章设成发布用的视频，图文换成配图。
-- **要改就回到做它的那段对话**：用户在对话里接着说，照 `work-on-article` 第 5 步做。
-- **引用** `@表:id#n`：用户从页面「复制引用」贴进对话（文章 `@articles:<id>`，产物 `@assets:<id>`，组里第 3 个 `@assets:<id>#3`），消息后面有 `<references>`。资料库 `#n` 数 `files`，图文文章数 `images`。
+- **要改就回到做它的那段对话**：用户在对话里接着说，照 `work-on-content` 第 4 步做。
+- **引用** `@表:id#n`：用户从页面「复制引用」贴进对话（内容 `@articles:<id>`，资料库的 `@assets:<id>`，组里第 3 个 `@assets:<id>#3`），消息后面有 `<references>`。引用一条内容时，它的文件在它的文件夹里。
 
 ## 定位怎么用
 
@@ -89,3 +91,5 @@
 ## 浏览器窗口
 
 「打开主页」执行 `social/social.openProfile({ channel_id })`，用账号的 `browser_profile`，窗口留给用户看。你要检查或修的时候，在本机函数里用同一个 `browser_profile` 调 `ctx.browser.open({ profile })` 接管原窗口，不要另开默认浏览器或换 profile（登录状态不同）。
+
+视频可用 `articles.video_cover` 指定封面图片（资料库地址或本机上传地址），编辑器支持上传、粘贴、选择、替换、移除；复制保留封面。小红书和抖音的即时、定时发布使用该封面，其他平台使用默认封面。模板与社媒插件需要一起更新；封面上传失败时停止发布，不静默改用默认封面。

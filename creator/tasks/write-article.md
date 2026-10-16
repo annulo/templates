@@ -55,3 +55,7 @@ annulo run content.save --input @/tmp/article.json
 ```
 
 content.save 报错（比如长文正文是 Markdown、太短，笔记正文带了 HTML）就按报错改了再存。存完回复用户：标题、一句话讲了什么、配了几张图（视频类型说有没有配上视频），最后给出新文章的链接 `[打开「标题」](/?view=content&article=<content.save 返回的 article_id>)`，满意了在文章页点「发布」选账号发出去。
+
+## 视频封面
+
+视频的独立封面用 `video_cover` 保存，图片必须来自资料库或本机上传。沿用同一视频时保留原封面；换了视频要重新核对封面。没有合适的图片就留空，不编造图片地址，不用 `cover_text` 代替。只修改文案时不要清空已有封面。

@@ -339,7 +339,7 @@ export const content: Article = {
 
 点开一篇：
 - 点击顶部的状态，手动标记「草稿」或「已发布」，也可以「恢复自动更新」，按文章与发布记录判断。列表右侧也能直接修改，保存后刷新仍保留，状态筛选同步更新；平台上的帖子和历史发布记录不受影响。
-- 「修改」：按类型改。长文改标题、摘要、正文（能插小标题、列表、图片，也能直接粘贴、拖进图片，输入 / 选要插入的块）；图文笔记改正文和配图（「从资料库选」，拖动调整顺序，没配图时填「封面大字」生成文字封面）；视频选资料库的视频或「上传本机视频」（只存在这台电脑上，最多 8 GB，90 天后清理），再写简介。三种都有话题；
+- 「修改」：按类型改。长文改标题、摘要、正文（能插小标题、列表、图片，也能直接粘贴、拖进图片，输入 / 选要插入的块）；图文笔记改正文和配图（「从资料库选」，拖动调整顺序，没配图时填「封面大字」生成文字封面）；视频选资料库的视频或「上传本机视频」（只存在这台电脑上，最多 8 GB，90 天后清理），再写简介。视频还可设置独立封面（上传、粘贴或从资料库选），支持更换、移除，保存后显示在播放器；小红书和抖音使用该封面，其他平台仍用默认封面，需要 social 0.8.5。三种都有话题；
 - 「AI 修改」：写清楚哪里要改，它在当前内容上只改你说到的部分，类型不变；「更多 → 改写要求」是它每次改都要遵守的写法；
 - 「更多 → 删除这篇」：已经发出去或排了期的不能直接删。
 
@@ -638,10 +638,10 @@ Annulo「设置 → 项目」里的「给助手的说明」：写你对这个项
 
 ## 在手机上用
 
-连了 creght 的在线项目，可以在手机或别的电脑上打开后台（地址在 Annulo「设置 → 远程访问」里），用 creght 账号登录：
-- 数据都能看，文章也能改；
-- 发布、采集、交给 AI 的按钮要转到你的电脑上跑：电脑上的 Annulo 要开着、打开着这个项目，并且在「设置 → 远程访问」里打开「允许远程调用这台电脑」。页面顶部会显示电脑在不在线；
-- 手机上没有右侧的助手，左侧多一个「助手」：发一句话交给电脑上的助手做，过程和结果在这里看。`,
+在 Annulo「设置 → 远程访问」里打开「在手机上打开这台电脑的 Annulo」（要开通 creght 的远程访问）。之后在手机或别的电脑的浏览器里，用的就是电脑上的 Annulo：后台、右侧的助手、发布和采集都和电脑上一样，离线项目也能用。
+- 地址和二维码在「设置 → 远程访问」的「在浏览器中打开」里，用 creght 账号登录；新设备第一次打开，要在电脑上点「允许」；
+- 手机上后台和助手分成两页，在底部切换；左上角 Annulo 菜单里能「添加到桌面」；
+- 电脑和 Annulo 要开着。详细说明见官网帮助 [连接 creght：云端和手机](https://annulo.dev/help/creght)。`,
     en: `The assistant on the right of Annulo sees this project's data, accounts and back-office code, and it can act on them.
 
 ![The Annulo window with the assistant answering a data question](https://fsu.creght.com/site/2103669300995821568/1791356473851__creator_help_assistant.png)
@@ -681,10 +681,10 @@ Some schedules hand a job to the assistant, like writing the weekly summary. Eac
 
 ## Using it from your phone
 
-For an online project (connected to creght), you can open the back office on a phone or another computer (the address is in Annulo's Settings → Remote access) and sign in with your creght account:
-- You can see all the data and edit articles;
-- Publishing, collecting and AI buttons run on your computer: Annulo must be running there with this project open, and "Allow remote use of this computer" turned on in Settings → Remote access. The top of the page shows whether the computer is online;
-- There's no assistant panel on the phone; "Assistant" appears in the sidebar instead. Send it a message and the assistant on your computer does the work; follow the progress and result there.`,
+In Annulo's Settings → Remote access, turn on "Open this computer's Annulo on your phone" (needs a creght remote access subscription). From then on, a browser on your phone or another computer runs the Annulo on your computer: the back office, the assistant on the right, publishing and collecting all work just like there, offline projects included.
+- The addresses and QR codes are under "Open in a browser" in Settings → Remote access; sign in with your creght account. The first time a new device opens it, click "Allow" on the computer;
+- On a phone, the back office and the assistant are two pages with a switcher at the bottom; "Add to desktop" is in the Annulo menu at the top left;
+- Your computer and Annulo need to be running. Details are in the site help, [Connect creght: cloud and phone](https://annulo.dev/help/creght).`,
   },
 }
 

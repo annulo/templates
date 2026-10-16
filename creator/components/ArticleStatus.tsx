@@ -21,7 +21,7 @@ export default function ArticleStatus({ article, status, onChanged, disabled = f
   }
   return <div onClick={e => e.stopPropagation()} aria-busy={saving} inert={saving || disabled} className={saving || disabled ? 'opacity-60' : ''}>
     <Select<'auto' | ContentStatus> value={manual} onChange={value => void change(value)} variant="inline" align="right" ariaLabel={tr('content_status.change', { title: article.title })} title={tr('content_status.title')} className="min-w-28" options={[
-      { value: 'auto', label: manual === 'auto' ? `${tr(status === 'published' ? 'content.a_published' : 'content.a_draft')} · ${tr('content_status.auto_short')}` : tr('content_status.auto'), sub: tr('content_status.auto_hint'), icon: <RefreshCw className="size-3.5" /> },
+      { value: 'auto', label: manual === 'auto' ? tr('content_status.auto_label', { status: tr(status === 'published' ? 'content.a_published' : 'content.a_draft') }) : tr('content_status.auto'), sub: tr('content_status.auto_hint'), icon: <RefreshCw className="size-3.5" /> },
       { value: 'draft', label: tr('content.a_draft'), sub: tr('content_status.draft_hint'), icon: <FilePenLine className="size-3.5" /> },
       { value: 'published', label: tr('content.a_published'), sub: tr('content_status.published_hint'), icon: <CheckCircle2 className="size-3.5" /> },
     ]} />

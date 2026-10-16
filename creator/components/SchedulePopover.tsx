@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { CalendarClock, Loader2 } from 'lucide-react'
-import { Button, fmtUntil, inputCls } from './ui'
+import { Button, fmtUntil } from './ui'
+import DateTimeField from './DateTimePicker'
 import { tr } from '../lib/i18n'
 
 /** datetime-local 要的本地时间：给了 iso（改时间）就是它，没给是下一个整点 */
@@ -87,7 +88,7 @@ export default function SchedulePopover({ onSchedule, onUnschedule, hint, disabl
       {open && (
         <div role="dialog" aria-label={tr('social.schedule_title')} className="absolute bottom-full left-0 z-30 mb-2 w-72 space-y-2.5 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg">
           <div className="text-xs font-medium">{tr('social.f_time')}</div>
-          <input type="datetime-local" autoFocus className={inputCls} value={at} onChange={(e) => { setAt(e.target.value); setError('') }} onKeyDown={(e) => { if (e.key === 'Enter') void confirm() }} />
+          <DateTimeField value={at} onChange={(v) => { setAt(v); setError('') }} />
           {error ? <p className="text-xs text-destructive">{error}</p> : hint && <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>}
           <div className="flex items-center justify-end gap-2">
             {scheduled && onUnschedule ? (

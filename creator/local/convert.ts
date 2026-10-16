@@ -65,7 +65,7 @@ export function toType(input: { article_id: string; type: ArticleType }, ctx: an
   if (to === 'article') {
     out.summary = a.summary || ''
     out.body = from === 'article' ? body : textToHtml(body, from === 'post' ? parseList(a.images) : [])
-    if (a.video) out.video = a.video
+    if (a.video) { out.video = a.video; if (a.video_cover) out.video_cover = a.video_cover }
   } else {
     out.body = from === 'article' ? htmlToText(body) : body
     if (to === 'post') {
@@ -73,6 +73,7 @@ export function toType(input: { article_id: string; type: ArticleType }, ctx: an
       if (from === 'post' && a.cover_text) out.cover_text = a.cover_text
     } else {
       out.video = a.video || ''
+      if (a.video_cover) out.video_cover = a.video_cover
       if (from === 'video' && a.category) out.category = a.category
     }
   }
@@ -86,7 +87,7 @@ export function copy(input: { article_id: string }, ctx: any) {
   const a = input?.article_id ? ctx.db.get('articles', input.article_id) : null
   if (!a) throw new Error(L(ctx, `找不到这篇文章：${input?.article_id}`, `Article not found: ${input?.article_id}`))
   const keep: Record<string, any> = {}
-  for (const k of ['type', 'summary', 'body', 'tags', 'images', 'video', 'cover_text', 'category', 'topic_id', 'evidence_snapshot']) if (a[k] !== undefined && a[k] !== null) keep[k] = a[k]
+  for (const k of ['type', 'summary', 'body', 'tags', 'images', 'video', 'video_cover', 'cover_text', 'category', 'topic_id', 'evidence_snapshot']) if (a[k] !== undefined && a[k] !== null) keep[k] = a[k]
   const t = new Date().toISOString()
   const row = ctx.db.insert('articles', { ...keep, title: `${a.title || ''}${L(ctx, '（副本）', ' (copy)')}`, status: 'draft', created_at: t, updated_at: t })
   return { article_id: row.id }
