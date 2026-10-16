@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, inputCls } from './ui'
 import { fileSrc, filesOf } from '../lib/files'
@@ -9,7 +9,7 @@ import { TaskRunning, useTaskRuns } from './Task'
 
 // 内容文件夹（docs/content-model.md）：一条内容的稿子、脚本、文案、视频都是它文件夹里的文件，可以分目录。
 // 文件夹在项目的工作目录里（本机 ~/Annulo/<项目名>/内容/<名字>），读写走本机函数 local/folder.ts（Annulo 的 ctx.fs），
-// 图片、视频直接用 /_annulo/work-files/<路径> 显示。默认网格（所有文件铺平），可以切成树；文本在页面里改，md 用富文本编辑器。
+// 图片、视频、音频直接用 /_annulo/work-files/<路径> 显示，PDF 在新标签页打开。默认网格（所有文件铺平），可以切成树；文本在页面里改，md 用富文本编辑器。
 // 打开时还没有文件夹就建一个，老文章的稿子、正文、配图、视频、产物搬进去（表里的留着不动）。
 // AI 在对话里改文件不经过表，没有推送：看得见时每 4 秒重读。发布在 FolderPublish.tsx：挑这次发成什么、用哪些文件。
 
@@ -19,6 +19,8 @@ type Call = <T>(fn: string, input?: Record<string, unknown>) => Promise<T>
 export const TEXT = /\.(md|markdown|txt|json|ya?ml|csv|srt|vtt|html?|css|tsx?|jsx?|py|sh)$/i
 export const VIDEO = /\.(mp4|mov|webm|m4v)$/i
 export const IMAGE = /\.(png|jpe?g|gif|webp|svg|avif)$/i
+export const AUDIO = /\.(mp3|m4a|wav|ogg|oga|opus|aac|flac)$/i
+export const PDF = /\.pdf$/i
 export const MD = /\.(md|markdown)$/i
 /** 稿子：最外层的 稿子.md（英文界面建的是 brief.md） */
 export const isDraft = (p: string) => p === '稿子.md' || p === 'brief.md'
@@ -33,7 +35,8 @@ function iconOf(e: Entry, open: boolean) {
   if (e.dir) return open ? FolderOpen : FolderIcon
   if (VIDEO.test(e.path)) return Film
   if (IMAGE.test(e.path)) return ImageIcon
-  if (TEXT.test(e.path)) return FileText
+  if (AUDIO.test(e.path)) return Music
+  if (TEXT.test(e.path) || PDF.test(e.path)) return FileText
   return File
 }
 
@@ -246,6 +249,8 @@ function Viewer({ root, canOpen, e, kids, call, reload, onSelect }: { root: stri
         {e.dir ? <DirView kids={kids} onSelect={onSelect} />
           : TEXT.test(e.path) ? <TextEditor root={root} path={e.path} mtime={e.mtime} call={call} reload={reload} />
           : VIDEO.test(e.path) || IMAGE.test(e.path) ? <MediaView src={`${workSrc(`${root}/${e.path}`)}?v=${e.mtime}`} video={VIDEO.test(e.path)} />
+          : AUDIO.test(e.path) ? <div className="flex justify-center p-6"><audio src={`${workSrc(`${root}/${e.path}`)}?v=${e.mtime}`} controls preload="metadata" className="w-full max-w-md" /></div>
+          : PDF.test(e.path) ? <div className="flex justify-center p-6"><Button variant="outline" onClick={() => void window.open(`${workSrc(`${root}/${e.path}`)}?v=${e.mtime}`, '_blank')}><ExternalLink />{t('open_tab')}</Button></div>
           : <p className="p-4 text-sm text-muted-foreground">{t('cant_view')}</p>}
       </div>
     </div>

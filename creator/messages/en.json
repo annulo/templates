@@ -1661,6 +1661,7 @@
     "reveal": "Show in folder",
     "delete": "Delete",
     "delete_confirm": "Move to trash?",
+    "open_tab": "Open in new tab",
     "cant_view": "This kind of file can't be shown here. Click \"Open\" to use another app.",
     "draft_placeholder": "What is this piece about: why, requirements, outline, references… The AI reads this before it starts.",
     "save_first": "Save before switching",
