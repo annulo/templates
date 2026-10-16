@@ -4,7 +4,7 @@ import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, inputCls } from './ui'
 import { filesOf } from '../lib/files'
 import { isEn, useT } from '../lib/i18n'
-import { askInNewChat, dbList, openChat, runLocal, type Article } from '../lib/shuttle'
+import { askInNewChat, composeInChat, dbList, openChat, runLocal, type Article } from '../lib/shuttle'
 import { refOf } from '../lib/refs'
 import { TaskRunning, useTaskRuns } from './Task'
 
@@ -63,6 +63,8 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
   const [asking, setAsking] = useState(false)
   const continueChat = async () => {
     if (chat) { openChat(chat); return }
+    // 还没有对话：新开一段，输入框里放这条内容的引用，用户说要改什么再发
+    if (composeInChat(`${refOf('articles', id)} `)) return
     setAsking(true)
     try { const r = await askInNewChat(t('ask_prompt', { ref: refOf('articles', id), title: a.title }), t('ask_title', { title: a.title })); openChat(r.chat_id) } catch (e) { setError((e as Error).message) } finally { setAsking(false) }
   }
