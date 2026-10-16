@@ -14,6 +14,7 @@ annulo run topics.context --input '{"channel_id":"<id>","question_ids":["<id>"]}
 
 输出里：`brief` 是项目定位、目标客户、语气、关键词；`existing` 是已有选题（包括写完的、放弃的）；`site.digest` 是站点首页和几个页面的内容；`products` 是产品目录（选题可以围绕主推产品和用户会搜的词）；
 从 GEO 出时还有 `geo_questions`（没被引用的问题）。`geo_questions` 是空的就告诉用户现在没有没被引用的问题，不用出。
+自媒体选题（`workspace` 不是 website）有已发内容的数据时还有 `performance`：近半年发的内容按平台分开排，`top` 浏览最多、`rising` 近 7 天涨得最快、`low` 发出去一周以上浏览最少，每条有标题、切入点或正文摘要、浏览、互动率（`engagement_rate`）、近 7 天增长；`note` 说明口径。
 
 ## 2. 怎么写
 
@@ -26,6 +27,7 @@ annulo run topics.context --input '{"channel_id":"<id>","question_ids":["<id>"]}
 写法归用户（点「出一批选题」时弹窗里填的就是它）；和下面的规则冲突时，以规则为准。
 
 - 不要和 `existing` 里的选题重复或高度相似；
+- 有 `performance` 时参考它：看 `top`、`rising` 里的主题、形式和切入点有什么共同点，延续做得好的（换新的角度，不重复同一篇），少出和 `low` 一样的；只在同一平台内比较，浏览少但互动率高的也算做得好。在 `angle` 里写一句依据（比如「延续《…》的…，那篇在小红书 1.8k 浏览、互动率 24%」），数字照抄 `performance`，不编。回复用户时先用两三句话说你从数据里看到了什么；
 - 每个选题写 `title`、`angle`（切入点：写给谁、解决什么问题、和已有内容有什么不同；从 GEO 出的写清要覆盖哪些内容才能被 AI 引用）、`keywords`（关键词，逗号分隔）。
 
 ## 4. 存

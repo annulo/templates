@@ -186,6 +186,7 @@ export function publish(input: { article_id: string; kind: 'post' | 'video' | 'a
     type: kind, title: String(input.title ?? '').trim() || a.title, body, tags: JSON.stringify(input.tags ?? []),
     images: JSON.stringify(kind === 'post' ? (input.images ?? []).map(ref) : []),
     video: kind === 'video' && input.video ? ref(input.video) : '',
+    video_cover: kind === 'video' ? String(a.video_cover ?? '') : '', // 文章上设的视频封面（小红书、抖音用）
     cover_text: String(input.cover_text ?? ''), category: String(input.category ?? ''),
   }
   const ready: { channel_id: string; post_id: string }[] = []

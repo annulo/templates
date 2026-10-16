@@ -468,6 +468,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [confirmDel, setConfirmDel] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<ArticleDraft>(() => draftOf(a))
   // base：开始编辑时（或上次同步时）表里的内容。表里的文章在别处变了（AI 改完、别的窗口保存）：
@@ -509,7 +510,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     : undefined
   const markSeen = () => { const next = [...seen, doneKey].slice(-50); setSeen(next); try { localStorage.setItem('creator.rewrite-seen', JSON.stringify(next)) } catch {} }
   // 改文章只写表，手机上（不在 Annulo 里）也能改；AI 修改、发布这些按钮自己会在 Annulo 外灰掉
-  const locked = !!busy || revising.length > 0
+  const locked = !!busy || uploadingCover || revising.length > 0
   const fromRow = () => draftOf(a)
   const loadDraft = (d: ArticleDraft) => {
     setDraft(d)
@@ -527,7 +528,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     if (sameDraft(now, base)) return
     if (sameDraft(draft, base) || sameDraft(draft, now)) loadDraft(now)
     else setStale(true)
-  }, [a.updated_at, a.title, a.summary, a.body, a.video, a.images, a.tags, a.cover_text, a.category])
+  }, [a.updated_at, a.title, a.summary, a.body, a.video, a.video_cover, a.images, a.tags, a.cover_text, a.category])
 
   const run = async (key: string, f: () => Promise<unknown>) => {
     setBusy(key)
@@ -629,13 +630,13 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
         {/* 左边的箭头回列表（顶栏面包屑的「内容中心」也行）；右边是状态和操作。外面这条的 -mt-4 抵掉滚动区的上内边距 */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
-            <Button variant="ghost" size="icon-sm" onClick={onBack} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
+            <Button variant="ghost" size="icon-sm" onClick={onBack} disabled={uploadingCover} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
             <TypeBadge type={type} />
             {statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {/* 编辑中：取消（有没存的）/ 完成、保存；没在编辑但稿子改了：编辑、保存。保存一次存正文和稿子 */}
-            {editing && <Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => { draftCtl.current?.discard(); setEditing(false) }}>{anyDirty ? tr('common.cancel') : tr('content.edit_done')}</Button>}
+            {editing && <Button variant="ghost" size="sm" disabled={busy === 'save' || uploadingCover} onClick={() => { draftCtl.current?.discard(); setEditing(false) }}>{anyDirty ? tr('common.cancel') : tr('content.edit_done')}</Button>}
             {!editing && <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
             {(editing || draftDirty) && <Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !anyDirty}>{tr('common.save')}</Button>}
             {/* 能「在这篇上做」的模板：改正文也在「交给 AI」里说，不单独一个「AI 修改」 */}
@@ -707,7 +708,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
                 </div>
               </Notice>
             )}
-            <ArticleEditor type={type} draft={draft} setDraft={setDraft} editorKey={editorKey} />
+            <ArticleEditor type={type} draft={draft} setDraft={setDraft} editorKey={editorKey} onUploadingChange={setUploadingCover} />
           </div>
         ) : (
           // 看的时候加一圈边框，内边距和编辑器的正文一样（px-5 py-4），切到修改时正文不跳；改的时候不要这圈

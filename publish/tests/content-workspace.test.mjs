@@ -18,7 +18,7 @@ await build({ stdin: { contents: "export * from './lib/contentWorkspace'; export
     b.onResolve({ filter: /plugins\/social\// }, a => ({ path: a.path, namespace: 'social-fixture' }));
     b.onLoad({ filter: /.*/, namespace: 'social-fixture' }, () => ({ loader: 'ts', contents: "export const FIELDS={}; export const CONTENT_TYPES=['article','post','video']; export const contentType=c=>c?.type || 'article'; export const parseList=v=>Array.isArray(v)?v:JSON.parse(v || '[]'); export const lengthOn=c=>String(c.body || '').length; export const platformsFor=()=>[]; export const htmlImages=()=>[]; export const supports=()=>false; export const fromContent=c=>c; export async function summary(){return []}" }));
   } }] });
-const { contentEntries, entryAccountIds, legacyContentWorkspace, reviewWorkspace, publishedUrl, workspace, topics } = await import(pathToFileURL(path.join(temp, 'test.mjs')));
+const { contentEntries, entryAccountIds, entryMetrics, legacyContentWorkspace, reviewWorkspace, publishedUrl, workspace, topics } = await import(pathToFileURL(path.join(temp, 'test.mjs')));
 const empty = () => ({ articles: [], topics: [], plans: [], posts: [], publications: [], channels: [] });
 
 test('destination evidence determines ownership, including long social content; format alone stays unassigned', () => {
@@ -314,4 +314,91 @@ test('editing links on a merged entry moves older topic and draft links to the p
   assert.deepEqual(JSON.parse(tables.marketing_plans[0].publication_links), { social: ['https://social.example/draft'] });
   assert.equal(tables.topics[0].publication_links, '');
   assert.deepEqual(JSON.parse(tables.articles[0].publication_links), { website: ['https://example.com/site'] });
+});
+test('posts without an original are their own social rows; data sums each published post of an entry', () => {
+  const data = empty();
+  data.channels = [{ id: 'xhs', type: 'xiaohongshu' }];
+  data.articles = [{ id: 'article', target_account_id: 'xhs' }];
+  data.posts = [
+    { id: 'p1', article_id: 'article', channel_id: 'xhs', status: 'published', views: 100, likes: 5, comments: 1 },
+    { id: 'p2', article_id: 'article', channel_id: 'x', status: 'published', views: 50, likes: 1, comments: 0 },
+    { id: 'draft', article_id: 'article', channel_id: 'x', status: 'draft', views: 999 },
+    { id: 'native', channel_id: 'xhs', source: 'platform', status: 'published', title: '', body: 'First line\nmore', post_url: 'https://www.xiaohongshu.com/explore/1', views: 7 },
+  ];
+  data.post_gains = { p1: { views: 30, likes: 2, comments: 0, collects: 0, shares: 0 } };
+  const social = contentEntries(data, 'social'), native = social.find(r => r.key === 'post:native');
+  assert.deepEqual(native.workspaces, ['social']); assert.equal(native.stage, 'published'); assert.equal(native.title, 'First line');
+  assert.deepEqual(native.publicationUrls, ['https://www.xiaohongshu.com/explore/1']); assert.deepEqual(entryAccountIds(native, data, 'social', true), ['xhs']);
+  assert.ok(!contentEntries(data, 'website').some(r => r.post));
+  const m = entryMetrics(social.find(r => r.article?.id === 'article'), data);
+  assert.equal(m.views, 150); assert.equal(m.likes, 6); assert.equal(m.posts, 2); assert.equal(m.gain.views, 30);
+  assert.equal(entryMetrics(native, data).gain, null);
+  data.posts = []; assert.equal(entryMetrics(contentEntries(data, 'social')[0], data), null);
+});
+test('a platform post can be linked to existing content or saved as content; only its article_id changes', () => {
+  const { ctx, tables, updates } = fixture();
+  tables.social_accounts = [{ id: 'xhs', type: 'xiaohongshu' }];
+  tables.social_posts = [{ id: 'a', channel_id: 'xhs', source: 'platform', status: 'published', body: 'Hello\nworld', images: '["i"]', published_at: '2026-10-01T00:00:00Z', views: 3 },
+    { id: 'b', channel_id: 'xhs', source: 'platform', status: 'published', title: 'B' }];
+  assert.throws(() => workspace.assign({ key: 'post:a', workspace: 'social' }, ctx));
+  assert.equal(workspace.adoptPost({ post_id: 'a', article_id: 'article' }, ctx).article_id, 'article');
+  assert.equal(tables.social_posts[0].article_id, 'article'); assert.equal(tables.social_posts[0].views, 3);
+  assert.throws(() => workspace.adoptPost({ post_id: 'a' }, ctx));
+  assert.throws(() => workspace.adoptPost({ post_id: 'b', article_id: 'missing' }, ctx));
+  const { article_id } = workspace.adoptPost({ post_id: 'b' }, ctx), saved = tables.articles.find(r => r.id === article_id);
+  assert.equal(saved.title, 'B'); assert.equal(saved.type, 'post'); assert.equal(saved.workspace, 'social'); assert.equal(saved.target_account_id, 'xhs'); assert.equal(saved.status, 'published');
+  assert.ok(updates.filter(u => u.table === 'social_posts').every(u => Object.keys(u.patch).join() === 'article_id'));
+  const rows = contentEntries(workspace.context({}, ctx), 'social');
+  assert.ok(!rows.some(r => r.post)); assert.ok(rows.some(r => r.article?.id === article_id));
+});
+test('7-day growth is latest minus the last record before the window; older posts without a baseline are left out', () => {
+  const { ctx, tables } = fixture();
+  const day = n => { const d = new Date(Date.now() - n * 86400000), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` };
+  tables.social_posts = [{ id: 'old', article_id: 'article', status: 'published', published_at: '2020-01-01T00:00:00Z' },
+    { id: 'new', article_id: 'article', status: 'published', published_at: new Date().toISOString() },
+    { id: 'gap', article_id: 'article', status: 'published', published_at: '2020-01-01T00:00:00Z' }];
+  const daily = [{ post_id: 'old', date: day(10), views: 100 }, { post_id: 'old', date: day(0), views: 160 }, { post_id: 'new', date: day(0), views: 40 }, { post_id: 'gap', date: day(1), views: 9 }];
+  ctx.db.aggregate = (_t, q) => {
+    const rows = daily.filter(r => !q.filter || r.date < q.filter[0].value), last = {};
+    for (const r of [...rows].sort((a, b) => a.date.localeCompare(b.date))) last[r.post_id] = r;
+    return { list: Object.values(last) };
+  };
+  const gains = workspace.context({}, ctx).post_gains;
+  assert.equal(gains.old.views, 60); assert.equal(gains.new.views, 40); assert.equal(gains.gap, undefined);
+});
+test('collected posts behind a confirmed link count toward that content by platform id, without becoming separate rows', () => {
+  const data = empty();
+  data.plans = [{ id: 'plan', platform: 'xiaohongshu', publication_links: JSON.stringify({ social: ['https://www.xiaohongshu.com/explore/abc123?xsec_token=t'] }) }];
+  data.posts = [{ id: 'hit', post_id: 'abc123', channel_id: 'xhs', status: 'published', views: 12, post_url: 'https://www.xiaohongshu.com/explore/abc123' },
+    { id: 'partial', post_id: 'abc', channel_id: 'xhs', status: 'published', views: 99 }];
+  const rows = contentEntries(data, 'social'), plan = rows.find(r => r.key === 'plan:plan');
+  assert.deepEqual(plan.linkedPosts.map(p => p.id), ['hit']); assert.equal(entryMetrics(plan, data).views, 12);
+  assert.deepEqual(entryAccountIds(plan, data, 'social', true), ['xhs']);
+  assert.deepEqual(rows.filter(r => r.post).map(r => r.post.id), ['partial']);
+});
+test('ranking compares content within each platform, only recent posts, and topics.context carries it for social topics', () => {
+  const { ctx, tables } = fixture();
+  const ago = d => new Date(Date.now() - d * 86400000).toISOString();
+  tables.social_accounts = [{ id: 'xhs', name: 'XHS', type: 'xiaohongshu' }, { id: 'dy', name: 'DY', type: 'douyin' }];
+  tables.social_posts = [
+    { id: 'a', article_id: 'article', channel_id: 'xhs', status: 'published', published_at: ago(20), views: 900, likes: 90 },
+    { id: 'b', article_id: 'article', channel_id: 'dy', status: 'published', published_at: ago(20), views: 50000 },
+    { id: 'c', channel_id: 'xhs', status: 'published', published_at: ago(30), views: 10, body: 'Quiet post' },
+    { id: 'd', channel_id: 'xhs', status: 'published', published_at: ago(400), views: 99999 },
+    { id: 'e', channel_id: 'xhs', status: 'draft', views: 5 },
+  ];
+  const r = workspace.ranking({}, ctx);
+  assert.equal(r.published, 3);
+  assert.deepEqual(r.platforms.xiaohongshu.top.map(x => x.views), [900, 10]);
+  assert.equal(r.platforms.xiaohongshu.top[0].engagement_rate, 10);
+  assert.equal(r.platforms.douyin.top[0].views, 50000);
+  assert.equal(r.platforms.xiaohongshu.top[1].excerpt, 'Quiet post');
+  assert.ok(topics.context({ workspace: 'social' }, ctx).performance.platforms.douyin);
+  assert.equal(topics.context({ workspace: 'website' }, ctx).performance, undefined);
+});
+test('performance returns each post\'s daily totals in date order, capped and de-duplicated', () => {
+  const { ctx } = fixture(); const asked = [];
+  ctx.db.query = (table, q) => { asked.push(q.where.post_id); return { list: table === 'social_post_daily' ? [{ post_id: q.where.post_id, date: '2026-10-01', views: '5' }] : [] } };
+  const r = workspace.performance({ post_ids: ['p', 'p', 'q', 3] }, ctx);
+  assert.deepEqual(asked, ['p', 'q']); assert.equal(r.days.p[0].views, 5); assert.equal(r.days.q[0].likes, 0);
 });

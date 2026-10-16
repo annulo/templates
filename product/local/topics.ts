@@ -2,9 +2,14 @@ import { L } from "./_i18n";
 import { context as growthContext } from "./growth";
 import { sourceSnapshot, link } from './inspiration';
 import { platformWorkspace } from '../lib/contentWorkspace';
+import { ranking } from './content-workspace';
 export const cloud = ["context", "save"];
 export function context(input: any, ctx: any) {
-  return { ...growthContext({}, ctx), workspace: input?.workspace || (input?.channel_id ? 'website' : ''), channel_id: input?.channel_id || "", sources: [...new Set<string>(input?.source_ids || [])].map((id) => sourceSnapshot(ctx, id)) };
+  const workspace = input?.workspace || (input?.channel_id ? 'website' : '');
+  // 自媒体选题参考已发内容的表现：哪些主题、形式、切入点数据好，哪些差（读不到社媒数据就没有这项）
+  let performance;
+  if (workspace !== 'website') try { performance = ranking({}, ctx) } catch {}
+  return { ...growthContext({}, ctx), workspace, channel_id: input?.channel_id || "", sources: [...new Set<string>(input?.source_ids || [])].map((id) => sourceSnapshot(ctx, id)), ...(performance?.published ? { performance } : {}) };
 }
 export function save(
   input: {

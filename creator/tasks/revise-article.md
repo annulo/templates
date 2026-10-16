@@ -44,3 +44,7 @@ annulo run content.update --input @/tmp/article-update.json
 
 能改的字段：`title`、`summary`、`body`、`tags`（数组），图文笔记还有 `images`（数组）、`cover_text`，视频还有 `video`、`category`。
 存完回复用户：改了哪几处（一两句），最后给出这篇的链接 `[打开「标题」](/?view=content&article=<article_id>)`。
+
+## 视频封面
+
+视频的独立封面用 `video_cover` 保存，图片必须来自资料库或本机上传。沿用同一视频时保留原封面；换了视频要重新核对封面。没有合适的图片就留空，不编造图片地址，不用 `cover_text` 代替。只修改文案时不要清空已有封面。
