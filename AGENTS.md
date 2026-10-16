@@ -21,7 +21,7 @@
    本机函数马上生效（`annulo run`），页面在 Annulo 里自动刷新；改了 `backend/func` 才加 `--push`。对着真实页面、真实账号试，要改就回第 1 步。不要在项目里改完再搬回来；
 3. 跑测试：`python3 -m unittest discover -s publish/tests -p 'test_*.py'`，`node --test publish/tests/*.test.mjs`（要 esbuild，没全局装就用 `ESBUILD_MODULE=<esbuild 包目录>` 指过去）；
 4. `git commit` 自己改的文件（别 `git add -A`：常有别人同时在改），`git push`，或者提 PR；
-5. 发版（维护者）：**每个模板自己发版本、自己的版本号**（和插件仓库一样），tag 是 `<模板>/vX.Y.Z`。先在模板的 `changelog.yaml` 最上面写这一版（`version` 加 `zh`、`en`… 各语言一段），提交推送，
+5. 发版（维护者）：**每个模板自己发版本、自己的版本号**（和插件仓库一样），tag 是 `<模板>/vX.Y.Z`。先在模板的 `changelog.yaml` 最上面写这一版（`version` 加 `zh`、`en`… 各语言一段；写短：一两句话说最重要的变化，中文大概 60 字以内，不逐条列细节），提交推送，
    再 `python3 publish/publish.py <模板> --note "<English note>" --tag vX.Y.Z`（先 `--dry-run`：看 release 分支会改什么、这个模板现在是哪一版；新版本要比它高）。
    脚本只发已推到 `origin/main` 的提交：组装这个模板、换掉 `release` 分支上它的目录（别的模板不动）、打 `<模板>/vX.Y.Z`，再同步官网的帮助手册（官网仓库 shuttle-site 有别的没发布的改动时它会停下）。
    改了 core 的，每个用到这处改动的模板各发一版；不带目录的 `vX.Y.Z` 是 2026-10-15 前几个模板一起发的老版本，不再打。
