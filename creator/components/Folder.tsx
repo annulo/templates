@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, File, FileText, Film, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Image as ImageIcon, LayoutGrid, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, inputCls } from './ui'
@@ -103,7 +103,7 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
       </section>
     )
   }
-  const viewer = (e: Entry) => <Viewer key={e.path + e.mtime} root={state.path} canOpen={!!state.can_open} e={e} kids={children[e.path] ?? []} call={call} reload={load} onSelect={setSel} />
+  const viewer = (e: Entry) => <Viewer key={e.path} root={state.path} canOpen={!!state.can_open} e={e} kids={children[e.path] ?? []} call={call} reload={load} onSelect={setSel} />
 
   const row = (e: Entry, depth: number) => {
     const Icon = iconOf(e, isOpen(e.path))
@@ -151,7 +151,7 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
       )}
       {error && <Notice tone="error">{error}</Notice>}
       {view === 'grid' ? (
-        <div className="min-h-[360px] overflow-hidden rounded-lg border border-border">
+        <div className="min-h-[360px] overflow-clip rounded-lg border border-border">
           {selected && !selected.dir
             ? <>
                 {files.length > 1 && <div className="border-b border-border bg-muted/30 px-2 py-1.5"><button type="button" onClick={() => setSel('')} className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-sm hover:bg-muted"><ChevronLeft className="size-4" />{t('all_files')}</button></div>}
@@ -160,7 +160,7 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
             : files.length ? <Grid root={state.path} files={files} onSelect={setSel} /> : <p className="p-4 text-sm text-muted-foreground">{t('empty_grid')}</p>}
         </div>
       ) : (
-        <div className="grid min-h-[360px] grid-cols-1 overflow-hidden rounded-lg border border-border md:grid-cols-[240px_1fr]">
+        <div className="grid min-h-[360px] grid-cols-1 overflow-clip rounded-lg border border-border md:grid-cols-[240px_1fr]">
           <div className="max-h-[640px] overflow-auto border-b border-border p-1.5 md:border-r md:border-b-0">
             {entries.length ? (children[''] ?? []).map((e) => row(e, 0)) : <p className="p-3 text-xs text-muted-foreground">{t('empty_tree')}</p>}
           </div>
@@ -206,8 +206,8 @@ function Viewer({ root, canOpen, e, kids, call, reload, onSelect }: { root: stri
       {error && <div className="p-3"><Notice tone="error">{error}</Notice></div>}
       <div className="min-h-0 flex-1">
         {e.dir ? <DirView kids={kids} onSelect={onSelect} />
-          : TEXT.test(e.path) ? <TextEditor root={root} path={e.path} call={call} reload={reload} />
-          : VIDEO.test(e.path) || IMAGE.test(e.path) ? <MediaView src={workSrc(`${root}/${e.path}`)} video={VIDEO.test(e.path)} />
+          : TEXT.test(e.path) ? <TextEditor root={root} path={e.path} mtime={e.mtime} call={call} reload={reload} />
+          : VIDEO.test(e.path) || IMAGE.test(e.path) ? <MediaView src={`${workSrc(`${root}/${e.path}`)}?v=${e.mtime}`} video={VIDEO.test(e.path)} />
           : <p className="p-4 text-sm text-muted-foreground">{t('cant_view')}</p>}
       </div>
     </div>
@@ -297,15 +297,29 @@ function DirView({ kids, onSelect }: { kids: Entry[]; onSelect: (p: string) => v
   )
 }
 
-/** 文本文件：md 默认用富文本编辑器改（存回去还是 md），能切到「源码」；别的文本是等宽文本框。切换和保存在同一排 */
+/**
+ * 文本文件：md 默认用富文本编辑器改（存回去还是 md），能切到「源码」；别的文本是等宽文本框。切换和保存在同一排。
+ * 编辑器只按路径挂载（保存不重新加载）；文件在别处改了（mtime 变了）由编辑器自己重读，见 useExternal
+ */
 type Bar = { dirty: boolean; saving: boolean; save: () => void }
-function TextEditor({ root, path, call, reload }: { root: string; path: string; call: Call; reload: () => Promise<void> }) {
+function TextEditor({ root, path, mtime, call, reload }: { root: string; path: string; mtime: string | number; call: Call; reload: () => Promise<void> }) {
   const { t } = useT('folder')
   const [raw, setRaw] = useState(!MD.test(path))
   const [bar, setBar] = useState<Bar>({ dirty: false, saving: false, save: () => {} })
+  // 「富文本 / 源码」和保存这排吸在页面顶栏下面（--page-top，内容页给的），编辑器的工具条再吸在这排下面（--sticky-top）。
+  // 外面的框用 overflow-clip 不用 overflow-hidden：hidden 会让 sticky 失效
+  const [barH, setBarH] = useState(0)
+  const barObserver = useRef<ResizeObserver | null>(null)
+  const barRef = useCallback((el: HTMLDivElement | null) => {
+    barObserver.current?.disconnect()
+    if (!el) return
+    setBarH(el.offsetHeight)
+    barObserver.current = new ResizeObserver(() => setBarH(el.offsetHeight))
+    barObserver.current.observe(el)
+  }, [])
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 px-3 pt-2">
+    <div className="flex h-full flex-col" style={{ '--sticky-top': `calc(var(--page-top, 0px) + ${barH}px)` } as CSSProperties}>
+      <div ref={barRef} className="sticky top-[var(--page-top,0px)] z-20 flex items-center gap-2 bg-background px-3 py-2">
         {MD.test(path) && <div title={bar.dirty ? t('save_first') : undefined} className={cx(bar.dirty && 'pointer-events-none opacity-50')}>
           <Segmented value={raw ? 'raw' : 'rich'} onChange={(v) => setRaw(v === 'raw')} options={[{ value: 'rich', label: t('rich') }, { value: 'raw', label: t('source') }]} />
         </div>}
@@ -314,7 +328,7 @@ function TextEditor({ root, path, call, reload }: { root: string; path: string; 
           <Button size="sm" disabled={!bar.dirty || bar.saving} onClick={bar.save}>{bar.saving ? <Loader2 className="animate-spin" /> : null}{t('save')}</Button>
         </div>
       </div>
-      {raw ? <RawText key="raw" path={path} call={call} reload={reload} onBar={setBar} /> : <RichMd key="rich" root={root} path={path} call={call} reload={reload} onBar={setBar} />}
+      {raw ? <RawText key="raw" path={path} mtime={mtime} call={call} reload={reload} onBar={setBar} /> : <RichMd key="rich" root={root} path={path} mtime={mtime} call={call} reload={reload} onBar={setBar} />}
     </div>
   )
 }
@@ -326,26 +340,63 @@ function useBar(onBar: (b: Bar) => void, dirty: boolean, saving: boolean, save: 
   useEffect(() => onBar({ dirty, saving, save: () => void ref.current() }), [dirty, saving])
 }
 
+const FRONT = /^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/
+
+/**
+ * 文件在别处改了（AI 在对话里改、用别的程序改）：mtime 变了就重读，和上次读到 / 存进去的一样就不管（自己刚存的）；
+ * 不一样时，没改过直接换成新的，改过了提示用户，让他选丢掉自己的修改载入新的、还是接着改（存的时候覆盖）
+ */
+function useExternal(path: string, mtime: string | number, call: Call, dirty: boolean, apply: (text: string) => void) {
+  const last = useRef<string | null>(null)
+  const [pending, setPending] = useState<string | null>(null)
+  const first = useRef(true)
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+  useEffect(() => {
+    if (first.current) { first.current = false; return }
+    call<{ text: string }>('read', { path }).then((r) => {
+      if (r.text === last.current) return
+      if (dirtyRef.current) setPending(r.text)
+      else { last.current = r.text; apply(r.text) }
+    }).catch(() => {})
+  }, [mtime])
+  const notice = pending === null ? null : <ExternalNotice onLoad={() => { last.current = pending; apply(pending); setPending(null) }} onKeep={() => setPending(null)} />
+  return { last, notice, clear: () => setPending(null) }
+}
+
+function ExternalNotice({ onLoad, onKeep }: { onLoad: () => void; onKeep: () => void }) {
+  const { t } = useT('folder')
+  return (
+    <div className="px-3 pt-2"><Notice tone="info">
+      <div className="flex flex-wrap items-center gap-2"><span className="min-w-0 flex-1">{t('changed_outside')}</span>
+        <Button size="sm" variant="outline" onClick={onLoad}>{t('changed_load')}</Button>
+        <Button size="sm" variant="ghost" onClick={onKeep}>{t('changed_keep')}</Button>
+      </div>
+    </Notice></div>
+  )
+}
+
 const saveKey = (ev: KeyboardEvent, save: () => Promise<void>) => { if ((ev.metaKey || ev.ctrlKey) && ev.key === 's') { ev.preventDefault(); void save() } }
 
-function RawText({ path, call, reload, onBar }: { path: string; call: Call; reload: () => Promise<void>; onBar: (b: Bar) => void }) {
+function RawText({ path, mtime, call, reload, onBar }: { path: string; mtime: string | number; call: Call; reload: () => Promise<void>; onBar: (b: Bar) => void }) {
   const [text, setText] = useState<string | null>(null)
   const [savedText, setSavedText] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  useEffect(() => {
-    call<{ text: string }>('read', { path }).then((r) => { setText(r.text); setSavedText(r.text) }).catch((e) => setError((e as Error).message))
-  }, [path])
   const dirty = text !== null && text !== savedText
+  const ext = useExternal(path, mtime, call, dirty, (x) => { setText(x); setSavedText(x) })
+  useEffect(() => {
+    call<{ text: string }>('read', { path }).then((r) => { ext.last.current = r.text; setText(r.text); setSavedText(r.text) }).catch((e) => setError((e as Error).message))
+  }, [path])
   const save = async () => {
     if (text === null) return
     setSaving(true); setError('')
-    try { await call('write', { path, text }); setSavedText(text); await reload() } catch (e) { setError((e as Error).message) } finally { setSaving(false) }
+    try { await call('write', { path, text }); ext.last.current = text; ext.clear(); setSavedText(text); await reload() } catch (e) { setError((e as Error).message) } finally { setSaving(false) }
   }
   useBar(onBar, dirty, saving, save)
   if (error) return <div className="p-3"><Notice tone="error">{error}</Notice></div>
   if (text === null) return <div className="p-4"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>
-  return <textarea value={text} onChange={(ev) => setText(ev.target.value)} onKeyDown={(ev) => saveKey(ev, save)} spellCheck={false} className="m-3 min-h-[480px] flex-1 resize-y rounded-md border border-border bg-transparent p-3 font-mono text-[13px] leading-relaxed outline-none focus:border-primary/50" />
+  return <>{ext.notice}<textarea value={text} onChange={(ev) => setText(ev.target.value)} onKeyDown={(ev) => saveKey(ev, save)} spellCheck={false} className="m-3 min-h-[480px] flex-1 resize-y rounded-md border border-border bg-transparent p-3 font-mono text-[13px] leading-relaxed outline-none focus:border-primary/50" /></>
 }
 
 const isRelative = (src: string) => !!src && !/^(https?:|data:|local:|blob:|\/)/i.test(src)
@@ -359,29 +410,50 @@ export const joinPath = (dir: string, p: string) => {
  * md 用富文本编辑器改：读进来 md → HTML，相对路径的图片、视频换成工作目录的预览地址；
  * 存的时候换回相对路径，编辑器里新插的本机文件（上传、从资料库选）复制进 md 旁边的「图」目录，再 HTML → md 写回去
  */
-function RichMd({ root, path, call, reload, onBar }: { root: string; path: string; call: Call; reload: () => Promise<void>; onBar: (b: Bar) => void }) {
+function RichMd({ root, path, mtime, call, reload, onBar }: { root: string; path: string; mtime: string | number; call: Call; reload: () => Promise<void>; onBar: (b: Bar) => void }) {
   const { t } = useT('folder')
   const [html, setHtml] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const back = useRef<Record<string, string>>({})
-  // 编辑器加载时会把内容规范化一次（触发 onChange）：第一次拿到的当作没改过的样子
-  const baseline = useRef<string | null>(null)
+  // 改没改：把编辑器里的内容转成 md，和打开时（或上次存的）比。不能拿编辑器第一次 onChange 当原样：有的内容加载时不触发
+  const mdRef = useRef<typeof import('../lib/mdhtml') | null>(null)
+  const baseline = useRef('')
+  const mdOf = (h: string) => mdRef.current!.htmlToMd(h)
   const dir = parent(path)
-  useEffect(() => {
-    void (async () => {
-      try {
-        const m = await import('../lib/mdhtml')
-        const { text } = await call<{ text: string }>('read', { path })
-        setHtml(m.mapSrc(m.mdToHtml(text), (src) => {
+  // 换内容（别处改了文件）要让编辑器重新挂载：它只在挂载时读 value
+  const [ver, setVer] = useState(0)
+  // 开头的 --- 头（文案的 title、tags）不进编辑器：富文本会把它当成分隔线和标题。原样留着，存的时候接回去，在源码里改
+  const [front, setFront] = useState('')
+  // 表格、任务列表的编辑器扩展：第三方包只在浏览器里有，和 md 转换一起动态加载
+  const [exts, setExts] = useState<unknown[]>([])
+  const show = async (text: string) => {
+    const [m, x] = await Promise.all([import('../lib/mdhtml'), import('./rich/mdExtensions')])
+    mdRef.current = m
+    setExts(x.default)
+    const fm = text.match(FRONT)?.[0] ?? ''
+    setDirty(false)
+    setFront(fm)
+    setVer((v) => v + 1)
+    const h = m.mapSrc(m.mdToHtml(text.slice(fm.length)), (src) => {
           if (!isRelative(src)) return src
           // marked 会把地址编码（中文、空格），文件里存的是原样的路径
           const plain = decodeURI(src)
           const url = workSrc(`${root}/${joinPath(dir, plain)}`)
           back.current[url] = plain
           return url
-        }))
+        })
+    baseline.current = m.htmlToMd(h)
+    setHtml(h)
+  }
+  const ext = useExternal(path, mtime, call, dirty, (x) => void show(x))
+  useEffect(() => {
+    void (async () => {
+      try {
+        const { text } = await call<{ text: string }>('read', { path })
+        ext.last.current = text
+        await show(text)
       } catch (e) { setError((e as Error).message) }
     })()
   }, [path])
@@ -397,8 +469,12 @@ function RichMd({ root, path, call, reload, onBar }: { root: string; path: strin
         await call('importLocal', { url: src, to: joinPath(dir, to) })
         back.current[src] = to
       }
-      await call('write', { path, text: m.htmlToMd(m.mapSrc(html, (s) => (back.current[s] ? back.current[s].replace(/ /g, '%20') : s))) })
-      baseline.current = html
+      const body = m.htmlToMd(m.mapSrc(html, (s) => (back.current[s] ? back.current[s].replace(/ /g, '%20') : s)))
+      const text = (front ? front.replace(/\n*$/, '\n\n') : '') + body
+      await call('write', { path, text })
+      ext.last.current = text
+      ext.clear()
+      baseline.current = m.htmlToMd(html)
       setDirty(false)
       await reload()
     } catch (e) { setError((e as Error).message) } finally { setSaving(false) }
@@ -407,8 +483,10 @@ function RichMd({ root, path, call, reload, onBar }: { root: string; path: strin
   if (error) return <div className="p-3"><Notice tone="error">{error}</Notice></div>
   if (html === null) return <div className="p-4"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>
   return (
-    <div className="p-3" onKeyDown={(ev) => saveKey(ev, save)}>
-      <RichEditor value={html} placeholder={isDraft(path) ? t('draft_placeholder') : undefined} onChange={(h) => { setHtml(h); if (baseline.current === null) baseline.current = h; else setDirty(h !== baseline.current) }} />
+    <div className="px-3 pb-3" onKeyDown={(ev) => saveKey(ev, save)}>
+      {ext.notice}
+      {front && <pre title={t('front_hint')} className="mb-2 overflow-x-auto rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground">{front.trim()}</pre>}
+      <RichEditor key={ver} markdown extensions={exts} value={html} placeholder={isDraft(path) ? t('draft_placeholder') : undefined} onChange={(h) => { setHtml(h); setDirty(mdOf(h) !== baseline.current) }} />
     </div>
   )
 }

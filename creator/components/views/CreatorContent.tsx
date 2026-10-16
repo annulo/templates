@@ -707,7 +707,8 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
       {hasFolder && (renaming
         ? <RenameInput value={a.title} onDone={(v) => void retitle(v)} onCancel={() => setRenaming(false)} className="h-11 text-2xl font-semibold" />
         : <h1 className="cursor-text text-2xl leading-snug font-semibold tracking-tight text-balance" title={tr('folder.title_hint')} onDoubleClick={() => !locked && setRenaming(true)}>{a.title || tr('versions.untitled')}</h1>)}
-      {work && <work.Panel article={a} all={all} open={open} onChanged={onChanged} />}
+      {/* 文件夹里的编辑器：保存那排和工具条吸在顶上这条下面（--page-top，Folder.tsx） */}
+      {work && <div style={{ '--page-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><work.Panel article={a} all={all} open={open} onChanged={onChanged} /></div>}
       {!hasFolder && <article className="w-full min-w-0" style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}>
         {editing ? (
           <div className="space-y-3">

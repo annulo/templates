@@ -26,6 +26,9 @@ export default {
       "@tiptap/starter-kit": "https://esm.talizen.com/@tiptap/starter-kit@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
       "@tiptap/extensions": "https://esm.talizen.com/@tiptap/extensions@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
       "@tiptap/extension-image": "https://esm.talizen.com/@tiptap/extension-image@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
+      // 编辑器的 markdown 模式（表格、任务列表，components/rich/mdExtensions.ts），只有内容文件夹用
+      "@tiptap/extension-table": "https://esm.talizen.com/@tiptap/extension-table@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
+      "@tiptap/extension-list": "https://esm.talizen.com/@tiptap/extension-list@3.31.3?bundle&external=@tiptap/core,@tiptap/pm",
       // 内容文件夹里的 .md 用富文本编辑器改：md → HTML 用 marked，HTML → md 用 turndown（lib/mdhtml.ts）
       "marked": "https://esm.talizen.com/marked@15.0.12?bundle",
       "turndown": "https://esm.talizen.com/turndown@7.2.0?bundle",

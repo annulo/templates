@@ -2,8 +2,12 @@ import { useEffect, useState, type ComponentType } from 'react'
 import { Notice, Skeleton } from './ui'
 import { tr } from '../lib/i18n'
 
-/** placeholder：空的时候段落里的提示，不给用「输入正文……」 */
-export type RichEditorProps = { value: string; onChange: (html: string) => void; placeholder?: string }
+/**
+ * placeholder：空的时候段落里的提示，不给用「输入正文……」。
+ * markdown：改的是 .md 文件（自媒体的内容文件夹）：一到六级标题都能用，斜杠菜单多一个「表格」（要同时传表格扩展）。
+ * extensions：模板自己加的 Tiptap 扩展（比如表格、任务列表），模板在 importMap 里给包、自己动态加载好了再传进来
+ */
+export type RichEditorProps = { value: string; onChange: (html: string) => void; placeholder?: string; markdown?: boolean; extensions?: unknown[] }
 
 /**
  * 文章正文的编辑器（飞书 / Notion 式：输入 / 插入块，选中文字浮出格式工具栏，粘贴、拖进图片直接上传）。存的是 HTML。

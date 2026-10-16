@@ -1,13 +1,13 @@
 // 文章正文编辑器（Tiptap）。第三方包只在浏览器里有（talizen.config.ts 的 importMap，SSR 没有），
 // 所以这个文件只能经 components/RichEditor.tsx 在 useEffect 里 await import()，不要在别处静态引入。
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Node, mergeAttributes } from '@tiptap/core'
+import { Node, mergeAttributes, type AnyExtension } from '@tiptap/core'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
 import ImageBase from '@tiptap/extension-image'
-import { Bold, Code, Heading2, Heading3, ImageIcon, Images, Italic, Link2, List, ListOrdered, Minus, Pilcrow, Quote, SquareCode, Strikethrough, Unlink, Upload, type LucideIcon } from 'lucide-react'
+import { Bold, Code, Heading2, Heading3, ImageIcon, Images, Italic, Link2, List, ListOrdered, Minus, Pilcrow, Quote, SquareCode, Strikethrough, Table2, Unlink, Upload, type LucideIcon } from 'lucide-react'
 import { uploadFile } from '../../lib/shuttle'
 import { fileSrc } from '../../lib/files'
 import { tr } from '../../lib/i18n'
@@ -126,8 +126,9 @@ type SlashItem = { key: string; icon: LucideIcon; label: string; desc: string; w
 type Slash = { from: number; to: number; query: string; top: number; bottom: number; left: number }
 
 /** 斜杠菜单：输入 / 弹出，像飞书、Notion 一样插入块 */
-function slashItems(pickImage: () => void): SlashItem[] {
+function slashItems(pickImage: () => void, markdown?: boolean): SlashItem[] {
   return [
+    ...(markdown ? [{ key: 'table', icon: Table2, label: tr('editor.table'), desc: tr('editor.table_desc'), words: 'table biaoge 表格', run: (e: Editor) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() }] : []),
     { key: 'p', icon: Pilcrow, label: tr('editor.p'), desc: tr('editor.p_desc'), words: 'text paragraph zhengwen 正文 段落', run: (e) => e.chain().focus().setParagraph().run() },
     { key: 'h2', icon: Heading2, label: tr('editor.h2'), desc: tr('editor.h2_desc'), words: 'h2 heading biaoti 标题 小标题', run: (e) => e.chain().focus().setHeading({ level: 2 }).run() },
     { key: 'h3', icon: Heading3, label: tr('editor.h3'), desc: tr('editor.h3_desc'), words: 'h3 heading biaoti 标题 三级', run: (e) => e.chain().focus().setHeading({ level: 3 }).run() },
@@ -153,7 +154,7 @@ function findSlash(editor: Editor): Slash | null {
   return { from: $from.pos - m[1].length - 1, to: $from.pos, query: m[1].toLowerCase(), top: c.top, bottom: c.bottom, left: c.left }
 }
 
-export default function TiptapEditor({ value, onChange, placeholder }: RichEditorProps) {
+export default function TiptapEditor({ value, onChange, placeholder, markdown, extensions }: RichEditorProps) {
   const [slash, setSlash] = useState<Slash | null>(null)
   const [active, setActive] = useState(0)
   const [uploading, setUploading] = useState(0)
@@ -187,7 +188,7 @@ export default function TiptapEditor({ value, onChange, placeholder }: RichEdito
     if (!e || !nodes.length) return
     e.chain().focus().insertContentAt(e.state.selection.to, nodes).run()
   }
-  const items = slashItems(() => fileInput.current?.click())
+  const items = slashItems(() => fileInput.current?.click(), markdown)
   const shown = slash ? items.filter((i) => !slash.query || i.words.includes(slash.query) || i.label.toLowerCase().includes(slash.query)) : []
   // 菜单放光标下方；下方不够放（不到 240px）而上方更宽，就翻到上方，用 bottom 贴住光标上沿往上长。
   // 高度限制在那一侧剩下的空间里，放不下就在菜单里滚动；横向不超出窗口
@@ -223,10 +224,11 @@ export default function TiptapEditor({ value, onChange, placeholder }: RichEdito
     immediatelyRender: false,
     extensions: [
       // 链接不加 nofollow、不强制新窗口：文章里多是站内链接，nofollow 影响 SEO
-      StarterKit.configure({ heading: { levels: [2, 3] }, link: { openOnClick: false, autolink: true, defaultProtocol: 'https', HTMLAttributes: { target: null, rel: null } } }),
+      StarterKit.configure({ heading: { levels: markdown ? [1, 2, 3, 4, 5, 6] : [2, 3] }, link: { openOnClick: false, autolink: true, defaultProtocol: 'https', HTMLAttributes: { target: null, rel: null } } }),
       Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? tr('editor.ph_heading') : placeholder || tr('editor.ph_media')) }),
       Image,
       Video,
+      ...((extensions ?? []) as AnyExtension[]),
     ],
     content: value,
     editorProps: {
