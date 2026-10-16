@@ -393,5 +393,16 @@
   "site_admin": {
     "edit": "Edit site",
     "open_blocked": "The browser blocked the new window. Click here to open it (valid for 1 minute)"
+  },
+  "datetime": {
+    "pick": "Pick a time",
+    "past": "Passed",
+    "in_hour": "In 1 hour",
+    "tonight": "Tonight 8 PM",
+    "tomorrow_morning": "Tomorrow 9 AM",
+    "prev": "Previous month",
+    "next": "Next month",
+    "future_only": "Pick a time in the future",
+    "ok": "Done"
   }
 }

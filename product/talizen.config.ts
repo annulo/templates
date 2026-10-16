@@ -16,6 +16,9 @@ export default {
   // 不然各包各带一份 ProseMirror，编辑器会报错。
   importMap: {
     imports: {
+      // core 的日期时间选择（components/DateTimePicker.tsx，shadcn 的月历）：react-day-picker 和它的中文
+      "react-day-picker": "https://esm.talizen.com/react-day-picker@9.14.0?bundle&external=react,react-dom",
+      "date-fns/locale/zh-CN": "https://esm.talizen.com/date-fns@4.1.0/locale/zh-CN?bundle",
       "@tiptap/core":
         "https://esm.talizen.com/@tiptap/core@3.31.3?bundle&external=@tiptap/pm",
       // 平台会把 importMap 里别的包加进 external，子路径连自己的包也被标成 external、import 不到自己的文件；

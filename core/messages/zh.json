@@ -393,5 +393,16 @@
   "site_admin": {
     "edit": "去编辑",
     "open_blocked": "浏览器拦住了新窗口，点这里打开（1 分钟内有效）"
+  },
+  "datetime": {
+    "pick": "选时间",
+    "past": "已过",
+    "in_hour": "1 小时后",
+    "tonight": "今晚 20:00",
+    "tomorrow_morning": "明早 9:00",
+    "prev": "上个月",
+    "next": "下个月",
+    "future_only": "要选以后的时间",
+    "ok": "确定"
   }
 }

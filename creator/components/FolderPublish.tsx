@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Check, FileText, Film, Image as ImageIcon, Library, Loader2, Newspaper, Send, X } from 'lucide-react'
 import AssetPicker from './AssetPicker'
+import RichEditor from './RichEditor'
 import { ChannelAvatar } from './ArticlePublish'
 import { Badge, Button, Dialog, Notice, Segmented, cx, inputCls, toast } from './ui'
+import DateTimeField from './DateTimePicker'
 import { IMAGE, MD, VIDEO, base, fmtSize, isDraft, joinPath, parent, workSrc, type Entry } from './Folder'
 import { enqueue } from '../lib/publishQueue'
 import { fileSrc } from '../lib/files'
@@ -74,8 +76,15 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   const [root, setRoot] = useState('')
   const [files, setFiles] = useState<Entry[] | null>(null)
   const [kind, setKind] = useState<Kind>('post')
+  // 从哪份 md 填的文字（只用来填，填完下面都能改；也用它挑同目录的图、视频）
   const [copy, setCopy] = useState('')
-  const [copyText, setCopyText] = useState('')
+  // 正文：长文是 md（富文本编辑器直接改，发的时候转成 HTML），图文、视频是纯文字。各存一份，切「发成」不丢
+  const [md, setMd] = useState('')
+  const [plain, setPlain] = useState('')
+  const [mdVer, setMdVer] = useState(0)
+  // 点同一份文件也重新填一次
+  const [fill, setFill] = useState(0)
+  const [exts, setExts] = useState<unknown[] | null>(null)
   const [title, setTitle] = useState('')
   const [tags, setTags] = useState('')
   const [images, setImages] = useState<Media[]>([])
@@ -112,16 +121,20 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     }).catch((e) => setError((e as Error).message))
   }, [open, article.id])
 
-  // 挑了文案：读出来，标题、话题填上；没手动挑过的图、视频换成离它最近的
+  // 点了一份 md：把它的标题、话题、正文填进来（覆盖现在的）；没手动挑过的图、视频换成离它最近的
   useEffect(() => {
-    if (!copy) { setCopyText(''); setTitle(article.title); setTags(''); return }
-    runLocal<{ text: string }>('folder.read', { article_id: article.id, path: copy }).then((r) => {
+    if (!open) return
+    void import('./rich/mdExtensions').then((x) => setExts(x.default))
+    if (!copy) { setMd(''); setPlain(''); setMdVer((v) => v + 1); setTitle(article.title); setTags(''); return }
+    Promise.all([runLocal<{ text: string }>('folder.read', { article_id: article.id, path: copy }), import('../lib/mdhtml')]).then(([r, m]) => {
       const c = parseCopy(r.text)
-      setCopyText(c.body)
+      setMd(c.body)
+      setPlain(htmlPlain(m.mdToHtml(c.body)))
+      setMdVer((v) => v + 1)
       setTitle(c.title || article.title)
       setTags(c.tags.join(', '))
     }).catch((e) => setError((e as Error).message))
-  }, [copy, article.id])
+  }, [copy, fill, article.id, open])
   useEffect(() => {
     if (!files) return
     const dir = copy ? parent(copy) : ''
@@ -135,15 +148,15 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     }
   }, [copy, files, root])
 
-  // 正文：图文、视频是纯文字；长文是富文本，图片、视频的相对路径换成文件夹里的路径（发的时候存成本机文件）
+  // 发出去的正文：图文、视频是纯文字；长文把 md 转成 HTML，图片、视频的相对路径换成文件夹里的路径（发的时候存成本机文件）
   const [body, setBody] = useState('')
   useEffect(() => {
-    if (!copyText) { setBody(''); return }
-    void import('../lib/mdhtml').then((m) => {
-      const html = m.mdToHtml(copyText)
-      setBody(kind === 'article' ? m.mapSrc(html, (s) => (isUrl(s) || s.startsWith('/') ? s : joinPath(parent(copy), decodeURI(s)))) : htmlPlain(html))
-    })
-  }, [copyText, kind, copy])
+    if (kind !== 'article') { setBody(plain); return }
+    if (!md.trim()) { setBody(''); return }
+    void import('../lib/mdhtml').then((m) => setBody(m.mapSrc(m.mdToHtml(md), (s) => (isUrl(s) || s.startsWith('/') ? s : joinPath(parent(copy), decodeURI(s))))))
+  }, [md, plain, kind, copy])
+  // 长文编辑器里显示图片、视频：相对路径按填进来的那份 md 所在的目录找
+  const resolveSrc = (s: string) => (isUrl(s) ? fileSrc(s) : s.startsWith('/') ? s : workSrc(`${root}/${joinPath(parent(copy), decodeURI(s))}`))
   const tagList = tags.split(/[,，\s]+/).map((x) => x.replace(/^#/, '').trim()).filter(Boolean)
 
   const machine = useElsewhere(ctx.channels)
@@ -194,20 +207,22 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
             ]} />
           </div>
 
-          {/* 文字：从文件夹里挑一份 md；标题、话题能当场改（只改这次发的，不改文件） */}
+          {/* 文字：标题、话题、正文都在这里改（只改这次发的，不改文件）；文件夹里的 md 点一下把内容填进来 */}
           <div>
             {section(kind === 'video' ? t('text_video') : t('text'))}
-            {copies.length ? <div className="flex flex-wrap gap-1.5">
-              {copies.map((e) => <button key={e.path} type="button" onClick={() => setCopy(e.path)} className={cx('inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs', copy === e.path ? 'border-primary/50 bg-primary/10 text-primary-text' : 'border-border hover:bg-muted')}><FileText className="size-3.5 shrink-0" /><span className="truncate">{e.path}</span></button>)}
-              <button type="button" onClick={() => setCopy('')} className={cx('cursor-pointer rounded-md border px-2 py-1 text-xs', !copy ? 'border-primary/50 bg-primary/10 text-primary-text' : 'border-border text-muted-foreground hover:bg-muted')}>{t('no_text')}</button>
+            {copies.length ? <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">{t('fill_from')}</span>
+              {copies.map((e) => <button key={e.path} type="button" onClick={() => { setCopy(e.path); setFill((x) => x + 1) }} title={t('fill_hint')} className={cx('inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs', copy === e.path ? 'border-primary/50 bg-primary/10 text-primary-text' : 'border-border hover:bg-muted')}><FileText className="size-3.5 shrink-0" /><span className="truncate">{e.path}</span></button>)}
             </div> : <p className="text-xs text-muted-foreground">{t('no_md')}</p>}
             <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_200px]">
               <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('title_ph')} className={cx(inputCls, 'h-8')} />
               <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder={t('tags_ph')} className={cx(inputCls, 'h-8')} />
             </div>
-            {body && (kind === 'article'
-              ? <div className="prose prose-sm mt-2 max-h-48 max-w-none overflow-auto rounded-md bg-muted/40 p-3 text-xs dark:prose-invert" dangerouslySetInnerHTML={{ __html: body.replace(/(<(?:img|video)\b[^>]*?\ssrc=")([^"]+)(")/gi, (_m, a, s, b) => a + (isUrl(s) ? fileSrc(s) : workSrc(`${root}/${s}`)) + b) }} />
-              : <pre className="mt-2 max-h-40 overflow-auto rounded-md bg-muted/40 p-3 font-sans text-xs whitespace-pre-wrap">{body}</pre>)}
+            <div className="mt-2">
+              {kind === 'article'
+                ? (exts ? <RichEditor key={`${copy}:${mdVer}`} markdown extensions={exts} resolveSrc={resolveSrc} value={md} onChange={setMd} placeholder={t('body_ph')} /> : <Loader2 className="size-4 animate-spin text-muted-foreground" />)
+                : <textarea value={plain} onChange={(e) => setPlain(e.target.value)} placeholder={t(kind === 'video' ? 'desc_ph' : 'body_ph')} className={cx(inputCls, 'min-h-40 resize-y py-2 leading-relaxed')} />}
+            </div>
           </div>
 
           {kind === 'post' && <div>
@@ -264,7 +279,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
               <label className="inline-flex cursor-pointer items-center gap-2"><input type="radio" checked={when === 'now'} disabled={running} onChange={() => setWhen('now')} className="accent-primary" />{t('now')}</label>
               <label className="inline-flex cursor-pointer items-center gap-2"><input type="radio" checked={when === 'later'} disabled={running} onChange={() => setWhen('later')} className="accent-primary" />{t('later')}</label>
             </div>
-            {when === 'later' && <input type="datetime-local" className={inputCls} value={at} disabled={running} onChange={(e) => setAt(e.target.value)} />}
+            {when === 'later' && <DateTimeField value={at} disabled={running} onChange={setAt} />}
           </div>
           {missing && <p className="text-xs text-amber-700 dark:text-amber-400">{missing}</p>}
           {error && <Notice tone="error">{error}</Notice>}

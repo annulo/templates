@@ -8,7 +8,8 @@ import RunButton from './RunButton'
 import { fileSrc } from '../lib/files'
 import SchedulePopover, { ScheduledLine } from './SchedulePopover'
 import { TYPE_META, typeOf } from './ArticleTypes'
-import { Badge, Button, Dialog, Notice, cx, fmtTime, inputCls, toast } from './ui'
+import { Badge, Button, Dialog, Notice, cx, fmtTime, toast } from './ui'
+import DateTimeField from './DateTimePicker'
 import { enqueue, reveal, stop, usePublishQueue, type PublishJob } from '../lib/publishQueue'
 import WatchControls from './WatchControls'
 
@@ -144,7 +145,7 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
             <label className="inline-flex cursor-pointer items-center gap-2"><input type="radio" name="when" checked={when === 'now'} disabled={running} onChange={() => setWhen('now')} className="accent-primary" />{tr('social.publish_now')}</label>
             <label className="inline-flex cursor-pointer items-center gap-2"><input type="radio" name="when" checked={when === 'later'} disabled={running} onChange={() => setWhen('later')} className="accent-primary" />{tr('article.pub_later')}</label>
           </div>
-          {when === 'later' && <><input type="datetime-local" className={inputCls} value={at} disabled={running} onChange={(e) => setAt(e.target.value)} /><p className="text-xs leading-relaxed text-muted-foreground">{tr('social.time_hint', { rate: '' })}</p></>}
+          {when === 'later' && <><DateTimeField value={at} disabled={running} onChange={setAt} /><p className="text-xs leading-relaxed text-muted-foreground">{tr('social.time_hint', { rate: '' })}</p></>}
         </div>}
         {error && <Notice tone="error">{error}</Notice>}
       </>}
