@@ -3,7 +3,7 @@
     "title": "Change content status",
     "change": "Change content status for {title}",
     "auto": "Restore automatic status",
-    "auto_short": "Auto",
+    "auto_label": "Auto ({status})",
     "auto_hint": "Follow the article and publication records",
     "draft_hint": "Mark as a draft to keep working on it",
     "published_hint": "Mark as published, including on other channels",

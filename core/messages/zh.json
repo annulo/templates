@@ -3,7 +3,7 @@
     "title": "修改内容状态",
     "change": "修改「{title}」的内容状态",
     "auto": "恢复自动更新",
-    "auto_short": "自动",
+    "auto_label": "自动（{status}）",
     "auto_hint": "根据文章和发布记录自动更新",
     "draft_hint": "手动标记为草稿，继续修改内容",
     "published_hint": "手动标记为已发布，包括在其他渠道发布",
