@@ -52,10 +52,11 @@ type Writer = ReturnType<typeof useTask>
  * 能「在这篇上做」的模板（creator）传进来（docs/artifacts.md）：task 是「在这篇上做」的任务（参数 { article_id, note }：
  * 照稿子写正文、配图、做视频…），Panel 是文章页正文下面的产物（artifacts）。传了才有稿子、「在这篇上做」和产物；没传就和以前一样只有改写。
  */
-export type AIWork = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void }> }
+// file / setFile：文件夹里打开的文件或目录，记在地址栏（?file=），头部的返回先一级级退回文件夹，手机的返回手势也一样
+export type AIWork = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void; file?: string; setFile?: (p: string) => void }> }
 
 /** 自媒体的内容中心（从 core 的内容中心分出来，docs/content-model.md）：每条内容一个文件夹，稿子、脚本、文案、视频都是里面的文件 */
-const FOLDER_WORK: AIWork = { task: 'work-on-content', Panel: ({ article, onChanged }) => <Folder article={article} onChanged={onChanged} /> }
+const FOLDER_WORK: AIWork = { task: 'work-on-content', Panel: ({ article, onChanged, file, setFile }) => <Folder article={article} onChanged={onChanged} sel={file} setSel={setFile} /> }
 
 /** 交给「在这篇上做」的任务：开一段对话、在右侧打开 */
 async function startWork(work: AIWork, articleId: string, note: string) {
@@ -208,7 +209,7 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const openArticle = params.article ? articles?.find((a) => a.id === params.article) : undefined
   const writingTitle = topicTitle(writingInput?.topic_id) || writingInput?.subject
 
-  if (openArticle) return <ArticleDetail key={openArticle.id} work={work} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
+  if (openArticle) return <ArticleDetail key={openArticle.id} work={work} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} file={params.file ?? ''} setFile={(p) => setParam('file', p)} open={(id) => { setParam('version', ''); setParam('file', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('file', ''); setParam('article', '') }} onChanged={load} />
 
   return (
     <div className="space-y-6">
@@ -459,7 +460,7 @@ export function RowMore({ items = [], onRewrite, onCopy, onDelete }: { items?: {
   </div>
 }
 
-export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks, work }: { work?: AIWork; inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
+export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks, work, file = '', setFile }: { file?: string; setFile?: (p: string) => void; work?: AIWork; inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
   const type = typeOf(a)
   const [moreOpen, setMoreOpen] = useState(false)
   // 菜单往哪边展开：宽屏时按钮在一行最右边，往左；手机上按钮换到下一行的左边，往左会伸出屏幕，改往右。按打开时按钮的实际位置算
@@ -655,12 +656,14 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
 
   return (
     <div className="space-y-5">
-      <div ref={headerRef} className="sticky -top-4 -mx-4 -mt-4 px-4 md:-mx-6 md:px-6 z-20 border-b border-border bg-background py-2 sm:py-3">
+      {/* z-30：要盖过文件夹里吸顶的「富文本 / 源码 / 保存」那排（z-20），不然「更多」菜单被它挡住 */}
+      <div ref={headerRef} className="sticky -top-4 -mx-4 -mt-4 px-4 md:-mx-6 md:px-6 z-30 border-b border-border bg-background py-2 sm:py-3">
         {/* 左边的箭头回列表（顶栏面包屑的「内容中心」也行）；右边是状态和操作。外面这条的 -mt-4 抵掉滚动区的上内边距 */}
         {/* 手机上排成一行（按钮只留图标，发布留字）：两行吸顶的话正文就只剩半屏 */}
         <div className="flex items-center justify-between gap-2 sm:flex-wrap sm:gap-3">
           <div className="flex min-w-0 items-center gap-2">
-            <Button variant="ghost" size="icon-sm" onClick={onBack} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
+            {/* 文件夹里打开着文件：先退回上一级目录，退到全部文件，再回内容列表 */}
+            <Button variant="ghost" size="icon-sm" onClick={() => (file && setFile ? setFile(file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '') : onBack())} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
             {/* 手机上一行放不下：状态收进「更多」菜单 */}
             <div className="hidden sm:block">{statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}</div>
           </div>
@@ -743,7 +746,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
         ? <RenameInput value={a.title} onDone={(v) => void retitle(v)} onCancel={() => setRenaming(false)} className="h-11 text-2xl font-semibold" />
         : <h1 className="cursor-text text-2xl leading-snug font-semibold tracking-tight text-balance" title={tr('folder.title_hint')} onDoubleClick={() => !locked && setRenaming(true)}>{a.title || tr('versions.untitled')}</h1>)}
       {/* 文件夹里的编辑器：保存那排和工具条吸在顶上这条下面（--page-top，Folder.tsx） */}
-      {work && <div style={{ '--page-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><work.Panel article={a} all={all} open={open} onChanged={onChanged} /></div>}
+      {work && <div style={{ '--page-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><work.Panel article={a} all={all} open={open} onChanged={onChanged} file={file} setFile={setFile} /></div>}
       {!hasFolder && <article className="w-full min-w-0" style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}>
         {editing ? (
           <div className="space-y-3">
