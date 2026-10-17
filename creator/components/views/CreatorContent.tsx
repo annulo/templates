@@ -649,25 +649,26 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
 
   return (
     <div className="space-y-5">
-      <div ref={headerRef} className="sticky -top-4 -mx-4 -mt-4 px-4 md:-mx-6 md:px-6 z-20 border-b border-border bg-background py-3">
+      <div ref={headerRef} className="sticky -top-4 -mx-4 -mt-4 px-4 md:-mx-6 md:px-6 z-20 border-b border-border bg-background py-2 sm:py-3">
         {/* 左边的箭头回列表（顶栏面包屑的「内容中心」也行）；右边是状态和操作。外面这条的 -mt-4 抵掉滚动区的上内边距 */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* 手机上排成一行（按钮只留图标，发布留字）：两行吸顶的话正文就只剩半屏 */}
+        <div className="flex items-center justify-between gap-2 sm:flex-wrap sm:gap-3">
           <div className="flex min-w-0 items-center gap-2">
             <Button variant="ghost" size="icon-sm" onClick={onBack} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
             {statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex shrink-0 items-center justify-end gap-1.5 sm:flex-wrap sm:gap-2">
             {/* 编辑中：取消（有没存的）/ 完成、保存；没在编辑但稿子改了：编辑、保存。保存一次存正文和稿子 */}
             {editing && <Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => { draftCtl.current?.discard(); setEditing(false) }}>{anyDirty ? tr('common.cancel') : tr('content.edit_done')}</Button>}
             {!editing && !hasFolder && <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
             {(editing || draftDirty) && <Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !anyDirty}>{tr('common.save')}</Button>}
             {/* 能「在这篇上做」的模板：改正文也在「交给 AI」里说，不单独一个「AI 修改」 */}
             {!work && <Button size="sm" variant="outline" onClick={() => setAsking(true)} disabled={locked || !reviser.shuttle}><Sparkles />{tr('content.ask_ai')}</Button>}
-            <Button size="sm" variant="outline" onClick={() => setAiOpen(work ? {} : { mode: 'new' })} disabled={locked || !rewriter.shuttle}>{work ? <Wand2 /> : <Repeat2 />}{work ? tr('article.ai') : tr('article.rewrite')}</Button>
+            <Button size="sm" variant="outline" onClick={() => setAiOpen(work ? {} : { mode: 'new' })} disabled={locked || !rewriter.shuttle} title={work ? tr('article.ai') : tr('article.rewrite')} aria-label={work ? tr('article.ai') : tr('article.rewrite')}>{work ? <Wand2 /> : <Repeat2 />}<span className="hidden sm:inline">{work ? tr('article.ai') : tr('article.rewrite')}</span></Button>
             <Button size="sm" feedback={false} onClick={() => void openPublish()} disabled={locked}><Send />{tr('article.publish')}</Button>
             <div ref={moreRef} className="relative">
-              <Button size="sm" variant="ghost" onClick={() => { const r = moreRef.current?.getBoundingClientRect(); setMoreLeft(!!r && r.right < 224 + 8); setMoreOpen((v) => !v); setConfirmDel(false) }} aria-haspopup="menu" aria-expanded={moreOpen} aria-controls={`article-more-${a.id}`}>
-                {tr('content.more_actions')}<ChevronDown className="size-3.5" />
+              <Button size="sm" variant="ghost" onClick={() => { const r = moreRef.current?.getBoundingClientRect(); setMoreLeft(!!r && r.right < 224 + 8); setMoreOpen((v) => !v); setConfirmDel(false) }} aria-haspopup="menu" aria-expanded={moreOpen} aria-controls={`article-more-${a.id}`} aria-label={tr('content.more_actions')} title={tr('content.more_actions')}>
+                <MoreHorizontal className="sm:hidden" /><span className="hidden sm:inline">{tr('content.more_actions')}</span><ChevronDown className="hidden size-3.5 sm:block" />
               </Button>
               {moreOpen && <div id={`article-more-${a.id}`} role="menu" aria-label={tr('content.more_actions')} className={cx('absolute top-full z-40 mt-2 w-56 rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl', moreLeft ? 'left-0' : 'right-0')}
                 onKeyDown={(e) => {

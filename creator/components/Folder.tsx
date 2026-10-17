@@ -181,7 +181,8 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
       )}
       {error && <Notice tone="error">{error}</Notice>}
       {view === 'grid' ? (
-        <div className="min-h-[360px] overflow-clip rounded-lg border border-border">
+        // 手机上铺满屏幕宽（抵掉页面左右 1rem 的内边距），只留上下分隔线：一层层卡片边框会把正文挤窄
+        <div className="-mx-4 min-h-[360px] overflow-clip border-y border-border sm:mx-0 sm:rounded-lg sm:border">
           {selected
             ? <>
                 {/* 面包屑：全部文件 / 目录 / 目录，点哪一级回到哪一级（目录显示里面的东西）；文件名在下面看文件的那一栏 */}
@@ -441,7 +442,7 @@ function TextEditor({ root, path, mtime, call, reload }: { root: string; path: s
   }, [])
   return (
     <div className="flex h-full flex-col" style={{ '--sticky-top': `calc(var(--page-top, 0px) + ${barH}px)` } as CSSProperties}>
-      <div ref={barRef} className="sticky top-[var(--page-top,0px)] z-20 flex items-center gap-2 bg-background px-3 py-2">
+      <div ref={barRef} className="sticky top-[var(--page-top,0px)] z-20 flex items-center gap-2 bg-background px-4 py-1.5 sm:px-3 sm:py-2">
         {MD.test(path) && <div title={bar.dirty ? t('save_first') : undefined} className={cx(bar.dirty && 'pointer-events-none opacity-50')}>
           <Segmented value={raw ? 'raw' : 'rich'} onChange={(v) => setRaw(v === 'raw')} options={[{ value: 'rich', label: t('rich') }, { value: 'raw', label: t('source') }]} />
         </div>}
@@ -598,9 +599,10 @@ function RichMd({ root, path, mtime, call, reload, onBar }: { root: string; path
   if (error) return <div className="p-3"><Notice tone="error">{error}</Notice></div>
   if (md === null || !exts) return <div className="p-4"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>
   return (
-    <div className="px-3 pb-3" onKeyDown={(ev) => saveKey(ev, save)}>
-      {ext.notice}
-      {front && <pre title={t('front_hint')} className="mb-2 overflow-x-auto rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground">{front.trim()}</pre>}
+    // 手机上编辑器没有外框、自己带左右内边距，这里不再加一层
+    <div className="sm:px-3 sm:pb-3" onKeyDown={(ev) => saveKey(ev, save)}>
+      {ext.notice && <div className="px-4 sm:px-0">{ext.notice}</div>}
+      {front && <pre title={t('front_hint')} className="mx-4 mb-2 overflow-x-auto rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground sm:mx-0">{front.trim()}</pre>}
       <RichEditor key={ver} markdown extensions={exts} resolveSrc={resolveSrc} value={md} placeholder={isDraft(path) ? t('draft_placeholder') : undefined}
         onChange={(v) => { setMd(v); if (baseline.current === null) baseline.current = v.trimEnd(); else setDirty(v.trimEnd() !== baseline.current) }} />
     </div>

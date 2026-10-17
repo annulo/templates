@@ -268,7 +268,7 @@ export default function TiptapEditor({ value, onChange, placeholder, markdown, e
     // markdown 模式：value、onChange 都是 md（要模板在 extensions 里加 @tiptap/markdown 的 Markdown）
     ...(markdown ? { contentType: 'markdown' } : {}),
     editorProps: {
-      attributes: { class: 'rich-content min-h-80 px-5 py-4 outline-none' },
+      attributes: { class: 'rich-content min-h-80 px-4 py-3 outline-none sm:px-5 sm:py-4' },
       handleKeyDown: (_view, ev) => {
         const { slash: s, shown: list, active: i } = menu.current
         if (!s || !list.length) return false
@@ -316,7 +316,8 @@ export default function TiptapEditor({ value, onChange, placeholder, markdown, e
   useEffect(() => () => editor?.destroy(), [editor])
 
   return (
-    <div className="relative rounded-lg border border-border bg-background">
+    // 手机上不要外框：外面一般已经套了卡片，一层层边框加内边距，正文左右挤得只剩一半
+    <div className="relative bg-background sm:rounded-lg sm:border sm:border-border">
       {editor && <Toolbar editor={editor} uploading={uploading > 0} onUpload={() => fileInput.current?.click()} onPick={() => setPicking(true)} />}
       {editor && <SelectionMenu editor={editor} />}
       <EditorContent editor={editor} />
@@ -391,6 +392,20 @@ function Toolbar({ editor, uploading, onUpload, onPick }: { editor: Editor; uplo
       editor.off('transaction', f)
     }
   }, [editor])
+  // 手机上大多是在看：光标在正文里（在改）才显示工具条，省出屏幕。失焦晚一点藏，点工具条上的按钮时不会先闪没
+  const [focused, setFocused] = useState(false)
+  useEffect(() => {
+    let timer = 0
+    const on = () => { clearTimeout(timer); setFocused(true) }
+    const off = () => { clearTimeout(timer); timer = window.setTimeout(() => setFocused(editor.isFocused), 200) }
+    editor.on('focus', on)
+    editor.on('blur', off)
+    return () => {
+      clearTimeout(timer)
+      editor.off('focus', on)
+      editor.off('blur', off)
+    }
+  }, [editor])
   const btn = (on: boolean, label: string, icon: ReactNode, run: () => void) => (
     <button
       key={label}
@@ -399,7 +414,7 @@ function Toolbar({ editor, uploading, onUpload, onPick }: { editor: Editor; uplo
       aria-label={label}
       onMouseDown={(e) => e.preventDefault()}
       onClick={run}
-      className={cx('flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:size-4', on && 'bg-accent text-primary-text')}
+      className={cx('flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:size-4', on && 'bg-accent text-primary-text')}
     >
       {icon}
     </button>
@@ -407,26 +422,30 @@ function Toolbar({ editor, uploading, onUpload, onPick }: { editor: Editor; uplo
   const text = (label: string, icon: ReactNode, run: () => void, disabled = false) => (
     <button
       type="button"
+      title={label}
+      aria-label={label}
       onMouseDown={(e) => e.preventDefault()}
       onClick={run}
       disabled={disabled}
-      className="flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-default disabled:opacity-50 [&_svg]:size-4"
+      className="flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-default disabled:opacity-50 [&_svg]:size-4"
     >
       {icon}
-      {label}
+      {/* 手机上只留图标，工具条排成一行 */}
+      <span className="hidden sm:inline">{label}</span>
     </button>
   )
   return (
     // 吸顶时外框已经滚走了：工具条自己带上面的圆角边框（-mx-px -mt-px 压在外框上，没吸顶时和外框重合）。
     // 外面这层是不透明的直角底：盖住圆角外侧露出来的外框竖线、正文
-    <div className="sticky top-[var(--sticky-top,0px)] z-10 -mx-px -mt-px bg-background">
-    <div className="flex flex-wrap items-center gap-0.5 rounded-t-lg border border-border px-2 py-1">
+    // 手机上：只在改的时候出现，排成一行（放不下左右滑），没有外框只留上下分隔线
+    <div className={cx('sticky top-[var(--sticky-top,0px)] z-10 bg-background sm:-mx-px sm:-mt-px', !focused && 'hidden sm:block')}>
+    <div className="flex items-center gap-0.5 overflow-x-auto border-y border-border px-2 py-1 sm:flex-wrap sm:overflow-visible sm:rounded-t-lg sm:border">
       {btn(editor.isActive('heading', { level: 2 }), tr('editor.h2'), <Heading2 />, () => editor.chain().focus().toggleHeading({ level: 2 }).run())}
       {btn(editor.isActive('heading', { level: 3 }), tr('editor.h3'), <Heading3 />, () => editor.chain().focus().toggleHeading({ level: 3 }).run())}
       {btn(editor.isActive('bulletList'), tr('editor.ul'), <List />, () => editor.chain().focus().toggleBulletList().run())}
       {btn(editor.isActive('orderedList'), tr('editor.ol'), <ListOrdered />, () => editor.chain().focus().toggleOrderedList().run())}
       {btn(editor.isActive('blockquote'), tr('editor.quote'), <Quote />, () => editor.chain().focus().toggleBlockquote().run())}
-      <span className="mx-1 h-4 w-px bg-border" />
+      <span className="mx-1 h-4 w-px shrink-0 bg-border" />
       {text(uploading ? tr('editor.uploading') : tr('editor.upload_media'), <Upload />, onUpload, uploading)}
       {text(tr('editor.pick_media'), <Images />, onPick)}
     </div>
