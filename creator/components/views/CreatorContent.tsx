@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, AtSign, Boxes, Copy, Wand2, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, AtSign, Boxes, Check, CheckCircle2, Copy, FilePenLine, Wand2, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import InspirationLibrary, { InspirationReferences } from '../InspirationLibrary'
 import { WritingBriefDialog } from '../ContentEvidence'
 import { NotionLogo } from '../BrandIcons'
@@ -543,6 +543,12 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     else setStale(true)
   }, [a.updated_at, a.title, a.summary, a.body, a.video, a.images, a.tags, a.cover_text, a.category])
 
+  // 手动标的状态（自动 / 草稿 / 已发布）：手机上在「更多」菜单里改，电脑上用头部的 ArticleStatus
+  const manualStatus: 'auto' | ContentStatus = a.manual_status === 'draft' || a.manual_status === 'published' ? a.manual_status : 'auto'
+  const setManualStatus = (v: 'auto' | ContentStatus) => run('status', async () => {
+    await dbPatch('articles', a.id, { manual_status: v === 'auto' ? '' : v, updated_at: new Date().toISOString() })
+    toast(tr('content_status.saved'))
+  })
   const run = async (key: string, f: () => Promise<unknown>) => {
     setBusy(key)
     setError('')
@@ -655,7 +661,8 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
         <div className="flex items-center justify-between gap-2 sm:flex-wrap sm:gap-3">
           <div className="flex min-w-0 items-center gap-2">
             <Button variant="ghost" size="icon-sm" onClick={onBack} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
-            {statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}
+            {/* 手机上一行放不下：状态收进「更多」菜单 */}
+            <div className="hidden sm:block">{statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}</div>
           </div>
           <div className="flex shrink-0 items-center justify-end gap-1.5 sm:flex-wrap sm:gap-2">
             {/* 编辑中：取消（有没存的）/ 完成、保存；没在编辑但稿子改了：编辑、保存。保存一次存正文和稿子 */}
@@ -680,6 +687,20 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
                   const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (current + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
                   items[next]?.focus()
                 }}>
+                {/* 手机上状态在这里改（头部放不下），和 ArticleStatus 一样存 manual_status */}
+                {!statusControl && <div className="sm:hidden">
+                  <div className="px-3 pt-1 pb-1.5 text-xs text-muted-foreground">{tr('content_status.title')}</div>
+                  {([
+                    ['auto', manualStatus === 'auto' ? tr('content_status.auto_label', { status: tr(displayStatus === 'published' ? 'content.a_published' : 'content.a_draft') }) : tr('content_status.auto'), RefreshCw],
+                    ['draft', tr('content.a_draft'), FilePenLine],
+                    ['published', tr('content.a_published'), CheckCircle2],
+                  ] as const).map(([v, label, Icon]) => (
+                    <button key={v} type="button" role="menuitemradio" aria-checked={manualStatus === v} disabled={locked || !!busy} className={cx(item, 'disabled:cursor-default disabled:opacity-50')} onClick={() => { setMoreOpen(false); if (v !== manualStatus) void setManualStatus(v) }}>
+                      <Icon className="size-4" /><span className="min-w-0 flex-1">{label}</span>{manualStatus === v && <Check className="size-4 text-primary-text" />}
+                    </button>
+                  ))}
+                  <div role="separator" className="my-1 border-t border-border" />
+                </div>}
                 <button type="button" role="menuitem" className={item} onClick={() => { setMoreOpen(false); void copyRefs([refOf('articles', a.id)]) }}><AtSign className="size-4" />{tr('files.copy_ref')}</button>
                 {(reviser.task?.prompt_file || reviser.task?.prompt_has_default) && <><button type="button" role="menuitem" className={item} onClick={() => { setMoreOpen(false); setRequirementsOpen(true) }}><SlidersHorizontal className="size-4" />{tr('content.revise_req_btn')}</button></>}
                 <div role="separator" className="my-1 border-t border-border" />
