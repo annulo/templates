@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, AtSign, Boxes, Copy, Wand2, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, AtSign, Boxes, Check, CheckCircle2, Copy, FilePenLine, Wand2, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import InspirationLibrary, { InspirationReferences } from '../InspirationLibrary'
 import { WritingBriefDialog } from '../ContentEvidence'
 import { NotionLogo } from '../BrandIcons'
 import { ArticleEditor, ArticleView, draftOf, patchOf, sameDraft, type ArticleDraft } from '../ArticleEditor'
 import ArticleStatusControl from '../ArticleStatus'
 import { articleStatus, type ContentStatus } from '../../lib/articleStatus'
-import { ARTICLE_TYPES, PICKER_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleType } from '../ArticleTypes'
+import { TYPE_META, TypeBadge, typeOf, type ArticleType } from '../ArticleTypes'
 import { PublishDialog, PublishRecords } from '../ArticlePublish'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import type { DraftControl } from '../Draft'
@@ -22,7 +22,7 @@ import { copyRefs, refOf } from '../../lib/refs'
 import { clearUnsaved, readUnsaved, writeUnsaved } from '../../lib/unsaved'
 import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, runLocal, runTask, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
 import type { Ctx } from './types'
-import { numLocale, tr } from '../../lib/i18n'
+import { isEn, numLocale, tr } from '../../lib/i18n'
 
 // label 按当前语言取（getter）
 const lbl = (key: string, tone: Tone) => ({ get label() { return tr(key) }, tone })
@@ -52,10 +52,11 @@ type Writer = ReturnType<typeof useTask>
  * 能「在这篇上做」的模板（creator）传进来（docs/artifacts.md）：task 是「在这篇上做」的任务（参数 { article_id, note }：
  * 照稿子写正文、配图、做视频…），Panel 是文章页正文下面的产物（artifacts）。传了才有稿子、「在这篇上做」和产物；没传就和以前一样只有改写。
  */
-export type AIWork = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void }> }
+// file / setFile：文件夹里打开的文件或目录，记在地址栏（?file=），头部的返回先一级级退回文件夹，手机的返回手势也一样
+export type AIWork = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void; file?: string; setFile?: (p: string) => void }> }
 
 /** 自媒体的内容中心（从 core 的内容中心分出来，docs/content-model.md）：每条内容一个文件夹，稿子、脚本、文案、视频都是里面的文件 */
-const FOLDER_WORK: AIWork = { task: 'work-on-content', Panel: ({ article, onChanged }) => <Folder article={article} onChanged={onChanged} /> }
+const FOLDER_WORK: AIWork = { task: 'work-on-content', Panel: ({ article, onChanged, file, setFile }) => <Folder article={article} onChanged={onChanged} sel={file} setSel={setFile} /> }
 
 /** 交给「在这篇上做」的任务：开一段对话、在右侧打开 */
 async function startWork(work: AIWork, articleId: string, note: string) {
@@ -63,6 +64,13 @@ async function startWork(work: AIWork, articleId: string, note: string) {
   openChat(r.chat_id)
 }
 type WriteInput = { topic_id?: string; subject?: string; channel_id?: string }
+
+/** 选题的写作简报（JSON）写成稿子里的几行 */
+function briefText(raw?: string) {
+  let b: Record<string, unknown> = {}
+  try { b = JSON.parse(raw || '{}') } catch { return raw ?? '' }
+  return Object.entries(b).filter(([, v]) => v && (!Array.isArray(v) || v.length)).map(([k, v]) => `- ${k}：${Array.isArray(v) ? v.join('、') : typeof v === 'object' ? JSON.stringify(v) : v}`).join('\n')
+}
 
 /**
  * 删掉一篇文章：已经发出去、正在发、排了期的不能删（先在发布记录里处理）；没发出去的发布记录（社媒的、网站的）一起删掉，
@@ -88,7 +96,6 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const [pubs, setPubs] = useState<Publication[]>([])
   const [error, setError] = useState('')
   const [writingInput, setWritingInput] = useState<WriteInput | null>(null)
-  const [writingType, setWritingType] = useState<ArticleType>(PICKER_TYPES[0])
   const [writingNotes, setWritingNotes] = useState('')
   const [savingSelf, setSavingSelf] = useState(false)
   // 「写作要求」在页头的「更多」里
@@ -126,31 +133,41 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const statusOf = (a: Article): ContentStatus => articleStatus(a, !!publishedTo[a.id]?.length)
 
   const writer = useTask(WRITE_TASK, load)
-  const openWriter = (input: WriteInput = {}, type: ArticleType = PICKER_TYPES[0]) => {
+  const openWriter = (input: WriteInput = {}) => {
     setWritingNotes('')
-    setWritingType(type)
     setWritingInput(input)
   }
+  // 新建一条内容（内容不分类型，docs/content-model.md）：建好文件夹，弹窗里写的存成 稿子.md（第一行当名字）；
+  // 从选题来的，选题的标题和简报也写进稿子，选题标成已做
+  const createContent = async () => {
+    const notes = writingNotes.trim()
+    const topic = writingInput?.topic_id ? topics?.find((x) => x.id === writingInput.topic_id) : undefined
+    const title = (topic?.title || notes.split('\n')[0].replace(/^#+\s*/, '').trim() || writingInput?.subject || tr('content.untitled')).slice(0, 200)
+    const t = new Date().toISOString()
+    const row = await dbCreate('articles', { title, summary: '', tags: '[]', status: 'draft', ...(topic ? { topic_id: topic.id } : {}), created_at: t, updated_at: t })
+    const call = (fn: string, input: Record<string, unknown> = {}) => runLocal(`folder.${fn}`, { article_id: row.id, ...input })
+    await call('create')
+    const brief = topic ? [`# ${topic.title}`, topic.angle, briefText(topic.brief), notes].filter(Boolean).join('\n\n') : notes
+    if (brief) await call('write', { path: isEn() ? 'brief.md' : '稿子.md', text: brief + '\n' })
+    if (topic) await dbPatch('topics', topic.id, { status: 'done', article_id: row.id })
+    return row.id as string
+  }
+  const openNew = (id: string) => { setWritingInput(null); load(); setParam('tab', 'articles'); setParam('article', id) }
+  // 让 AI 做：建好内容，交给「在这条上做」，照稿子做（没写也没选题就从选题池挑一个），做出来的放进文件夹
   const startWriting = async () => {
     if (!writingInput) return
-    const req = writingNotes.trim()
-    const id = await writer.run({ ...writingInput, type: writingType, ...(req ? { notes: req } : {}) })
-    if (id) setWritingInput(null)
-  }
-  // 自己写：建一篇草稿打开编辑；填的第一行当标题，后面的放进正文
-  const writeSelf = async () => {
-    const [first = '', ...rest] = writingNotes.trim().split('\n')
-    const text = rest.join('\n').trim()
-    const body = writingType === 'article' ? text.split(/\n{2,}/).filter(Boolean).map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('') : text
     setSavingSelf(true)
     try {
-      const t = new Date().toISOString()
-      const row = await dbCreate('articles', { type: writingType, title: (first.trim() || writingInput?.subject || '').slice(0, 200), summary: '', body, tags: '[]', status: 'draft', created_at: t, updated_at: t })
-      setWritingInput(null)
-      load()
-      setParam('tab', 'articles')
-      setParam('article', row.id)
+      const empty = !writingNotes.trim() && !writingInput.topic_id
+      const id = await createContent()
+      openNew(id)
+      if (work) await startWork(work, id, tr(empty ? 'content.new_ai_pick' : 'content.new_ai_note'))
     } catch (e) { toast((e as Error).message, 'error') } finally { setSavingSelf(false) }
+  }
+  // 自己写：建好内容打开它，在文件夹里写
+  const writeSelf = async () => {
+    setSavingSelf(true)
+    try { openNew(await createContent()) } catch (e) { toast((e as Error).message, 'error') } finally { setSavingSelf(false) }
   }
   // 列表上的「更多 → 改写 / 复制」：改写弹窗和文章页的同一个；复制另存一篇草稿，打开它
   const [rewriting, setRewriting] = useState<Article | null>(null)
@@ -169,7 +186,7 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const importDoc = async () => {
     setImporting(true); setImportError(null)
     try {
-      const r = await runLocal<{ article_id: string; warnings: string[] }>('docsync.create', { url: docUrl, type: writingType })
+      const r = await runLocal<{ article_id: string; warnings: string[] }>('docsync.create', { url: docUrl, type: 'article' })
       setWritingInput(null)
       load()
       setParam('tab', 'articles')
@@ -191,9 +208,8 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const topicTitle = (id?: string) => topics?.find((t) => t.id === id)?.title
   const openArticle = params.article ? articles?.find((a) => a.id === params.article) : undefined
   const writingTitle = topicTitle(writingInput?.topic_id) || writingInput?.subject
-  const writerBusy = !writer.shuttle || !writer.task || writer.starting || !!writer.task.running.length
 
-  if (openArticle) return <ArticleDetail key={openArticle.id} work={work} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
+  if (openArticle) return <ArticleDetail key={openArticle.id} work={work} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} file={params.file ?? ''} setFile={(p) => setParam('file', p)} open={(id) => { setParam('version', ''); setParam('file', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('file', ''); setParam('article', '') }} onChanged={load} />
 
   return (
     <div className="space-y-6">
@@ -236,9 +252,8 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
         onWork={work ? async (note) => { await startWork(work, rewriting.id, note); setRewriting(null) } : undefined}
         onStart={async (to, note) => { if (await listRewriter.run({ article_id: rewriting.id, type: to, note })) setRewriting(null) }}
         onConvert={async (to) => { const r = await runLocal<{ article_id: string }>('convert.toType', { article_id: rewriting.id, type: to }); setRewriting(null); load(); setParam('article', r.article_id) }} />}
-      <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingTitle ? `${tr('content.new_article')} · ${writingTitle}` : tr('content.new_article')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button>{!writingInput?.topic_id && !docUrl && <Button variant="outline" onClick={writeSelf} disabled={savingSelf || writer.starting}>{savingSelf ? <Loader className="animate-spin" /> : <Pencil />}{tr('content.write_self')}</Button>}<Button variant={docUrl ? 'outline' : 'default'} onClick={startWriting} disabled={writerBusy || savingSelf || importing}>{writer.starting ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.ai_write_this')}</Button>{docUrl && <Button onClick={importDoc} disabled={importing}>{importing ? <Loader className="animate-spin" /> : <Download />}{tr('content.import_doc')}</Button>}</>}>
+      <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingTitle ? `${tr('content.new_article')} · ${writingTitle}` : tr('content.new_article')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button>{!docUrl && <Button variant="outline" onClick={writeSelf} disabled={savingSelf || writer.starting}>{savingSelf ? <Loader className="animate-spin" /> : <Pencil />}{tr('content.write_self')}</Button>}<Button variant={docUrl ? 'outline' : 'default'} onClick={startWriting} needsShuttle disabled={savingSelf || importing}>{savingSelf ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.ai_write_this')}</Button>{docUrl && <Button onClick={importDoc} disabled={importing}>{importing ? <Loader className="animate-spin" /> : <Download />}{tr('content.import_doc')}</Button>}</>}>
         <div className="space-y-4">
-          <Field group label={tr('article.type')}><TypePicker value={writingType} onChange={setWritingType} /></Field>
           {/* 这里写这篇写什么（主题、要点、草稿）；怎么写照「写作要求」，每篇都用 */}
           <Field label={tr('content.write_notes')}><textarea autoFocus value={writingNotes} placeholder={tr(writingInput?.topic_id ? 'content.write_notes_ph_topic' : 'content.write_notes_ph')} onChange={(e) => setWritingNotes(e.target.value)} rows={8} className={cx(inputCls, 'py-2 leading-relaxed')} /></Field>
           {!writingInput?.topic_id && <p className="-mt-2 flex items-center gap-1.5 text-sm text-muted-foreground"><NotionLogo size={16} className="shrink-0" />{tr(docUrl ? 'content.import_doc_hint' : 'content.import_doc_tip')}</p>}
@@ -292,7 +307,6 @@ function DocSource({ a, onChanged }: { a: Article; onChanged: () => void }) {
 /** 粘的是不是一篇外部文档（现在只有 Notion）的链接：整段只有这一个链接 */
 const isDocUrl = (s: string) => /^https?:\/\/(?:[\w-]+\.)*notion\.(?:so|site|com)\/\S+$/i.test(s.trim())
 
-const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /** 页头的「更多」：不常用的设置（写作要求…）收在这里，点外面、按 Esc 收起 */
 function HeaderMore({ items }: { items: { label: string; icon: typeof SlidersHorizontal; onClick: () => void; hidden?: boolean }[] }) {
@@ -446,7 +460,7 @@ export function RowMore({ items = [], onRewrite, onCopy, onDelete }: { items?: {
   </div>
 }
 
-export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks, work }: { work?: AIWork; inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
+export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks, work, file = '', setFile }: { file?: string; setFile?: (p: string) => void; work?: AIWork; inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
   const type = typeOf(a)
   const [moreOpen, setMoreOpen] = useState(false)
   // 菜单往哪边展开：宽屏时按钮在一行最右边，往左；手机上按钮换到下一行的左边，往左会伸出屏幕，改往右。按打开时按钮的实际位置算
@@ -530,6 +544,29 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     else setStale(true)
   }, [a.updated_at, a.title, a.summary, a.body, a.video, a.images, a.tags, a.cover_text, a.category])
 
+  // 手动标的状态（自动 / 草稿 / 已发布）：手机上在「更多」菜单里改，电脑上用头部的 ArticleStatus
+  const manualStatus: 'auto' | ContentStatus = a.manual_status === 'draft' || a.manual_status === 'published' ? a.manual_status : 'auto'
+  const setManualStatus = (v: 'auto' | ContentStatus) => run('status', async () => {
+    await dbPatch('articles', a.id, { manual_status: v === 'auto' ? '' : v, updated_at: new Date().toISOString() })
+    toast(tr('content_status.saved'))
+  })
+  // 文件夹里走过的路（打开文件、进目录）：返回退回上一步，也就是点进来的地方。网格是铺平的，子目录里的文件是从全部文件点进来的，
+  // 不能退到它所在的目录。新的一步正好是上一步时（系统返回手势、这里的返回）出栈；没走过的（刷新进来）按目录往上退
+  const trail = useRef<string[]>([])
+  const prevFile = useRef(file)
+  useEffect(() => {
+    const prev = prevFile.current
+    prevFile.current = file
+    if (prev === file) return
+    const t = trail.current
+    if (t[t.length - 1] === file) t.pop()
+    else t.push(prev)
+  }, [file])
+  const back = () => {
+    if (!file || !setFile) return onBack()
+    const t = trail.current
+    setFile(t.length ? t[t.length - 1] : file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '')
+  }
   const run = async (key: string, f: () => Promise<unknown>) => {
     setBusy(key)
     setError('')
@@ -636,25 +673,29 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
 
   return (
     <div className="space-y-5">
-      <div ref={headerRef} className="sticky -top-4 -mx-4 -mt-4 px-4 md:-mx-6 md:px-6 z-20 border-b border-border bg-background py-3">
+      {/* z-30：要盖过文件夹里吸顶的「富文本 / 源码 / 保存」那排（z-20），不然「更多」菜单被它挡住 */}
+      <div ref={headerRef} className="sticky -top-4 -mx-4 -mt-4 px-4 md:-mx-6 md:px-6 z-30 border-b border-border bg-background py-2 sm:py-3">
         {/* 左边的箭头回列表（顶栏面包屑的「内容中心」也行）；右边是状态和操作。外面这条的 -mt-4 抵掉滚动区的上内边距 */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* 手机上排成一行（按钮只留图标，发布留字）：两行吸顶的话正文就只剩半屏 */}
+        <div className="flex items-center justify-between gap-2 sm:flex-wrap sm:gap-3">
           <div className="flex min-w-0 items-center gap-2">
-            <Button variant="ghost" size="icon-sm" onClick={onBack} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
-            {statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}
+            {/* 文件夹里打开着文件：先退回点进来的地方（全部文件、某个目录），再回内容列表 */}
+            <Button variant="ghost" size="icon-sm" onClick={back} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
+            {/* 手机上一行放不下：状态收进「更多」菜单 */}
+            <div className="hidden sm:block">{statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}</div>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex shrink-0 items-center justify-end gap-1.5 sm:flex-wrap sm:gap-2">
             {/* 编辑中：取消（有没存的）/ 完成、保存；没在编辑但稿子改了：编辑、保存。保存一次存正文和稿子 */}
             {editing && <Button variant="ghost" size="sm" disabled={busy === 'save'} onClick={() => { draftCtl.current?.discard(); setEditing(false) }}>{anyDirty ? tr('common.cancel') : tr('content.edit_done')}</Button>}
             {!editing && !hasFolder && <Button variant="outline" size="sm" onClick={startEdit} disabled={locked}><Pencil />{tr('content.edit')}</Button>}
             {(editing || draftDirty) && <Button size="sm" variant="outline" successLabel={tr('ui.saved')} onClick={saveEdit} disabled={locked || !anyDirty}>{tr('common.save')}</Button>}
             {/* 能「在这篇上做」的模板：改正文也在「交给 AI」里说，不单独一个「AI 修改」 */}
             {!work && <Button size="sm" variant="outline" onClick={() => setAsking(true)} disabled={locked || !reviser.shuttle}><Sparkles />{tr('content.ask_ai')}</Button>}
-            <Button size="sm" variant="outline" onClick={() => setAiOpen(work ? {} : { mode: 'new' })} disabled={locked || !rewriter.shuttle}>{work ? <Wand2 /> : <Repeat2 />}{work ? tr('article.ai') : tr('article.rewrite')}</Button>
+            <Button size="sm" variant="outline" onClick={() => setAiOpen(work ? {} : { mode: 'new' })} disabled={locked || !rewriter.shuttle} title={work ? tr('article.ai') : tr('article.rewrite')} aria-label={work ? tr('article.ai') : tr('article.rewrite')}>{work ? <Wand2 /> : <Repeat2 />}<span className="hidden sm:inline">{work ? tr('article.ai') : tr('article.rewrite')}</span></Button>
             <Button size="sm" feedback={false} onClick={() => void openPublish()} disabled={locked}><Send />{tr('article.publish')}</Button>
             <div ref={moreRef} className="relative">
-              <Button size="sm" variant="ghost" onClick={() => { const r = moreRef.current?.getBoundingClientRect(); setMoreLeft(!!r && r.right < 224 + 8); setMoreOpen((v) => !v); setConfirmDel(false) }} aria-haspopup="menu" aria-expanded={moreOpen} aria-controls={`article-more-${a.id}`}>
-                {tr('content.more_actions')}<ChevronDown className="size-3.5" />
+              <Button size="sm" variant="ghost" onClick={() => { const r = moreRef.current?.getBoundingClientRect(); setMoreLeft(!!r && r.right < 224 + 8); setMoreOpen((v) => !v); setConfirmDel(false) }} aria-haspopup="menu" aria-expanded={moreOpen} aria-controls={`article-more-${a.id}`} aria-label={tr('content.more_actions')} title={tr('content.more_actions')}>
+                <MoreHorizontal className="sm:hidden" /><span className="hidden sm:inline">{tr('content.more_actions')}</span><ChevronDown className="hidden size-3.5 sm:block" />
               </Button>
               {moreOpen && <div id={`article-more-${a.id}`} role="menu" aria-label={tr('content.more_actions')} className={cx('absolute top-full z-40 mt-2 w-56 rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl', moreLeft ? 'left-0' : 'right-0')}
                 onKeyDown={(e) => {
@@ -666,6 +707,20 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
                   const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (current + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
                   items[next]?.focus()
                 }}>
+                {/* 手机上状态在这里改（头部放不下），和 ArticleStatus 一样存 manual_status */}
+                {!statusControl && <div className="sm:hidden">
+                  <div className="px-3 pt-1 pb-1.5 text-xs text-muted-foreground">{tr('content_status.title')}</div>
+                  {([
+                    ['auto', manualStatus === 'auto' ? tr('content_status.auto_label', { status: tr(displayStatus === 'published' ? 'content.a_published' : 'content.a_draft') }) : tr('content_status.auto'), RefreshCw],
+                    ['draft', tr('content.a_draft'), FilePenLine],
+                    ['published', tr('content.a_published'), CheckCircle2],
+                  ] as const).map(([v, label, Icon]) => (
+                    <button key={v} type="button" role="menuitemradio" aria-checked={manualStatus === v} disabled={locked || !!busy} className={cx(item, 'disabled:cursor-default disabled:opacity-50')} onClick={() => { setMoreOpen(false); if (v !== manualStatus) void setManualStatus(v) }}>
+                      <Icon className="size-4" /><span className="min-w-0 flex-1">{label}</span>{manualStatus === v && <Check className="size-4 text-primary-text" />}
+                    </button>
+                  ))}
+                  <div role="separator" className="my-1 border-t border-border" />
+                </div>}
                 <button type="button" role="menuitem" className={item} onClick={() => { setMoreOpen(false); void copyRefs([refOf('articles', a.id)]) }}><AtSign className="size-4" />{tr('files.copy_ref')}</button>
                 {(reviser.task?.prompt_file || reviser.task?.prompt_has_default) && <><button type="button" role="menuitem" className={item} onClick={() => { setMoreOpen(false); setRequirementsOpen(true) }}><SlidersHorizontal className="size-4" />{tr('content.revise_req_btn')}</button></>}
                 <div role="separator" className="my-1 border-t border-border" />
@@ -708,7 +763,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
         ? <RenameInput value={a.title} onDone={(v) => void retitle(v)} onCancel={() => setRenaming(false)} className="h-11 text-2xl font-semibold" />
         : <h1 className="cursor-text text-2xl leading-snug font-semibold tracking-tight text-balance" title={tr('folder.title_hint')} onDoubleClick={() => !locked && setRenaming(true)}>{a.title || tr('versions.untitled')}</h1>)}
       {/* 文件夹里的编辑器：保存那排和工具条吸在顶上这条下面（--page-top，Folder.tsx） */}
-      {work && <div style={{ '--page-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><work.Panel article={a} all={all} open={open} onChanged={onChanged} /></div>}
+      {work && <div style={{ '--page-top': `calc(${headerH}px - 1rem)` } as CSSProperties}><work.Panel article={a} all={all} open={open} onChanged={onChanged} file={file} setFile={setFile} /></div>}
       {!hasFolder && <article className="w-full min-w-0" style={{ '--sticky-top': `calc(${headerH}px - 1rem)` } as CSSProperties}>
         {editing ? (
           <div className="space-y-3">

@@ -53,7 +53,7 @@ JSON
 annulo run content.save --input @/tmp/rewrite.json
 ```
 
-content.save 报错就按报错改了再存。存完回复用户：改写成了什么、多长、配了几张图，最后给出新文章的链接 `[打开「标题」](/?view=content&article=<content.save 返回的 article_id>)`。
+content.save 报错就按报错改了再存。存完回复用户：改写成了什么、多长、配了几张图，提到新文章就写成链接 `[打开「标题」](/?view=content&article=<content.save 返回的 article_id>)`。
 
 ## 5. 要求里要把视频（或图）也做出来时
 

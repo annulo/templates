@@ -34,6 +34,12 @@
 | 资料库 `assets` | `assets` | |
 | 账号 `channels`（添加、登录、移除、自检） | 插件的 `social_accounts` | `channels.remove`、`social/social.login` / `probe` |
 
+页面链接（回复里提到就写，写法见 annulo skill 的 pages.md）：
+
+- 一条内容：`/?view=content&article=<article_id>`
+- 内容文件夹里的文件或目录：`/?view=content&article=<article_id>&file=<文件夹里的相对路径>`，打开就是那个文件（目录列出里面的文件），比如 `</?view=content&article=12&file=A 外贸版/旁白/前 35 秒.mp3>`
+- 其他页面：`/?view=<视图>`，视图见上表
+
 新项目先走向导：填定位（`components/wizard/CreatorProfile.tsx`，存 `profile.save`），再添加第一个账号。起步步骤在 `local/_checklist.ts`：定位、添加账号、写第一篇文章、发出第一条帖子。
 
 做页面、加功能、手动改一条数据先读 **ops-backend**（改记录用 `annulo run records.patch`，不要用 creght 命令行）；出选题、写文章、改文章读 **content-studio**；找图、配图读 **assets**；社媒先读 `plugins/social/PLUGIN.md`；本机函数、表声明见 **annulo** skill。

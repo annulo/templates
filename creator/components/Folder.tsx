@@ -40,12 +40,15 @@ function iconOf(e: Entry, open: boolean) {
   return File
 }
 
-export default function Folder({ article: a, onChanged }: { article: Article; onChanged: () => void }) {
+// sel / setSel：打开的文件或目录由内容页记在地址栏（返回按钮、返回手势一级级退）；没传就记在组件里
+export default function Folder({ article: a, onChanged, sel: selProp, setSel: setSelProp }: { article: Article; onChanged: () => void; sel?: string; setSel?: (p: string) => void }) {
   const { t } = useT('folder')
   const id = a.id
   const [state, setState] = useState<{ dir: string; path: string; entries: Entry[]; can_open?: boolean } | null>(null)
   const [error, setError] = useState('')
-  const [sel, setSel] = useState('')
+  const [selLocal, setSelLocal] = useState('')
+  const sel = setSelProp ? selProp ?? '' : selLocal
+  const setSel = setSelProp ?? setSelLocal
   const [openDirs, setOpenDirs] = useState<Record<string, boolean>>({})
   // 默认网格，可以切成树；记在这台电脑上
   const [view, setView] = useState<'grid' | 'tree'>(() => { try { return localStorage.getItem('folder:view') === 'tree' ? 'tree' : 'grid' } catch { return 'grid' } })
@@ -96,9 +99,47 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
   const selected = entries.find((e) => e.path === sel)
   // 网格：不分目录，所有文件铺平；稿子排第一，其余最近改的在前
   const files = useMemo(() => entries.filter((e) => !e.dir).sort((x, y) => Number(isDraft(y.path)) - Number(isDraft(x.path)) || y.mtime - x.mtime), [entries])
-  // 只有一个文件：直接打开它
+  // 只有一个文件：打开时直接打开它。只自动选一次：用户按返回退回全部文件后不能又被选回去，不然退不出来
   const only = files.length === 1 ? files[0].path : ''
-  useEffect(() => { if (only && !sel) setSel(only) }, [only, sel])
+  // 网格里每一层（全部文件、某个目录）各记各的滚动位置：点开稿子滚到底再返回，回到点开它时的地方，不停在网格底部；
+  // 打开文件时页面已经滚过了文件夹的顶，滚回文件开头。滚的是页面的滚动区（往上找第一个能滚的）
+  const gridBox = useRef<HTMLDivElement>(null)
+  const scrollPos = useRef<Record<string, number>>({})
+  const selRef = useRef(sel)
+  selRef.current = sel
+  const scrollerOf = (el: HTMLElement | null): HTMLElement => {
+    for (let p = el?.parentElement; p; p = p.parentElement) {
+      const o = getComputedStyle(p).overflowY
+      if (o === 'auto' || o === 'scroll') return p
+    }
+    return (document.scrollingElement as HTMLElement) ?? document.documentElement
+  }
+  const isList = !sel || !!selected?.dir
+  useEffect(() => {
+    if (view !== 'grid') return
+    const sc = scrollerOf(gridBox.current)
+    const target: HTMLElement | Window = sc === document.scrollingElement ? window : sc
+    const save = () => { scrollPos.current[selRef.current] = sc.scrollTop }
+    target.addEventListener('scroll', save, { passive: true })
+    return () => target.removeEventListener('scroll', save)
+  }, [view, !!state])
+  useLayoutEffect(() => {
+    const box = gridBox.current
+    if (view !== 'grid' || !box) return
+    const sc = scrollerOf(box)
+    if (isList) {
+      const y = scrollPos.current[sel]
+      if (y !== undefined) sc.scrollTop = y
+    } else if (box.getBoundingClientRect().top < sc.getBoundingClientRect().top) {
+      box.scrollIntoView({ block: 'start' })
+    }
+  }, [sel])
+  const autoPicked = useRef(false)
+  useEffect(() => {
+    if (!only || autoPicked.current) return
+    autoPicked.current = true
+    if (!sel) setSel(only)
+  }, [only, sel])
   // 新建的位置：选中的是目录就建在里面，是文件就建在它旁边
   const here = selected ? (selected.dir ? selected.path : parent(selected.path)) : ''
 
@@ -181,7 +222,9 @@ export default function Folder({ article: a, onChanged }: { article: Article; on
       )}
       {error && <Notice tone="error">{error}</Notice>}
       {view === 'grid' ? (
-        <div className="min-h-[360px] overflow-clip rounded-lg border border-border">
+        // 手机上铺满屏幕宽（抵掉页面左右 1rem 的内边距），只留上下分隔线：一层层卡片边框会把正文挤窄
+        // scroll-mt：打开文件滚回开头时停在吸顶的头部下面，不被它盖住
+        <div ref={gridBox} className="-mx-4 min-h-[360px] scroll-mt-[var(--page-top,0px)] overflow-clip border-y border-border sm:mx-0 sm:rounded-lg sm:border">
           {selected
             ? <>
                 {/* 面包屑：全部文件 / 目录 / 目录，点哪一级回到哪一级（目录显示里面的东西）；文件名在下面看文件的那一栏 */}
@@ -441,7 +484,7 @@ function TextEditor({ root, path, mtime, call, reload }: { root: string; path: s
   }, [])
   return (
     <div className="flex h-full flex-col" style={{ '--sticky-top': `calc(var(--page-top, 0px) + ${barH}px)` } as CSSProperties}>
-      <div ref={barRef} className="sticky top-[var(--page-top,0px)] z-20 flex items-center gap-2 bg-background px-3 py-2">
+      <div ref={barRef} className="sticky top-[var(--page-top,0px)] z-20 flex items-center gap-2 bg-background px-4 py-1.5 sm:px-3 sm:py-2">
         {MD.test(path) && <div title={bar.dirty ? t('save_first') : undefined} className={cx(bar.dirty && 'pointer-events-none opacity-50')}>
           <Segmented value={raw ? 'raw' : 'rich'} onChange={(v) => setRaw(v === 'raw')} options={[{ value: 'rich', label: t('rich') }, { value: 'raw', label: t('source') }]} />
         </div>}
@@ -598,9 +641,10 @@ function RichMd({ root, path, mtime, call, reload, onBar }: { root: string; path
   if (error) return <div className="p-3"><Notice tone="error">{error}</Notice></div>
   if (md === null || !exts) return <div className="p-4"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>
   return (
-    <div className="px-3 pb-3" onKeyDown={(ev) => saveKey(ev, save)}>
-      {ext.notice}
-      {front && <pre title={t('front_hint')} className="mb-2 overflow-x-auto rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground">{front.trim()}</pre>}
+    // 手机上编辑器没有外框、自己带左右内边距，这里不再加一层
+    <div className="sm:px-3 sm:pb-3" onKeyDown={(ev) => saveKey(ev, save)}>
+      {ext.notice && <div className="px-4 sm:px-0">{ext.notice}</div>}
+      {front && <pre title={t('front_hint')} className="mx-4 mb-2 overflow-x-auto rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground sm:mx-0">{front.trim()}</pre>}
       <RichEditor key={ver} markdown extensions={exts} resolveSrc={resolveSrc} value={md} placeholder={isDraft(path) ? t('draft_placeholder') : undefined}
         onChange={(v) => { setMd(v); if (baseline.current === null) baseline.current = v.trimEnd(); else setDirty(v.trimEnd() !== baseline.current) }} />
     </div>
