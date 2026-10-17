@@ -386,7 +386,8 @@ function MidName({ text, lines = 1, keep = 4 }: { text: string; lines?: 1 | 2; k
 
 function Grid({ root, files, onSelect, onMenu, active, renaming, nameOf }: { root: string; files: Entry[]; onSelect: (p: string) => void; onMenu: (ev: MouseEvent, e: Entry) => void; active?: string; renaming: string; nameOf: (e: Entry, className?: string, lines?: 1 | 2) => ReactNode }) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-3 p-3">
+    // 文件多的时候不把发布记录挤到很下面：最多大半屏高，里面滚
+    <div className="grid max-h-[min(60vh,560px)] grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-3 overflow-y-auto p-3">
       {files.map((k) => {
         const Icon = iconOf(k, false)
         const src = workSrc(`${root}/${k.path}`)
