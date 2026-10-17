@@ -694,6 +694,9 @@
     "published_posts": "{n} posts"
   },
   "content": {
+    "new_ai_pick": "This is new, empty content: run annulo run content.context --input '{}' to see my positioning and the topic pool, pick the topic most worth doing now, rename the content to it, write the requirements into the brief, then make it, with the copy in copy.md.",
+    "new_ai_note": "This is new content: make it from the brief in its folder. Write the copy to copy.md (title and tags in the --- header at the top), and put any images or videos in the folder too.",
+    "untitled": "Untitled",
     "ai_topic_line": "Topic for this piece: {topic}",
     "ai_write_this": "Let AI write it",
     "removed_channel": "Removed account",
@@ -730,7 +733,7 @@
     "no_articles": "No articles yet. Click \"New article\": give a subject or draft and let AI write it, or write it yourself.",
     "write_self": "Write it myself",
     "write_notes": "What to write",
-    "write_notes_ph": "A subject, a few points, or a rough draft. Writing it yourself, the first line becomes the title; letting AI write with nothing here, it picks the most worthwhile topic.",
+    "write_notes_ph": "What this piece is about: a topic, a few points or a draft (the first line becomes its name). It's saved as the brief in its folder. If AI does it and you leave this empty, it picks the topic most worth doing.",
     "import_doc_tip": "You can also paste a Notion page link to import it as a draft",
     "row_rewrite": "Rewrite",
     "row_copy": "Duplicate",

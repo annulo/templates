@@ -694,6 +694,9 @@
     "published_posts": "发布 {n} 条"
   },
   "content": {
+    "new_ai_pick": "这是新建的空内容：先跑 annulo run content.context --input '{}' 看我的定位和选题池，挑一个现在最值得做的，把名字改成它、要求写进稿子，再照稿子做出来，文案写进「文案.md」。",
+    "new_ai_note": "这是新建的内容：照文件夹里的稿子把它做出来，文案写进「文案.md」（开头 --- 里写 title、tags），要做图、视频也放进文件夹。",
+    "untitled": "未命名",
     "ai_topic_line": "这次写的主题：{topic}",
     "ai_write_this": "让 AI 写",
     "removed_channel": "已移除的账号",
@@ -730,7 +733,7 @@
     "no_articles": "还没有文章。点「新建文章」：写个主题或草稿让 AI 写，也可以自己写。",
     "write_self": "自己写",
     "write_notes": "这篇想写什么",
-    "write_notes_ph": "一个主题、几个要点，或者一段草稿都行。自己写时第一行当标题；让 AI 写时不填就从选题里挑一个最值得写的。",
+    "write_notes_ph": "这条想做什么：一个主题、几个要点，或者一段草稿都行（第一行当名字），存成文件夹里的稿子。让 AI 做时不填就从选题里挑一个最值得做的。",
     "import_doc_tip": "也可以粘一个 Notion 页面链接，导入成草稿",
     "row_rewrite": "改写",
     "row_copy": "复制",

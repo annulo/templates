@@ -7,7 +7,7 @@ import { NotionLogo } from '../BrandIcons'
 import { ArticleEditor, ArticleView, draftOf, patchOf, sameDraft, type ArticleDraft } from '../ArticleEditor'
 import ArticleStatusControl from '../ArticleStatus'
 import { articleStatus, type ContentStatus } from '../../lib/articleStatus'
-import { ARTICLE_TYPES, PICKER_TYPES, TYPE_META, TypeBadge, TypePicker, typeOf, type ArticleType } from '../ArticleTypes'
+import { TYPE_META, TypeBadge, typeOf, type ArticleType } from '../ArticleTypes'
 import { PublishDialog, PublishRecords } from '../ArticlePublish'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import type { DraftControl } from '../Draft'
@@ -22,7 +22,7 @@ import { copyRefs, refOf } from '../../lib/refs'
 import { clearUnsaved, readUnsaved, writeUnsaved } from '../../lib/unsaved'
 import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, runLocal, runTask, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
 import type { Ctx } from './types'
-import { numLocale, tr } from '../../lib/i18n'
+import { isEn, numLocale, tr } from '../../lib/i18n'
 
 // label 按当前语言取（getter）
 const lbl = (key: string, tone: Tone) => ({ get label() { return tr(key) }, tone })
@@ -64,6 +64,13 @@ async function startWork(work: AIWork, articleId: string, note: string) {
 }
 type WriteInput = { topic_id?: string; subject?: string; channel_id?: string }
 
+/** 选题的写作简报（JSON）写成稿子里的几行 */
+function briefText(raw?: string) {
+  let b: Record<string, unknown> = {}
+  try { b = JSON.parse(raw || '{}') } catch { return raw ?? '' }
+  return Object.entries(b).filter(([, v]) => v && (!Array.isArray(v) || v.length)).map(([k, v]) => `- ${k}：${Array.isArray(v) ? v.join('、') : typeof v === 'object' ? JSON.stringify(v) : v}`).join('\n')
+}
+
 /**
  * 删掉一篇文章：已经发出去、正在发、排了期的不能删（先在发布记录里处理）；没发出去的发布记录（社媒的、网站的）一起删掉，
  * 免得留下指向不存在的文章的记录。删完顶部提示一下
@@ -88,7 +95,6 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const [pubs, setPubs] = useState<Publication[]>([])
   const [error, setError] = useState('')
   const [writingInput, setWritingInput] = useState<WriteInput | null>(null)
-  const [writingType, setWritingType] = useState<ArticleType>(PICKER_TYPES[0])
   const [writingNotes, setWritingNotes] = useState('')
   const [savingSelf, setSavingSelf] = useState(false)
   // 「写作要求」在页头的「更多」里
@@ -126,31 +132,41 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const statusOf = (a: Article): ContentStatus => articleStatus(a, !!publishedTo[a.id]?.length)
 
   const writer = useTask(WRITE_TASK, load)
-  const openWriter = (input: WriteInput = {}, type: ArticleType = PICKER_TYPES[0]) => {
+  const openWriter = (input: WriteInput = {}) => {
     setWritingNotes('')
-    setWritingType(type)
     setWritingInput(input)
   }
+  // 新建一条内容（内容不分类型，docs/content-model.md）：建好文件夹，弹窗里写的存成 稿子.md（第一行当名字）；
+  // 从选题来的，选题的标题和简报也写进稿子，选题标成已做
+  const createContent = async () => {
+    const notes = writingNotes.trim()
+    const topic = writingInput?.topic_id ? topics?.find((x) => x.id === writingInput.topic_id) : undefined
+    const title = (topic?.title || notes.split('\n')[0].replace(/^#+\s*/, '').trim() || writingInput?.subject || tr('content.untitled')).slice(0, 200)
+    const t = new Date().toISOString()
+    const row = await dbCreate('articles', { title, summary: '', tags: '[]', status: 'draft', ...(topic ? { topic_id: topic.id } : {}), created_at: t, updated_at: t })
+    const call = (fn: string, input: Record<string, unknown> = {}) => runLocal(`folder.${fn}`, { article_id: row.id, ...input })
+    await call('create')
+    const brief = topic ? [`# ${topic.title}`, topic.angle, briefText(topic.brief), notes].filter(Boolean).join('\n\n') : notes
+    if (brief) await call('write', { path: isEn() ? 'brief.md' : '稿子.md', text: brief + '\n' })
+    if (topic) await dbPatch('topics', topic.id, { status: 'done', article_id: row.id })
+    return row.id as string
+  }
+  const openNew = (id: string) => { setWritingInput(null); load(); setParam('tab', 'articles'); setParam('article', id) }
+  // 让 AI 做：建好内容，交给「在这条上做」，照稿子做（没写也没选题就从选题池挑一个），做出来的放进文件夹
   const startWriting = async () => {
     if (!writingInput) return
-    const req = writingNotes.trim()
-    const id = await writer.run({ ...writingInput, type: writingType, ...(req ? { notes: req } : {}) })
-    if (id) setWritingInput(null)
-  }
-  // 自己写：建一篇草稿打开编辑；填的第一行当标题，后面的放进正文
-  const writeSelf = async () => {
-    const [first = '', ...rest] = writingNotes.trim().split('\n')
-    const text = rest.join('\n').trim()
-    const body = writingType === 'article' ? text.split(/\n{2,}/).filter(Boolean).map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('') : text
     setSavingSelf(true)
     try {
-      const t = new Date().toISOString()
-      const row = await dbCreate('articles', { type: writingType, title: (first.trim() || writingInput?.subject || '').slice(0, 200), summary: '', body, tags: '[]', status: 'draft', created_at: t, updated_at: t })
-      setWritingInput(null)
-      load()
-      setParam('tab', 'articles')
-      setParam('article', row.id)
+      const empty = !writingNotes.trim() && !writingInput.topic_id
+      const id = await createContent()
+      openNew(id)
+      if (work) await startWork(work, id, tr(empty ? 'content.new_ai_pick' : 'content.new_ai_note'))
     } catch (e) { toast((e as Error).message, 'error') } finally { setSavingSelf(false) }
+  }
+  // 自己写：建好内容打开它，在文件夹里写
+  const writeSelf = async () => {
+    setSavingSelf(true)
+    try { openNew(await createContent()) } catch (e) { toast((e as Error).message, 'error') } finally { setSavingSelf(false) }
   }
   // 列表上的「更多 → 改写 / 复制」：改写弹窗和文章页的同一个；复制另存一篇草稿，打开它
   const [rewriting, setRewriting] = useState<Article | null>(null)
@@ -169,7 +185,7 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const importDoc = async () => {
     setImporting(true); setImportError(null)
     try {
-      const r = await runLocal<{ article_id: string; warnings: string[] }>('docsync.create', { url: docUrl, type: writingType })
+      const r = await runLocal<{ article_id: string; warnings: string[] }>('docsync.create', { url: docUrl, type: 'article' })
       setWritingInput(null)
       load()
       setParam('tab', 'articles')
@@ -191,7 +207,6 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const topicTitle = (id?: string) => topics?.find((t) => t.id === id)?.title
   const openArticle = params.article ? articles?.find((a) => a.id === params.article) : undefined
   const writingTitle = topicTitle(writingInput?.topic_id) || writingInput?.subject
-  const writerBusy = !writer.shuttle || !writer.task || writer.starting || !!writer.task.running.length
 
   if (openArticle) return <ArticleDetail key={openArticle.id} work={work} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} open={(id) => { setParam('version', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('article', '') }} onChanged={load} />
 
@@ -236,9 +251,8 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
         onWork={work ? async (note) => { await startWork(work, rewriting.id, note); setRewriting(null) } : undefined}
         onStart={async (to, note) => { if (await listRewriter.run({ article_id: rewriting.id, type: to, note })) setRewriting(null) }}
         onConvert={async (to) => { const r = await runLocal<{ article_id: string }>('convert.toType', { article_id: rewriting.id, type: to }); setRewriting(null); load(); setParam('article', r.article_id) }} />}
-      <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingTitle ? `${tr('content.new_article')} · ${writingTitle}` : tr('content.new_article')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button>{!writingInput?.topic_id && !docUrl && <Button variant="outline" onClick={writeSelf} disabled={savingSelf || writer.starting}>{savingSelf ? <Loader className="animate-spin" /> : <Pencil />}{tr('content.write_self')}</Button>}<Button variant={docUrl ? 'outline' : 'default'} onClick={startWriting} disabled={writerBusy || savingSelf || importing}>{writer.starting ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.ai_write_this')}</Button>{docUrl && <Button onClick={importDoc} disabled={importing}>{importing ? <Loader className="animate-spin" /> : <Download />}{tr('content.import_doc')}</Button>}</>}>
+      <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingTitle ? `${tr('content.new_article')} · ${writingTitle}` : tr('content.new_article')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button>{!docUrl && <Button variant="outline" onClick={writeSelf} disabled={savingSelf || writer.starting}>{savingSelf ? <Loader className="animate-spin" /> : <Pencil />}{tr('content.write_self')}</Button>}<Button variant={docUrl ? 'outline' : 'default'} onClick={startWriting} needsShuttle disabled={savingSelf || importing}>{savingSelf ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.ai_write_this')}</Button>{docUrl && <Button onClick={importDoc} disabled={importing}>{importing ? <Loader className="animate-spin" /> : <Download />}{tr('content.import_doc')}</Button>}</>}>
         <div className="space-y-4">
-          <Field group label={tr('article.type')}><TypePicker value={writingType} onChange={setWritingType} /></Field>
           {/* 这里写这篇写什么（主题、要点、草稿）；怎么写照「写作要求」，每篇都用 */}
           <Field label={tr('content.write_notes')}><textarea autoFocus value={writingNotes} placeholder={tr(writingInput?.topic_id ? 'content.write_notes_ph_topic' : 'content.write_notes_ph')} onChange={(e) => setWritingNotes(e.target.value)} rows={8} className={cx(inputCls, 'py-2 leading-relaxed')} /></Field>
           {!writingInput?.topic_id && <p className="-mt-2 flex items-center gap-1.5 text-sm text-muted-foreground"><NotionLogo size={16} className="shrink-0" />{tr(docUrl ? 'content.import_doc_hint' : 'content.import_doc_tip')}</p>}
@@ -292,7 +306,6 @@ function DocSource({ a, onChanged }: { a: Article; onChanged: () => void }) {
 /** 粘的是不是一篇外部文档（现在只有 Notion）的链接：整段只有这一个链接 */
 const isDocUrl = (s: string) => /^https?:\/\/(?:[\w-]+\.)*notion\.(?:so|site|com)\/\S+$/i.test(s.trim())
 
-const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /** 页头的「更多」：不常用的设置（写作要求…）收在这里，点外面、按 Esc 收起 */
 function HeaderMore({ items }: { items: { label: string; icon: typeof SlidersHorizontal; onClick: () => void; hidden?: boolean }[] }) {
