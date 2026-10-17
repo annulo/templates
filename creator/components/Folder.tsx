@@ -101,6 +101,39 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
   const files = useMemo(() => entries.filter((e) => !e.dir).sort((x, y) => Number(isDraft(y.path)) - Number(isDraft(x.path)) || y.mtime - x.mtime), [entries])
   // 只有一个文件：打开时直接打开它。只自动选一次：用户按返回退回全部文件后不能又被选回去，不然退不出来
   const only = files.length === 1 ? files[0].path : ''
+  // 网格里每一层（全部文件、某个目录）各记各的滚动位置：点开稿子滚到底再返回，回到点开它时的地方，不停在网格底部；
+  // 打开文件时页面已经滚过了文件夹的顶，滚回文件开头。滚的是页面的滚动区（往上找第一个能滚的）
+  const gridBox = useRef<HTMLDivElement>(null)
+  const scrollPos = useRef<Record<string, number>>({})
+  const selRef = useRef(sel)
+  selRef.current = sel
+  const scrollerOf = (el: HTMLElement | null): HTMLElement => {
+    for (let p = el?.parentElement; p; p = p.parentElement) {
+      const o = getComputedStyle(p).overflowY
+      if (o === 'auto' || o === 'scroll') return p
+    }
+    return (document.scrollingElement as HTMLElement) ?? document.documentElement
+  }
+  const isList = !sel || !!selected?.dir
+  useEffect(() => {
+    if (view !== 'grid') return
+    const sc = scrollerOf(gridBox.current)
+    const target: HTMLElement | Window = sc === document.scrollingElement ? window : sc
+    const save = () => { scrollPos.current[selRef.current] = sc.scrollTop }
+    target.addEventListener('scroll', save, { passive: true })
+    return () => target.removeEventListener('scroll', save)
+  }, [view, !!state])
+  useLayoutEffect(() => {
+    const box = gridBox.current
+    if (view !== 'grid' || !box) return
+    const sc = scrollerOf(box)
+    if (isList) {
+      const y = scrollPos.current[sel]
+      if (y !== undefined) sc.scrollTop = y
+    } else if (box.getBoundingClientRect().top < sc.getBoundingClientRect().top) {
+      box.scrollIntoView({ block: 'start' })
+    }
+  }, [sel])
   const autoPicked = useRef(false)
   useEffect(() => {
     if (!only || autoPicked.current) return
@@ -190,7 +223,8 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
       {error && <Notice tone="error">{error}</Notice>}
       {view === 'grid' ? (
         // 手机上铺满屏幕宽（抵掉页面左右 1rem 的内边距），只留上下分隔线：一层层卡片边框会把正文挤窄
-        <div className="-mx-4 min-h-[360px] overflow-clip border-y border-border sm:mx-0 sm:rounded-lg sm:border">
+        // scroll-mt：打开文件滚回开头时停在吸顶的头部下面，不被它盖住
+        <div ref={gridBox} className="-mx-4 min-h-[360px] scroll-mt-[var(--page-top,0px)] overflow-clip border-y border-border sm:mx-0 sm:rounded-lg sm:border">
           {selected
             ? <>
                 {/* 面包屑：全部文件 / 目录 / 目录，点哪一级回到哪一级（目录显示里面的东西）；文件名在下面看文件的那一栏 */}

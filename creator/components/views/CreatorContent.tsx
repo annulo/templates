@@ -550,6 +550,23 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     await dbPatch('articles', a.id, { manual_status: v === 'auto' ? '' : v, updated_at: new Date().toISOString() })
     toast(tr('content_status.saved'))
   })
+  // 文件夹里走过的路（打开文件、进目录）：返回退回上一步，也就是点进来的地方。网格是铺平的，子目录里的文件是从全部文件点进来的，
+  // 不能退到它所在的目录。新的一步正好是上一步时（系统返回手势、这里的返回）出栈；没走过的（刷新进来）按目录往上退
+  const trail = useRef<string[]>([])
+  const prevFile = useRef(file)
+  useEffect(() => {
+    const prev = prevFile.current
+    prevFile.current = file
+    if (prev === file) return
+    const t = trail.current
+    if (t[t.length - 1] === file) t.pop()
+    else t.push(prev)
+  }, [file])
+  const back = () => {
+    if (!file || !setFile) return onBack()
+    const t = trail.current
+    setFile(t.length ? t[t.length - 1] : file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '')
+  }
   const run = async (key: string, f: () => Promise<unknown>) => {
     setBusy(key)
     setError('')
@@ -662,8 +679,8 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
         {/* 手机上排成一行（按钮只留图标，发布留字）：两行吸顶的话正文就只剩半屏 */}
         <div className="flex items-center justify-between gap-2 sm:flex-wrap sm:gap-3">
           <div className="flex min-w-0 items-center gap-2">
-            {/* 文件夹里打开着文件：先退回上一级目录，退到全部文件，再回内容列表 */}
-            <Button variant="ghost" size="icon-sm" onClick={() => (file && setFile ? setFile(file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '') : onBack())} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
+            {/* 文件夹里打开着文件：先退回点进来的地方（全部文件、某个目录），再回内容列表 */}
+            <Button variant="ghost" size="icon-sm" onClick={back} aria-label={tr('content.back')} title={tr('content.back')} className="-ml-2 shrink-0 text-muted-foreground"><ArrowLeft /></Button>
             {/* 手机上一行放不下：状态收进「更多」菜单 */}
             <div className="hidden sm:block">{statusControl ?? <ArticleStatusControl article={a} status={displayStatus as ContentStatus} onChanged={onChanged} disabled={locked} />}</div>
           </div>
