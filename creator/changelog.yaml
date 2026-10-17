@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.16.2
+  zh: "手机上看内容更宽松，返回按层级退回；新建内容不用选类型；助手回复里提到的文件能直接点开。"
+  en: "Content is easier to read on phones and Back steps up one level at a time; new content no longer asks for a type; files the assistant mentions open with a tap."
 - version: 0.16.1
   zh: "内容文件夹能直接播放音频、打开 PDF，文件支持右键菜单，目录有面包屑。"
   en: "Content folders play audio and open PDFs, with a right-click menu and breadcrumbs."
