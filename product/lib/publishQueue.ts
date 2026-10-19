@@ -30,6 +30,12 @@ export type PublishJob = {
   want_show?: boolean
   /** 正在做哪一步（插件报的进度） */
   step?: string
+  /** 这次报过的每一步和时间（ms）：右下角点开「过程」看每一步、耗时；发完也留着（浏览器助手最后报一句耗时汇总） */
+  steps?: { at: number; text: string }[]
+  started_at?: number
+  finished_at?: number
+  /** 浏览器助手（b.agent）结束时报的汇总：总耗时、用了哪个模型、输入输出缓存的 token */
+  summary?: { total_ms: number; steps: number; model?: string; input: number; output: number; cache_read: number; cache_write: number }
   error?: string
 }
 
@@ -62,9 +68,16 @@ async function work() {
   try {
     for (let next = jobs.find((j) => j.state === 'queued'); next; next = jobs.find((j) => j.state === 'queued')) {
       const j = next
-      patch(j.key, { state: 'running', step: '' })
+      patch(j.key, { state: 'running', step: '', steps: [], started_at: Date.now(), finished_at: undefined, summary: undefined })
       try {
-        const onEvent = (e: { type: string; data: any }) => { if (e.type === 'progress' && e.data?.message) patch(j.key, { step: String(e.data.message) }) }
+        const onEvent = (e: { type: string; data: any }) => {
+          if (e.type !== 'progress') return
+          if (e.data?.summary) patch(j.key, { summary: e.data.summary })
+          if (!e.data?.message) return
+          const text = String(e.data.message)
+          const cur = jobs.find((x) => x.key === j.key)
+          patch(j.key, { step: text, steps: [...(cur?.steps ?? []), { at: Date.now(), text }].slice(-80) })
+        }
         // 浏览器用屏幕外的真窗口：用户点「在前台看」时能调出来（无界面的没有窗口）
         const opts = { browser: 'offscreen' as const, onStart: (id: string) => {
           patch(j.key, { run_id: id })
@@ -72,10 +85,10 @@ async function work() {
         } }
         if (j.publisher) await runLocal(`${j.publisher}.publish`, { article_id: j.article_id }, onEvent, opts)
         else await runLocal('social/social.publish', { post_id: j.post_id, ...(j.check_only ? { check_only: true } : {}), ...(j.confirm_unpublished ? { confirm_unpublished: true } : {}) }, onEvent, opts)
-        patch(j.key, { state: 'ok', step: '', run_id: undefined })
+        patch(j.key, { state: 'ok', step: '', run_id: undefined, finished_at: Date.now() })
       } catch (e) {
         const stopped = jobs.find((x) => x.key === j.key)?.stopped
-        patch(j.key, { state: 'error', step: '', run_id: undefined, error: stopped ? tr('article.pub_stopped') : (e as Error).message })
+        patch(j.key, { state: 'error', step: '', run_id: undefined, finished_at: Date.now(), error: stopped ? tr('article.pub_stopped') : (e as Error).message })
       }
       // 发布记录、列表跟着刷新（social_posts / publications 变了）
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('db:changed', { detail: { table: j.publisher ? 'publications' : 'social_posts' } }))

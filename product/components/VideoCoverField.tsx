@@ -6,6 +6,7 @@ import { Button, Field, Notice } from './ui'
 import { uploadAssets, type UploadItem } from '../lib/assets'
 import { dbList, type Asset } from '../lib/shuttle'
 import { usePasteFiles } from '../lib/usePasteFiles'
+import { fileSrc } from '../lib/files'
 import { tr } from '../lib/i18n'
 
 /** A single cover stored in the Library. Failed replacements keep the previous cover. */
@@ -33,7 +34,7 @@ export default function VideoCoverField({ value, onChange, onUploadingChange }: 
   return <Field group label={tr('article.video_cover')} hint={tr('article.video_cover_hint')}>
     <div className="space-y-3">
       {value && <div className="relative w-fit">
-        <img src={value} alt={tr('article.video_cover')} className="max-h-56 max-w-full rounded-lg border border-border object-contain" />
+        <img src={fileSrc(value)} alt={tr('article.video_cover')} className="max-h-56 max-w-full rounded-lg border border-border object-contain" />
         <Button size="icon-sm" variant="secondary" disabled={uploading} aria-label={tr('article.remove_cover')} title={tr('article.remove_cover')}
           className="absolute top-2 right-2" onClick={() => onChange('')}><X /></Button>
       </div>}

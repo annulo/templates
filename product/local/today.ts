@@ -99,7 +99,7 @@ export function list(_input: {}, ctx: any) {
     all(ctx, "social_health").filter((h) => h.ok === false).length,
     "有账号操作失败",
     "Account operations need attention",
-    "检查登录状态和发布自检结果。",
+    "检查登录状态和最近发布、采集的结果。",
     "Check account login and publishing health.",
     "channels",
   );

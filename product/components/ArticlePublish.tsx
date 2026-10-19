@@ -2,7 +2,7 @@ import { metricText } from '../lib/apiMetrics'
 import { facebookPublishRecovery } from '../lib/facebookPublishRecovery'
 import FacebookPublishRecovery from './FacebookPublishRecovery'
 import FacebookComments from './FacebookComments'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle, ArrowUpRight, Bookmark, Eye, Film, Heart, Loader2, MessageCircle, RefreshCw, Send, Share2, Trash2 } from 'lucide-react'
 import RunButton from './RunButton'
 import { fileSrc } from '../lib/files'
@@ -44,6 +44,48 @@ async function setupPublish(channelId: string, note?: string) {
 
 const statusTone = (s?: string) => s === 'published' ? 'ok' as const : s === 'failed' ? 'bad' as const : s === 'scheduled' || s === 'publishing' ? 'primary' as const : 'default' as const
 const metricsLine = (p: SocialPost) => tr('versions.metrics', { v: metricText(p, 'views'), l: metricText(p, 'likes'), c: metricText(p, 'comments') })
+
+/** 已发布记录的删除：点开一个小菜单二选一。「从平台删除」去平台上删帖子；「只删记录」平台上的不动（平台上已经手动删过、
+ *  或者同一条重复记了两次时用，从平台删除会报找不到） */
+function DeleteMenu({ label, busy, disabled, onRemote, onRecord }: { label: string; busy: boolean; disabled: boolean; onRemote: () => void; onRecord: () => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc) }
+  }, [open])
+  const item = 'flex w-full cursor-pointer flex-col items-start rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-muted'
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <Button size="icon-sm" variant="ghost" className="text-destructive" disabled={disabled} title={tr('article.delete_menu')} aria-label={tr('article.delete_menu')} aria-expanded={open} onClick={() => setOpen(!open)}>
+        {busy ? <Loader2 className="animate-spin" /> : <Trash2 />}
+      </Button>
+      {open && (
+        <div role="menu" className="absolute top-full right-0 z-30 mt-1 w-64 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+          <button type="button" role="menuitem" className={cx(item, 'text-destructive')} onClick={() => { setOpen(false); onRemote() }}>
+            {tr('article.delete_from_platform', { p: label })}
+            <span className="text-xs text-muted-foreground">{tr('article.delete_from_platform_hint', { p: label })}</span>
+          </button>
+          <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); onRecord() }}>
+            {tr('article.delete_record_only')}
+            <span className="text-xs text-muted-foreground">{tr('article.delete_record_only_hint', { p: label })}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 平台标签：图标 + 平台名（「B站」「抖音」），跟在账号名后面（发布记录、发布弹窗的账号列表） */
+export function PlatformTag({ type }: { type: string }) {
+  const t = CHANNEL_TYPES[type]
+  const Icon = t?.icon
+  return <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">{Icon && <Icon size={11} />}{t?.label}</span>
+}
 
 export function ChannelAvatar({ ch }: { ch: Channel }) {
   const Icon = CHANNEL_TYPES[ch.type]?.icon
@@ -240,7 +282,11 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
             {/* 账号头像和名字点了去「社交媒体 → 数据表现」看这个账号：打开主页、重新采集都在那里 */}
             {ch ? <button type="button" onClick={() => ctx.go('social', { section: 'data', account: ch.id })} title={tr('article.open_account_data')} className="shrink-0 cursor-pointer rounded-full"><ChannelAvatar ch={ch} /></button> : <span className="size-7 shrink-0 rounded-full bg-muted" />}
             <span className="min-w-0 flex-1">
-              {ch ? <button type="button" onClick={() => ctx.go('social', { section: 'data', account: ch.id })} title={tr('article.open_account_data')} className="block max-w-full cursor-pointer truncate text-left text-sm font-medium hover:text-primary-text hover:underline">{ch.name}</button>
+              {/* 名字后面跟一个平台标签：几个账号可能同名（bysir / Bysir），只看名字分不清发到了哪个平台 */}
+              {ch ? <span className="flex min-w-0 items-center gap-2">
+                  <button type="button" onClick={() => ctx.go('social', { section: 'data', account: ch.id })} title={tr('article.open_account_data')} className="min-w-0 cursor-pointer truncate text-left text-sm font-medium hover:text-primary-text hover:underline">{ch.name}</button>
+                  {CHANNEL_TYPES[ch.type] && <PlatformTag type={ch.type} />}
+                </span>
                 : <span className="block truncate text-sm font-medium">{tr('content.removed_channel')}</span>}
               <span className="block truncate text-xs text-muted-foreground">
                 {p.status === 'published' ? <>{fmtTime(p.published_at)}{p.metrics_at && !detailed ? ` · ${metricsLine(p)}` : ''}</> : p.status === 'removed' ? tr('social.removed_from', { when: fmtTime(p.removed_at), p: ch ? CHANNEL_TYPES[ch.type]?.label : '' }) : legacy ? tr('article.legacy_version') : ch ? CHANNEL_TYPES[ch.type]?.label : ''}
@@ -248,6 +294,15 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
             </span>
             {p.post_url && p.status === 'published' && <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text">{tr('content.view_live')}<ArrowUpRight className="size-3" /></a>}
             {jobOf(p.id) ? <Badge tone="primary">{jobOf(p.id)!.state === 'running' ? tr('meta.social_status.publishing') : tr('article.pub_queued')}</Badge> : <Badge tone={statusTone(p.status)}>{tr(`meta.social_status.${p.status}`)}</Badge>}
+            {p.status === 'published' && !jobOf(p.id) && ch && (
+              <DeleteMenu label={CHANNEL_TYPES[ch.type]?.label ?? ''} busy={busy === 'remove' + p.id} disabled={!!busy}
+                onRemote={() => act('remove' + p.id, () => runLocal('social/social.remove', { post_id: p.id }))}
+                onRecord={() => act('remove' + p.id, async () => {
+                  // 插件的 purge 不删「已发布」的（怕平台上还挂着、这里查不到）；用户明确选了只删记录，先标成已删除再清
+                  await dbPatch('social_posts', p.id, { status: 'removed', removed_at: new Date().toISOString() })
+                  await runLocal('social/social.purge', { post_id: p.id })
+                })} />
+            )}
           </div>
           {detailed && <PostSnapshot p={p} />}
           {detailed && p.status === 'published' && <PostMetrics p={p} onChanged={onChanged} />}
@@ -256,6 +311,8 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
           <FacebookComments post={p} channel={ch} />
           {!jobOf(p.id) && p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
           {!jobOf(p.id) && <FacebookPublishRecovery post={p} channel={ch} disabled={!!busy} onAction={(input) => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', ...input }])} />}
+          {/* 已经从平台删掉的：留着记录能看到删过，不要了就删记录 */}
+          {p.status === 'removed' && !jobOf(p.id) && <div className="flex justify-end"><Button fn="social/social.purge" size="sm" variant="ghost" className="text-muted-foreground" disabled={!!busy} onClick={() => act('purge' + p.id, () => runLocal('social/social.purge', { post_id: p.id }))}><Trash2 />{tr('article.delete_record')}</Button></div>}
           {p.status !== 'published' && p.status !== 'removed' && !jobOf(p.id) && <div className="flex flex-wrap items-center gap-2">
             {!recovery && (p.status === 'failed' || p.status === 'approved' || p.status === 'scheduled') && <Button size="sm" variant="outline" fn="social/social.publish" feedback={false} onClick={() => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', post_id: p.id }])}><Send />{p.status === 'failed' ? tr('article.retry') : tr('social.publish_now')}</Button>}
             {p.status === 'scheduled' && !recovery && <SchedulePopover size="sm" current={p.scheduled_at} onSchedule={(iso) => dbPatch('social_posts', p.id, { status: 'scheduled', scheduled_at: iso }).then(onChanged)} onUnschedule={() => dbPatch('social_posts', p.id, { status: 'approved', scheduled_at: '' }).then(onChanged)} />}

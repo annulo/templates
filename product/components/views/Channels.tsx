@@ -18,7 +18,7 @@ import EditSiteButton from "../EditSiteButton";
 import AskButton from "../AskButton";
 import {
   brokenOf,
-  ProbeLine,
+  ActivityLine,
   PublishProblems,
   usePlatformHealth,
 } from "../PlatformHealth";
@@ -99,7 +99,7 @@ const DOT: Record<Tone, string> = {
   default: "bg-muted-foreground/50",
 };
 
-/** 网站和账号：只管连接（添加、移除、登录、自检、网站的发布设置），不放数据 */
+/** 网站和账号：只管连接（添加、移除、登录、网站的发布设置），不放数据 */
 export default function Channels({
   ctx,
   current,
@@ -267,7 +267,7 @@ export default function Channels({
 
           {selected && (
             <div className="space-y-4">
-              {/* 每个渠道一张卡片：头部是头像/图标、名字、状态和操作（看数据、移除），下面分隔线隔开的是这个渠道的设置——网站是文章发布，社媒是发布自检 */}
+              {/* 每个渠道一张卡片：头部是头像/图标、名字、状态和操作（看数据、移除），下面分隔线隔开的是这个渠道的设置——网站是文章发布，社媒是上次发布、采集成没成 */}
               {isSite(selected) ? (
                 <SiteCard
                   ctx={ctx}
@@ -421,7 +421,7 @@ function SiteCard({
   );
 }
 
-/** 社媒账号的连接：登录状态、重新登录、打开主页、发布自检。采集和数据在社交媒体页 */
+/** 社媒账号的连接：登录状态、重新登录、打开主页、上次发布和采集的结果。采集和数据在社交媒体页 */
 function AccountConnection({
   ch,
   actions,
@@ -524,8 +524,8 @@ function AccountConnection({
         onOpenPost={onOpenPost}
         onChanged={onDone}
       />
-      {platformOf(ch)?.probe && !expired && !other && (
-        <ProbeLine ch={ch} rows={health} onChanged={onDone} />
+      {!expired && !other && (
+        <ActivityLine ch={ch} rows={health} />
       )}
     </div>
   );

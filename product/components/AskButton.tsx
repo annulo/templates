@@ -7,7 +7,7 @@ import { useAssistant } from '../lib/useShuttle'
 
 /**
  * 「交给助手」：新开一段对话把 prompt 交给右侧的运营助手（不塞进用户当前的对话），在右侧打开它。
- * 跑的时候按钮变成「进行中 · 看过程」，点了回到那段对话；跑完（或者停下来等用户回答）恢复，调 onFinished 让页面重拉数据。
+ * 跑的时候按钮变成「进行中 · 查看对话」，点了回到那段对话；跑完（或者停下来等用户回答）恢复，调 onFinished 让页面重拉数据。
  * 和 TaskButton 一个样子。不在 Shuttle 里时禁用并说明原因。
  */
 export default function AskButton({
