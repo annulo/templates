@@ -2,11 +2,14 @@
 // 页面上改 .md 不经过这里：编辑器直接读写 md（官方的 @tiptap/markdown，components/rich/mdExtensions.ts）。
 // md → HTML 用 marked，HTML → md 用 turndown（加 GFM：删除线、表格、任务列表）；视频没有 md 写法，原样留 <video src width height> 标签。
 // 只在浏览器里用。
-import { marked } from 'marked'
+import { Marked } from 'marked'
 import TurndownService from 'turndown'
 import { gfm } from 'turndown-plugin-gfm'
 
-export const mdToHtml = (md: string) => marked.parse(md, { async: false, gfm: true })
+// 用自己的一份 Marked，不用全局的 marked：编辑器（@tiptap/markdown）会往全局 marked 上注册 taskList 这类扩展，
+// 全局的一旦被它改过，这里再转带列表的 md 就报「Token with "taskList" type was not found」，发布弹窗点了文案也填不进来
+const md2html = new Marked({ async: false, gfm: true })
+export const mdToHtml = (md: string) => md2html.parse(md, { async: false }) as string
 
 // turndown 默认把 * _ [ ] # 这些都转义，存一次源码里就多出一堆反斜杠。只转义会改变意思的：行首的标题、引用、列表记号，和 * `
 const escape = (s: string) => s

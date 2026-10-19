@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Clapperboard, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, inputCls } from './ui'
 import { fileSrc, filesOf } from '../lib/files'
@@ -31,14 +31,16 @@ export const fmtSize = (n: number) => (n > 1 << 20 ? `${(n / (1 << 20)).toFixed(
 /** 工作目录里的文件给 <img>、<video> 的地址（Annulo 能力版本 46） */
 export const workSrc = (p: string) => '/_shuttle/work-files/' + p.split('/').map(encodeURIComponent).join('/')
 
+// 文件图标：形状和颜色都分开（视频用场记板、紫色，图片绿色，音频橙色，文字灰色），扫一眼就分得出，不光靠一个小图案
 function iconOf(e: Entry, open: boolean) {
   if (e.dir) return open ? FolderOpen : FolderIcon
-  if (VIDEO.test(e.path)) return Film
+  if (VIDEO.test(e.path)) return Clapperboard
   if (IMAGE.test(e.path)) return ImageIcon
   if (AUDIO.test(e.path)) return Music
   if (TEXT.test(e.path) || PDF.test(e.path)) return FileText
   return File
 }
+const toneOf = (e: Entry) => e.dir ? 'text-muted-foreground' : VIDEO.test(e.path) ? 'text-violet-500 dark:text-violet-400' : IMAGE.test(e.path) ? 'text-emerald-600 dark:text-emerald-400' : AUDIO.test(e.path) ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
 
 // sel / setSel：打开的文件或目录由内容页记在地址栏（返回按钮、返回手势一级级退）；没传就记在组件里
 export default function Folder({ article: a, onChanged, sel: selProp, setSel: setSelProp }: { article: Article; onChanged: () => void; sel?: string; setSel?: (p: string) => void }) {
@@ -95,7 +97,8 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
     for (const k in m) m[k].sort((x, y) => Number(y.dir) - Number(x.dir) || x.path.localeCompare(y.path, 'zh'))
     return m
   }, [entries])
-  const isOpen = (p: string) => openDirs[p] ?? true
+  // 目录默认收起，只展开当前选中的文件（或目录）所在的那一路：几十个文件的目录不会一打开就把树撑得很长
+  const isOpen = (p: string) => openDirs[p] ?? (sel === p || sel.startsWith(p + '/'))
   const selected = entries.find((e) => e.path === sel)
   // 网格：不分目录，所有文件铺平；稿子排第一，其余最近改的在前
   const files = useMemo(() => entries.filter((e) => !e.dir).sort((x, y) => Number(isDraft(y.path)) - Number(isDraft(x.path)) || y.mtime - x.mtime), [entries])
@@ -134,24 +137,110 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
       box.scrollIntoView({ block: 'start' })
     }
   }, [sel])
+  // 树：做成固定高度的工作区，正好是页面滚动区里顶栏（--page-top）以下的那一截；左边树、右边文件各自在里面滚，
+  // 页面滚到这块就不用再滚，不会三层滚动条叠在一起。高度跟着窗口变
+  const treeBox = useRef<HTMLDivElement>(null)
+  const topProbe = useRef<HTMLDivElement>(null)
+  const treeCol = useRef<HTMLDivElement>(null)
+  const [paneH, setPaneH] = useState(0)
+  useLayoutEffect(() => {
+    const box = treeBox.current
+    if (view !== 'tree' || !box) return
+    const sc = scrollerOf(box)
+    // 从这块在页面里的位置一直到窗口底边：页面没滚的时候整块就在屏幕里，不用先滚页面；
+    // 位置太靠下（剩不到 360）时才改成「滚到顶栏下面时正好占满」
+    const fit = () => {
+      const doc = sc === document.scrollingElement
+      const vt = doc ? 0 : Math.max(0, sc.getBoundingClientRect().top)
+      const vb = Math.min(doc ? window.innerHeight : sc.getBoundingClientRect().bottom, window.innerHeight)
+      const at = box.getBoundingClientRect().top - vt + (doc ? window.scrollY : sc.scrollTop)
+      const below = vb - vt - at - 16
+      setPaneH(below >= 360 ? below : Math.max(360, vb - vt - (topProbe.current?.offsetHeight ?? 0) - 12))
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(sc)
+    window.addEventListener('resize', fit)
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit) }
+  }, [view, !!state?.dir, entries.length])
+  // 页面怎么滚，这块露在屏幕里的部分都完整可用：外框在页面里照常占位（高 paneH），里面那块按「顶栏以下、窗口底边以上」实时裁剪，
+  // 上边贴住顶栏、下边不出屏幕；往下滚去看发布记录时它从上往下变矮，两栏照常各自滚。直接改样式，不走 React（每帧都在算）
+  const treeInner = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const box = treeBox.current
+    const inner = treeInner.current
+    if (view !== 'tree' || !box || !inner) return
+    const sc = scrollerOf(box)
+    const doc = sc === document.scrollingElement
+    const wide = window.matchMedia('(min-width: 768px)')
+    let raf = 0
+    const clip = () => {
+      raf = 0
+      if (!wide.matches) { inner.style.top = ''; inner.style.height = ''; inner.style.visibility = ''; return }
+      const vt = doc ? 0 : Math.max(0, sc.getBoundingClientRect().top)
+      const vb = Math.min(doc ? window.innerHeight : sc.getBoundingClientRect().bottom, window.innerHeight)
+      const r = box.getBoundingClientRect()
+      // 顶栏吸顶的位置（--page-top）是按滚动区的内容边算的，要加上滚动区的上内边距才是它在屏幕上的底边
+      const pad = doc ? 0 : parseFloat(getComputedStyle(sc).paddingTop) || 0
+      const top = Math.max(r.top, vt + pad + (topProbe.current?.offsetHeight ?? 0))
+      const bottom = Math.min(r.bottom, vb)
+      inner.style.top = `${Math.max(0, top - r.top)}px`
+      inner.style.height = `${Math.max(0, bottom - top)}px`
+      inner.style.visibility = bottom - top < 40 ? 'hidden' : ''
+    }
+    const kick = () => { if (!raf) raf = requestAnimationFrame(clip) }
+    clip()
+    const target: HTMLElement | Window = doc ? window : sc
+    target.addEventListener('scroll', kick, { passive: true })
+    window.addEventListener('resize', kick)
+    wide.addEventListener('change', kick)
+    const ro = new ResizeObserver(kick)
+    ro.observe(box)
+    return () => { cancelAnimationFrame(raf); target.removeEventListener('scroll', kick); window.removeEventListener('resize', kick); wide.removeEventListener('change', kick); ro.disconnect() }
+  }, [view, !!state?.dir, paneH])
+  // 选中的那项滚进树的可见区：只滚树这一栏自己，不用 scrollIntoView（它会连页面一起滚，把这块推到顶栏下面）
+  useLayoutEffect(() => {
+    const col = treeCol.current
+    const it = col?.querySelector<HTMLElement>('[data-tree-sel]')
+    if (view !== 'tree' || !col || !it) return
+    const c = col.getBoundingClientRect()
+    const r = it.getBoundingClientRect()
+    if (r.top < c.top) col.scrollTop -= c.top - r.top + 8
+    else if (r.bottom > c.bottom) col.scrollTop += r.bottom - c.bottom + 8
+  }, [sel, view])
   const autoPicked = useRef(false)
   useEffect(() => {
     if (!only || autoPicked.current) return
     autoPicked.current = true
     if (!sel) setSel(only)
   }, [only, sel])
+  // 树状视图右边不留空，默认打开一个文件，取第一个有的：上次在这条内容里打开的（每条内容各记各的，记在这台电脑上）→
+  // 最外层最近改过的文件（多半是 AI 刚做出来的；不进子目录，旁白这类一堆分句音频的目录不算）→ 稿子。网格视图默认看全部文件，不自动打开
+  const lastKey = `folder:last:${id}`
+  useEffect(() => { if (sel) try { localStorage.setItem(lastKey, sel) } catch {} }, [sel, lastKey])
+  const treePicked = useRef(false)
+  useEffect(() => {
+    if (view !== 'tree' || sel || treePicked.current || !entries.length) return
+    treePicked.current = true
+    let last = ''
+    try { last = localStorage.getItem(lastKey) ?? '' } catch {}
+    const top = entries.filter((e) => !e.dir && !e.path.includes('/') && !/^[.~]/.test(e.path)).sort((x, y) => y.mtime - x.mtime)
+    const pick = (last && entries.some((e) => e.path === last) ? last : '') || top[0]?.path || entries.find((e) => isDraft(e.path))?.path || ''
+    if (pick) setSel(pick)
+  }, [view, sel, entries, lastKey])
   // 新建的位置：选中的是目录就建在里面，是文件就建在它旁边
   const here = selected ? (selected.dir ? selected.path : parent(selected.path)) : ''
 
   const [adding, setAdding] = useState<'file' | 'dir' | null>(null)
   const [newName, setNewName] = useState('')
-  const startAdd = (k: 'file' | 'dir') => { setAdding(k); setNewName(k === 'file' ? t('new_file_default') : '') }
+  const [addError, setAddError] = useState('')
+  const startAdd = (k: 'file' | 'dir') => { setAdding(k); setAddError(''); setNewName(k === 'file' ? t('new_file_default') : '') }
   const add = async () => {
     const name = newName.trim()
     if (!name || !adding) return
     const p = here ? `${here}/${name}` : name
-    setError('')
-    try { await call(adding === 'file' ? 'write' : 'mkdir', adding === 'file' ? { path: p, text: '' } : { path: p }); await load(); setSel(p); setAdding(null) } catch (e) { setError((e as Error).message) }
+    setAddError('')
+    try { await call(adding === 'file' ? 'write' : 'mkdir', adding === 'file' ? { path: p, text: '' } : { path: p }); await load(); setSel(p); setAdding(null) } catch (e) { setAddError((e as Error).message) }
   }
 
   if (!state || !state.dir) {
@@ -179,11 +268,11 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
     const Icon = iconOf(e, isOpen(e.path))
     return (
       <div key={e.path}>
-        <div onContextMenu={(ev) => onMenu(ev, e)} className={cx('flex items-center gap-1 rounded-md pr-1 text-sm', sel === e.path || menu?.e.path === e.path ? 'bg-primary/10 text-primary-text' : 'hover:bg-muted')} style={{ paddingLeft: 4 + depth * 12 }}>
+        <div data-tree-sel={sel === e.path || undefined} onContextMenu={(ev) => onMenu(ev, e)} className={cx('flex items-center gap-1 rounded-md pr-1 text-sm', sel === e.path || menu?.e.path === e.path ? 'bg-primary/10 text-primary-text' : 'hover:bg-muted')} style={{ paddingLeft: 4 + depth * 12 }}>
           {/* 改名时不能是 button：输入框放在 button 里，按空格会点到按钮 */}
           {renaming === e.path ? <div className="flex min-w-0 flex-1 items-center gap-1.5 py-1"><span className="w-3.5 shrink-0" />{nameOf(e, 'h-6')}</div> : <button type="button" className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-left" onClick={() => { setSel(e.path); if (e.dir) setOpenDirs((o) => ({ ...o, [e.path]: !isOpen(e.path) })) }}>
             {e.dir ? (isOpen(e.path) ? <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />) : <span className="w-3.5 shrink-0" />}
-            <Icon className="size-4 shrink-0 text-muted-foreground" />
+            <Icon className={cx('size-4 shrink-0', toneOf(e))} />
             {nameOf(e, 'h-6')}
           </button>}
         </div>
@@ -193,7 +282,8 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
   }
 
   return (
-    <section className="mt-6 space-y-3">
+    <section className="relative mt-6 space-y-3">
+      <div ref={topProbe} aria-hidden className="pointer-events-none invisible absolute h-[var(--page-top,0px)] w-0" />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-base font-semibold">{t('title')}</h2>
@@ -201,8 +291,20 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
           {state.can_open && <p className="mt-0.5 truncate text-xs text-muted-foreground" title={state.dir}>{state.dir.replace(/^(\/Users\/[^/]+|\/home\/[^/]+|[A-Z]:\\Users\\[^\\]+)/, '~')}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <Button size="sm" variant="outline" onClick={() => startAdd('file')}><FilePlus />{t('new_file')}</Button>
-          {view === 'tree' && <Button size="sm" variant="outline" onClick={() => startAdd('dir')}><FolderPlus />{t('new_dir')}</Button>}
+          {(['file', 'dir'] as const).filter((k) => k === 'file' || view === 'tree').map((k) => (
+            <AddPopover key={k} open={adding === k} onToggle={() => (adding === k ? setAdding(null) : startAdd(k))} onClose={() => setAdding(null)}
+              button={<>{k === 'file' ? <FilePlus /> : <FolderPlus />}{t(k === 'file' ? 'new_file' : 'new_dir')}</>}>
+              <form className="space-y-2.5" onSubmit={(ev) => { ev.preventDefault(); void add() }}>
+                <div className="text-xs font-medium">{t(k === 'file' ? 'new_file_in' : 'new_dir_in', { where: here ? t('in_dir', { dir: here }) : t('in_root') })}</div>
+                <input autoFocus value={newName} placeholder={k === 'file' ? (view === 'grid' ? t('new_file_ph_grid') : t('new_file_ph')) : t('new_dir_ph')} onChange={(ev) => { setNewName(ev.target.value); setAddError('') }} className={cx(inputCls, 'h-8 w-full')} />
+                {addError && <p className="text-xs text-destructive">{addError}</p>}
+                <div className="flex items-center justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setAdding(null)}>{t('cancel')}</Button>
+                  <Button size="sm" type="submit" disabled={!newName.trim()}>{t('create')}</Button>
+                </div>
+              </form>
+            </AddPopover>
+          ))}
           {state.can_open && <Button size="sm" variant="ghost" onClick={() => void call('open', {}).catch((e) => setError((e as Error).message))}><FolderOpen />{t('open_folder')}</Button>}
           <Button size="sm" variant="ghost" onClick={() => void load()} aria-label={t('refresh')} title={t('refresh')}><RefreshCw /></Button>
           <div className="flex rounded-md border border-border p-0.5">
@@ -211,15 +313,8 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
           </div>
         </div>
       </div>
-      <TaskRunning runs={runs} title={() => t('running')} desc={t('running_desc')} />
-      {adding && (
-        <form className="flex flex-wrap items-center gap-1.5" onSubmit={(ev) => { ev.preventDefault(); void add() }}>
-          <span className="text-sm text-muted-foreground">{t(adding === 'file' ? 'new_file_in' : 'new_dir_in', { where: here ? t('in_dir', { dir: here }) : t('in_root') })}</span>
-          <input autoFocus value={newName} placeholder={adding === 'file' ? (view === 'grid' ? t('new_file_ph_grid') : t('new_file_ph')) : t('new_dir_ph')} onChange={(ev) => setNewName(ev.target.value)} onKeyDown={(ev) => { if (ev.key === 'Escape') setAdding(null) }} className={cx(inputCls, 'h-8 w-64')} />
-          <Button size="sm" type="submit" disabled={!newName.trim()}>{t('create')}</Button>
-          <Button size="sm" variant="ghost" onClick={() => setAdding(null)}>{t('cancel')}</Button>
-        </form>
-      )}
+      {/* 下面一行写这次交代的要求（「做个封面图，抖音和小红书的」），看得出它在做哪件事；没写要求才用通用的说明 */}
+      <TaskRunning runs={runs} title={() => t('running')} desc={(r) => (typeof r.input?.note === 'string' && r.input.note.trim()) || t('running_desc')} />
       {error && <Notice tone="error">{error}</Notice>}
       {view === 'grid' ? (
         // 手机上铺满屏幕宽（抵掉页面左右 1rem 的内边距），只留上下分隔线：一层层卡片边框会把正文挤窄
@@ -237,12 +332,16 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
             : files.length ? <Grid root={state.path} files={files} onSelect={setSel} onMenu={onMenu} active={menu?.e.path} renaming={renaming} nameOf={nameOf} /> : <p className="p-4 text-sm text-muted-foreground">{t('empty_grid')}</p>}
         </div>
       ) : (
-        <div className="grid min-h-[360px] grid-cols-1 overflow-clip rounded-lg border border-border md:grid-cols-[var(--tree-w)_1fr]" style={{ '--tree-w': `${treeW}px` } as CSSProperties}>
-          <div className="relative max-h-[640px] overflow-auto border-b border-border p-1.5 md:border-r md:border-b-0">
-            <div onPointerDown={dragTree} title={t('drag_width')} className="absolute inset-y-0 right-0 z-10 hidden w-1.5 cursor-col-resize hover:bg-primary/30 md:block" />
+        // 手机上树和文件上下叠着，照常跟页面一起滚；宽屏是固定高度的两栏（见上面 paneH），右栏里吸顶的那几排吸在右栏自己的顶上（--page-top 归零）
+        <div ref={treeBox} className="relative scroll-mt-[var(--page-top,0px)] md:h-[var(--pane-h)]" style={{ '--pane-h': `${paneH || 600}px` } as CSSProperties}>
+        <div ref={treeInner} className="grid min-h-[360px] grid-cols-1 overflow-clip rounded-lg border border-border md:absolute md:inset-x-0 md:min-h-0 md:grid-cols-[var(--tree-w)_1fr] md:grid-rows-[minmax(0,1fr)]" style={{ '--tree-w': `${treeW}px` } as CSSProperties}>
+          {/* 调宽度的那条：放在外框上、贴着两栏的分界线，不放进树那栏（那栏会滚，滚下去就抓不到了） */}
+          <div onPointerDown={dragTree} title={t('drag_width')} className="absolute inset-y-0 z-10 hidden w-1.5 cursor-col-resize hover:bg-primary/30 md:block" style={{ left: treeW - 6 }} />
+          <div ref={treeCol} className="relative max-h-[640px] overflow-auto border-b border-border p-1.5 md:h-full md:max-h-none md:border-b-0">
             {entries.length ? (children[''] ?? []).map((e) => row(e, 0)) : <p className="p-3 text-xs text-muted-foreground">{t('empty_tree')}</p>}
           </div>
-          <div className="min-w-0">{selected ? viewer(selected) : <p className="p-4 text-sm text-muted-foreground">{t('pick_one')}</p>}</div>
+          <div className="min-w-0 md:h-full md:overflow-auto md:border-l md:border-border md:[--page-top:0px]">{selected ? viewer(selected) : <p className="p-4 text-sm text-muted-foreground">{t('pick_one')}</p>}</div>
+        </div>
         </div>
       )}
       {menu && <FileMenu e={menu.e} x={menu.x} y={menu.y} canOpen={!!state.can_open} onClose={() => setMenu(null)}
@@ -273,8 +372,9 @@ function Viewer({ root, canOpen, e, kids, call, reload, onSelect }: { root: stri
     await call('rename', { path: e.path, to }); onSelect(to); await reload()
   })
 
+  // min-h-full 不用 h-full：树的右栏是固定高度、自己滚的，容器要能跟着内容长，里面吸顶的那几排才不会滚过一屏就被带走
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-full flex-col">
       <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-3 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {renaming
@@ -283,9 +383,10 @@ function Viewer({ root, canOpen, e, kids, call, reload, onSelect }: { root: stri
           {!e.dir && <span className="shrink-0 text-xs text-muted-foreground">{fmtSize(e.size)}</span>}
         </div>
         {/* 服务端部署（canOpen 是 false）：用户不在服务器前面，「打开」在新标签页打开预览地址，没有「在文件夹中显示」 */}
-        {!e.dir && <Button size="sm" variant="ghost" onClick={() => (canOpen ? void run(() => call('open', { path: e.path })) : void window.open(workSrc(`${root}/${e.path}`), '_blank'))}><ExternalLink />{t('open')}</Button>}
-        {canOpen && <Button size="sm" variant="ghost" onClick={() => void run(() => call('open', { path: e.path, reveal: true }))}><FolderOpen />{t('reveal')}</Button>}
-        <Button size="sm" variant="ghost" className="text-destructive" onMouseLeave={() => setConfirmDel(false)} onClick={() => { if (!confirmDel) { setConfirmDel(true); return } void run(async () => { await call('remove', { path: e.path }); onSelect(''); await reload() }) }}><Trash2 />{confirmDel ? t('delete_confirm') : t('delete')}</Button>
+        {/* 只放图标，悬停看提示；删除点第一下才出字确认（「挪进废纸篓？」），再点才删 */}
+        {!e.dir && <Button size="icon-sm" variant="ghost" title={t('open')} aria-label={t('open')} onClick={() => (canOpen ? void run(() => call('open', { path: e.path })) : void window.open(workSrc(`${root}/${e.path}`), '_blank'))}><ExternalLink /></Button>}
+        {canOpen && <Button size="icon-sm" variant="ghost" title={t('reveal')} aria-label={t('reveal')} onClick={() => void run(() => call('open', { path: e.path, reveal: true }))}><FolderOpen /></Button>}
+        <Button size={confirmDel ? 'sm' : 'icon-sm'} variant="ghost" className="text-destructive" title={t('delete')} aria-label={t('delete')} onMouseLeave={() => setConfirmDel(false)} onClick={() => { if (!confirmDel) { setConfirmDel(true); return } void run(async () => { await call('remove', { path: e.path }); onSelect(''); await reload() }) }}><Trash2 />{confirmDel && t('delete_confirm')}</Button>
       </div>
       {error && <div className="p-3"><Notice tone="error">{error}</Notice></div>}
       <div className="min-h-0 flex-1">
@@ -400,7 +501,7 @@ function Grid({ root, files, onSelect, onMenu, active, renaming, nameOf }: { roo
               {VIDEO.test(k.path)
                 ? <div className="relative size-full"><video src={`${src}?v=${k.mtime}#t=0.5`} preload="metadata" muted playsInline className="size-full object-cover" /><Film className="absolute right-1.5 bottom-1.5 size-4 text-white drop-shadow" /></div>
                 : IMAGE.test(k.path) ? <img src={`${src}?v=${k.mtime}`} alt="" loading="lazy" className="size-full object-cover" />
-                : <Icon className="size-10 text-muted-foreground" strokeWidth={1.25} />}
+                : <Icon className={cx('size-10', toneOf(k))} strokeWidth={1.25} />}
             </div>
             <div className="min-w-0 px-0.5">
               <div className="flex text-sm leading-snug">{nameOf(k, 'h-7 text-sm', 2)}</div>
@@ -458,7 +559,7 @@ function DirView({ kids, onSelect }: { kids: Entry[]; onSelect: (p: string) => v
   const { t } = useT('folder')
   return (
     <div className="space-y-2 p-4 text-sm">
-      {kids.length ? kids.map((k) => { const I = iconOf(k, false); return <button key={k.path} type="button" onClick={() => onSelect(k.path)} className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted"><I className="size-4 text-muted-foreground" /><span className="min-w-0 flex-1 truncate">{base(k.path)}</span>{!k.dir && <span className="text-xs text-muted-foreground">{fmtSize(k.size)}</span>}</button> }) : <p className="text-muted-foreground">{t('empty_dir')}</p>}
+      {kids.length ? kids.map((k) => { const I = iconOf(k, false); return <button key={k.path} type="button" onClick={() => onSelect(k.path)} className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted"><I className={cx('size-4', toneOf(k))} /><span className="min-w-0 flex-1 truncate">{base(k.path)}</span>{!k.dir && <span className="text-xs text-muted-foreground">{fmtSize(k.size)}</span>}</button> }) : <p className="text-muted-foreground">{t('empty_dir')}</p>}
     </div>
   )
 }
@@ -484,7 +585,7 @@ function TextEditor({ root, path, mtime, call, reload }: { root: string; path: s
     barObserver.current.observe(el)
   }, [])
   return (
-    <div className="flex h-full flex-col" style={{ '--sticky-top': `calc(var(--page-top, 0px) + ${barH}px)` } as CSSProperties}>
+    <div className="flex min-h-full flex-col" style={{ '--sticky-top': `calc(var(--page-top, 0px) + ${barH}px)` } as CSSProperties}>
       <div ref={barRef} className="sticky top-[var(--page-top,0px)] z-20 flex items-center gap-2 bg-background px-4 py-1.5 sm:px-3 sm:py-2">
         {MD.test(path) && <div title={bar.dirty ? t('save_first') : undefined} className={cx(bar.dirty && 'pointer-events-none opacity-50')}>
           <Segmented value={raw ? 'raw' : 'rich'} onChange={(v) => setRaw(v === 'raw')} options={[{ value: 'rich', label: t('rich') }, { value: 'raw', label: t('source') }]} />
@@ -654,4 +755,23 @@ function RichMd({ root, path, mtime, call, reload, onBar }: { root: string; path
 
 function MediaView({ src, video }: { src: string; video: boolean }) {
   return <div className="flex justify-center bg-black/40 p-3">{video ? <video src={src} controls className="max-h-[520px] max-w-full rounded" /> : <img src={src} alt="" className="max-h-[520px] max-w-full rounded object-contain" />}</div>
+}
+
+/** 「新建文件」「新建文件夹」按钮：点了在按钮下面弹一个小气泡填名字（照「排期」的气泡），点外面、按 Esc 收起；不在页面里插一行表单 */
+function AddPopover({ open, onToggle, onClose, button, children }: { open: boolean; onToggle: () => void; onClose: () => void; button: ReactNode; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: globalThis.MouseEvent) => { if (!ref.current?.contains(e.target as Node)) onClose() }
+    const esc = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc) }
+  }, [open, onClose])
+  return (
+    <div ref={ref} className="relative">
+      <Button size="sm" variant="outline" onClick={onToggle} aria-expanded={open}>{button}</Button>
+      {open && <div role="dialog" className="absolute top-full right-0 z-30 mt-2 w-80 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg">{children}</div>}
+    </div>
+  )
 }
