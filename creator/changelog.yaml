@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.16.3
+  zh: "发布时能设视频封面、直接上传文件；账号卡片改成显示上次发布、采集成没成；发布进度能展开看每一步。"
+  en: "Set a video cover and upload files right in the publish dialog; account cards show whether the last publish and collection worked; publishing progress can be expanded step by step."
 - version: 0.16.2
   zh: "手机上看内容更宽松，返回按层级退回；新建内容不用选类型；助手回复里提到的文件能直接点开。"
   en: "Content is easier to read on phones and Back steps up one level at a time; new content no longer asks for a type; files the assistant mentions open with a tap."

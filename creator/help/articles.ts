@@ -122,10 +122,10 @@ export const overview: Article = {
 
 左侧「工作台 → 运营总览」，从上到下：
 
-- **四个数字**：粉丝（全部账号最近一次采集的合计，旁边是近 30 天发布了几条）、待发布文章（写好了还没发的）、已连接社媒（登录着的账号数）、发布异常（发布或自检出了问题的账号数，点它去「账号」页处理）。点哪个就去对应的地方；
+- **四个数字**：粉丝（全部账号最近一次采集的合计，旁边是近 30 天发布了几条）、待发布文章（写好了还没发的）、已连接社媒（登录着的账号数）、发布异常（发布出了问题的账号数，点它去「账号」页处理）。点哪个就去对应的地方；
 - **今日工作**：现在该处理的事：写好了还没发的文章（「去发布」）、社媒发布流程需要修复（「交给助手修」）、这周的总结还没写（「现在写」）。不想看的点「×」忽略，数量变多了会再出现；
 - **每周总结**：最新一期每周总结的标题和结论，「查看每周总结」打开全文（右上角的「查看每周总结」也一样）；
-- **账号**：每个账号的平台、数据采集时间、发布自检状态（正常、尚未自检、发布异常、登录已失效）。点账号名去「账号」，「管理账号」也去那里；
+- **账号**：每个账号的平台、数据采集时间、发布状态（正常、还没发过、发布异常、登录已失效）。点账号名去「账号」，「管理账号」也去那里；
 - **更多运营数据**（点开）：待发布的文章、选题（选题是空的时候能直接「出一批选题」）。
 
 ![运营总览：四个数字、今日工作、每周总结](https://fsu.creght.com/site/2103669300995821568/1791357359359__creator_help_overview_v2.png)
@@ -136,7 +136,7 @@ export const overview: Article = {
 
 ![每周总结：最新一期](https://fsu.creght.com/site/2103669300995821568/1791356480228__creator_help_reports.png)
 
-- **立即写本周总结**：现在就让助手写一期，和每周自动写的一样，一般几分钟。按钮变成「进行中 · 看过程」时，点它能看助手每一步在做什么；
+- **立即写本周总结**：现在就让助手写一期，和每周自动写的一样，一般几分钟。按钮变成「进行中 · 查看对话」时，点它能看助手每一步在做什么；
 - **AI 要求**：助手每次写总结都照这份要求做。想重点看什么、换什么格式，改这里，下一期就按新的写；改坏了能「恢复默认」；
 - **看助手怎么写的**：打开写这一期的那段对话；「全部每周总结」回到列表；
 - 数字和各页面出自同一份统计，不是助手自己算的。各账号分开说，不同平台的浏览、点赞口径不同，不加在一起比；
@@ -145,10 +145,10 @@ export const overview: Article = {
 
 Workspace → Operations overview in the sidebar, from top to bottom:
 
-- **Four numbers**: Followers (the total across accounts from the latest collection, plus how many posts went out in the last 30 days), Versions to review, Social accounts (signed in), Publishing issues (accounts whose publishing or self-test failed; click it to handle them on the Accounts page). Click one to go there;
+- **Four numbers**: Followers (the total across accounts from the latest collection, plus how many posts went out in the last 30 days), Versions to review, Social accounts (signed in), Publishing issues (accounts whose publishing failed; click it to handle them on the Accounts page). Click one to go there;
 - **Today's work**: what needs you now: articles ready to publish ("Publish"), social publishing that needs repair ("Have the assistant fix it"), this week's summary not written yet ("Write now"). Click "×" to dismiss one; it comes back if the number grows;
 - **Weekly summary**: the title and summary of the newest weekly summary; "View weekly summary" opens it (so does "View weekly summary" at the top right);
-- **Accounts**: each account's platform, data collection time and publishing check (Healthy, Not checked, Publishing issue, Login expired). Click a name to go to Accounts; "Manage accounts" goes there too;
+- **Accounts**: each account's platform, data collection time and publishing status (Healthy, Nothing published yet, Publishing issue, Login expired). Click a name to go to Accounts; "Manage accounts" goes there too;
 - **More operations data** (click to expand): articles ready to publish, and topics (when there are none, "Suggest topics" is right there).
 
 ![Operations overview: four numbers, today's work, latest weekly summary](https://fsu.creght.com/site/2103669300995821568/1791357359359__creator_help_overview_v2.png)
@@ -159,7 +159,7 @@ Workspace → Weekly summary in the sidebar. Every 7 days a schedule hands the s
 
 ![Weekly summary: the latest weekly summary](https://fsu.creght.com/site/2103669300995821568/1791356480228__creator_help_reports.png)
 
-- **Write this week's summary**: have the assistant write one now, same as the weekly one; it usually takes a few minutes. While the button shows "In progress · View progress", click it to watch each step;
+- **Write this week's summary**: have the assistant write one now, same as the weekly one; it usually takes a few minutes. While the button shows "In progress · View chat", click it to watch each step;
 - **AI instructions**: the assistant follows these every time. Change what to focus on or the format here, and the next summary follows the new version; "Restore default" undoes your edits;
 - **See how it was written**: opens the chat that wrote this summary; "All weekly summaries" goes back to the list;
 - The numbers come from the same stats as the pages, not from the assistant's own math. Each account is reported separately: platforms count views and likes differently, so they're never added up;
@@ -170,7 +170,7 @@ Workspace → Weekly summary in the sidebar. Every 7 days a schedule hands the s
 export const social: Article = {
   id: 'social',
   title: { zh: '社交媒体', en: 'Social media' },
-  summary: { zh: 'X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站、知乎：看账号状态、粉丝和互动，采集数据，自检。', en: 'X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili, Zhihu: account status, followers and engagement, collecting stats, self-tests.' },
+  summary: { zh: 'X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站、知乎：看账号状态、粉丝和互动，采集数据。', en: 'X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili, Zhihu: account status, followers and engagement, collecting stats.' },
   body: {
     zh: `社交媒体页看账号和数据。文章的编辑、发布在「内容中心」里做（见「内容中心」一篇），排期在「发布日历」里看。
 
@@ -208,7 +208,7 @@ export const social: Article = {
 
 第二个页签「数据表现」，上面选账号和时间段（近 7 / 30 / 90 天）：
 
-- 账号卡片：登录状态、粉丝、上次采集时间，「打开主页」「立即采集」，以及上次自检的结果；
+- 账号卡片：登录状态、粉丝、上次采集时间，「打开主页」「立即采集」，以及上次发布、采集成没成（成功但有没做成的次要项，比如话题没加上，会逐条写出来）；
 - 这段时间发布了几条、新增粉丝和互动，每天的变化图（要采集过两天以上才画得出来）；
 - 「帖子」列表：每条的各项数据，点表头按那一列排；可以只看这段时间发的，也可以看全部。点标题打开它出自的文章和发布记录。
 
@@ -221,11 +221,11 @@ Facebook 公共主页使用官方 API 连接时，近期帖子、数据表现和
 每 6 小时自动采集一次粉丝和每条帖子的数据（Annulo 要开着）。在平台上直接发的帖子也会收进来。
 要最新的：账号卡片上「立即采集」，或者「账号概览」里「全部重新采集」（一个一个账号来）。采集要打开浏览器跑一会儿，太频繁可能被平台限流。
 
-## 自检和修复
+## 发布、采集失败了
 
-平台改版后，发帖、采集的流程可能走不通。每天 08:30 会自检一次：走一遍登录、读数据、打开发帖框、找发布按钮，不真的发。
-- 账号卡片上能看上次自检的结果，点「自检」现在就测一次（小红书账号的卡片上没有自检）；
-- 走不通时，账号卡片上会说是哪一步，运营总览的「今日工作」会出现「社媒发布流程需要修复」。点「交给助手修」，助手照失败时的截图更新这个平台的发布脚本，改完点「重新自检」；
+平台改版后，发帖、采集的流程可能走不通。登录有没有过期，每 6 小时的自动采集会顺带检查。
+- 走不通时，账号卡片上会说是哪一步，运营总览的「今日工作」会出现「社媒发布流程需要修复」。点「交给助手修」，助手照失败时的截图更新这个平台的发布脚本；
+- 改完再真做一次：采集失败的点「立即采集」，发布失败的在那条内容旁边点「重新发布」。成功了，失败的提示就消失；
 - 一直显示「发布中」、其实没在跑（比如发到一半关了 Annulo）：点「标记为发布失败」再重新发。重新发布前会先去平台上找这一条，已经发出去的不会重发。
 
 ## 登录在别的电脑
@@ -267,7 +267,7 @@ At the top right, "Manage accounts" goes to Accounts and "Create content" starts
 
 The second tab, "Performance". Pick an account and a period at the top (last 7 / 30 / 90 days):
 
-- Account card: login status, followers, last collection, "Profile" and "Collect now", and the last self-test result;
+- Account card: login status, followers, last collection, "Profile" and "Collect now", and whether the last publish and collection worked (minor things that didn't, like a hashtag that wasn't added, are listed);
 - Posts published in the period, new followers and engagement, and a daily chart (it needs at least two days of collection);
 - "Posts" list: each post's numbers; click a column header to sort by it. Show only posts from the period, or all. Click a title to open its article and publishing record in Content center.
 
@@ -281,11 +281,11 @@ For Facebook Pages connected through the official API, "View comments" is availa
 Followers and every post's numbers are collected every 6 hours (Annulo must be open). Posts you made directly on the platform are picked up too.
 For the latest numbers: "Collect now" on the account card, or "Collect all again" on the Accounts tab (one account at a time). Collecting runs a browser for a while; doing it too often can get you rate-limited.
 
-## Self-test and repair
+## When publishing or collecting fails
 
-When a platform changes its pages, posting or collecting can break. A self-test runs every day at 08:30: it walks through login, reading data, opening the composer and finding the post button, without posting.
-- The account card shows the last result; click "Self-test" to run one now (Xiaohongshu cards don't have a self-test);
-- When it fails, the card says which step, and "Social publishing needs repair" appears in Today's work on the overview. Click "Have the assistant fix it"; the assistant updates that platform's posting script from the failure screenshot. Then click "Test again";
+When a platform changes its pages, posting or collecting can break. Whether the login has expired is checked by the automatic collection every 6 hours.
+- When it fails, the card says which step, and "Social publishing needs repair" appears in Today's work on the overview. Click "Have the assistant fix it"; the assistant updates that platform's posting script from the failure screenshot;
+- Then do it for real once more: "Collect now" for a failed collection, "Publish again" next to a failed post. Once it works, the failure notice goes away;
 - Stuck on "Publishing" but nothing is running (say, Annulo was closed mid-post): click "Mark as failed" and publish again. A retry first looks for the post on the platform, so one that already went out isn't posted twice.
 
 ## Signed in on another computer
@@ -332,7 +332,7 @@ export const content: Article = {
 - 选题上「写成文章」：写这个选题，同样先选类型，可以补充要点或草稿。
 - 在 Notion 里写好的：在「这篇想写什么」里只粘那篇 Notion 页面的链接，点「从 Notion 导入」存成草稿，图片存进资料库（要先在 Annulo 的 设置 → MCP 里连上 Notion）。文章页标题下面写着来源，文档改了会提示「文档有更新」，点「从文档更新」拉回来；这边改过正文的，覆盖前会先问。
 
-交给助手写的，页面上显示「助手正在写…」，一般几分钟，点「看过程」能看它每一步。写好的文章是「草稿」，在「文章」页签里。长期的写法在页面右上角「更多 → 写作要求」里改。
+交给助手写的，页面上显示「助手正在写…」，一般几分钟，点「查看对话」能看它每一步。写好的文章是「草稿」，在「文章」页签里。长期的写法在页面右上角「更多 → 写作要求」里改。
 助手只用「我的定位」里写了的个人经历，不编数据和案例；资料库里有对得上的图会配上。
 
 ## 编辑文章
@@ -407,7 +407,7 @@ Three ways to start:
 - "Write article" on a topic: writes that topic, again after picking a type; you can add points or a draft.
 - Written in Notion: paste just the Notion page link into "What to write" and click "Import from Notion" to save it as a draft, with images saved to your library (connect Notion first in Annulo, Settings → MCP). The article page shows the source under the title; when the document changes it says "Document changed", and "Update from document" pulls it in, asking first if you edited the body here.
 
-While the assistant writes, the page shows "The assistant is writing…", usually for a few minutes; "View progress" shows each step. The result is a "Draft" under Articles. Change the long-term instructions under "More → Writing instructions" at the top right.
+While the assistant writes, the page shows "The assistant is writing…", usually for a few minutes; "View chat" shows each step. The result is a "Draft" under Articles. Change the long-term instructions under "More → Writing instructions" at the top right.
 The assistant only uses personal stories you wrote in My profile and doesn't make up data or cases; matching images from the Library are added.
 
 ## Editing an article
@@ -537,9 +537,9 @@ Click "Save" at the bottom of the page; the next topics and drafts follow the ne
 export const channels: Article = {
   id: 'channels',
   title: { zh: '账号', en: 'Accounts' },
-  summary: { zh: '添加和移除社媒账号、登录、发布自检；登录状态只在这台电脑上。', en: 'Add and remove social accounts, log in, self-test publishing; logins stay on this computer.' },
+  summary: { zh: '添加和移除社媒账号、登录、处理发布失败；登录状态只在这台电脑上。', en: 'Add and remove social accounts, log in, handle failed posts; logins stay on this computer.' },
   body: {
-    zh: `左侧下方的「账号」：连接你要运营的社媒账号。添加、登录、发布自检都在这里，数据在「社交媒体」里看。
+    zh: `左侧下方的「账号」：连接你要运营的社媒账号。添加、登录、处理发布和采集的失败都在这里，数据在「社交媒体」里看。
 
 ![账号](https://fsu.creght.com/site/2103669300995821568/1791356475190__creator_help_channels.png)
 
@@ -558,14 +558,14 @@ export const channels: Article = {
 - 「立即采集」：现在采集一次粉丝和帖子数据；
 - 「重新登录」：登录过期、换了电脑、清了浏览器数据时用；账号登录在别的电脑上时是「在这台电脑登录」；
 - 「看数据」：去「社交媒体 → 数据表现」；
-- 发布自检和发布失败的提示，见「社交媒体」一篇。
+- 发布、采集失败的提示，见「社交媒体」一篇。
 
 账号已经加上、但这个平台在项目里还没接入的，会显示「未接入」，点「让助手接入 …」（后面是平台名）交给助手把这个平台接进来。
 
 ## 移除
 
 「移除」，再「确认移除」。只是不再在这里运营它，账号本身不受影响，之后还能再添加回来。`,
-    en: `"Accounts" at the bottom of the sidebar connects the social accounts you run. Adding, logging in and publishing self-tests happen here; the numbers are under Social media.
+    en: `"Accounts" at the bottom of the sidebar connects the social accounts you run. Adding, logging in and fixing failed posts or collections happen here; the numbers are under Social media.
 
 ![Accounts](https://fsu.creght.com/site/2103669300995821568/1791356475190__creator_help_channels.png)
 
@@ -584,7 +584,7 @@ Each account has a small card at the top with its platform and status (Connected
 - "Collect now": collects followers and post numbers now;
 - "Sign in again": when the login expired, or after switching computers or clearing browser data. For an account logged in on another computer it says "Log in on this computer";
 - "View data": goes to Social media → Performance;
-- Publishing self-tests and failed posts: see "Social media".
+- Failed posts and collections: see "Social media".
 
 If the account is added but its platform isn't set up in this project yet, it shows "Not set up". Click "Set up … with the assistant" (the platform name is in the button) to have the assistant add the platform.
 
@@ -612,8 +612,8 @@ export const assistant: Article = {
 
 ## 按钮和助手
 
-后台很多按钮是直接执行的（采集、自检、发布），不经过助手。
-要 AI 读东西、想东西的按钮（出一批选题、新建文章里的让 AI 写、AI 修改、改写、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；按钮变成「进行中 · 看过程」，点它打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
+后台很多按钮是直接执行的（采集、发布），不经过助手。
+要 AI 读东西、想东西的按钮（出一批选题、新建文章里的让 AI 写、AI 修改、改写、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；按钮变成「进行中 · 查看对话」，点它打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
 
 ## 不会替你做的
 
@@ -655,8 +655,8 @@ Annulo「设置 → 项目」里的「给助手的说明」：写你对这个项
 
 ## Buttons and the assistant
 
-Many buttons run directly (collecting, self-tests, publishing) without the assistant.
-Buttons that need AI to read or think (Suggest topics, Let AI write it, Ask AI to revise, Rewrite, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. The button turns into "In progress · View progress"; click it to open that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
+Many buttons run directly (collecting, publishing) without the assistant.
+Buttons that need AI to read or think (Suggest topics, Let AI write it, Ask AI to revise, Rewrite, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. The button turns into "In progress · View chat"; click it to open that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
 
 ## What it won't do for you
 
@@ -721,7 +721,6 @@ export const settings: Article = {
 | 写每周总结（交给助手） | 7 天 |
 | 发布到点的社媒帖子 | 各平台 5~15 分钟 |
 | 采集社媒数据 | 各平台 6 小时 |
-| 社媒自检 | 每天 08:30 |
 
 没有某个平台的账号时，那个平台的任务什么都不做。**只在 Annulo 开着的时候跑**，关机或退出期间错过的，下次打开时补跑一次。
 
@@ -763,7 +762,6 @@ Settings → Schedules lists what the back office runs by itself. Each shows its
 | Write the weekly summary (handed to the assistant) | 7 days |
 | Publish social posts that are due | 5–15 minutes per platform |
 | Collect social stats | 6 hours per platform |
-| Social self-test | Daily at 08:30 |
 
 A platform's tasks do nothing when you have no account on it. **They only run while Annulo is open**; anything missed while the computer was off or Annulo was closed runs once when you open it again.
 
@@ -799,7 +797,7 @@ X 登录后一直跳验证的，可以让助手看一下（X 可能识别了自�
 
 - 看文章「发布记录」里的报错，改好后重新发布。重新发布前会先去平台上找这一条，已经发出去的不会重发；
 - 一直显示「发布中」：点「标记为发布失败」再重新发；
-- 报「页面可能改了」，或者运营总览出现「社媒发布流程需要修复」：平台改版了，点「交给助手修」，改完点「重新自检」；
+- 报「页面可能改了」，或者运营总览出现「社媒发布流程需要修复」：平台改版了，点「交给助手修」，改完点那条内容的「重新发布」；
 - X 报「内容重复」：X 不让发和之前一样的内容，改一下正文再发；
 - 抖音、B 站发出去后还要等平台审核，审核期间平台上可能暂时看不到。
 
@@ -835,7 +833,7 @@ If X keeps asking for verification after you log in, ask the assistant to take a
 
 - Read the error in the article's publishing record, fix it and publish again. A retry first looks for the post on the platform, so one that already went out isn't posted twice;
 - Stuck on "Publishing": click "Mark as failed", then publish again;
-- "The page may have changed", or "Social publishing needs repair" on the overview: the platform changed. Click "Have the assistant fix it", then "Test again";
+- "The page may have changed", or "Social publishing needs repair" on the overview: the platform changed. Click "Have the assistant fix it", then "Publish again" on that post;
 - X says "duplicate content": X won't accept the same text twice; tweak it and post again;
 - Douyin and Bilibili review videos after posting; the video may not be visible on the platform until that's done.
 

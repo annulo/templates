@@ -27,7 +27,7 @@ description: 运营后台的通用结构和做法：业务表怎么读写、页�
 - `pages/Index.tsx`：外壳：左侧模块导航，右侧按 `?view=` 渲染视图；状态都在地址栏参数里（view、tab、channel…），读写用这里的 `readParam` / `writeParam`
 - `components/views/`：各模块的视图，一个模块一个文件
 - `components/charts/TrendChart.tsx`：折线图（纯 SVG），新图表仿照它写，放 `components/charts/`，不要引入图表库
-- `components/Task.tsx`：交给助手的任务。`TaskButton` 开一段对话、在右侧打开，跑的时候变成「进行中 · 看过程」；`TaskRequirements` 显示并编辑任务的写法（「AI 要求」）；`TaskRunning` / `TaskFailed` 显示在跑的和上次失败的
+- `components/Task.tsx`：交给助手的任务。`TaskButton` 开一段对话、在右侧打开，跑的时候变成「进行中 · 查看对话」；`TaskRequirements` 显示并编辑任务的写法（「AI 要求」）；`TaskRunning` / `TaskFailed` 显示在跑的和上次失败的
 - `components/AskButton.tsx`：把一句话交给助手（`askInNewChat`），给开放的、要改代码的活（排查问题、一次性配置）
 - `components/RunButton.tsx`：执行本机函数的按钮（确定的操作：检测、同步、发布），带进度，缺密钥时给「去设置」。默认把进度和报错写在按钮下面，只适合单独放的按钮；**和别的按钮排在一行时一律加 `inline`**，报错用 `onError` 交给这一行自己显示，否则会把旁边的按钮顶歪
 - `components/ui.tsx`：Button、Segmented、RangeToggle、Badge、Panel、Notice、Skeleton、Dialog、Field、PageHeader
@@ -60,7 +60,7 @@ export const remote = ['publish']        // 要电脑（浏览器登录态、密
 - 用户点按钮、要 AI 读东西想东西的活（出选题、写文章、改文章、写总结）→ 写成任务 `tasks/<id>.md`，按钮用 `TaskButton`；本机函数只负责取数（`*.context`）和存表（`*.save`）。开放的、要改代码的活 → `AskButton`。
 - **产出内容的任务，用户关心的写法单独一个文件**：默认 `prompts/<id>.md`，用户改的存 `user/prompts/<id>.md`（有它就用它）；发起它的按钮旁边放 `TaskRequirements`。取数、存表、字段格式、平台限制放在任务文件的「规则」里，用户改不到。按固定流程配系统的任务没有写法文件。
 - **`user/` 目录是用户自己的东西**：用户在对话里让你改的写法放这里，不要改 `prompts/` 下的默认和任务文件（那是模板的，升级会覆盖）。
-- **交给助手的按钮都新开一段对话在后台跑**，在右侧打开，按钮变成「进行中 · 看过程」，跑完恢复、页面重拉数据；不要把话塞进用户当前的对话。
+- **交给助手的按钮都新开一段对话在后台跑**，在右侧打开，按钮变成「进行中 · 查看对话」，跑完恢复、页面重拉数据；不要把话塞进用户当前的对话。
 - 页面上显示的失败、过期、没接入这些状态，旁边要有解决它的操作；灰掉的选项写明原因。
 
 ## 改导航、说法、起步步骤：改这几个配置文件

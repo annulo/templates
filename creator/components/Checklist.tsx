@@ -195,7 +195,7 @@ export default function Checklist({ ctx, mode = 'all' }: { ctx: Ctx; mode?: 'all
   )
 }
 
-/** 一项的主按钮：去页面 / 跑本机函数（按钮上带进度）/ 交给助手的任务（开一段对话，能看过程） */
+/** 一项的主按钮：去页面 / 跑本机函数（按钮上带进度）/ 交给助手的任务（开一段对话，能查看对话） */
 export function ChecklistItemAction({ ctx, it, onDone, onChat, compact = false }: { ctx: Ctx; it: Item; onDone: () => void; onChat: (chatId: string) => void; compact?: boolean }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')

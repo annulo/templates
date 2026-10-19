@@ -90,7 +90,7 @@ export function useTaskRuns(ids: string[], match: (r: TaskRun) => boolean = () =
 
 /**
  * 交给助手的任务按钮：点了开一段对话、在右侧打开（过程看得见）。
- * 这个任务有符合 match 的在跑时，按钮变成「进行中 · 看过程」，点了打开那段对话；跑完调 onFinished。
+ * 这个任务有符合 match 的在跑时，按钮变成「进行中 · 查看对话」，点了打开那段对话；跑完调 onFinished。
  * 要 AI 想、要写的活都用它，不在本机函数里调模型写长内容（见 AGENTS.md「后台功能怎么分」）。
  */
 export function TaskButton({
@@ -157,7 +157,7 @@ export function TaskButton({
 /**
  * 交给助手、要用户想清楚再跑的按钮（和内容中心「出一批选题」一样）：点了先弹窗，说清这次会做什么，
  * 写这一次的要求（灰字是这件任务的默认写法，不填就照它做；「改默认要求」改的是以后每次都用的），点「开始」才开一段对话交给助手。
- * 这次的要求作为参数 reqKey 传给任务，任务文件里要写明怎么用它。在跑时按钮变成「进行中 · 看过程」。
+ * 这次的要求作为参数 reqKey 传给任务，任务文件里要写明怎么用它。在跑时按钮变成「进行中 · 查看对话」。
  */
 export function TaskLaunchButton({
   task: id,
@@ -254,8 +254,9 @@ export function TaskLaunchButton({
   )
 }
 
-/** 正在跑的任务：一行一个，带「看过程」（在右侧打开那段对话） */
-export function TaskRunning({ runs, title, desc }: { runs: TaskRun[]; title: (r: TaskRun) => string; desc?: string }) {
+/** 正在跑的任务：一行一个，带「查看对话」（在右侧打开那段对话） */
+/** desc 可以按这次运行给（比如显示用户交代的那句要求），没给就不显示 */
+export function TaskRunning({ runs, title, desc }: { runs: TaskRun[]; title: (r: TaskRun) => string; desc?: string | ((r: TaskRun) => string) }) {
   if (!runs.length) return null
   return (
     <div className="space-y-2">
@@ -264,7 +265,7 @@ export function TaskRunning({ runs, title, desc }: { runs: TaskRun[]; title: (r:
           <Loader2 className="size-4 shrink-0 animate-spin text-primary-text" />
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold">{title(r)}</div>
-            {desc && <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>}
+            {(() => { const d = typeof desc === 'function' ? desc(r) : desc; return d ? <p className="mt-0.5 truncate text-xs text-muted-foreground" title={d}>{d}</p> : null })()}
           </div>
           <Button variant="outline" size="sm" onClick={() => openChat(r.chat_id)}>
             <MessageSquareText /> {tr('task.view')}

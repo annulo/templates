@@ -3,7 +3,7 @@ import { ArrowUpRight, BarChart3, Plus, RefreshCw, Trash2, UserRound } from 'luc
 import AddChannelDialog from '../AddChannelDialog'
 import RunButton from '../RunButton'
 import AskButton from '../AskButton'
-import { brokenOf, ProbeLine, PublishProblems, usePlatformHealth } from '../PlatformHealth'
+import { brokenOf, ActivityLine, PublishProblems, usePlatformHealth } from '../PlatformHealth'
 import { Button, ErrorDetails, Notice, PageHeader, cx, fmtTime, type Tone } from '../ui'
 import { dbList, removeChannel, shuttleImage, type Channel, type PlatformHealth, type SocialPost } from '../../lib/shuttle'
 import { CHANNEL_TYPES } from '../../lib/channels'
@@ -26,7 +26,7 @@ function connection(c: Channel, health: PlatformHealth[], posts: SocialPost[], m
 
 const DOT: Record<Tone, string> = { ok: 'bg-emerald-500', warn: 'bg-amber-500', bad: 'bg-destructive', primary: 'bg-primary', default: 'bg-muted-foreground/50' }
 
-/** 账号：只管连接（添加、移除、登录、自检），不放数据 */
+/** 账号：只管连接（添加、移除、登录），不放数据 */
 export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; current: string; setCurrent: (id: string) => void }) {
   const [adding, setAdding] = useState(false)
   // 添加前已有的账号：列表重新读回来后选中多出来的那个（对话框只告诉我们加了哪种，一次勾好几个时选第一个）
@@ -111,7 +111,7 @@ export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; curre
 
           {selected && (
             <div className="space-y-4">
-              {/* 每个账号一张卡片：头部是头像、名字、状态和操作（看数据、移除），下面是发布自检 */}
+              {/* 每个账号一张卡片：头部是头像、名字、状态和操作（看数据、移除），下面是上次发布、采集成没成 */}
               {confirmBox}
               {isSocial(selected) ? (
                 <AccountConnection key={selected.id} actions={<><Button variant="outline" size="sm" onClick={() => ctx.go('social', { section: 'data', account: selected.id })}><BarChart3 />{tr('channels.view_data')}</Button>{removeBtn}</>} ch={selected} other={loggedInElsewhere(selected, machine)} health={health.rows} posts={posts} onOpenPost={(p) => p.article_id ? ctx.go('content', { article: p.article_id, version: p.id }) : ctx.go('social', { post: p.id })} onDone={() => { health.reload(); loadPosts(); ctx.reloadChannels() }} />
@@ -137,7 +137,7 @@ export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; curre
   )
 }
 
-/** 社媒账号的连接：登录状态、重新登录、打开主页、发布自检。采集和数据在社交媒体页 */
+/** 社媒账号的连接：登录状态、重新登录、打开主页、上次发布和采集的结果。采集和数据在社交媒体页 */
 function AccountConnection({ ch, actions, other, health, posts, onOpenPost, onDone }: { ch: Channel; actions: ReactNode; other: string; health: PlatformHealth[]; posts: SocialPost[]; onOpenPost: (p: SocialPost) => void; onDone: () => void }) {
   const [error, setError] = useState('')
   const expired = !other && ch.login_status === 'expired'
@@ -173,7 +173,7 @@ function AccountConnection({ ch, actions, other, health, posts, onOpenPost, onDo
       </div>
       {error && <ErrorDetails message={error} />}
       <PublishProblems account={ch} rows={health} posts={posts} onOpenPost={onOpenPost} onChanged={onDone} />
-      {platformOf(ch)?.probe && !expired && !other && <ProbeLine ch={ch} rows={health} onChanged={onDone} />}
+      {!expired && !other && <ActivityLine ch={ch} rows={health} />}
     </div>
   )
 }

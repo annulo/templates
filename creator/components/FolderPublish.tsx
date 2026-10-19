@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Check, FileText, Film, Image as ImageIcon, Library, Loader2, Newspaper, Send, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Check, FileText, Film, HardDrive, Image as ImageIcon, Library, Loader2, Newspaper, Play, Send, X } from 'lucide-react'
 import AssetPicker from './AssetPicker'
+import Lightbox from './Lightbox'
 import RichEditor from './RichEditor'
-import { ChannelAvatar } from './ArticlePublish'
-import { Badge, Button, Dialog, Notice, Segmented, cx, inputCls, toast } from './ui'
+import { ChannelAvatar, PlatformTag } from './ArticlePublish'
+import { Badge, Button, Dialog, Notice, Segmented, cx, fmtTime, inputCls, toast } from './ui'
 import { DateTimeChip } from './DateTimePicker'
 import { IMAGE, MD, VIDEO, base, fmtSize, isDraft, joinPath, parent, workSrc, type Entry } from './Folder'
 import { enqueue } from '../lib/publishQueue'
 import { fileSrc } from '../lib/files'
 import { tr, useT } from '../lib/i18n'
-import { CHANNEL_TYPES } from '../lib/channels'
-import { runLocal, type Article } from '../lib/shuttle'
+import { dbList, runLocal, uploadLocalFile, type Article } from '../lib/shuttle'
 import { SOCIAL, loggedInElsewhere, useElsewhere } from '../lib/social'
 import { FIELDS } from '../plugins/social/local/_fields'
 import { lengthOn, supports } from '../local/_types'
@@ -20,7 +20,15 @@ import type { Ctx } from './views/types'
 //   发成：图文（文字 + 一组图）/ 视频（简介 + 一个视频）/ 长文（Markdown 转成富文本，图在正文里）。打开时按文件夹里有什么猜一个。
 //   文字：从文件夹里挑一份 .md（开头 --- 包住的 title、tags 填进标题和话题，能当场改）；
 //   图片、视频：文件夹里的直接点选，也能从资料库选。挑了文案自动配上和它在同一个目录的图、视频（用户自己点过的不动）。
+//   三样都能「上传本机」：传上来的文件复制进这条内容的文件夹（folder.importLocal），和文件夹里原有的一样点选、发布。
+//   视频封面（小红书、抖音用，插件 FIELDS 的 videoCover）：文件夹里的图点选或从资料库选；内容上设过封面就用它，没有就挑文件夹里名字带「封面 / cover」的图，都没有用平台默认的那一帧。
 // 选好账号、现在发或排期：folder.publish 每个账号新建一条帖子（存的就是这次挑的内容，排期到点照它发），放进后台发布队列。
+
+/** 文案：名字带「文案 / copy」的 md，或者开头写了 title 的 md（见组件里的 isCopy）；成片：名字带「成片 / final」的视频（挑选规则，弹窗里有说明） */
+/** 开头 --- 包住的那几行里写了 title（文案的写法）；正文第一行的 # 标题不算，分镜、说明文档也常这样开头 */
+const frontTitle = (text: string) => { const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/); return !!m && /^title:\s*\S/m.test(m[1]) }
+const copyName = (p: string) => /文案|copy/i.test(p.split('/').pop() ?? '')
+const isFinal = (p: string) => /成片|final/i.test(p.split('/').pop() ?? '')
 
 type Kind = 'post' | 'video' | 'article'
 
@@ -84,33 +92,73 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   const [video, setVideo] = useState<Media | null>(null)
   // 用户自己点过图片、视频就不再跟着文案自动换
   const [touched, setTouched] = useState({ images: false, video: false })
-  const [picker, setPicker] = useState<'image' | 'video' | null>(null)
+  // 视频封面：null 是平台默认的那一帧
+  const [cover, setCover] = useState<Media | null>(null)
+  const [picker, setPicker] = useState<'image' | 'video' | 'cover' | null>(null)
+  // 上传本机：给哪一栏传（配图可以一次传几张），进度 0–1，null 是没在传
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [uploadFor, setUploadFor] = useState<'image' | 'video' | 'cover'>('image')
+  const [uploading, setUploading] = useState<number | null>(null)
   const [picked, setPicked] = useState<string[]>([])
   // 定时发布的时间（本地时间 'YYYY-MM-DDTHH:mm'），空的是现在发
   const [at, setAt] = useState('')
   const [result, setResult] = useState<Record<string, string>>({})
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
+  // 预览（视频卡片上的播放按钮）：大窗口播一遍，看对了再选
+  const [preview, setPreview] = useState('')
 
   const media = (ref: string): Media => ({ ref, src: isUrl(ref) ? fileSrc(ref) : workSrc(`${root}/${ref}`), name: isUrl(ref) ? t('from_library') : ref })
   const folderImages = useMemo(() => (files ?? []).filter((e) => IMAGE.test(e.path)).sort((a, b) => a.path.localeCompare(b.path, 'zh', { numeric: true })), [files])
-  const folderVideos = useMemo(() => (files ?? []).filter((e) => VIDEO.test(e.path)).sort((a, b) => b.mtime - a.mtime), [files])
-  const copies = useMemo(() => (files ?? []).filter((e) => MD.test(e.path) && !isDraft(e.path)), [files])
+  // 挑选规则（弹窗里写给人看，人自己整理文件时照着起名）：名字带「成片」的视频优先、默认选上；名字带「文案」的 md 排前面、默认用它，
+  // 其余 md（分镜、脚本…）收进「更多」，没有带「文案」的就全摆出来
+  // 开头写了 title 的 md 也算文案（文件名随手起的也能认出来）；打开时读一遍每份 md 的开头
+  const [titled, setTitled] = useState<Set<string>>(new Set())
+  const userPicked = useRef(false)
+  const isCopy = (p: string) => copyName(p) || titled.has(p)
+  const folderVideos = useMemo(() => (files ?? []).filter((e) => VIDEO.test(e.path)).sort((a, b) => Number(isFinal(b.path)) - Number(isFinal(a.path)) || b.mtime - a.mtime), [files])
+  const copies = useMemo(() => (files ?? []).filter((e) => MD.test(e.path) && !isDraft(e.path)).sort((a, b) => Number(isCopy(b.path)) - Number(isCopy(a.path))), [files, titled])
+  const [moreCopies, setMoreCopies] = useState(false)
+  const named = copies.filter((e) => isCopy(e.path))
+  const shownCopies = !named.length || moreCopies ? copies : copies.filter((e) => isCopy(e.path) || e.path === copy)
+  const hiddenCopies = copies.length - shownCopies.length
+
+  // 这条内容已经发过 / 排期到哪些账号：账号列表里提示「已发布 · 1 天前」「已排期 · 10月20日 9:00」，免得同一份重复发
+  const [sent, setSent] = useState<Record<string, { status: string; at?: string }>>({})
+  useEffect(() => {
+    if (!open) return
+    setSent({})
+    dbList('social_posts').then((l) => {
+      const m: Record<string, { status: string; at?: string }> = {}
+      for (const p of l.filter((p) => p.article_id === article.id && (p.status === 'published' || p.status === 'scheduled'))) {
+        const at = p.status === 'published' ? p.published_at : p.scheduled_at
+        const had = m[p.channel_id]
+        if (!had || (had.status !== 'published' && p.status === 'published') || (had.status === p.status && (at ?? '') > (had.at ?? ''))) m[p.channel_id] = { status: p.status, at }
+      }
+      setSent(m)
+    }).catch(() => {})
+  }, [open, article.id])
 
   // 打开时：读文件夹，猜发成什么，挑文案（名字带「文案 / copy」的优先，再是离视频近的），配好图、视频
   useEffect(() => {
     if (!open) return
-    setFiles(null); setError(''); setResult({}); setPicked([]); setAt(''); setTouched({ images: false, video: false })
+    setFiles(null); setError(''); setResult({}); setPicked([]); setAt(''); setMoreCopies(false); setTitled(new Set()); userPicked.current = false; setTouched({ images: false, video: false })
     runLocal<{ path: string; entries: Entry[] }>('folder.list', { article_id: article.id }).then((r) => {
       const fs = r.entries.filter((e) => !e.dir)
       setRoot(r.path)
       setFiles(fs)
+      const named = fs.filter((e) => IMAGE.test(e.path) && /封面|cover/i.test(base(e.path))).sort((a, b) => b.mtime - a.mtime)[0]
+      setCover(article.video_cover ? { ref: article.video_cover, src: fileSrc(article.video_cover), name: t('from_library') } : named ? { ref: named.path, src: workSrc(`${r.path}/${named.path}`), name: named.path } : null)
       const k = guessKind(fs)
       setKind(k)
       const mds = fs.filter((e) => MD.test(e.path) && !isDraft(e.path))
       const vid = fs.filter((e) => VIDEO.test(e.path)).sort((a, b) => b.mtime - a.mtime)[0]
-      const score = (e: Entry) => (/文案|copy/i.test(base(e.path)) ? 0 : 10) + (vid ? near(parent(vid.path), e.path) : 0)
-      setCopy([...mds].sort((a, b) => score(a) - score(b) || b.mtime - a.mtime)[0]?.path ?? '')
+      return Promise.all(mds.map((e) => runLocal<{ text: string }>('folder.read', { article_id: article.id, path: e.path }).then((x) => (frontTitle(x.text) ? e.path : '')).catch(() => ''))).then((hits) => {
+        const ok = new Set(hits.filter(Boolean))
+        setTitled(ok)
+        const score = (e: Entry) => (copyName(e.path) || ok.has(e.path) ? 0 : 10) + (vid ? near(parent(vid.path), e.path) : 0)
+        if (!userPicked.current) setCopy([...mds].sort((a, b) => score(a) - score(b) || b.mtime - a.mtime)[0]?.path ?? '')
+      })
     }).catch((e) => setError((e as Error).message))
   }, [open, article.id])
 
@@ -119,7 +167,9 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     if (!open) return
     void import('./rich/mdExtensions').then((x) => setExts(x.default))
     if (!copy) { setMd(''); setPlain(''); setMdVer((v) => v + 1); setTitle(article.title); setTags(''); return }
+    let stale = false
     Promise.all([runLocal<{ text: string }>('folder.read', { article_id: article.id, path: copy }), import('../lib/mdhtml')]).then(([r, m]) => {
+      if (stale) return
       const c = parseCopy(r.text)
       setMd(c.body)
       setPlain(htmlPlain(m.mdToHtml(c.body)))
@@ -127,6 +177,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
       setTitle(c.title || article.title)
       setTags(c.tags.join(', '))
     }).catch((e) => setError((e as Error).message))
+    return () => { stale = true }
   }, [copy, fill, article.id, open])
   useEffect(() => {
     if (!files) return
@@ -136,7 +187,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
       setImages(folderImages.filter((e) => near(dir, e.path) === best).slice(0, 18).map((e) => media(e.path)))
     }
     if (!touched.video) {
-      const v = [...folderVideos].sort((a, b) => near(dir, a.path) - near(dir, b.path))[0]
+      const v = [...folderVideos].sort((a, b) => near(dir, a.path) - near(dir, b.path) || Number(isFinal(b.path)) - Number(isFinal(a.path)))[0]
       setVideo(v ? media(v.path) : null)
     }
   }, [copy, files, root])
@@ -154,6 +205,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
 
   const machine = useElsewhere(ctx.channels)
   const accounts = ctx.channels.filter((ch) => !!SOCIAL[ch.type])
+  const coverUsed = kind === 'video' && accounts.some((ch) => FIELDS[ch.type]?.videoCover)
   const blocked = (ch: { type: string; login_status?: string } & Parameters<typeof loggedInElsewhere>[0]) => !supports(FIELDS[ch.type], kind) ? t('unsupported', { kind: t(`kind_${kind}`) })
     : loggedInElsewhere(ch, machine) ? t('on_machine', { name: loggedInElsewhere(ch, machine) })
     : ch.login_status === 'expired' ? t('expired') : ''
@@ -168,7 +220,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     if (at && !(ts > Date.now())) { setError(t('future_time')); setRunning(false); return }
     try {
       const r = await runLocal<{ ready: { channel_id: string; post_id: string }[]; problems: { channel_id: string; problems: string[] }[] }>('folder.publish', {
-        article_id: article.id, kind, title, body, tags: tagList, images: images.map((i) => i.ref), video: video?.ref ?? '', channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}),
+        article_id: article.id, kind, title, body, tags: tagList, images: images.map((i) => i.ref), video: video?.ref ?? '', ...(kind === 'video' ? { video_cover: cover?.ref ?? '' } : {}), channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}),
       })
       const name = (id: string) => accounts.find((c) => c.id === id)?.name ?? ''
       if (!ts && r.ready.length) enqueue(r.ready.map((p) => ({ article_id: article.id, article_title: title || article.title, channel_id: p.channel_id, channel_name: name(p.channel_id), post_id: p.post_id })))
@@ -179,6 +231,38 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     } catch (e) { setError((e as Error).message) } finally { setRunning(false) }
   }
 
+  /** 上传本机：每个文件存成本机文件，复制进内容文件夹的最外层（重名的在名字后面加序号），再选上 */
+  const uploadLocal = async (list: File[]) => {
+    if (!list.length) return
+    setUploading(0); setError('')
+    try {
+      const taken = new Set((files ?? []).map((e) => e.path))
+      const added: string[] = []
+      for (const f of list) {
+        const r = await uploadLocalFile(f, setUploading)
+        const dot = f.name.lastIndexOf('.')
+        const stem = dot > 0 ? f.name.slice(0, dot) : f.name, ext = dot > 0 ? f.name.slice(dot) : ''
+        let to = f.name
+        for (let i = 2; taken.has(to); i++) to = `${stem} ${i}${ext}`
+        taken.add(to)
+        // 不在 Annulo 里打开的页面传到的是素材网址，复制不进文件夹：直接用网址
+        added.push(r.ref.startsWith('local:') ? (await runLocal<{ path: string }>('folder.importLocal', { article_id: article.id, url: r.ref, to })).path : r.ref)
+      }
+      // 先记下用户自己点过，不然文件列表一变，自动挑图、视频的会把刚传的换掉
+      if (uploadFor === 'image') { setTouched((x) => ({ ...x, images: true })); setImages((l) => [...l, ...added.filter((p) => !l.some((m) => m.ref === p)).map(media)]) }
+      if (uploadFor === 'video') { setTouched((x) => ({ ...x, video: true })); setVideo(media(added[0])) }
+      if (uploadFor === 'cover') setCover(media(added[0]))
+      const r = await runLocal<{ path: string; entries: Entry[] }>('folder.list', { article_id: article.id })
+      setFiles(r.entries.filter((e) => !e.dir))
+    } catch (e) { setError((e as Error).message) } finally { setUploading(null) }
+  }
+  /** 一栏右上角的按钮：上传本机、从资料库选 */
+  const pickers = (what: 'image' | 'video' | 'cover') => <span className="flex gap-1">
+    <Button size="sm" variant="ghost" disabled={uploading != null} onClick={() => { setUploadFor(what); fileInput.current?.click() }}>
+      {uploading != null && uploadFor === what ? <Loader2 className="animate-spin" /> : <HardDrive />}{uploading != null && uploadFor === what ? t('uploading', { n: Math.round(uploading * 100) }) : t('upload_local')}
+    </Button>
+    <Button size="sm" variant="ghost" disabled={uploading != null} onClick={() => setPicker(what)}><Library />{t('from_library')}</Button>
+  </span>
   const section = (label: string, extra?: ReactNode) => <div className="mb-1.5 flex items-center justify-between gap-2"><p className="text-sm font-medium">{label}</p>{extra}</div>
   const thumb = (m: Media, isVideo: boolean) => isVideo
     ? <video src={`${m.src}#t=0.5`} preload="metadata" muted playsInline className="size-full object-cover" />
@@ -207,21 +291,26 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
             {section(kind === 'video' ? t('text_video') : t('text'))}
             {copies.length ? <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs text-muted-foreground">{t('fill_from')}</span>
-              {copies.map((e) => <button key={e.path} type="button" onClick={() => { setCopy(e.path); setFill((x) => x + 1) }} title={t('fill_hint')} className={cx('inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs', copy === e.path ? 'border-primary/50 bg-primary/10 text-primary-text' : 'border-border hover:bg-muted')}><FileText className="size-3.5 shrink-0" /><span className="truncate">{e.path}</span></button>)}
+              {shownCopies.map((e) => <button key={e.path} type="button" onClick={() => { userPicked.current = true; setCopy(e.path); setFill((x) => x + 1) }} title={t('fill_hint')} className={cx('inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs', copy === e.path ? 'border-primary/50 bg-primary/10 text-primary-text' : 'border-border hover:bg-muted')}><FileText className="size-3.5 shrink-0" /><span className="truncate">{e.path}</span></button>)}
+              {hiddenCopies > 0 && <button type="button" onClick={() => setMoreCopies(true)} className="cursor-pointer rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">{t('more_copies', { n: hiddenCopies })}</button>}
             </div> : <p className="text-xs text-muted-foreground">{t('no_md')}</p>}
-            <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_200px]">
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('title_ph')} className={cx(inputCls, 'h-8')} />
-              <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder={t('tags_ph')} className={cx(inputCls, 'h-8')} />
-            </div>
-            <div className="mt-2">
+            <p className="mt-1.5 text-xs text-muted-foreground">{t('copy_rule')}</p>
+            {/* 每个框上面写它是什么：填进去以后 placeholder 就看不到了，光看内容分不清哪个是标题、哪个是话题 */}
+            <label className="mt-3 block space-y-1"><span className="block text-xs text-muted-foreground">{t('title_ph')}</span>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('title_ph')} className={cx(inputCls, 'h-8')} /></label>
+            <div className="mt-2 space-y-1">
+              <span className="block text-xs text-muted-foreground">{t(kind === 'video' ? 'desc_ph' : 'body_ph')}</span>
               {kind === 'article'
                 ? (exts ? <RichEditor key={`${copy}:${mdVer}`} markdown extensions={exts} resolveSrc={resolveSrc} value={md} onChange={setMd} placeholder={t('body_ph')} /> : <Loader2 className="size-4 animate-spin text-muted-foreground" />)
                 : <textarea value={plain} onChange={(e) => setPlain(e.target.value)} placeholder={t(kind === 'video' ? 'desc_ph' : 'body_ph')} className={cx(inputCls, 'min-h-40 resize-y py-2 leading-relaxed')} />}
             </div>
+            {/* 话题单独一行，放在正文后面（和发出去的样子一样：正文在前、话题在后） */}
+            <label className="mt-2 block space-y-1"><span className="block text-xs text-muted-foreground">{t('tags_label')}</span>
+              <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder={t('tags_ph')} className={cx(inputCls, 'h-8')} /></label>
           </div>
 
           {kind === 'post' && <div>
-            {section(t('images', { n: images.length }), <Button size="sm" variant="ghost" onClick={() => setPicker('image')}><Library />{t('from_library')}</Button>)}
+            {section(t('images', { n: images.length }), pickers('image'))}
             {/* 选中的按顺序排（第一张是封面），点 × 拿掉；下面是文件夹里所有的图，点了加到最后 / 拿掉 */}
             {images.length ? <div className="flex flex-wrap gap-2">
               {images.map((m, i) => <div key={m.ref} className="group relative size-20 overflow-hidden rounded-md border border-border" title={m.name}>
@@ -242,14 +331,39 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
           </div>}
 
           {kind === 'video' && <div>
-            {section(t('video'), <Button size="sm" variant="ghost" onClick={() => setPicker('video')}><Library />{t('from_library')}</Button>)}
+            {section(t('video'), pickers('video'))}
             <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
-              {[...folderVideos.map((e) => ({ ...media(e.path), size: e.size })), ...(video && isUrl(video.ref) ? [{ ...video, size: 0 }] : [])].map((m) => <button key={m.ref} type="button" onClick={() => { setTouched((x) => ({ ...x, video: true })); setVideo(m) }} className={cx('cursor-pointer overflow-hidden rounded-md border text-left', video?.ref === m.ref ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:bg-muted')}>
-                <div className="relative aspect-video bg-black/40">{thumb(m, true)}{video?.ref === m.ref && <Check className="absolute top-1.5 right-1.5 size-4 rounded-full bg-primary p-0.5 text-primary-foreground" />}</div>
-                <div className="px-2 py-1.5 text-xs"><div className="truncate">{m.name}</div>{m.size > 0 && <div className="text-muted-foreground">{fmtSize(m.size)}</div>}</div>
-              </button>)}
+              {[...folderVideos.map((e) => ({ ...media(e.path), size: e.size })), ...(video && isUrl(video.ref) ? [{ ...video, size: 0 }] : [])].map((m) => <div key={m.ref} role="button" tabIndex={0} onClick={() => { setTouched((x) => ({ ...x, video: true })); setVideo(m) }} onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setTouched((x) => ({ ...x, video: true })); setVideo(m) } }} className={cx('group cursor-pointer overflow-hidden rounded-md border text-left', video?.ref === m.ref ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:bg-muted')}>
+                <div className="relative aspect-video bg-black/40">{thumb(m, true)}{video?.ref === m.ref && <Check className="absolute top-1.5 right-1.5 size-4 rounded-full bg-primary p-0.5 text-primary-foreground" />}
+                  {/* 播放：先看一眼再决定选不选（只预览，不选中） */}
+                  <button type="button" aria-label={t('preview')} title={t('preview')} onClick={(ev) => { ev.stopPropagation(); setPreview(m.src) }} className="absolute inset-0 m-auto flex size-10 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-black/80"><Play className="size-4 fill-current" /></button>
+                </div>
+                <div className="px-2 py-1.5 text-xs" title={m.name}><div className="line-clamp-2 break-all">{m.name}</div>{m.size > 0 && <div className="text-muted-foreground">{fmtSize(m.size)}</div>}</div>
+              </div>)}
             </div>
             {!folderVideos.length && !video && <p className="text-xs text-muted-foreground">{t('no_videos')}</p>}
+            {folderVideos.length > 1 && <p className="mt-1.5 text-xs text-muted-foreground">{t('video_rule')}</p>}
+          </div>}
+
+          {coverUsed && <div>
+            {section(t('video_cover'), pickers('cover'))}
+            <p className="mb-2 text-xs text-muted-foreground">{t('video_cover_hint')}</p>
+            <div className="flex flex-wrap items-start gap-2">
+              <button type="button" onClick={() => setCover(null)} className={cx('flex h-24 w-[72px] cursor-pointer items-center justify-center rounded-md border px-1 text-center text-xs text-muted-foreground', !cover ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:bg-muted')}>{t('cover_default')}</button>
+              {cover && <div className="relative h-24 w-[72px] overflow-hidden rounded-md border border-primary ring-2 ring-primary/40" title={cover.name}>
+                <img src={cover.src} alt="" className="size-full object-cover" />
+                <Check className="absolute top-1 right-1 size-4 rounded-full bg-primary p-0.5 text-primary-foreground" />
+              </div>}
+            </div>
+            {folderImages.length > 0 && <>
+              <p className="mt-3 mb-1.5 text-xs text-muted-foreground">{t('cover_folder')}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {folderImages.map((e) => { const on = cover?.ref === e.path; return <button key={e.path} type="button" title={e.path} onClick={() => setCover(on ? null : media(e.path))} className={cx('relative size-12 cursor-pointer overflow-hidden rounded border', on ? 'border-primary ring-2 ring-primary/40' : 'border-border opacity-70 hover:opacity-100')}>
+                  <img src={workSrc(`${root}/${e.path}`)} alt="" loading="lazy" className="size-full object-cover" />
+                  {on && <Check className="absolute right-0.5 bottom-0.5 size-3.5 rounded-full bg-primary p-0.5 text-primary-foreground" />}
+                </button> })}
+              </div>
+            </>}
           </div>}
 
           <div>
@@ -258,12 +372,15 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
               : <div className="max-h-64 space-y-1 overflow-y-auto">{[...accounts].sort((a, b) => Number(!!blocked(a)) - Number(!!blocked(b))).map((ch) => {
                 const why = blocked(ch)
                 const { length, max } = lengthOn(content, ch.type)
+                const was = sent[ch.id]
                 const note = result[ch.id] ? <span className="text-destructive">{result[ch.id]}</span>
-                  : why || (max > 0 && length > max ? <span className="text-amber-700 dark:text-amber-400">{t('too_long', { n: length, max })}</span> : CHANNEL_TYPES[ch.type]?.label)
+                  : why || (max > 0 && length > max ? <span className="text-amber-700 dark:text-amber-400">{t('too_long', { n: length, max })}</span>
+                    : was ? <span className="text-primary-text">{t(was.status === 'published' ? 'sent_before' : 'scheduled_before', { at: fmtTime(was.at) })}</span>
+                    : '')
                 return <label key={ch.id} className={cx('flex items-center gap-3 rounded-lg border px-3 py-2', why ? 'cursor-default border-border opacity-60' : picked.includes(ch.id) ? 'cursor-pointer border-primary/50 bg-primary/5' : 'cursor-pointer border-border hover:bg-accent/50')}>
                   <input type="checkbox" disabled={!!why || running} checked={picked.includes(ch.id)} onChange={() => setPicked((l) => l.includes(ch.id) ? l.filter((x) => x !== ch.id) : [...l, ch.id])} className="size-4 accent-primary" />
                   <ChannelAvatar ch={ch} />
-                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{ch.name}</span><span className="block text-xs leading-relaxed text-muted-foreground">{note}</span></span>
+                  <span className="min-w-0 flex-1"><span className="flex min-w-0 items-center gap-2"><span className="truncate text-sm font-medium">{ch.name}</span><PlatformTag type={ch.type} /></span><span className="block text-xs leading-relaxed text-muted-foreground">{note}</span></span>
                   {result[ch.id] && <Badge tone="bad">{t('not_passed')}</Badge>}
                 </label>
               })}</div>}
@@ -273,8 +390,11 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
           {error && <Notice tone="error">{error}</Notice>}
         </div>
       )}
-      <AssetPicker open={!!picker} kind={picker ?? 'image'} max={picker === 'video' ? 1 : undefined} onClose={() => setPicker(null)} onPick={(urls) => {
+      <input ref={fileInput} type="file" className="hidden" multiple={uploadFor === 'image'} accept={uploadFor === 'video' ? 'video/*' : 'image/*'} onChange={(e) => { void uploadLocal([...(e.target.files ?? [])]); e.target.value = '' }} />
+      {preview && <Lightbox src={preview} video onClose={() => setPreview('')} />}
+      <AssetPicker open={!!picker} kind={picker === 'video' ? 'video' : 'image'} max={picker === 'image' ? undefined : 1} onClose={() => setPicker(null)} onPick={(urls) => {
         if (picker === 'video' && urls[0]) { setTouched((x) => ({ ...x, video: true })); setVideo(media(urls[0])) }
+        if (picker === 'cover' && urls[0]) setCover(media(urls[0]))
         if (picker === 'image') { setTouched((x) => ({ ...x, images: true })); setImages((l) => [...l, ...urls.filter((u) => !l.some((m) => m.ref === u)).map(media)]) }
         setPicker(null)
       }} />

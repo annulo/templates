@@ -21,7 +21,7 @@ import { CHANNEL_TYPES } from '../../lib/channels'
 import type { Ctx } from './types'
 import { metricText, metricUnavailable } from '../../lib/apiMetrics'
 import { numLocale, tr } from '../../lib/i18n'
-import { brokenOf, ProbeLine, PublishProblems, usePlatformHealth } from '../PlatformHealth'
+import { brokenOf, ActivityLine, PublishProblems, usePlatformHealth } from '../PlatformHealth'
 
 // label 按当前语言取（getter）
 const lbl = (key: string, tone: Tone) => ({ get label() { return tr(key) }, tone })
@@ -98,7 +98,7 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const other = (a: Channel) => !!loggedInElsewhere(a, machine)
   const expired = (a: Channel) => !other(a) && a.login_status === 'expired'
   const broken = (a: Channel) => brokenOf(health.rows, a.id).some((r) => r.op === 'publish') || owned.some((p) => p.channel_id === a.id && p.status === 'failed')
-  // 要人处理的账号：登录过期，或者发布出了问题（自检失败、有发失败的帖子）。统计卡片叫「待处理账号」，不只是发布异常
+  // 要人处理的账号：登录过期，或者发布出了问题（流程失效、有发失败的帖子）。统计卡片叫「待处理账号」，不只是发布异常
   const issues = accounts.filter((a) => expired(a) || broken(a))
   const collectable = accounts.filter((a) => !other(a) && a.login_status === 'ok')
   const oldest = collectable.map((a) => a.collected_at).filter((t): t is string => !!t).sort()[0]
@@ -296,7 +296,7 @@ function PlatformName({ type, name }: { type?: Channel['type']; name: string }) 
 
 function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channel; other: string; health: PlatformHealth[]; selected: boolean; onSelect: () => void; onDone: () => void }) {
   const [error, setError] = useState('')
-  // 登录态在别的电脑上：这台电脑上看不到它登没登录，采集、自检、打开主页也做不了，只给「在这台电脑登录」
+  // 登录态在别的电脑上：这台电脑上看不到它登没登录，采集、打开主页也做不了，只给「在这台电脑登录」
   const expired = !other && ch.login_status === 'expired'
   const home = !other && platformOf(ch)?.profileUrl(ch)
   return (
@@ -333,9 +333,9 @@ function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channe
         </div>
       </div>
       {error && <div className="mt-2"><ErrorDetails message={error} /></div>}
-      {platformOf(ch)?.probe && !expired && !other && (
+      {!expired && !other && (
         <div className="mt-3">
-          <ProbeLine ch={ch} rows={health} onChanged={onDone} />
+          <ActivityLine ch={ch} rows={health} />
         </div>
       )}
     </div>
@@ -389,7 +389,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
     <div ref={rowRef} className={cx('flex gap-4 border-b border-border p-4 last:border-b-0', focus && 'bg-primary/5')}>
       <button type="button" onClick={() => setPreviewing(true)} title={tr('social.preview')} className="w-20 shrink-0 self-start cursor-pointer rounded-lg transition-opacity hover:opacity-80">
         {isVideoPost(pf, p) && p.video ? (
-          <video poster={p.video_cover || undefined} src={videoSrc(p.video)} muted preload="metadata" className="aspect-[3/4] w-20 rounded-lg bg-black object-cover" />
+          <video poster={videoSrc(p.video_cover) || undefined} src={videoSrc(p.video)} muted preload="metadata" className="aspect-[3/4] w-20 rounded-lg bg-black object-cover" />
         ) : images[0] ? (
           <img src={shuttleImage(images[0])} alt="" className="aspect-[3/4] w-20 rounded-lg object-cover" />
         ) : isRich(pf) ? (
@@ -775,7 +775,7 @@ function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReje
 function VideoCard({ p, owner, tags }: { p: SocialPost; owner?: Channel; tags: string[] }) {
   return (
     <div className="mx-auto w-[380px] shrink-0 self-start overflow-hidden rounded-2xl border border-neutral-200 bg-white text-neutral-900 shadow-lg">
-      {p.video ? <video poster={p.video_cover || undefined} src={videoSrc(p.video)} controls className="aspect-video w-full bg-black" /> : <div className="flex aspect-video w-full items-center justify-center bg-neutral-900 text-sm text-neutral-400">{tr('social.no_video')}</div>}
+      {p.video ? <video poster={videoSrc(p.video_cover) || undefined} src={videoSrc(p.video)} controls className="aspect-video w-full bg-black" /> : <div className="flex aspect-video w-full items-center justify-center bg-neutral-900 text-sm text-neutral-400">{tr('social.no_video')}</div>}
       <div className="space-y-2 p-3">
         <div className="text-[15px] leading-snug font-semibold">{p.title}</div>
         <div className="flex items-center gap-2 text-[13px] text-neutral-600">
