@@ -1714,7 +1714,7 @@
     "video_cover_hint": "Used by Xiaohongshu and Douyin; without one they use the platform's default frame",
     "cover_default": "Platform default",
     "cover_folder": "Images in the folder (click one to use it as the cover)",
-    "upload_local": "Upload from computer",
+    "upload_local": "Upload",
     "uploading": "Uploading {n}%",
     "accounts": "Accounts",
     "no_accounts": "No social accounts yet.",
