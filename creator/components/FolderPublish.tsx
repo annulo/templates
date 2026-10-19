@@ -20,6 +20,7 @@ import type { Ctx } from './views/types'
 //   发成：图文（文字 + 一组图）/ 视频（简介 + 一个视频）/ 长文（Markdown 转成富文本，图在正文里）。打开时按文件夹里有什么猜一个。
 //   文字：从文件夹里挑一份 .md（开头 --- 包住的 title、tags 填进标题和话题，能当场改）；
 //   图片、视频：文件夹里的直接点选，也能从资料库选。挑了文案自动配上和它在同一个目录的图、视频（用户自己点过的不动）。
+//   视频封面（小红书、抖音用，插件 FIELDS 的 videoCover）：文件夹里的图点选或从资料库选；内容上设过封面就用它，没有就挑文件夹里名字带「封面 / cover」的图，都没有用平台默认的那一帧。
 // 选好账号、现在发或排期：folder.publish 每个账号新建一条帖子（存的就是这次挑的内容，排期到点照它发），放进后台发布队列。
 
 type Kind = 'post' | 'video' | 'article'
@@ -84,7 +85,9 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   const [video, setVideo] = useState<Media | null>(null)
   // 用户自己点过图片、视频就不再跟着文案自动换
   const [touched, setTouched] = useState({ images: false, video: false })
-  const [picker, setPicker] = useState<'image' | 'video' | null>(null)
+  // 视频封面：null 是平台默认的那一帧
+  const [cover, setCover] = useState<Media | null>(null)
+  const [picker, setPicker] = useState<'image' | 'video' | 'cover' | null>(null)
   const [picked, setPicked] = useState<string[]>([])
   // 定时发布的时间（本地时间 'YYYY-MM-DDTHH:mm'），空的是现在发
   const [at, setAt] = useState('')
@@ -105,6 +108,8 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
       const fs = r.entries.filter((e) => !e.dir)
       setRoot(r.path)
       setFiles(fs)
+      const named = fs.filter((e) => IMAGE.test(e.path) && /封面|cover/i.test(base(e.path))).sort((a, b) => b.mtime - a.mtime)[0]
+      setCover(article.video_cover ? { ref: article.video_cover, src: fileSrc(article.video_cover), name: t('from_library') } : named ? { ref: named.path, src: workSrc(`${r.path}/${named.path}`), name: named.path } : null)
       const k = guessKind(fs)
       setKind(k)
       const mds = fs.filter((e) => MD.test(e.path) && !isDraft(e.path))
@@ -154,6 +159,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
 
   const machine = useElsewhere(ctx.channels)
   const accounts = ctx.channels.filter((ch) => !!SOCIAL[ch.type])
+  const coverUsed = kind === 'video' && accounts.some((ch) => FIELDS[ch.type]?.videoCover)
   const blocked = (ch: { type: string; login_status?: string } & Parameters<typeof loggedInElsewhere>[0]) => !supports(FIELDS[ch.type], kind) ? t('unsupported', { kind: t(`kind_${kind}`) })
     : loggedInElsewhere(ch, machine) ? t('on_machine', { name: loggedInElsewhere(ch, machine) })
     : ch.login_status === 'expired' ? t('expired') : ''
@@ -168,7 +174,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     if (at && !(ts > Date.now())) { setError(t('future_time')); setRunning(false); return }
     try {
       const r = await runLocal<{ ready: { channel_id: string; post_id: string }[]; problems: { channel_id: string; problems: string[] }[] }>('folder.publish', {
-        article_id: article.id, kind, title, body, tags: tagList, images: images.map((i) => i.ref), video: video?.ref ?? '', channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}),
+        article_id: article.id, kind, title, body, tags: tagList, images: images.map((i) => i.ref), video: video?.ref ?? '', ...(kind === 'video' ? { video_cover: cover?.ref ?? '' } : {}), channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}),
       })
       const name = (id: string) => accounts.find((c) => c.id === id)?.name ?? ''
       if (!ts && r.ready.length) enqueue(r.ready.map((p) => ({ article_id: article.id, article_title: title || article.title, channel_id: p.channel_id, channel_name: name(p.channel_id), post_id: p.post_id })))
@@ -252,6 +258,27 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
             {!folderVideos.length && !video && <p className="text-xs text-muted-foreground">{t('no_videos')}</p>}
           </div>}
 
+          {coverUsed && <div>
+            {section(t('video_cover'), <Button size="sm" variant="ghost" onClick={() => setPicker('cover')}><Library />{t('from_library')}</Button>)}
+            <p className="mb-2 text-xs text-muted-foreground">{t('video_cover_hint')}</p>
+            <div className="flex flex-wrap items-start gap-2">
+              <button type="button" onClick={() => setCover(null)} className={cx('flex h-24 w-[72px] cursor-pointer items-center justify-center rounded-md border px-1 text-center text-xs text-muted-foreground', !cover ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:bg-muted')}>{t('cover_default')}</button>
+              {cover && <div className="relative h-24 w-[72px] overflow-hidden rounded-md border border-primary ring-2 ring-primary/40" title={cover.name}>
+                <img src={cover.src} alt="" className="size-full object-cover" />
+                <Check className="absolute top-1 right-1 size-4 rounded-full bg-primary p-0.5 text-primary-foreground" />
+              </div>}
+            </div>
+            {folderImages.length > 0 && <>
+              <p className="mt-3 mb-1.5 text-xs text-muted-foreground">{t('cover_folder')}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {folderImages.map((e) => { const on = cover?.ref === e.path; return <button key={e.path} type="button" title={e.path} onClick={() => setCover(on ? null : media(e.path))} className={cx('relative size-12 cursor-pointer overflow-hidden rounded border', on ? 'border-primary ring-2 ring-primary/40' : 'border-border opacity-70 hover:opacity-100')}>
+                  <img src={workSrc(`${root}/${e.path}`)} alt="" loading="lazy" className="size-full object-cover" />
+                  {on && <Check className="absolute right-0.5 bottom-0.5 size-3.5 rounded-full bg-primary p-0.5 text-primary-foreground" />}
+                </button> })}
+              </div>
+            </>}
+          </div>}
+
           <div>
             {section(t('accounts'))}
             {!accounts.length ? <Notice>{t('no_accounts')}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); ctx.go('channels') }}>{t('go_add')}</button></Notice>
@@ -273,8 +300,9 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
           {error && <Notice tone="error">{error}</Notice>}
         </div>
       )}
-      <AssetPicker open={!!picker} kind={picker ?? 'image'} max={picker === 'video' ? 1 : undefined} onClose={() => setPicker(null)} onPick={(urls) => {
+      <AssetPicker open={!!picker} kind={picker === 'video' ? 'video' : 'image'} max={picker === 'image' ? undefined : 1} onClose={() => setPicker(null)} onPick={(urls) => {
         if (picker === 'video' && urls[0]) { setTouched((x) => ({ ...x, video: true })); setVideo(media(urls[0])) }
+        if (picker === 'cover' && urls[0]) setCover(media(urls[0]))
         if (picker === 'image') { setTouched((x) => ({ ...x, images: true })); setImages((l) => [...l, ...urls.filter((u) => !l.some((m) => m.ref === u)).map(media)]) }
         setPicker(null)
       }} />

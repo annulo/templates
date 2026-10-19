@@ -168,8 +168,9 @@ const isRef = (u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/|loca
  *
  *   kind     发成什么：post 图文（纯文字 + 配图）/ video 视频（简介 + 视频）/ article 长文（HTML 正文，图在正文里）
  *   images   配图：文件夹里的路径（相对这条内容的文件夹）或资料库的地址；video 同样。长文正文里 <img> 的相对路径也换成本机文件
+ *   video_cover  视频封面（小红书、抖音用），同样是文件夹里的路径或资料库地址；空字符串是用平台默认的那一帧，不传用内容上设的
  */
-export function publish(input: { article_id: string; kind: 'post' | 'video' | 'article'; title?: string; body?: string; tags?: string[]; images?: string[]; video?: string; cover_text?: string; category?: string; channel_ids: string[]; scheduled_at?: string }, ctx: any) {
+export function publish(input: { article_id: string; kind: 'post' | 'video' | 'article'; title?: string; body?: string; tags?: string[]; images?: string[]; video?: string; video_cover?: string; cover_text?: string; category?: string; channel_ids: string[]; scheduled_at?: string }, ctx: any) {
   const a = article(ctx, input.article_id)
   const dir = dirOf(ctx, a.id)
   const kind = input.kind
@@ -186,7 +187,8 @@ export function publish(input: { article_id: string; kind: 'post' | 'video' | 'a
     type: kind, title: String(input.title ?? '').trim() || a.title, body, tags: JSON.stringify(input.tags ?? []),
     images: JSON.stringify(kind === 'post' ? (input.images ?? []).map(ref) : []),
     video: kind === 'video' && input.video ? ref(input.video) : '',
-    video_cover: kind === 'video' ? String(a.video_cover ?? '') : '', // 文章上设的视频封面（小红书、抖音用）
+    // 视频封面（小红书、抖音用）：发布时挑的，没传用内容上设的
+    video_cover: kind !== 'video' ? '' : input.video_cover === undefined ? String(a.video_cover ?? '') : input.video_cover ? ref(String(input.video_cover)) : '',
     cover_text: String(input.cover_text ?? ''), category: String(input.category ?? ''),
   }
   const ready: { channel_id: string; post_id: string }[] = []
