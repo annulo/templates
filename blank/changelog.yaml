@@ -3,7 +3,7 @@
 
 - version: 0.2.2
   zh: "交给助手的按钮文字改成「查看对话」。"
-  en: "Buttons that hand work to the assistant now say "View chat"."
+  en: "Buttons that hand work to the assistant now say \"View chat\"."
 - version: 0.2.1
   zh: 示例换成：每天早上 9 点，检查几个网站的 SSL 证书到期时间
   en: "New example: every day at 9 am, check when a few websites' SSL certificates expire"
