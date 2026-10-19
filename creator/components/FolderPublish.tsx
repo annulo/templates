@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Check, FileText, Film, Image as ImageIcon, Library, Loader2, Newspaper, Send, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Check, FileText, Film, HardDrive, Image as ImageIcon, Library, Loader2, Newspaper, Send, X } from 'lucide-react'
 import AssetPicker from './AssetPicker'
 import RichEditor from './RichEditor'
 import { ChannelAvatar } from './ArticlePublish'
@@ -10,7 +10,7 @@ import { enqueue } from '../lib/publishQueue'
 import { fileSrc } from '../lib/files'
 import { tr, useT } from '../lib/i18n'
 import { CHANNEL_TYPES } from '../lib/channels'
-import { runLocal, type Article } from '../lib/shuttle'
+import { runLocal, uploadLocalFile, type Article } from '../lib/shuttle'
 import { SOCIAL, loggedInElsewhere, useElsewhere } from '../lib/social'
 import { FIELDS } from '../plugins/social/local/_fields'
 import { lengthOn, supports } from '../local/_types'
@@ -20,6 +20,7 @@ import type { Ctx } from './views/types'
 //   发成：图文（文字 + 一组图）/ 视频（简介 + 一个视频）/ 长文（Markdown 转成富文本，图在正文里）。打开时按文件夹里有什么猜一个。
 //   文字：从文件夹里挑一份 .md（开头 --- 包住的 title、tags 填进标题和话题，能当场改）；
 //   图片、视频：文件夹里的直接点选，也能从资料库选。挑了文案自动配上和它在同一个目录的图、视频（用户自己点过的不动）。
+//   三样都能「上传本机」：传上来的文件复制进这条内容的文件夹（folder.importLocal），和文件夹里原有的一样点选、发布。
 //   视频封面（小红书、抖音用，插件 FIELDS 的 videoCover）：文件夹里的图点选或从资料库选；内容上设过封面就用它，没有就挑文件夹里名字带「封面 / cover」的图，都没有用平台默认的那一帧。
 // 选好账号、现在发或排期：folder.publish 每个账号新建一条帖子（存的就是这次挑的内容，排期到点照它发），放进后台发布队列。
 
@@ -88,6 +89,10 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   // 视频封面：null 是平台默认的那一帧
   const [cover, setCover] = useState<Media | null>(null)
   const [picker, setPicker] = useState<'image' | 'video' | 'cover' | null>(null)
+  // 上传本机：给哪一栏传（配图可以一次传几张），进度 0–1，null 是没在传
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [uploadFor, setUploadFor] = useState<'image' | 'video' | 'cover'>('image')
+  const [uploading, setUploading] = useState<number | null>(null)
   const [picked, setPicked] = useState<string[]>([])
   // 定时发布的时间（本地时间 'YYYY-MM-DDTHH:mm'），空的是现在发
   const [at, setAt] = useState('')
@@ -185,6 +190,38 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     } catch (e) { setError((e as Error).message) } finally { setRunning(false) }
   }
 
+  /** 上传本机：每个文件存成本机文件，复制进内容文件夹的最外层（重名的在名字后面加序号），再选上 */
+  const uploadLocal = async (list: File[]) => {
+    if (!list.length) return
+    setUploading(0); setError('')
+    try {
+      const taken = new Set((files ?? []).map((e) => e.path))
+      const added: string[] = []
+      for (const f of list) {
+        const r = await uploadLocalFile(f, setUploading)
+        const dot = f.name.lastIndexOf('.')
+        const stem = dot > 0 ? f.name.slice(0, dot) : f.name, ext = dot > 0 ? f.name.slice(dot) : ''
+        let to = f.name
+        for (let i = 2; taken.has(to); i++) to = `${stem} ${i}${ext}`
+        taken.add(to)
+        // 不在 Annulo 里打开的页面传到的是素材网址，复制不进文件夹：直接用网址
+        added.push(r.ref.startsWith('local:') ? (await runLocal<{ path: string }>('folder.importLocal', { article_id: article.id, url: r.ref, to })).path : r.ref)
+      }
+      // 先记下用户自己点过，不然文件列表一变，自动挑图、视频的会把刚传的换掉
+      if (uploadFor === 'image') { setTouched((x) => ({ ...x, images: true })); setImages((l) => [...l, ...added.filter((p) => !l.some((m) => m.ref === p)).map(media)]) }
+      if (uploadFor === 'video') { setTouched((x) => ({ ...x, video: true })); setVideo(media(added[0])) }
+      if (uploadFor === 'cover') setCover(media(added[0]))
+      const r = await runLocal<{ path: string; entries: Entry[] }>('folder.list', { article_id: article.id })
+      setFiles(r.entries.filter((e) => !e.dir))
+    } catch (e) { setError((e as Error).message) } finally { setUploading(null) }
+  }
+  /** 一栏右上角的按钮：上传本机、从资料库选 */
+  const pickers = (what: 'image' | 'video' | 'cover') => <span className="flex gap-1">
+    <Button size="sm" variant="ghost" disabled={uploading != null} onClick={() => { setUploadFor(what); fileInput.current?.click() }}>
+      {uploading != null && uploadFor === what ? <Loader2 className="animate-spin" /> : <HardDrive />}{uploading != null && uploadFor === what ? t('uploading', { n: Math.round(uploading * 100) }) : t('upload_local')}
+    </Button>
+    <Button size="sm" variant="ghost" disabled={uploading != null} onClick={() => setPicker(what)}><Library />{t('from_library')}</Button>
+  </span>
   const section = (label: string, extra?: ReactNode) => <div className="mb-1.5 flex items-center justify-between gap-2"><p className="text-sm font-medium">{label}</p>{extra}</div>
   const thumb = (m: Media, isVideo: boolean) => isVideo
     ? <video src={`${m.src}#t=0.5`} preload="metadata" muted playsInline className="size-full object-cover" />
@@ -227,7 +264,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
           </div>
 
           {kind === 'post' && <div>
-            {section(t('images', { n: images.length }), <Button size="sm" variant="ghost" onClick={() => setPicker('image')}><Library />{t('from_library')}</Button>)}
+            {section(t('images', { n: images.length }), pickers('image'))}
             {/* 选中的按顺序排（第一张是封面），点 × 拿掉；下面是文件夹里所有的图，点了加到最后 / 拿掉 */}
             {images.length ? <div className="flex flex-wrap gap-2">
               {images.map((m, i) => <div key={m.ref} className="group relative size-20 overflow-hidden rounded-md border border-border" title={m.name}>
@@ -248,7 +285,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
           </div>}
 
           {kind === 'video' && <div>
-            {section(t('video'), <Button size="sm" variant="ghost" onClick={() => setPicker('video')}><Library />{t('from_library')}</Button>)}
+            {section(t('video'), pickers('video'))}
             <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
               {[...folderVideos.map((e) => ({ ...media(e.path), size: e.size })), ...(video && isUrl(video.ref) ? [{ ...video, size: 0 }] : [])].map((m) => <button key={m.ref} type="button" onClick={() => { setTouched((x) => ({ ...x, video: true })); setVideo(m) }} className={cx('cursor-pointer overflow-hidden rounded-md border text-left', video?.ref === m.ref ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:bg-muted')}>
                 <div className="relative aspect-video bg-black/40">{thumb(m, true)}{video?.ref === m.ref && <Check className="absolute top-1.5 right-1.5 size-4 rounded-full bg-primary p-0.5 text-primary-foreground" />}</div>
@@ -259,7 +296,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
           </div>}
 
           {coverUsed && <div>
-            {section(t('video_cover'), <Button size="sm" variant="ghost" onClick={() => setPicker('cover')}><Library />{t('from_library')}</Button>)}
+            {section(t('video_cover'), pickers('cover'))}
             <p className="mb-2 text-xs text-muted-foreground">{t('video_cover_hint')}</p>
             <div className="flex flex-wrap items-start gap-2">
               <button type="button" onClick={() => setCover(null)} className={cx('flex h-24 w-[72px] cursor-pointer items-center justify-center rounded-md border px-1 text-center text-xs text-muted-foreground', !cover ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:bg-muted')}>{t('cover_default')}</button>
@@ -300,6 +337,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
           {error && <Notice tone="error">{error}</Notice>}
         </div>
       )}
+      <input ref={fileInput} type="file" className="hidden" multiple={uploadFor === 'image'} accept={uploadFor === 'video' ? 'video/*' : 'image/*'} onChange={(e) => { void uploadLocal([...(e.target.files ?? [])]); e.target.value = '' }} />
       <AssetPicker open={!!picker} kind={picker === 'video' ? 'video' : 'image'} max={picker === 'image' ? undefined : 1} onClose={() => setPicker(null)} onPick={(urls) => {
         if (picker === 'video' && urls[0]) { setTouched((x) => ({ ...x, video: true })); setVideo(media(urls[0])) }
         if (picker === 'cover' && urls[0]) setCover(media(urls[0]))

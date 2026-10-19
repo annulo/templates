@@ -1714,6 +1714,8 @@
     "video_cover_hint": "小红书、抖音用；不选就用平台默认的那一帧",
     "cover_default": "平台默认",
     "cover_folder": "文件夹里的图（点一张当封面）",
+    "upload_local": "上传本机",
+    "uploading": "上传中 {n}%",
     "accounts": "发到哪些账号",
     "no_accounts": "还没有社媒账号。",
     "go_add": "去添加",
