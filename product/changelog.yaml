@@ -1,6 +1,6 @@
 - version: 0.15.3
-  zh: "账号卡片去掉「自检」，改成显示上次发布、采集成没成；失败了交给助手修，再点「重新发布」或「立即采集」确认。"
-  en: "Account cards drop the self-test and show whether the last publish and collection worked; when one fails, have the assistant fix it, then use \"Publish again\" or \"Collect now\" to confirm."
+  zh: "账号卡片改成显示上次发布、采集成没成；发布记录能只删记录；发布进度能展开看每一步。"
+  en: "Account cards show whether the last publish and collection worked; publish records can be removed without touching the platform; publishing progress can be expanded step by step."
 - version: 0.15.2
   zh: 渠道页的 creght 站点多了「去编辑」：一点就打开这个站点在 creght 里的编辑器，已经是登录状态，不用再登录一次。视频内容支持独立封面：上传、粘贴、从资料库选择、更换和移除，小红书、抖音发布带上封面。定时发布用日历选时间。不在 Annulo 里打开时的提示改成用 Annulo 的远程访问。需要社媒插件 0.8.5。
   en: "creght sites on the Channels page get an \"Edit site\" button: it opens the site's editor in creght, already signed in. Video content can have its own cover: upload, paste, pick from the library, replace or remove it, and Xiaohongshu and Douyin posts carry it. Scheduling uses a calendar picker. The hints shown outside Annulo now point to Annulo's remote access. Requires the social plugin 0.8.5."
