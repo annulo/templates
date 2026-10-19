@@ -1,7 +1,7 @@
 # 升级说明，新的在最上面：每条一个 version 加各语言一段（zh、en……）。没写的版本是空白模板没有改动。
 # Upgrade notes, newest first. Versions not listed had no changes to the blank template.
 
-- version: 0.2.2
+- version: 0.13.2
   zh: "交给助手的按钮文字改成「查看对话」。"
   en: "Buttons that hand work to the assistant now say \"View chat\"."
 - version: 0.2.1
