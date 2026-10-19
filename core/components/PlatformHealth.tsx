@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowUpRight, Send, Stethoscope, Wrench, X } from 'lucide-react'
+import { ArrowUpRight, RefreshCw, Send, Stethoscope, Wrench, X } from 'lucide-react'
 import RunButton from './RunButton'
 import { TaskButton } from './Task'
 import { Button, cx, fmtTime } from './ui'
@@ -126,6 +126,60 @@ export function PublishProblems({ account, rows, posts, onOpenPost, onChanged }:
       )}
     </>
   )
+}
+
+/** 一条健康记录里没走通的步骤：没通过时是失败的那一步（旧记录没有 steps 时退回 step + error），通过了是次要的提醒 */
+function badSteps(r: PlatformHealth) {
+  let steps: { name: string; ok: boolean; soft?: boolean; error?: string }[] = []
+  try {
+    steps = r.steps ? JSON.parse(r.steps) : []
+  } catch {}
+  if (r.ok) return steps.filter((s) => !s.ok && s.soft)
+  const failed = steps.filter((s) => !s.ok)
+  return failed.length ? failed : [{ name: r.step ?? '', ok: false, error: r.error }]
+}
+
+/**
+ * 账号卡片上的两行：上次真实发布、采集成没成（社媒插件把每次发布、采集记进 social_health），不用另外自检。
+ * 没走通的步骤逐条写出哪一步、为什么；采集失败或没采集过时旁边放「立即采集」。
+ */
+export function ActivityLine({ ch, rows, onChanged }: { ch: Channel; rows: PlatformHealth[]; onChanged?: () => void }) {
+  const line = (op: 'publish' | 'collect') => {
+    const r = rows.find((x) => x.channel_id === ch.id && x.op === op)
+    const bad = r ? badSteps(r) : []
+    const when = fmtTime(r?.checked_at ?? '')
+    return (
+      <div key={op} className="space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="min-w-0 truncate">
+            {!r ? (
+              tr(`health.${op}_never`)
+            ) : r.ok ? (
+              <span className={cx(bad.length ? 'text-amber-600' : 'text-emerald-600')}>{bad.length ? tr(`health.${op}_warn`, { when, n: bad.length }) : tr(`health.${op}_ok`, { when })}</span>
+            ) : (
+              <span className="text-destructive">{tr(`health.${op}_failed`, { when })}</span>
+            )}
+          </span>
+          {op === 'collect' && (!r || !r.ok) && (
+            <RunButton inline watch fn="social/social.collect" input={{ channel_id: ch.id }} icon={RefreshCw} variant="ghost" onDone={onChanged}>
+              {tr('health.collect_again')}
+            </RunButton>
+          )}
+        </div>
+        {bad.length > 0 && (
+          <ul className="space-y-1">
+            {bad.map((s, i) => (
+              <li key={i} className={cx('break-words leading-relaxed', r?.ok ? 'text-amber-600' : 'text-destructive')}>
+                {s.name}
+                {s.error ? `：${s.error}` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
+  }
+  return <div className="space-y-1.5 border-t border-border pt-2 text-[11px] text-muted-foreground">{line('publish')}{line('collect')}</div>
 }
 
 /** 账号卡片上的一行：上次自检的结果 + 「自检」按钮；没走通的步骤（包括次要的）在下面逐条写出哪一步、为什么 */
