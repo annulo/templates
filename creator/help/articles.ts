@@ -136,7 +136,7 @@ export const overview: Article = {
 
 ![每周总结：最新一期](https://fsu.creght.com/site/2103669300995821568/1791356480228__creator_help_reports.png)
 
-- **立即写本周总结**：现在就让助手写一期，和每周自动写的一样，一般几分钟。按钮变成「进行中 · 看过程」时，点它能看助手每一步在做什么；
+- **立即写本周总结**：现在就让助手写一期，和每周自动写的一样，一般几分钟。按钮变成「进行中 · 查看对话」时，点它能看助手每一步在做什么；
 - **AI 要求**：助手每次写总结都照这份要求做。想重点看什么、换什么格式，改这里，下一期就按新的写；改坏了能「恢复默认」；
 - **看助手怎么写的**：打开写这一期的那段对话；「全部每周总结」回到列表；
 - 数字和各页面出自同一份统计，不是助手自己算的。各账号分开说，不同平台的浏览、点赞口径不同，不加在一起比；
@@ -159,7 +159,7 @@ Workspace → Weekly summary in the sidebar. Every 7 days a schedule hands the s
 
 ![Weekly summary: the latest weekly summary](https://fsu.creght.com/site/2103669300995821568/1791356480228__creator_help_reports.png)
 
-- **Write this week's summary**: have the assistant write one now, same as the weekly one; it usually takes a few minutes. While the button shows "In progress · View progress", click it to watch each step;
+- **Write this week's summary**: have the assistant write one now, same as the weekly one; it usually takes a few minutes. While the button shows "In progress · View chat", click it to watch each step;
 - **AI instructions**: the assistant follows these every time. Change what to focus on or the format here, and the next summary follows the new version; "Restore default" undoes your edits;
 - **See how it was written**: opens the chat that wrote this summary; "All weekly summaries" goes back to the list;
 - The numbers come from the same stats as the pages, not from the assistant's own math. Each account is reported separately: platforms count views and likes differently, so they're never added up;
@@ -332,7 +332,7 @@ export const content: Article = {
 - 选题上「写成文章」：写这个选题，同样先选类型，可以补充要点或草稿。
 - 在 Notion 里写好的：在「这篇想写什么」里只粘那篇 Notion 页面的链接，点「从 Notion 导入」存成草稿，图片存进资料库（要先在 Annulo 的 设置 → MCP 里连上 Notion）。文章页标题下面写着来源，文档改了会提示「文档有更新」，点「从文档更新」拉回来；这边改过正文的，覆盖前会先问。
 
-交给助手写的，页面上显示「助手正在写…」，一般几分钟，点「看过程」能看它每一步。写好的文章是「草稿」，在「文章」页签里。长期的写法在页面右上角「更多 → 写作要求」里改。
+交给助手写的，页面上显示「助手正在写…」，一般几分钟，点「查看对话」能看它每一步。写好的文章是「草稿」，在「文章」页签里。长期的写法在页面右上角「更多 → 写作要求」里改。
 助手只用「我的定位」里写了的个人经历，不编数据和案例；资料库里有对得上的图会配上。
 
 ## 编辑文章
@@ -407,7 +407,7 @@ Three ways to start:
 - "Write article" on a topic: writes that topic, again after picking a type; you can add points or a draft.
 - Written in Notion: paste just the Notion page link into "What to write" and click "Import from Notion" to save it as a draft, with images saved to your library (connect Notion first in Annulo, Settings → MCP). The article page shows the source under the title; when the document changes it says "Document changed", and "Update from document" pulls it in, asking first if you edited the body here.
 
-While the assistant writes, the page shows "The assistant is writing…", usually for a few minutes; "View progress" shows each step. The result is a "Draft" under Articles. Change the long-term instructions under "More → Writing instructions" at the top right.
+While the assistant writes, the page shows "The assistant is writing…", usually for a few minutes; "View chat" shows each step. The result is a "Draft" under Articles. Change the long-term instructions under "More → Writing instructions" at the top right.
 The assistant only uses personal stories you wrote in My profile and doesn't make up data or cases; matching images from the Library are added.
 
 ## Editing an article
@@ -613,7 +613,7 @@ export const assistant: Article = {
 ## 按钮和助手
 
 后台很多按钮是直接执行的（采集、发布），不经过助手。
-要 AI 读东西、想东西的按钮（出一批选题、新建文章里的让 AI 写、AI 修改、改写、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；按钮变成「进行中 · 看过程」，点它打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
+要 AI 读东西、想东西的按钮（出一批选题、新建文章里的让 AI 写、AI 修改、改写、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；按钮变成「进行中 · 查看对话」，点它打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
 
 ## 不会替你做的
 
@@ -656,7 +656,7 @@ Annulo「设置 → 项目」里的「给助手的说明」：写你对这个项
 ## Buttons and the assistant
 
 Many buttons run directly (collecting, publishing) without the assistant.
-Buttons that need AI to read or think (Suggest topics, Let AI write it, Ask AI to revise, Rewrite, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. The button turns into "In progress · View progress"; click it to open that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
+Buttons that need AI to read or think (Suggest topics, Let AI write it, Ask AI to revise, Rewrite, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. The button turns into "In progress · View chat"; click it to open that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
 
 ## What it won't do for you
 
