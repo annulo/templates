@@ -7,7 +7,7 @@ import { L } from './_i18n'
 //   social_migrate.run()      搬过去：建 social_accounts、改帖子和每天数据的 channel_id、删掉 channels 里的旧行
 //
 // 中途失败了再跑一次就行：已经搬过的账号按平台和账号 id 认出来，不会建两份。
-// 浏览器登录态跟着 browser_profile 走，不用重新登录。平台健康记录（以前的 platform_health）不搬：下次自检、发布会重新记。
+// 浏览器登录态跟着 browser_profile 走，不用重新登录。平台健康记录（以前的 platform_health）不搬：下次发布、采集会重新记。
 
 const SOCIAL = ['xiaohongshu', 'douyin', 'x', 'linkedin', 'facebook', 'instagram', 'youtube', 'bilibili']
 // social_accounts 的字段（插件的 tables/accounts.json）

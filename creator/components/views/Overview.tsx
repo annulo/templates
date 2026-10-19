@@ -49,7 +49,7 @@ export default function Overview({ ctx }: { ctx: Ctx }) {
 
   const social = ctx.channels
   const connected = social.filter((channel) => ['logged_in', 'ready', 'ok', 'active'].includes(channel.login_status ?? ''))
-  const broken = social.filter((channel) => brokenOf(health.rows, channel.id).some((row) => row.op === 'publish' || row.op === 'probe'))
+  const broken = social.filter((channel) => brokenOf(health.rows, channel.id).some((row) => row.op === 'publish'))
   const publishingProblems = broken
   // 各账号的粉丝合计（采集时写进账号）：外贸模板这里是网站访问量
   const followers = social.some((channel) => channel.followers != null) ? social.reduce((sum, channel) => sum + (Number(channel.followers) || 0), 0) : null
@@ -113,10 +113,9 @@ export default function Overview({ ctx }: { ctx: Ctx }) {
                 const meta = CHANNEL_TYPES[channel.type]
                 const Icon = meta?.icon
                 const problems = brokenOf(health.rows, channel.id)
-                const probe = newestHealth(health.rows.filter((row) => row.channel_id === channel.id && row.op === 'probe'))
                 const publishHealth = newestHealth(health.rows.filter((row) => row.channel_id === channel.id && row.op === 'publish'))
-                const warning = problems.some((row) => row.op === 'publish' || row.op === 'probe')
-                const publishedHealthy = publishHealth?.ok || probe?.ok
+                const warning = problems.some((row) => row.op === 'publish')
+                const publishedHealthy = publishHealth?.ok
                 const otherMachine = loggedInElsewhere(channel, machine)
                 const statusLabel = warning ? tr('overview.publish_problem') : otherMachine ? tr('social.on_machine', { name: otherMachine }) : channel.login_status === 'expired' ? tr('overview.login_expired') : publishedHealthy ? tr('overview.healthy') : tr('overview.not_checked')
                 return <tr key={channel.id} className="transition-colors hover:bg-muted/40">
@@ -216,7 +215,7 @@ function TodayWork({ ctx, pending, broken, health }: { ctx: Ctx; pending: Articl
           </button>
           <div className={actionClass}><ChecklistItemAction compact ctx={ctx} it={item} onDone={ctx.checklist.load} onChat={() => {}} /><button type="button" onClick={() => dismiss(item)} aria-label={tr('today.dismiss')} title={tr('today.dismiss')} className="cursor-pointer rounded-md p-1 text-muted-foreground/50 hover:bg-accent hover:text-foreground"><X className="size-3.5" /></button></div>
         </div>)}
-        {broken.map((channel) => { const problem = brokenOf(health, channel.id).find((row) => row.op === 'publish' || row.op === 'probe'); return <div key={channel.id} className={rowClass}>
+        {broken.map((channel) => { const problem = brokenOf(health, channel.id).find((row) => row.op === 'publish'); return <div key={channel.id} className={rowClass}>
           <span className="flex size-8 items-center justify-center"><span className="size-2.5 rounded-full bg-amber-500" /></span>
           <button type="button" onClick={() => ctx.go('channels', { channel: channel.id })} className={linkClass}><div className="row-title truncate text-sm leading-relaxed font-medium" title={tr('overview.social_repair')}>{tr('overview.social_repair')}</div><p className="mt-0.5 truncate text-xs leading-relaxed text-muted-foreground" title={`${channel.name} · ${CHANNEL_TYPES[channel.type]?.label}${problem?.error ? ` · ${problem.error}` : ''}`}>{channel.name} · {CHANNEL_TYPES[channel.type]?.label}{problem?.error ? ` · ${problem.error}` : ''}</p></button>
           <div className={actionClass}><TaskButton task={FIX_TASK} input={{ channel_id: channel.id }} match={(run) => run.input?.channel_id === channel.id} variant="outline" onFinished={ctx.checklist.load}>{tr('overview.fix_social')}</TaskButton>{noDismiss}</div>

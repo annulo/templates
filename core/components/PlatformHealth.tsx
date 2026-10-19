@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowUpRight, RefreshCw, Send, Stethoscope, Wrench, X } from 'lucide-react'
+import { ArrowUpRight, RefreshCw, Send, Wrench, X } from 'lucide-react'
 import RunButton from './RunButton'
 import { TaskButton } from './Task'
 import { Button, cx, fmtTime } from './ui'
@@ -25,14 +25,15 @@ export function usePlatformHealth(rev?: number) {
   return { rows, reload: load }
 }
 
-/** 这个账号流程失效的记录（页面 / 接口对不上了，不算登录过期；用户关掉了、之后没再失败的不算），新的在前 */
+/** 这个账号流程失效的记录（页面 / 接口对不上了，不算登录过期；用户关掉了、之后没再失败的不算），新的在前。
+ * 只看真实的发布、删除、采集：op 是 probe 的是以前「自检」留下的旧记录（社媒插件 2026-10 去掉了自检），不算 */
 export function brokenOf(rows: PlatformHealth[], channelId: string) {
-  return rows.filter((r) => r.channel_id === channelId && !r.ok && r.kind !== 'expired' && !(r.dismissed_at && String(r.dismissed_at) >= String(r.checked_at ?? ''))).sort((a, b) => String(b.checked_at ?? '').localeCompare(String(a.checked_at ?? '')))
+  return rows.filter((r) => r.channel_id === channelId && r.op !== 'probe' && !r.ok && r.kind !== 'expired' && !(r.dismissed_at && String(r.dismissed_at) >= String(r.checked_at ?? ''))).sort((a, b) => String(b.checked_at ?? '').localeCompare(String(a.checked_at ?? '')))
 }
 
 /**
- * 流程失效的提示：哪个账号哪一步走不通了，旁边「重新自检」和「交给助手修」（社媒插件的任务 social/fix-platform）。
- * 平台改页面时发布、采集会悄悄坏掉，每天的自检（social.probeAll）和真实操作的失败都会记进来。
+ * 流程失效的提示：哪个账号哪一步走不通了，旁边「交给助手修」（社媒插件的任务 social/fix-platform）和再真做一次的入口
+ * （采集失败给「立即采集」；发布失败的内容在 PublishProblems 下面有「重新发布」）。真做成功一次，这条就消失。
  * 发布、删除失败的能点到那条内容（post_id；旧记录没有，按同账号、同报错的失败内容找）；能关掉，之后再失败会重新出来。
  */
 export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: { accounts: Channel[]; rows: PlatformHealth[]; posts?: SocialPost[]; onOpenPost?: (id: string) => void; onChanged: () => void }) {
@@ -69,9 +70,11 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
             {a.auth_mode === 'api' && r.kind === 'permission' ? <FacebookConnectionButton channel={a} onDone={onChanged} /> : a.auth_mode === 'api' && r.kind === 'restricted' ? <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="text-xs text-primary-text underline">{tr('facebook_connect.open_meta')}</a> : r.kind !== 'network' && <TaskButton task={FIX_TASK} input={{ channel_id: a.id }} match={(run) => run.input?.channel_id === a.id} icon={Wrench} onFinished={onChanged}>
               {tr('health.fix')}
             </TaskButton>}
-            <RunButton inline watch fn="social/social.probe" input={{ channel_id: a.id }} icon={Stethoscope} variant="outline" onDone={onChanged}>
-              {tr('health.probe_again')}
-            </RunButton>
+            {r.op === 'collect' && (
+              <RunButton inline watch fn="social/social.collect" input={{ channel_id: a.id }} icon={RefreshCw} variant="outline" onDone={onChanged}>
+                {tr('health.collect_again')}
+              </RunButton>
+            )}
             {post && onOpenPost && (
               <Button size="sm" variant="ghost" onClick={() => onOpenPost(post)}>
                 <ArrowUpRight />
@@ -87,7 +90,7 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
 }
 
 /**
- * 一个账号发布出的问题，每条都带处理入口：流程失效（HealthAlerts：重新自检、交给助手修）+ 发布失败的内容（看原因、重新发布）。
+ * 一个账号发布出的问题，每条都带处理入口：流程失效（HealthAlerts：交给助手修、再做一次）+ 发布失败的内容（看原因、重新发布）。
  * 页面上显示了「发布失败」「发布异常」的地方都放它，不让状态只看得到、处理不了。
  */
 export function PublishProblems({ account, rows, posts, onOpenPost, onChanged }: { account: Channel; rows: PlatformHealth[]; posts: SocialPost[]; onOpenPost: (p: SocialPost) => void; onChanged: () => void }) {
@@ -180,49 +183,4 @@ export function ActivityLine({ ch, rows, onChanged }: { ch: Channel; rows: Platf
     )
   }
   return <div className="space-y-1.5 border-t border-border pt-2 text-[11px] text-muted-foreground">{line('publish')}{line('collect')}</div>
-}
-
-/** 账号卡片上的一行：上次自检的结果 + 「自检」按钮；没走通的步骤（包括次要的）在下面逐条写出哪一步、为什么 */
-export function ProbeLine({ ch, rows, onChanged }: { ch: Channel; rows: PlatformHealth[]; onChanged: () => void }) {
-  const p = rows.find((r) => r.channel_id === ch.id && r.op === 'probe')
-  const steps: { name: string; ok: boolean; soft?: boolean; error?: string }[] = (() => {
-    try {
-      return p?.steps ? JSON.parse(p.steps) : []
-    } catch {
-      return []
-    }
-  })()
-  const warn = p?.ok ? steps.filter((s) => !s.ok && s.soft) : []
-  // 没通过时列出失败的那一步；旧记录没有 steps 时退回 step + error
-  const bad = !p || p.ok || p.kind === 'expired' ? warn : steps.filter((s) => !s.ok).length ? steps.filter((s) => !s.ok) : [{ name: p.step ?? '', ok: false, error: p.error }]
-  return (
-    <div className="space-y-1.5 border-t border-border pt-2 text-[11px] text-muted-foreground">
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate">
-          {!p ? tr('health.never') : p.ok ? (
-            <span className={cx(warn.length ? 'text-amber-600' : 'text-emerald-600')}>{ch.auth_mode === 'api' ? tr(warn.length ? 'facebook_connect.probe_limited' : 'facebook_connect.probe_ok') : warn.length ? tr('health.ok_warn', { when: fmtTime(p.checked_at ?? ''), n: warn.length }) : tr('health.ok', { when: fmtTime(p.checked_at ?? '') })}</span>
-          ) : p.kind === 'expired' ? (
-            tr('health.expired', { when: fmtTime(p.checked_at ?? '') })
-          ) : (
-            <span className="text-destructive">{tr('health.failed', { when: fmtTime(p.checked_at ?? ''), step: p.step ?? '' })}</span>
-          )}
-        </span>
-        <RunButton inline watch fn="social/social.probe" input={{ channel_id: ch.id }} icon={Stethoscope} variant="ghost" onDone={onChanged}>
-          {tr('health.probe')}
-        </RunButton>
-      </div>
-      {bad.length > 0 && (
-        <ul className="space-y-1">
-          {bad.map((s, i) => (
-            <li key={i} className={cx('break-words leading-relaxed', p?.ok ? 'text-amber-600' : 'text-destructive')}>
-              {ch.auth_mode === 'api' && s.error ? <details>
-                <summary className="cursor-pointer">{s.name}：{s.error.split('Facebook Graph API:')[0].trim()} <span className="underline">{tr('ui.details')}</span></summary>
-                <p className="mt-1 whitespace-pre-wrap font-mono text-muted-foreground [overflow-wrap:anywhere]">{s.error}</p>
-              </details> : <>{s.name}{s.error ? `：${s.error}` : ''}</>}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
 }

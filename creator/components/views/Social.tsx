@@ -21,7 +21,7 @@ import { CHANNEL_TYPES } from '../../lib/channels'
 import type { Ctx } from './types'
 import { metricText, metricUnavailable } from '../../lib/apiMetrics'
 import { numLocale, tr } from '../../lib/i18n'
-import { brokenOf, ProbeLine, PublishProblems, usePlatformHealth } from '../PlatformHealth'
+import { brokenOf, ActivityLine, PublishProblems, usePlatformHealth } from '../PlatformHealth'
 
 // label 按当前语言取（getter）
 const lbl = (key: string, tone: Tone) => ({ get label() { return tr(key) }, tone })
@@ -98,7 +98,7 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const other = (a: Channel) => !!loggedInElsewhere(a, machine)
   const expired = (a: Channel) => !other(a) && a.login_status === 'expired'
   const broken = (a: Channel) => brokenOf(health.rows, a.id).some((r) => r.op === 'publish') || owned.some((p) => p.channel_id === a.id && p.status === 'failed')
-  // 要人处理的账号：登录过期，或者发布出了问题（自检失败、有发失败的帖子）。统计卡片叫「待处理账号」，不只是发布异常
+  // 要人处理的账号：登录过期，或者发布出了问题（流程失效、有发失败的帖子）。统计卡片叫「待处理账号」，不只是发布异常
   const issues = accounts.filter((a) => expired(a) || broken(a))
   const collectable = accounts.filter((a) => !other(a) && a.login_status === 'ok')
   const oldest = collectable.map((a) => a.collected_at).filter((t): t is string => !!t).sort()[0]
@@ -296,7 +296,7 @@ function PlatformName({ type, name }: { type?: Channel['type']; name: string }) 
 
 function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channel; other: string; health: PlatformHealth[]; selected: boolean; onSelect: () => void; onDone: () => void }) {
   const [error, setError] = useState('')
-  // 登录态在别的电脑上：这台电脑上看不到它登没登录，采集、自检、打开主页也做不了，只给「在这台电脑登录」
+  // 登录态在别的电脑上：这台电脑上看不到它登没登录，采集、打开主页也做不了，只给「在这台电脑登录」
   const expired = !other && ch.login_status === 'expired'
   const home = !other && platformOf(ch)?.profileUrl(ch)
   return (
@@ -333,9 +333,9 @@ function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channe
         </div>
       </div>
       {error && <div className="mt-2"><ErrorDetails message={error} /></div>}
-      {platformOf(ch)?.probe && !expired && !other && (
+      {!expired && !other && (
         <div className="mt-3">
-          <ProbeLine ch={ch} rows={health} onChanged={onDone} />
+          <ActivityLine ch={ch} rows={health} />
         </div>
       )}
     </div>

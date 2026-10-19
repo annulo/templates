@@ -67,9 +67,7 @@
     "problem_permission": "{name}：Facebook 权限不足",
     "problem_restricted": "{name}：Facebook API 访问受限",
     "problem_network": "{name}：Facebook 连接暂时异常",
-    "open_meta": "到 Meta 后台检查限制",
-    "probe_limited": "发帖授权可用，部分数据暂不可读取",
-    "probe_ok": "发帖授权和数据读取检查通过"
+    "open_meta": "到 Meta 后台检查限制"
   },
   "article": {
     "type": "文章类型",

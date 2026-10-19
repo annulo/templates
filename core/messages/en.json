@@ -67,9 +67,7 @@
     "problem_permission": "{name}: Facebook permission required",
     "problem_restricted": "{name}: Facebook API access restricted",
     "problem_network": "{name}: Facebook connection temporarily unavailable",
-    "open_meta": "Check restrictions in Meta",
-    "probe_limited": "Publishing authorization is available; some data is unavailable",
-    "probe_ok": "Publishing authorization and data access checks passed"
+    "open_meta": "Check restrictions in Meta"
   },
   "article": {
     "type": "Type",

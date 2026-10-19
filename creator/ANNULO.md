@@ -32,7 +32,7 @@
 | 发布日历 `calendar`（按天看排期和发布，拖动改排期） | 读 `social_posts`、`articles` | |
 | 我的定位 `company` | `profile` | `profile.get` / `save` |
 | 资料库 `assets` | `assets` | |
-| 账号 `channels`（添加、登录、移除、自检） | 插件的 `social_accounts` | `channels.remove`、`social/social.login` / `probe` |
+| 账号 `channels`（添加、登录、移除） | 插件的 `social_accounts` | `channels.remove`、`social/social.login` |
 
 页面链接（回复里提到就写，写法见 annulo skill 的 pages.md）：
 
@@ -84,7 +84,7 @@
 
 ## 社媒插件
 
-社媒（账号、登录、发布、采集、自检、各平台的写法）是公开的 Annulo 插件 **social**（`plugins/social/`，github.com/annulo/plugins），这个模板接它的地方：
+社媒（账号、登录、发布、采集、各平台的写法）是公开的 Annulo 插件 **social**（`plugins/social/`，github.com/annulo/plugins），这个模板接它的地方：
 
 - 页面：`lib/shuttle.ts` 的 `listChannels` 读 `social_accounts`；社媒页、内容页的按钮调 `social/social.*`。
 - 文章就是要发的内容，不再按账号各写一版：文章页「发布」勾选账号，`publish.prepare({ article_id, channel_ids, scheduled_at? })` 按文章给每个账号建一条 `social_posts`（过一遍插件的规格检查），页面再逐条调 `social/social.publish`；排期的到点由插件的定时任务发。

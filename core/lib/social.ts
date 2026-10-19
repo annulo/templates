@@ -34,8 +34,6 @@ export type SocialPlatform = {
   task: string
   /** 账号的主页地址（卡片上「打开主页」）；缺账号信息时返回空 */
   profileUrl: (ch: Channel) => string
-  /** 平台文件有自检（probe）：账号卡片上显示上次自检的结果和「自检」按钮 */
-  probe?: boolean
   /** 视频：only 只发视频（YouTube、B 站、抖音），optional 图文和视频二选一（social_posts.video 有值就按视频发）；不写就是不能发视频 */
   video?: 'only' | 'optional'
   /**
@@ -106,7 +104,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     label: 'LinkedIn',
     get noun() { return tr('meta.platform.linkedin.noun') },
     task: 'social/write-linkedin',
-    probe: true,
     profileUrl: (ch) => (ch.handle ? `https://www.linkedin.com/in/${encodeURIComponent(ch.handle)}/` : ''),
     get bodyHint() { return tr('meta.platform.linkedin.body_hint') },
     metrics: [
@@ -122,7 +119,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     label: 'Facebook',
     get noun() { return tr('meta.platform.facebook.noun') },
     task: 'social/write-facebook',
-    probe: true,
     // 个人主页 facebook.com/<handle 或 profile.php?id=uid>；公司主页 facebook.com/<page id>
     profileUrl: (ch) => (ch.handle ? `https://www.facebook.com/${ch.handle}` : ch.platform_uid ? `https://www.facebook.com/profile.php?id=${ch.platform_uid}` : ''),
     get bodyHint() { return tr('meta.platform.facebook.body_hint') },
@@ -134,7 +130,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     label: 'Instagram',
     get noun() { return tr('meta.platform.instagram.noun') },
     task: 'social/write-instagram',
-    probe: true,
     profileUrl: (ch) => (ch.handle ? `https://www.instagram.com/${ch.handle}/` : ''),
     get bodyHint() { return tr('meta.platform.instagram.body_hint') },
     metrics: [metric('instagram', 'views'), metric('instagram', 'likes'), metric('instagram', 'comments'), metric('instagram', 'collects')],
@@ -145,7 +140,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     label: 'YouTube',
     get noun() { return tr('meta.platform.youtube.noun') },
     task: 'social/write-youtube',
-    probe: true,
     profileUrl: (ch) => (ch.handle ? `https://www.youtube.com/${ch.handle.startsWith('@') ? ch.handle : '@' + ch.handle}` : ch.platform_uid ? `https://www.youtube.com/channel/${ch.platform_uid}` : ''),
     get bodyHint() { return tr('meta.platform.youtube.body_hint') },
     metrics: [metric('youtube', 'views'), metric('youtube', 'likes'), metric('youtube', 'comments')],
@@ -156,7 +150,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     label: 'B 站',
     get noun() { return tr('meta.platform.bilibili.noun') },
     task: 'social/write-bilibili',
-    probe: true,
     profileUrl: (ch) => (ch.platform_uid ? `https://space.bilibili.com/${ch.platform_uid}` : ''),
     get bodyHint() { return tr('meta.platform.bilibili.body_hint') },
     metrics: [metric('bilibili', 'views'), metric('bilibili', 'likes'), metric('bilibili', 'comments'), metric('bilibili', 'collects'), metric('bilibili', 'shares')],
@@ -167,7 +160,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     get label() { return tr('meta.platform.zhihu.label') },
     get noun() { return tr('meta.platform.zhihu.noun') },
     task: 'social/write-zhihu',
-    probe: true,
     profileUrl: (ch) => (ch.handle ? `https://www.zhihu.com/people/${ch.handle}` : ''),
     get bodyHint() { return tr('meta.platform.zhihu.body_hint') },
     metrics: [metric('zhihu', 'views'), metric('zhihu', 'likes'), metric('zhihu', 'comments'), metric('zhihu', 'collects')],
@@ -178,7 +170,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     get label() { return tr('meta.platform.douyin.label') },
     get noun() { return tr('meta.platform.douyin.noun') },
     task: 'social/write-douyin',
-    probe: true,
     profileUrl: (ch) => (ch.platform_uid ? `https://www.douyin.com/user/${ch.platform_uid}` : ''),
     get bodyHint() { return tr('meta.platform.douyin.body_hint') },
     metrics: [metric('douyin', 'views'), metric('douyin', 'likes'), metric('douyin', 'comments'), metric('douyin', 'collects'), metric('douyin', 'shares')],
@@ -188,7 +179,6 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     ...fromPlugin('x'),
     label: 'X',
     task: 'social/write-x',
-    probe: true,
     profileUrl: (ch) => (ch.handle ? `https://x.com/${ch.handle}` : ''),
     get noun() { return tr('meta.platform.x.noun') },
     get bodyHint() { return tr('meta.platform.x.body_hint') },
