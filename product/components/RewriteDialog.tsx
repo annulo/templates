@@ -45,7 +45,9 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
   const focusBox = () => setTimeout(() => { const el = box.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length) } }, 0)
   useEffect(() => { if (open) focusBox() }, [open])
   const { presets, error: loadErr, reload } = usePresets(open, here)
-  const list = (presets ?? []).filter((p) => p.mode === mode && fitsType(p, from))
+  // 内容文件夹（自媒体）里的内容没有类型：预设都能用，不按类型筛（不然「配 5 张图」这类只给图文的永远不出现）
+  const untyped = !!(article as { folder?: string }).folder
+  const list = (presets ?? []).filter((p) => p.mode === mode && (untyped || fitsType(p, from)))
   useEffect(() => {
     if (!open) return
     setMode(initialMode ?? (here ? 'here' : 'new')); setType(from === 'article' ? 'post' : 'article'); setNote(initialNote ?? ''); setMsg(''); setErr('')

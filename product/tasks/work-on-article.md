@@ -63,7 +63,7 @@ annulo run assets.add --input @/tmp/assets-add.json
 
 `files` 每个是 `{ url, mime, name }`：`mime` 用 `--json` 打印的 `content_type`（不给就按扩展名推），`name` 写这一个是什么（封面、步骤 1、片头…），页面和引用里会显示。只有一个文件可以写成 `"url": "local:<name>", "mime": "video/mp4"`。
 
-`use: true` 把它用到这篇上：视频文章设成发布用的视频，图文把这组图换成配图。长文的图不用 `use`：要插进正文，用 `annulo upload <图>`（不加 `--local`）拿地址，再用第 2 步的 `content.update` 写进正文的 `<img>`，产物里也照样存一份。
+`use: true` 把它用到这篇上：视频文章设成发布用的视频，图文把这组图换成配图。**做的是这篇要发的配图、视频时默认 `use: true`**（要求里说了只是试做、备选的才不用），不用等用户另外说「设成配图」。长文的图不用 `use`：要插进正文，用 `annulo upload <图>`（不加 `--local`）拿地址，再用第 2 步的 `content.update` 写进正文的 `<img>`，产物里也照样存一份。
 
 ## 4. 回复
 
