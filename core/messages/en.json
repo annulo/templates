@@ -167,7 +167,7 @@
     "ai": "Ask AI",
     "ai_title": "Ask AI",
     "work_go": "Start",
-    "work_hint": "Work on \"{title}\": revise or write its content, or make images or a video attached to it, following the instructions below. To change the result, keep talking in the chat on the right.",
+    "work_hint": "Work on \"{title}\": write the text to post, make images or a video, following the instructions below. To change the result, keep talking in the chat on the right.",
     "work_note": "Instructions",
     "work_note_hint": "Say what AI should make and how: how many images, what style, how long, which tool…",
     "preset_save_here": "Save as preset",
@@ -330,15 +330,15 @@
     "builtin": {
       "make_video": {
         "name": "Make the video",
-        "prompt": "Make a video from this piece: portrait or landscape for the platforms it goes to (9:16 for Douyin and Xiaohongshu, 16:9 for YouTube and Bilibili), about 60 seconds. Say what it's about in the first 3 seconds, follow the structure of the draft (or the content if there's no draft), get the key points across in voice-over or captions, and end with a line inviting people to follow. If this is a video piece, use it as the video to publish and write the title, description and tags."
+        "prompt": "Make a video from this piece: portrait or landscape for the platforms it goes to (9:16 for Douyin and Xiaohongshu, 16:9 for YouTube and Bilibili), about 60 seconds. Say what it's about in the first 3 seconds, follow the structure of the draft (or the content if there's no draft), get the key points across in voice-over or captions, and end with a line inviting people to follow. Also write the video's title, description and tags."
       },
       "from_draft": {
         "name": "Write from the draft",
-        "prompt": "Write this piece from its draft: title, body (the description for videos) and tags for its type, following my writing instructions. Keep the draft's points, examples and wording where you can, fill in the structure, and don't invent anything that isn't in the draft."
+        "prompt": "Write the text to post from this piece's draft: title, body (the description for videos) and tags, following my writing instructions. Keep the draft's points, examples and wording where you can, fill in the structure, and don't invent anything that isn't in the draft."
       },
       "post_images": {
         "name": "Make 5 images",
-        "prompt": "Make 5 images for this post: 3:4 portrait; the first is the cover (a big headline that says what it's about at a glance), the rest each cover one point with little, large text and a consistent palette. Use them as this post's images."
+        "prompt": "Make 5 images for this piece: 3:4 portrait; the first is the cover (a big headline that says what it's about at a glance), the rest each cover one point with little, large text and a consistent palette."
       },
       "cover": {
         "name": "Make a cover",

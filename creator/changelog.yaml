@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.16.4
+  zh: "帮助手册按现在的界面重写、换了新截图；发布时默认选中的文案和视频配套，视频能先播放预览；「交给 AI」的预设都能用了，列表上能看到 AI 正在做哪条。"
+  en: "The help guide is rewritten for the current screens with new screenshots; the publish dialog picks a matching copy and video by default and lets you preview videos; all AI presets are available, and the list shows which piece AI is working on."
 - version: 0.16.3
   zh: "发布时能设视频封面、直接上传文件；账号卡片改成显示上次发布、采集成没成；发布进度能展开看每一步。"
   en: "Set a video cover and upload files right in the publish dialog; account cards show whether the last publish and collection worked; publishing progress can be expanded step by step."

@@ -1,3 +1,6 @@
+- version: 0.15.4
+  zh: "「交给 AI」的说明和自带预设改得更通用，做的配图、视频默认就用到这篇上。"
+  en: "The \"Hand to AI\" hint and built-in presets are more general, and images or videos it makes are used on the article by default."
 - version: 0.15.3
   zh: "账号卡片改成显示上次发布、采集成没成；发布记录能只删记录；发布进度能展开看每一步。"
   en: "Account cards show whether the last publish and collection worked; publish records can be removed without touching the platform; publishing progress can be expanded step by step."
