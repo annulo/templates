@@ -133,6 +133,8 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const statusOf = (a: Article): ContentStatus => articleStatus(a, !!publishedTo[a.id]?.length)
 
   const writer = useTask(WRITE_TASK, load)
+  // 新建内容「让 AI 写」、选题「写成文章」走的是「在这条上做」（work-on-content），列表上的进行中提示和按钮能不能点看它
+  const worker = useTask(FOLDER_WORK.task, load)
   const openWriter = (input: WriteInput = {}) => {
     setWritingNotes('')
     setWritingInput(input)
@@ -241,6 +243,11 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
         title={(r) => (topicTitle(r.input?.topic_id) ? tr('content.writing_topic', { title: topicTitle(r.input?.topic_id)! }) : r.input?.subject ? tr('content.writing_topic', { title: r.input.subject }) : tr('content.writing_pick'))}
         desc={tr('content.writing_desc')}
       />
+      {!params.article && <TaskRunning
+        runs={worker.task?.running ?? []}
+        title={(r) => tr('content.working_on', { title: articles?.find((x) => x.id === r.input?.article_id)?.title || tr('content.untitled') })}
+        desc={(r) => (typeof r.input?.note === 'string' && r.input.note.trim()) || ''}
+      />}
       <TaskFailed task={writer.task} />
       {tab === 'marketing' ? planning : tab === 'inspiration' ? <InspirationLibrary ctx={ctx} params={params} setParam={setParam} onChanged={load} /> : tab === 'articles' ? (
         <Articles artifacts={artifacts} onChanged={load} onRewrite={setRewriting} onCopy={copyArticle} ctx={ctx} publishedTo={publishedTo} openVersion={(id, version) => { setParam('version', version); setParam('article', id) }} list={articles?.map((a) => ({ ...a, status: statusOf(a) })) ?? null} status={params.status ?? ''} setStatus={(s) => setParam('status', s)} type={params.type ?? ''} setType={(t) => setParam('type', t)} open={(id) => setParam('article', id)} onWrite={() => openWriter()} onDelete={async (a) => { try { await removeArticle(a, posts, pubs); load() } catch (e) { toast((e as Error).message, 'error') } }} />
@@ -933,7 +940,7 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite, inspiration 
                       <Loader className="size-3 animate-spin" /> {TOPIC_STATUS.writing.label}
                     </Badge>
                   ) : (
-                    <Button variant="outline" size="sm" onClick={() => onWrite({ topic_id: t.id, channel_id: site?.id })} disabled={!writer.shuttle || !writer.task || writer.starting}>
+                    <Button variant="outline" size="sm" onClick={() => onWrite({ topic_id: t.id, channel_id: site?.id })} disabled={!writer.shuttle || writer.starting}>
                       <Sparkles /> {tr('content.write_article')}
                     </Button>
                   ))}

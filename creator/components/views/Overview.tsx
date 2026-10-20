@@ -16,7 +16,6 @@ import { TOPICS_TASK } from './Content'
 import { brokenOf, FIX_TASK, usePlatformHealth } from '../PlatformHealth'
 import { loggedInElsewhere, useElsewhere } from '../../lib/social'
 import { unpublished } from '../../local/_types'
-import { TYPE_META, typeOf } from '../ArticleTypes'
 
 /** 总览：各账号的粉丝、待你处理的事、最近的动作 */
 export default function Overview({ ctx }: { ctx: Ctx }) {
@@ -143,7 +142,7 @@ export default function Overview({ ctx }: { ctx: Ctx }) {
           count={data ? pending.length : null}
           empty={tr('overview.pending_empty')}
           onOpen={openPending}
-          items={pending.slice(0, 3).map((p) => ({ id: p.id, text: p.title || tr('versions.untitled'), meta: `${TYPE_META[typeOf(p)].label} · ${fmtTime(p.updated_at || p.created_at)}` }))}
+          items={pending.slice(0, 3).map((p) => ({ id: p.id, text: p.title || tr('versions.untitled'), meta: fmtTime(p.updated_at || p.created_at) }))}
         />
         <Todo
           icon={Lightbulb}
@@ -211,7 +210,7 @@ function TodayWork({ ctx, pending, broken, health }: { ctx: Ctx; pending: Articl
           <button type="button" onClick={openItem(item)} disabled={!openItem(item)} className={`${linkClass} disabled:cursor-default`}>
             {item.key === 'd_posts' && <div className="mb-0.5 text-xs text-muted-foreground">{tr('overview.content_review')}</div>}
             <div title={item.key === 'd_posts' && pending[0] ? pending[0].title : item.title} className="row-title truncate text-sm leading-relaxed font-medium">{item.key === 'd_posts' && pending[0] ? pending[0].title : item.title}</div>
-            <p className="mt-0.5 truncate text-xs leading-relaxed text-muted-foreground" title={item.why}>{item.key === 'd_posts' && pending[0] ? `${TYPE_META[typeOf(pending[0])].label} · ${tr('overview.awaiting_review')} · ${fmtTime(pending[0].updated_at || pending[0].created_at)}${pending.length > 1 ? ' · ' + tr('overview.review_more', { n: pending.length - 1 }) : ''}` : item.why}</p>
+            <p className="mt-0.5 truncate text-xs leading-relaxed text-muted-foreground" title={item.why}>{item.key === 'd_posts' && pending[0] ? `${tr('overview.awaiting_review')} · ${fmtTime(pending[0].updated_at || pending[0].created_at)}${pending.length > 1 ? ' · ' + tr('overview.review_more', { n: pending.length - 1 }) : ''}` : item.why}</p>
           </button>
           <div className={actionClass}><ChecklistItemAction compact ctx={ctx} it={item} onDone={ctx.checklist.load} onChat={() => {}} /><button type="button" onClick={() => dismiss(item)} aria-label={tr('today.dismiss')} title={tr('today.dismiss')} className="cursor-pointer rounded-md p-1 text-muted-foreground/50 hover:bg-accent hover:text-foreground"><X className="size-3.5" /></button></div>
         </div>)}

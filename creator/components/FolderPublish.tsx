@@ -115,6 +115,8 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   // 开头写了 title 的 md 也算文案（文件名随手起的也能认出来）；打开时读一遍每份 md 的开头
   const [titled, setTitled] = useState<Set<string>>(new Set())
   const userPicked = useRef(false)
+  // 打开时定下的那个视频：用户没自己点文案之前，视频就用它（不再按文案的目录重新挑，免得配到别的版本）
+  const autoVideo = useRef('')
   const isCopy = (p: string) => copyName(p) || titled.has(p)
   const folderVideos = useMemo(() => (files ?? []).filter((e) => VIDEO.test(e.path)).sort((a, b) => Number(isFinal(b.path)) - Number(isFinal(a.path)) || b.mtime - a.mtime), [files])
   const copies = useMemo(() => (files ?? []).filter((e) => MD.test(e.path) && !isDraft(e.path)).sort((a, b) => Number(isCopy(b.path)) - Number(isCopy(a.path))), [files, titled])
@@ -152,7 +154,9 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
       const k = guessKind(fs)
       setKind(k)
       const mds = fs.filter((e) => MD.test(e.path) && !isDraft(e.path))
-      const vid = fs.filter((e) => VIDEO.test(e.path)).sort((a, b) => b.mtime - a.mtime)[0]
+      // 先定视频（名字带「成片」的优先，再是最近改的），再挑离它最近的文案：默认选中的文案和视频是配套的（同一个版本目录里的）
+      const vid = fs.filter((e) => VIDEO.test(e.path)).sort((a, b) => Number(isFinal(b.path)) - Number(isFinal(a.path)) || b.mtime - a.mtime)[0]
+      autoVideo.current = vid?.path ?? ''
       return Promise.all(mds.map((e) => runLocal<{ text: string }>('folder.read', { article_id: article.id, path: e.path }).then((x) => (frontTitle(x.text) ? e.path : '')).catch(() => ''))).then((hits) => {
         const ok = new Set(hits.filter(Boolean))
         setTitled(ok)
@@ -187,7 +191,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
       setImages(folderImages.filter((e) => near(dir, e.path) === best).slice(0, 18).map((e) => media(e.path)))
     }
     if (!touched.video) {
-      const v = [...folderVideos].sort((a, b) => near(dir, a.path) - near(dir, b.path) || Number(isFinal(b.path)) - Number(isFinal(a.path)))[0]
+      const v = (!userPicked.current && autoVideo.current && folderVideos.find((e) => e.path === autoVideo.current)) || [...folderVideos].sort((a, b) => near(dir, a.path) - near(dir, b.path) || Number(isFinal(b.path)) - Number(isFinal(a.path)) || b.mtime - a.mtime)[0]
       setVideo(v ? media(v.path) : null)
     }
   }, [copy, files, root])
