@@ -2,7 +2,7 @@
 import { L } from './_i18n'
 import { profile } from './_ai'
 import { context as profileContext } from './profile'
-import { status } from './_creght'
+import { previewURL, status } from './_creght'
 import { sites as channelSites, add as addChannel, fromURL as channelFromURL, match as matchChannel } from './channels'
 import { run as runAudit, inspect as inspectAudit } from './audit'
 import { onboarding, parse, write, websiteURL, type CompanyDraft, type Competitor, type Onboarding } from './_onboarding'
@@ -51,14 +51,13 @@ export function ai(_input: {}, ctx: any) {
 // connected=false：没连 creght（MCP 列表里没有 creght），或者用户在 设置 → MCP 里关掉了它：向导只显示网址输入框，不出现任何 creght 的东西。
 export async function sites(_input: {}, ctx: any) {
   if (!ctx.mcp.servers().some((s: any) => s.name === 'creght' && s.status !== 'disabled')) return { connected: false, list: [] }
-  const host = new URL(ctx.workspace?.api_host || 'https://creght.cn').host
-  return { connected: true, list: (await channelSites({}, ctx)).list.map((s: any) => ({ ...s, preview_url: `https://${s.site_id}.preview.${host}/` })) }
+  return { connected: true, list: (await channelSites({}, ctx)).list.map((s: any) => ({ ...s, preview_url: previewURL(ctx, s.site_id, s.api_host) })) }
 }
 // 只读站点发布元数据，不抓取公司资料或正文。
 export async function preview(input: { project_id: string; site_id: string }, ctx: any) {
   const s = (await sites({}, ctx)).list.find((s: any) => s.project_id === input.project_id && s.site_id === input.site_id)
   if (!s) fail(ctx, '账号下没有这个站点', 'This site is not in your account')
-  try { const st = await status(ctx, s.project_id, s.site_id); return { url: st?.live_url || st?.preview_url || s.preview_url } }
+  try { const st = await status(ctx, s.project_id, s.site_id, s.api_host); return { url: st?.live_url || st?.preview_url || s.preview_url } }
   catch { return { url: s.preview_url } }
 }
 export async function selectSite(input: { project_id: string; site_id: string; refresh?: boolean }, ctx: any) {
