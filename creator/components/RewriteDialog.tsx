@@ -14,9 +14,10 @@ export const REWRITE_TASK = 'rewrite-article'
  * 交给 AI（docs/artifacts.md「交给 AI」），两种做法：
  *   在这篇上做（onWork，项目有「在这篇上做」的任务时才有）：写这篇的正文、做产物挂在这篇上，照 Prompt 做；
  *   另写一篇（onStart）：选改成哪种类型、写这次的要求，交给助手另写一篇（原文不动）。「转换」不经过 AI，只按类型换格式（onConvert）。
+ *     内容没有类型的（自媒体的内容文件夹）传 onFork：不选类型、没有「转换」，新建一条内容照要求另写，做成什么写在要求里。
  * 常用的要求存成「AI 预设」（core/lib/presets.ts，模板也自带几条）：点一下就填好，改、删、加在「管理预设」里。
  */
-export default function RewriteDialog({ open, article, starting, error, onClose, onStart, onConvert, onWork, initialMode, initialNote, initialPreset }: {
+export default function RewriteDialog({ open, article, starting, error, onClose, onStart, onConvert, onFork, onWork, initialMode, initialNote, initialPreset }: {
   open: boolean
   article: Article
   starting: boolean
@@ -24,6 +25,8 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
   onClose: () => void
   onStart: (type: ArticleType, note: string) => void
   onConvert: (type: ArticleType) => Promise<void>
+  /** 另写一篇，内容没有类型时（内容文件夹）：新建一条内容交给助手，note 是这次的要求。传了它就不用 onStart、onConvert */
+  onFork?: (note: string) => Promise<void>
   /** 在这篇上做：交给项目的「在这篇上做」任务，note 是这次的要求。不传就只有「另写一篇」 */
   onWork?: (note: string) => Promise<void>
   initialMode?: PresetMode
@@ -46,7 +49,7 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
   useEffect(() => { if (open) focusBox() }, [open])
   const { presets, error: loadErr, reload } = usePresets(open, here)
   // 内容文件夹（自媒体）里的内容没有类型：预设都能用，不按类型筛（不然「配 5 张图」这类只给图文的永远不出现）
-  const untyped = !!(article as { folder?: string }).folder
+  const untyped = !!onFork || !!(article as { folder?: string }).folder
   const list = (presets ?? []).filter((p) => p.mode === mode && (untyped || fitsType(p, from)))
   useEffect(() => {
     if (!open) return
@@ -59,7 +62,7 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
     const p = presets.find((x) => x.builtin === initialPreset)
     if (p) { setMode(p.mode); setNote(p.prompt) }
   }, [open, initialPreset, !!presets])
-  const picked = pickedPreset(presets, mode, type, note)
+  const picked = pickedPreset(presets, mode, type, note, !!onFork)
   const usePreset = (p: Preset) => { if (p.mode === 'new') setType(p.type); setNote(p.prompt); setMsg(''); focusBox() }
   const save = async () => {
     setErr(''); setMsg('')
@@ -73,25 +76,26 @@ export default function RewriteDialog({ open, article, starting, error, onClose,
 
   return <Dialog open={open} onClose={onClose} title={tr('article.ai_title')} width={640} footer={<>
     <Button variant="ghost" onClick={onClose}>{tr('common.cancel')}</Button>
-    {mode === 'new' && <Button variant="outline" onClick={() => run(() => onConvert(type))} disabled={working} title={type === from ? undefined : tr('article.convert_hint')}>{type === from ? <Copy /> : <ArrowRightLeft />}{type === from ? tr('article.copy_go') : tr('article.convert_go')}</Button>}
+    {mode === 'new' && !onFork && <Button variant="outline" onClick={() => run(() => onConvert(type))} disabled={working} title={type === from ? undefined : tr('article.convert_hint')}>{type === from ? <Copy /> : <ArrowRightLeft />}{type === from ? tr('article.copy_go') : tr('article.convert_go')}</Button>}
     {mode === 'here'
       ? <Button needsShuttle onClick={() => run(() => onWork!(note.trim()))} disabled={working || !note.trim()}>{working ? <Loader2 className="animate-spin" /> : <Wand2 />}{tr('article.work_go')}</Button>
+      : onFork ? <Button needsShuttle onClick={() => run(() => onFork(note.trim()))} disabled={working || !note.trim()}>{working ? <Loader2 className="animate-spin" /> : <Sparkles />}{tr('article.fork_go')}</Button>
       : <Button needsShuttle onClick={() => onStart(type, note.trim())} disabled={working}>{working ? <Loader2 className="animate-spin" /> : <Sparkles />}{tr('article.rewrite_go', { type: TYPE_META[type].label })}</Button>}
   </>}>
     <div className="space-y-4">
       {here && <Segmented<PresetMode> value={mode} onChange={(m) => { setMode(m); setNote(''); setMsg(''); focusBox() }} options={[{ value: 'here', label: tr('presets.mode_here') }, { value: 'new', label: tr('presets.mode_new') }]} />}
-      <p className="text-sm text-muted-foreground">{mode === 'here' ? tr('article.work_hint', { title: article.title }) : tr('article.rewrite_hint', { title: article.title })}</p>
+      <p className="text-sm text-muted-foreground">{mode === 'here' ? tr('article.work_hint', { title: article.title }) : tr(onFork ? 'article.fork_hint' : 'article.rewrite_hint', { title: article.title })}</p>
       <PresetChips presets={list} picked={picked} onPick={usePreset} onManage={() => setManaging(true)} emptyText={tr('article.presets_empty')} />
-      {mode === 'new' && <Field group label={tr('article.rewrite_to')}><TypePicker value={type} onChange={(t) => { if (picked) setNote(''); setType(t) }} /></Field>}
-      <Field label={mode === 'here' ? tr('article.work_note') : tr('article.rewrite_note')} hint={mode === 'here' ? tr('article.work_note_hint') : tr('article.rewrite_note_hint')}>
-        <textarea ref={box} value={note} onChange={(e) => { setNote(e.target.value); setMsg('') }} rows={mode === 'here' ? 5 : 4} className={cx(inputCls, 'py-2')} placeholder={mode === 'here' ? tr('presets.here_ph') : tr(`article.rewrite_ph_${type}`)} />
+      {mode === 'new' && !onFork && <Field group label={tr('article.rewrite_to')}><TypePicker value={type} onChange={(t) => { if (picked) setNote(''); setType(t) }} /></Field>}
+      <Field label={mode === 'here' || onFork ? tr('article.work_note') : tr('article.rewrite_note')} hint={mode === 'here' ? tr('article.work_note_hint') : tr(onFork ? 'article.fork_note_hint' : 'article.rewrite_note_hint')}>
+        <textarea ref={box} value={note} onChange={(e) => { setNote(e.target.value); setMsg('') }} rows={mode === 'here' ? 5 : 4} className={cx(inputCls, 'py-2')} placeholder={mode === 'here' ? tr('presets.here_ph') : onFork ? tr('article.fork_ph') : tr(`article.rewrite_ph_${type}`)} />
       </Field>
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" disabled={!note.trim() || !!picked} onClick={save}><Bookmark />{picked ? tr('article.preset_exists') : mode === 'here' ? tr('article.preset_save_here') : tr('article.preset_save', { type: TYPE_META[type].label })}</Button>
+        <Button size="sm" variant="outline" disabled={!note.trim() || !!picked} onClick={save}><Bookmark />{picked ? tr('article.preset_exists') : mode === 'here' ? tr('article.preset_save_here') : onFork ? tr('article.preset_save_new') : tr('article.preset_save', { type: TYPE_META[type].label })}</Button>
         {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
       </div>
       {(err || error || loadErr) && <Notice tone="error">{err || error || loadErr}</Notice>}
     </div>
-    <PresetsDialog open={managing} presets={presets ?? []} here={here} onClose={() => setManaging(false)} onChanged={reload} />
+    <PresetsDialog open={managing} presets={presets ?? []} here={here} untyped={untyped} onClose={() => setManaging(false)} onChanged={reload} />
   </Dialog>
 }

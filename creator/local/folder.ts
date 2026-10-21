@@ -9,7 +9,9 @@ import { check } from '../plugins/social/local/social'
 // 页面预览图片、视频用 /_annulo/work-files/<root 下的路径>（components/Folder.tsx），不经过这里。
 //
 //   folder.create({ article_id })                → { dir, path }  没有就建（带一个空的 稿子.md），有就返回；在对话里跑的会记下这段对话（「继续对话」回到它）
-//   folder.list({ article_id })                  → { dir, path, entries: [{ path, dir, size, mtime }], can_open }  entries 相对这条内容的文件夹
+//   folder.list({ article_id })                  → { dir, path, entries: [{ path, dir, size, mtime }], can_open, missing? }  entries 相对这条内容的文件夹；
+//                                                  missing：表里记着文件夹、磁盘上没有（被挪走、删了，工作目录换了），页面让用户选，不自动重建
+//   folder.openRoot()                            用系统程序打开工作目录（文件夹不见了时去找）
 //   folder.read({ article_id, path })            → { text }
 //   folder.write({ article_id, path, text })
 //   folder.mkdir / remove / rename({ article_id, path, to? })
@@ -84,7 +86,7 @@ export function list(input: { article_id: string }, ctx: any) {
   const dir = folderOf(ctx, article(ctx, input.article_id), false)
   // can_open：本机版能用系统程序打开、在访达里显示；服务端部署不能，页面在新标签页打开预览地址
   const can_open = !!ctx.fs.canOpen
-  if (!dir || !ctx.fs.stat(dir)) return { dir: '', path: dir, entries: [], can_open }
+  if (!dir || !ctx.fs.stat(dir)) return { dir: '', path: dir, entries: [], can_open, missing: !!dir, root: ctx.fs.root }
   return { dir: `${ctx.fs.root}/${dir}`, path: dir, entries: ctx.fs.list(dir), can_open }
 }
 
@@ -136,6 +138,12 @@ export function importLocal(input: { article_id: string; url: string; to: string
 export function open(input: { article_id: string; path?: string; reveal?: boolean }, ctx: any) {
   const dir = input.path ? dirOf(ctx, input.article_id) : create({ article_id: input.article_id }, ctx).path
   ctx.fs.open(join(dir, rel(ctx, input.path)), { reveal: !!input.reveal })
+  return { ok: true }
+}
+
+export function openRoot(_input: unknown, ctx: any) {
+  need(ctx)
+  ctx.fs.open('', { reveal: false })
   return { ok: true }
 }
 

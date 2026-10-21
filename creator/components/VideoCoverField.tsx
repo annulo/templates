@@ -35,7 +35,7 @@ export default function VideoCoverField({ value, onChange, onUploadingChange }: 
     <div className="space-y-3">
       {value && <div className="relative w-fit">
         <img src={fileSrc(value)} alt={tr('article.video_cover')} className="max-h-56 max-w-full rounded-lg border border-border object-contain" />
-        <Button size="icon-sm" variant="secondary" disabled={uploading} aria-label={tr('article.remove_cover')} title={tr('article.remove_cover')}
+        <Button size="icon-sm" variant="outline" disabled={uploading} aria-label={tr('article.remove_cover')} title={tr('article.remove_cover')}
           className="absolute top-2 right-2" onClick={() => onChange('')}><X /></Button>
       </div>}
       <div className="flex flex-wrap items-center gap-2">

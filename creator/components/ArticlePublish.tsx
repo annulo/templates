@@ -22,7 +22,7 @@ function JobLine({ job }: { job?: PublishJob }) {
     <WatchControls onShow={job.state === 'running' ? () => reveal(job.key).catch(fail) : undefined} onStop={() => stop(job.key).catch(fail)} />
   </div>
 }
-import { CHANNEL_TYPES } from '../lib/channels'
+import { CHANNEL_TYPES, type ChannelMeta } from '../lib/channels'
 import { tr } from '../lib/i18n'
 import { dbDelete, dbPatch, isSite, openChat, runLocal, runTask, shuttleImage, type Article, type Channel, type Publication, type SocialPost } from '../lib/shuttle'
 import { SOCIAL, loggedInElsewhere, useElsewhere } from '../lib/social'
@@ -82,7 +82,7 @@ function DeleteMenu({ label, busy, disabled, onRemote, onRecord }: { label: stri
 
 /** 平台标签：图标 + 平台名（「B站」「抖音」），跟在账号名后面（发布记录、发布弹窗的账号列表） */
 export function PlatformTag({ type }: { type: string }) {
-  const t = CHANNEL_TYPES[type]
+  const t = (CHANNEL_TYPES as Partial<Record<string, ChannelMeta>>)[type]
   const Icon = t?.icon
   return <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">{Icon && <Icon size={11} />}{t?.label}</span>
 }

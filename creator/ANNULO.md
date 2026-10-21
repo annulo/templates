@@ -1,6 +1,6 @@
 # 自媒体工作台
 
-这是一个从「自媒体工作台」模板建的项目：用户是自媒体人，在这里定好自己的定位，按定位出选题、写文章，再把一篇文章改写成各社媒平台的帖子，审核后发布或排期，看各账号的数据和每周总结。
+这是一个从「自媒体工作台」模板建的项目：用户是自媒体人，在这里定好自己的定位，按定位出选题、做内容（文案、图、视频都放在这条内容的文件夹里），发到各社媒账号或排期，看各账号的数据和每周总结。
 项目里只有一个业务；定位在 `profile` 表（只有一行），各业务表里没有「所属项目」字段。
 
 ## 用户是谁、怎么跟他说话
@@ -28,7 +28,7 @@
 | 总览 `overview`（起步步骤 + 今天要做的 + 粉丝、发布数） | `checklist` | `today.list`（用户问「接下来做什么」先跑它照着答）、`channels.stats` |
 | 每周总结 `reports` | `reports` | `reports.data` / `reports.save`；任务 `weekly-report`（每 7 天定时，也能在页面点） |
 | 社媒 `social`（账号概览、数据表现） | 社媒插件的 `social_accounts`、`social_daily`、`social_post_daily`、`social_health` | `social/social.*`、`social/stats.summary` |
-| 内容中心 `content`（选题 → 文章（长文 / 图文笔记 / 视频）→ 发布到支持这种类型的账号 / 排期；改写成别的类型、做成视频） | `topics`、`articles`、`rewrite_presets`（AI 预设）、`assets`（资料库）、插件的 `social_posts`（发布记录） | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`content.rewriteContext` / `save`（任务 `rewrite-article`）、`work.context`、`folder.*`（任务 `work-on-content`，见下面「内容文件夹」）、`publish.prepare` |
+| 内容中心 `content`（选题 → 内容（一个文件夹）→ 发布时挑发成图文 / 视频 / 长文，发到账号或排期） | `topics`、`articles`、`rewrite_presets`（AI 预设）、`assets`（资料库）、插件的 `social_posts`（发布记录） | `topics.context` / `save`（任务 `suggest-topics`）、`content.context` / `save`（任务 `write-article`）、`content.revisionContext` / `update`（任务 `revise-article`）、`work.context`、`folder.*`（任务 `work-on-content`，见下面「内容文件夹」）、`publish.prepare` |
 | 发布日历 `calendar`（按天看排期和发布，拖动改排期） | 读 `social_posts`、`articles` | |
 | 我的定位 `company` | `profile` | `profile.get` / `save` |
 | 资料库 `assets` | `assets` | |
@@ -44,19 +44,13 @@
 
 做页面、加功能、手动改一条数据先读 **ops-backend**（改记录用 `annulo run records.patch`，不要用 creght 命令行）；出选题、写文章、改文章读 **content-studio**；找图、配图读 **assets**；社媒先读 `plugins/social/PLUGIN.md`；本机函数、表声明见 **annulo** skill。
 
-## 文章类型
+## 内容没有类型
 
-一篇文章一种类型（`articles.type`，空的是老数据、按长文看；定义在 `local/_types.ts`）：
+**内容不分长文、图文、视频**：发成什么是发布时挑的（见下面「内容文件夹」）。`articles` 里的 `type`、`body`、`images`、`video` 这些是老数据，以文件夹里的文件为准。
 
-| 类型 | 字段 | 发到 |
-|---|---|---|
-| `article` 长文 | `title`、`summary`、`body`（HTML，图片插在正文里）、`tags` | 知乎这类富文本平台 |
-| `post` 图文笔记 | `title`、`body`（纯文字）、`images`（JSON 数组，第一张是封面）、`cover_text`（没图时的封面大字）、`tags` | 小红书、X、LinkedIn、Facebook、Instagram |
-| `video` 视频 | `title`、`body`（简介）、`video`、`category`（B 站分区）、`tags` | YouTube、抖音、B 站，以及能发视频的图文平台 |
-
-要发到不支持这种类型的平台，就「改写」成它支持的类型：任务 `rewrite-article`（参数 `article_id`、`type`、`note`）另存一篇新的，`source_id` 指回原文。
-`content.save` 存的文章带 `unread: true`（新文章），用户打开就清掉；左侧「内容中心」的数字数它，列表里新文章单独标出来。
-用户常用的改写要求存在 `rewrite_presets`（`type` + `prompt`），在改写弹窗里点一下就填好。
+- **同一条内容要发到别的平台**（比如长文要发小红书、X）：不用另存一篇，在这条内容的文件夹里做一份那个平台用的文案和配图（几个版本就分几个目录），用户点「发布」时挑图文、挑这份文案和图。跟用户说「我在这条内容里给你做一份图文版」，或者让他在内容页点「交给 AI」写要求，**不要让他去找「改写」：自媒体没有这个按钮**。
+- **照这条另做一条新内容**（换个角度重写、拆成一个系列）：内容页「交给 AI → 另写一篇」，新建一条内容（`source_id` 指回原内容），交给 `work-on-content` 照它的稿子做。
+- 新内容带 `unread: true`，用户打开就清掉；左侧「内容中心」的数字数它，列表里新内容单独标出来。
 
 ## 内容文件夹、交给 AI、引用
 
@@ -66,9 +60,9 @@
 - **稿子**是最外层的 `稿子.md`（英文界面 `brief.md`）：这条内容要做什么、要求、大纲、参考，用户写的，动手前先读。`articles.draft` 是老数据，内容页打开时会搬进 `稿子.md`。
 - **文案**（要发出去的文字）是名字带「文案」的 `.md`（英文 `copy.md`）：开头 `---` 包住 `title:`、`tags:`，下面是正文或视频简介。**发布是挑选**：内容本身没有类型，用户点「发布」时挑这次发成图文、视频还是长文，用哪份文案、哪些图、哪个视频（文件夹里的或资料库的），选账号；`folder.publish` 每个账号新建一条帖子，存的就是挑好的内容。同一条内容可以挑不同的文件发好几次。所以做几个版本不用问用户拆不拆，每个版本一个目录就行。
 - 做出来的文件**都放进文件夹**：不要 `annulo upload`、`assets.add`，也不用 `content.update` 写正文（用户明确要求的除外）。资料库（`assets`）只放几条内容都会用到的素材。
-- **交给 AI**两种做法，都是预设（`rewrite_presets`，`mode`）：
+- **交给 AI**两种做法，常用的要求存成预设（`rewrite_presets`，`mode` 是 `here` 或 `new`；自媒体不看预设的 `type`、`types`，做成什么写在要求里）：
   - **在这条上做**：任务 `work-on-content`（参数 `article_id`、`note`），写文案、改文案、做图、做视频都走它；
-  - **另写一篇**：任务 `rewrite-article`，只生成新文章的正文。
+  - **另写一篇**：页面新建一条内容（`source_id` 指回原内容，稿子里写照哪条另写和这次的要求），也交给 `work-on-content`，`note` 里给原内容的 `article_id`：先 `folder.list` 读原内容的文件，原内容不动。
 - **要改就回到做它的那段对话**：用户在对话里接着说，照 `work-on-content` 第 4 步做。
 - **引用** `@表:id#n`：用户从页面「复制引用」贴进对话（内容 `@articles:<id>`，资料库的 `@assets:<id>`，组里第 3 个 `@assets:<id>#3`），消息后面有 `<references>`。引用一条内容时，它的文件在它的文件夹里。
 
@@ -87,7 +81,7 @@
 社媒（账号、登录、发布、采集、各平台的写法）是公开的 Annulo 插件 **social**（`plugins/social/`，github.com/annulo/plugins），这个模板接它的地方：
 
 - 页面：`lib/shuttle.ts` 的 `listChannels` 读 `social_accounts`；社媒页、内容页的按钮调 `social/social.*`。
-- 文章就是要发的内容，不再按账号各写一版：文章页「发布」勾选账号，`publish.prepare({ article_id, channel_ids, scheduled_at? })` 按文章给每个账号建一条 `social_posts`（过一遍插件的规格检查），页面再逐条调 `social/social.publish`；排期的到点由插件的定时任务发。
+- 内容页「发布」挑发成什么、用哪些文件，勾选账号，`folder.publish` 给每个账号建一条 `social_posts`（存的就是挑好的内容，过一遍插件的规格检查），页面再逐条调 `social/social.publish`；排期的到点由插件的定时任务照帖子发。
 - 哪个平台支持哪种文章类型按插件的字段表算（`local/_types.ts` 的 `supports`：富文本 → 长文，纯文字 + 配图 → 图文笔记，能发视频 → 视频），插件加了平台不用改模板。
 - `content.socialSource({ id })` 还留着：用户在对话里要按插件的任务 `social/write-<平台>` 单独写一条时用（参数 `{ source: { fn: "content.socialSource", id: <文章 id> }, channel_ids }`）；页面上不再用。
 - 视频：`lib/social.ts` 里平台的 `video` 是 `'only'`（YouTube、B 站、抖音）或 `'optional'`；`social_posts.video` 有值就按视频发，可以是资料库的视频地址，或编辑框里「上传本机视频」存在这台电脑上的 `local:<name>`。

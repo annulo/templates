@@ -40,7 +40,7 @@ export async function stats(input: { days?: number }, ctx: any) {
   for (const c of socialAccounts(ctx)) {
     try {
       const { top, ...s } = socialSummary({ channel_id: c.id, days }, ctx)
-      social.push({ id: c.id, name: c.name, type: c.type, ...s, top: top.slice(0, 3).map((p) => ({ title: p.title, views: p.views, gain: p.gain })) })
+      social.push({ id: c.id, name: c.name, type: c.type, ...s, top: top.slice(0, 3).map((p) => ({ title: p.title, views: (p as { views?: number | null }).views, gain: p.gain })) })
     } catch (e: any) {
       failed.push({ id: c.id, name: c.name, type: c.type, error: e.message })
     }

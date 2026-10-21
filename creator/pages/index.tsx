@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Share2, CircleHelp, SlidersHorizontal, BarChart3, Menu, X, Sparkles } from 'lucide-react'
 import Wizard from '../components/wizard/Wizard'
 import { runLocal } from '../lib/shuttle'
@@ -83,7 +83,9 @@ export default function Index() {
       window.removeEventListener('hashchange', onHistory)
     }
   }, [])
-  useEffect(() => { if (routeReady) writeParams(params) }, [params, routeReady])
+  // setParam 第三个参数 replace：替换当前这条历史，不新增一步（自动打开的文件不该让返回多退一次）
+  const replaceNext = useRef(false)
+  useEffect(() => { if (routeReady) writeParams(params, replaceNext.current); replaceNext.current = false }, [params, routeReady])
 
   // 不在 Shuttle 里（手机、别的电脑）：图片不经过电脑代取，直接从社媒的图床拿。
   // 小红书、B 站的图床看到别的站点的 Referer 就拒绝，不发 Referer；X、Instagram 在国内网络下常常连不上，取不到的换成灰色占位，不显示裂图
@@ -203,7 +205,7 @@ export default function Index() {
     url.search = new URLSearchParams({ view: v }).toString()
     window.open(url, '_blank')
   }
-  const setParam = (k: string, v: string) => setParams((p) => ({ ...p, [k]: v }))
+  const setParam = (k: string, v: string, replace = false) => { if (replace) replaceNext.current = true; setParams((p) => ({ ...p, [k]: v })) }
 
   // 右侧助手一轮做完、改了数据时，外壳发 shuttle:refresh：重拉数据，不整页刷新
   useEffect(() => {
@@ -218,7 +220,7 @@ export default function Index() {
   }, [loadProfileRow, loadChannels])
 
   // 还没填项目资料时用空名称占位，总览顶部会提示去「项目设置」填定位
-  const ctx: Ctx | null = profile === undefined ? null : { profile: profile ?? EMPTY_PROFILE, channels, stats, days, go, reloadChannels: loadChannels, reloadProfile: loadProfileRow, rev, checklist, setupOpen, openWizard, toggleSetup: () => setSetupOpen((open) => !open) }
+  const ctx: Ctx | null = profile === undefined ? null : { profile: profile ?? EMPTY_PROFILE, channels, stats, days, go, reloadChannels: loadChannels, reloadProfile: loadProfileRow, rev, checklist, setupOpen, openWizard, offline: !shuttle && computer?.online === false, toggleSetup: () => setSetupOpen((open) => !open) }
 
   const navView = view
   // 页面标题跟着当前页走：Shuttle 顶栏的标签页、浏览器标签都显示它

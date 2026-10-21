@@ -19,4 +19,6 @@ export type Ctx = {
   setupOpen: boolean
   toggleSetup: () => void
   openWizard: (step?: string) => void
+  /** 不在 Annulo 里、项目所有者的电脑也没开：要电脑做的按钮灰掉（没跟踪电脑状态的模板不传） */
+  offline?: boolean
 }
