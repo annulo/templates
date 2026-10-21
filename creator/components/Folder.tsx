@@ -43,7 +43,7 @@ function iconOf(e: Entry, open: boolean) {
 const toneOf = (e: Entry) => e.dir ? 'text-muted-foreground' : VIDEO.test(e.path) ? 'text-violet-500 dark:text-violet-400' : IMAGE.test(e.path) ? 'text-emerald-600 dark:text-emerald-400' : AUDIO.test(e.path) ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
 
 // sel / setSel：打开的文件或目录由内容页记在地址栏（返回按钮、返回手势一级级退）；没传就记在组件里
-export default function Folder({ article: a, onChanged, sel: selProp, setSel: setSelProp }: { article: Article; onChanged: () => void; sel?: string; setSel?: (p: string) => void }) {
+export default function Folder({ article: a, onChanged, sel: selProp, setSel: setSelProp }: { article: Article; onChanged: () => void; sel?: string; setSel?: (p: string, replace?: boolean) => void }) {
   const { t } = useT('folder')
   const id = a.id
   const [state, setState] = useState<{ dir: string; path: string; entries: Entry[]; can_open?: boolean } | null>(null)
@@ -212,7 +212,7 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
   useEffect(() => {
     if (!only || autoPicked.current) return
     autoPicked.current = true
-    if (!sel) setSel(only)
+    if (!sel) setSel(only, true)
   }, [only, sel])
   // 树状视图右边不留空，默认打开一个文件，取第一个有的：上次在这条内容里打开的（每条内容各记各的，记在这台电脑上）→
   // 最外层最近改过的文件（多半是 AI 刚做出来的；不进子目录，旁白这类一堆分句音频的目录不算）→ 稿子。网格视图默认看全部文件，不自动打开
@@ -226,7 +226,7 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
     try { last = localStorage.getItem(lastKey) ?? '' } catch {}
     const top = entries.filter((e) => !e.dir && !e.path.includes('/') && !/^[.~]/.test(e.path)).sort((x, y) => y.mtime - x.mtime)
     const pick = (last && entries.some((e) => e.path === last) ? last : '') || top[0]?.path || entries.find((e) => isDraft(e.path))?.path || ''
-    if (pick) setSel(pick)
+    if (pick) setSel(pick, true)
   }, [view, sel, entries, lastKey])
   // 新建的位置：选中的是目录就建在里面，是文件就建在它旁边
   const here = selected ? (selected.dir ? selected.path : parent(selected.path)) : ''
@@ -290,7 +290,8 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
           {/* 路径只在本机版显示：服务端部署是服务器上的目录，用户用不上 */}
           {state.can_open && <p className="mt-0.5 truncate text-xs text-muted-foreground" title={state.dir}>{state.dir.replace(/^(\/Users\/[^/]+|\/home\/[^/]+|[A-Z]:\\Users\\[^\\]+)/, '~')}</p>}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        {/* ml-auto：路径太长、按钮折到下一行时也靠右 */}
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {(['file', 'dir'] as const).filter((k) => k === 'file' || view === 'tree').map((k) => (
             <AddPopover key={k} open={adding === k} onToggle={() => (adding === k ? setAdding(null) : startAdd(k))} onClose={() => setAdding(null)}
               button={<>{k === 'file' ? <FilePlus /> : <FolderPlus />}{t(k === 'file' ? 'new_file' : 'new_dir')}</>}>
@@ -319,7 +320,8 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
       {view === 'grid' ? (
         // 手机上铺满屏幕宽（抵掉页面左右 1rem 的内边距），只留上下分隔线：一层层卡片边框会把正文挤窄
         // scroll-mt：打开文件滚回开头时停在吸顶的头部下面，不被它盖住
-        <div ref={gridBox} className="-mx-4 min-h-[360px] scroll-mt-[var(--page-top,0px)] overflow-clip border-y border-border sm:mx-0 sm:rounded-lg sm:border">
+        // key：两个视图不复用 DOM，不然树视图直接写上去的高度（treeInner 的 style）会留在网格的面包屑上，把它撑高
+        <div key="grid" ref={gridBox} className="-mx-4 min-h-[360px] scroll-mt-[var(--page-top,0px)] overflow-clip border-y border-border sm:mx-0 sm:rounded-lg sm:border">
           {selected
             ? <>
                 {/* 面包屑：全部文件 / 目录 / 目录，点哪一级回到哪一级（目录显示里面的东西）；文件名在下面看文件的那一栏 */}
@@ -333,7 +335,7 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
         </div>
       ) : (
         // 手机上树和文件上下叠着，照常跟页面一起滚；宽屏是固定高度的两栏（见上面 paneH），右栏里吸顶的那几排吸在右栏自己的顶上（--page-top 归零）
-        <div ref={treeBox} className="relative scroll-mt-[var(--page-top,0px)] md:h-[var(--pane-h)]" style={{ '--pane-h': `${paneH || 600}px` } as CSSProperties}>
+        <div key="tree" ref={treeBox} className="relative scroll-mt-[var(--page-top,0px)] md:h-[var(--pane-h)]" style={{ '--pane-h': `${paneH || 600}px` } as CSSProperties}>
         <div ref={treeInner} className="grid min-h-[360px] grid-cols-1 overflow-clip rounded-lg border border-border md:absolute md:inset-x-0 md:min-h-0 md:grid-cols-[var(--tree-w)_1fr] md:grid-rows-[minmax(0,1fr)]" style={{ '--tree-w': `${treeW}px` } as CSSProperties}>
           {/* 调宽度的那条：放在外框上、贴着两栏的分界线，不放进树那栏（那栏会滚，滚下去就抓不到了） */}
           <div onPointerDown={dragTree} title={t('drag_width')} className="absolute inset-y-0 z-10 hidden w-1.5 cursor-col-resize hover:bg-primary/30 md:block" style={{ left: treeW - 6 }} />

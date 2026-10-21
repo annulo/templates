@@ -53,7 +53,7 @@ type Writer = ReturnType<typeof useTask>
  * 照稿子写正文、配图、做视频…），Panel 是文章页正文下面的产物（artifacts）。传了才有稿子、「在这篇上做」和产物；没传就和以前一样只有改写。
  */
 // file / setFile：文件夹里打开的文件或目录，记在地址栏（?file=），头部的返回先一级级退回文件夹，手机的返回手势也一样
-export type AIWork = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void; file?: string; setFile?: (p: string) => void }> }
+export type AIWork = { task: string; Panel: ComponentType<{ article: Article; all: Article[]; open: (id: string) => void; onChanged: () => void; file?: string; setFile?: (p: string, replace?: boolean) => void }> }
 
 /** 自媒体的内容中心（从 core 的内容中心分出来，docs/content-model.md）：每条内容一个文件夹，稿子、脚本、文案、视频都是里面的文件 */
 const FOLDER_WORK: AIWork = { task: 'work-on-content', Panel: ({ article, onChanged, file, setFile }) => <Folder article={article} onChanged={onChanged} sel={file} setSel={setFile} /> }
@@ -87,7 +87,7 @@ export async function removeArticle(a: Article, posts: SocialPost[], pubs: Publi
 }
 
 /** 内容：文章（一篇一种类型，直接发到支持它的账号）和选题池 */
-export default function Content({ ctx, params, setParam, inspiration = false, planning, work = FOLDER_WORK }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; inspiration?: boolean; planning?: ReactNode; work?: AIWork }) {
+export default function Content({ ctx, params, setParam, inspiration = false, planning, work = FOLDER_WORK }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string, replace?: boolean) => void; inspiration?: boolean; planning?: ReactNode; work?: AIWork }) {
   const tab: Tab = planning && params.tab === 'marketing' ? 'marketing' : inspiration && params.tab === 'inspiration' ? 'inspiration' : params.tab === 'topics' ? 'topics' : 'articles'
   const [articles, setArticles] = useState<Article[] | null>(null)
   const [topics, setTopics] = useState<Topic[] | null>(null)
@@ -211,7 +211,7 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
   const openArticle = params.article ? articles?.find((a) => a.id === params.article) : undefined
   const writingTitle = topicTitle(writingInput?.topic_id) || writingInput?.subject
 
-  if (openArticle) return <ArticleDetail key={openArticle.id} work={work} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} file={params.file ?? ''} setFile={(p) => setParam('file', p)} open={(id) => { setParam('version', ''); setParam('file', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('file', ''); setParam('article', '') }} onChanged={load} />
+  if (openArticle) return <ArticleDetail key={openArticle.id} work={work} inspiration={inspiration} ctx={ctx} a={openArticle} all={articles ?? []} posts={posts.filter((p) => p.article_id === openArticle.id)} pubs={pubs.filter((p) => p.article_id === openArticle.id)} focus={params.version} displayStatus={statusOf(openArticle)} file={params.file ?? ''} setFile={(p, replace) => setParam('file', p, replace)} open={(id) => { setParam('version', ''); setParam('file', ''); setParam('article', id) }} onBack={() => { setParam('version', ''); setParam('file', ''); setParam('article', '') }} onChanged={load} />
 
   return (
     <div className="space-y-6">
@@ -467,7 +467,7 @@ export function RowMore({ items = [], onRewrite, onCopy, onDelete }: { items?: {
   </div>
 }
 
-export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks, work, file = '', setFile }: { file?: string; setFile?: (p: string) => void; work?: AIWork; inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
+export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, open, onBack, onChanged, inspiration = false, publishScope, statusControl, publicationLinks, work, file = '', setFile: setFileRaw }: { file?: string; setFile?: (p: string, replace?: boolean) => void; work?: AIWork; inspiration?: boolean; publishScope?: 'website' | 'social'; statusControl?: ReactNode; publicationLinks?: ReactNode; ctx: Ctx; a: Article; all: Article[]; posts: SocialPost[]; pubs: Publication[]; focus?: string; displayStatus: ArticleStatus; open: (id: string) => void; onBack: () => void; onChanged: () => void }) {
   const type = typeOf(a)
   const [moreOpen, setMoreOpen] = useState(false)
   // 菜单往哪边展开：宽屏时按钮在一行最右边，往左；手机上按钮换到下一行的左边，往左会伸出屏幕，改往右。按打开时按钮的实际位置算
@@ -559,18 +559,23 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
   })
   // 文件夹里走过的路（打开文件、进目录）：返回退回上一步，也就是点进来的地方。网格是铺平的，子目录里的文件是从全部文件点进来的，
   // 不能退到它所在的目录。新的一步正好是上一步时（系统返回手势、这里的返回）出栈；没走过的（刷新进来）按目录往上退
+  // 自动打开的文件（replace）不算走过的一步：从它返回直接退出这条内容，不退到什么都没选的文件夹
   const trail = useRef<string[]>([])
   const prevFile = useRef(file)
+  const autoFile = useRef('')
+  const replacing = useRef(false)
+  const setFile = setFileRaw && ((p: string, replace?: boolean) => { replacing.current = !!replace; setFileRaw(p, replace) })
   useEffect(() => {
     const prev = prevFile.current
     prevFile.current = file
     if (prev === file) return
+    if (replacing.current) { replacing.current = false; autoFile.current = file; return }
     const t = trail.current
     if (t[t.length - 1] === file) t.pop()
     else t.push(prev)
   }, [file])
   const back = () => {
-    if (!file || !setFile) return onBack()
+    if (!file || !setFile || (file === autoFile.current && !trail.current.length)) return onBack()
     const t = trail.current
     setFile(t.length ? t[t.length - 1] : file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '')
   }
