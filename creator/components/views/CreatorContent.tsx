@@ -63,6 +63,19 @@ async function startWork(work: AIWork, articleId: string, note: string) {
   const r = await runTask(work.task, { article_id: articleId, note })
   openChat(r.chat_id)
 }
+/**
+ * 另写一篇（内容没有类型，docs/content-model.md）：新建一条内容，记下照哪条写的（source_id），
+ * 稿子里写「照哪条另写」和这次的要求，交给「在这条上做」；做成图文、视频还是长文由要求定。返回新内容的 id
+ */
+async function forkContent(work: AIWork, src: Article, note: string) {
+  const t = new Date().toISOString()
+  const row = await dbCreate('articles', { title: tr('content.fork_title', { title: src.title || tr('content.untitled') }).slice(0, 200), summary: '', tags: '[]', status: 'draft', source_id: src.id, created_at: t, updated_at: t })
+  const call = (fn: string, input: Record<string, unknown> = {}) => runLocal(`folder.${fn}`, { article_id: row.id, ...input })
+  await call('create')
+  await call('write', { path: isEn() ? 'brief.md' : '稿子.md', text: [tr('content.fork_brief', { title: src.title }), note].filter(Boolean).join('\n\n') + '\n' })
+  await startWork(work, row.id, tr('content.fork_ai_note', { source: src.id }))
+  return row.id as string
+}
 type WriteInput = { topic_id?: string; subject?: string; channel_id?: string }
 
 /** 选题的写作简报（JSON）写成稿子里的几行 */
@@ -257,6 +270,7 @@ export default function Content({ ctx, params, setParam, inspiration = false, pl
       <TaskRequirements task={writer.task} onSaved={writer.setTask} title={tr('content.req_title')} hint={tr('content.req_hint')} open={reqOpen} onOpenChange={setReqOpen} />
       {rewriting && <RewriteDialog open article={rewriting} starting={listRewriter.starting} error={listRewriter.error} onClose={() => setRewriting(null)}
         onWork={work ? async (note) => { await startWork(work, rewriting.id, note); setRewriting(null) } : undefined}
+        onFork={work ? async (note) => { const id = await forkContent(work, rewriting, note); setRewriting(null); openNew(id) } : undefined}
         onStart={async (to, note) => { if (await listRewriter.run({ article_id: rewriting.id, type: to, note })) setRewriting(null) }}
         onConvert={async (to) => { const r = await runLocal<{ article_id: string }>('convert.toType', { article_id: rewriting.id, type: to }); setRewriting(null); load(); setParam('article', r.article_id) }} />}
       <Dialog open={writingInput !== null} onClose={() => setWritingInput(null)} title={writingTitle ? `${tr('content.new_article')} · ${writingTitle}` : tr('content.new_article')} width={700} footer={<><Button variant="ghost" onClick={() => setWritingInput(null)}>{tr('common.cancel')}</Button>{!docUrl && <Button variant="outline" onClick={writeSelf} disabled={savingSelf || writer.starting}>{savingSelf ? <Loader className="animate-spin" /> : <Pencil />}{tr('content.write_self')}</Button>}<Button variant={docUrl ? 'outline' : 'default'} onClick={startWriting} needsShuttle disabled={savingSelf || importing}>{savingSelf ? <Loader className="animate-spin" /> : <Sparkles />}{tr('content.ai_write_this')}</Button>{docUrl && <Button onClick={importDoc} disabled={importing}>{importing ? <Loader className="animate-spin" /> : <Download />}{tr('content.import_doc')}</Button>}</>}>
@@ -812,7 +826,8 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
       <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} scope={publishScope} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />
       <RewriteDialog open={!!aiOpen} article={a} starting={rewriter.starting} error={rewriter.error} onClose={() => setAiOpen(null)} onStart={startRewrite} onConvert={convertTo}
         initialMode={aiOpen?.mode} initialPreset={aiOpen?.preset}
-        onWork={work ? async (note) => { if (dirty && !(await saveEdit())) return; await startWork(work, a.id, note); setAiOpen(null) } : undefined} />
+        onWork={work ? async (note) => { if (dirty && !(await saveEdit())) return; await startWork(work, a.id, note); setAiOpen(null) } : undefined}
+        onFork={work ? async (note) => { if (dirty && !(await saveEdit())) return; const id = await forkContent(work, a, note); setAiOpen(null); onChanged(); open(id) } : undefined} />
       <TaskRequirements task={reviser.task} onSaved={reviser.setTask} title={tr('content.revise_req_title')} hint={tr('content.revise_req_hint')} open={requirementsOpen} onOpenChange={(o) => { setRequirementsOpen(o); if (!o) moreRef.current?.querySelector('button')?.focus() }} />
       <Dialog
         open={asking}
