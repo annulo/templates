@@ -1638,6 +1638,11 @@
   "folder": {
     "title": "文件夹",
     "preparing": "正在准备文件夹…",
+    "missing": "这条内容的文件夹找不到了",
+    "missing_desc": "可能被挪走、改了名或删了。找到了就放回上面这个位置，再点「重新检查」；找不回来才点「重新建」：新建的文件夹里只有表里留着的稿子、正文和视频，别的文件不会回来。",
+    "missing_open": "打开工作目录",
+    "missing_retry": "重新检查",
+    "missing_rebuild": "重新建",
     "new_file": "新建文件",
     "new_dir": "新建文件夹",
     "new_file_default": "脚本.md",

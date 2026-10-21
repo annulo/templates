@@ -11,6 +11,7 @@ import { TaskRunning, useTaskRuns } from './Task'
 // 文件夹在项目的工作目录里（本机 ~/Annulo/<项目名>/内容/<名字>），读写走本机函数 local/folder.ts（Annulo 的 ctx.fs），
 // 图片、视频、音频直接用 /_annulo/work-files/<路径> 显示，PDF 在新标签页打开。默认网格（所有文件铺平），可以切成树；文本在页面里改，md 用富文本编辑器。
 // 打开时还没有文件夹就建一个，老文章的稿子、正文、配图、视频、产物搬进去（表里的留着不动）。
+// 表里记着文件夹、磁盘上却没有（挪走了、删了、工作目录换了）不自动建：建出来只有表里留的那几样，像是文件丢了一半。让用户去找，或者自己点重新建。
 // AI 在对话里改文件不经过表，没有推送：看得见时每 4 秒重读。发布在 FolderPublish.tsx：挑这次发成什么、用哪些文件。
 
 export type Entry = { path: string; dir: boolean; size: number; mtime: number }
@@ -46,7 +47,7 @@ const toneOf = (e: Entry) => e.dir ? 'text-muted-foreground' : VIDEO.test(e.path
 export default function Folder({ article: a, onChanged, sel: selProp, setSel: setSelProp }: { article: Article; onChanged: () => void; sel?: string; setSel?: (p: string, replace?: boolean) => void }) {
   const { t } = useT('folder')
   const id = a.id
-  const [state, setState] = useState<{ dir: string; path: string; entries: Entry[]; can_open?: boolean } | null>(null)
+  const [state, setState] = useState<{ dir: string; path: string; entries: Entry[]; can_open?: boolean; missing?: boolean; root?: string } | null>(null)
   const [error, setError] = useState('')
   const [selLocal, setSelLocal] = useState('')
   const sel = setSelProp ? selProp ?? '' : selLocal
@@ -78,12 +79,13 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
     try { setState(await runLocal('folder.list', { article_id: id })); setError('') } catch (e) { setError((e as Error).message) }
   }, [id])
   useEffect(() => { void load() }, [load])
-  useEffect(() => {
-    if (!state || state.dir || creating) return
+  const build = async () => {
     setCreating(true)
-    void (async () => {
-      try { await call('create'); await moveOld(a, call); await load(); onChanged() } catch (e) { setError((e as Error).message) } finally { setCreating(false) }
-    })()
+    try { await call('create'); await moveOld(a, call); await load(); onChanged() } catch (e) { setError((e as Error).message) } finally { setCreating(false) }
+  }
+  useEffect(() => {
+    if (!state || state.dir || state.missing || creating) return
+    void build()
   }, [state])
   useEffect(() => {
     const timer = setInterval(() => { if (document.visibilityState === 'visible') void load() }, 4000)
@@ -243,6 +245,28 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
     try { await call(adding === 'file' ? 'write' : 'mkdir', adding === 'file' ? { path: p, text: '' } : { path: p }); await load(); setSel(p); setAdding(null) } catch (e) { setAddError((e as Error).message) }
   }
 
+  if (state?.missing) {
+    // 本机版写出完整位置（主目录写成 ~），服务端部署只写相对工作目录的路径
+    const where = state.can_open && state.root ? `${state.root}/${state.path}`.replace(/^(\/Users\/[^/]+|\/home\/[^/]+|[A-Z]:\\Users\\[^\\]+)/, '~') : state.path
+    return (
+      <section className="mt-6 space-y-3">
+        <h2 className="text-base font-semibold">{t('title')}</h2>
+        <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
+          <div>
+            <p className="font-medium">{t('missing')}</p>
+            <p className="mt-0.5 break-all text-xs text-muted-foreground">{where}</p>
+          </div>
+          <p className="text-muted-foreground">{t('missing_desc')}</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {state.can_open && <Button size="sm" variant="outline" onClick={() => void call('openRoot').catch((e) => setError((e as Error).message))}><FolderOpen />{t('missing_open')}</Button>}
+            <Button size="sm" variant="outline" onClick={() => void load()}><RefreshCw />{t('missing_retry')}</Button>
+            <Button size="sm" variant="ghost" disabled={creating} onClick={() => void build()}>{creating ? <Loader2 className="animate-spin" /> : <FolderPlus />}{t('missing_rebuild')}</Button>
+          </div>
+        </div>
+        {error && <Notice tone="error">{error}</Notice>}
+      </section>
+    )
+  }
   if (!state || !state.dir) {
     return (
       <section className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">

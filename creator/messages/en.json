@@ -1638,6 +1638,11 @@
   "folder": {
     "title": "Folder",
     "preparing": "Preparing the folder…",
+    "missing": "This content's folder can't be found",
+    "missing_desc": "It may have been moved, renamed or deleted. If you find it, put it back at the location above and click \"Check again\". Only click \"Rebuild\" if it's gone: the new folder will only have the brief, text and video saved in the table; other files won't come back.",
+    "missing_open": "Open work folder",
+    "missing_retry": "Check again",
+    "missing_rebuild": "Rebuild",
     "new_file": "New file",
     "new_dir": "New folder",
     "new_file_default": "script.md",
