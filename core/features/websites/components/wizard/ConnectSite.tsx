@@ -88,12 +88,12 @@ const ConnectSite = ({ ctx, onDone, onBusyChange, onCanContinueChange, onChat, m
           const current = await runLocal<OnboardingData>(`${module}.get`, {})
           if (current.revision !== selected.revision) throw new Error(tr('onboarding.site_changed'))
           if (refresh ? current.company_status === 'needs_review' && current.company_draft !== null : ['done', 'needs_review'].includes(current.company_status)) break
-          const task = await getTask(task)
+          const info = await getTask(task)
           // 重试失败状态时，旧的 failed 不能被误认为本次任务已结束。
-          if (current.company_status === 'failed' && (selected.company_status !== 'failed' || task.last?.chat_id === chatId)) break
-          const running = task.running.some(matching)
-          if (!running && task.last && matching(task.last) && (!chatId || task.last.chat_id === chatId)) {
-            throw new Error(task.last.error || tr('onboarding.extract_stopped'))
+          if (current.company_status === 'failed' && (selected.company_status !== 'failed' || info.last?.chat_id === chatId)) break
+          const running = info.running.some(matching)
+          if (!running && info.last && matching(info.last) && (!chatId || info.last.chat_id === chatId)) {
+            throw new Error(info.last.error || tr('onboarding.extract_stopped'))
           }
           if (!running && ++missing >= 3) throw new Error(tr('onboarding.extract_stopped'))
           if (running) missing = 0

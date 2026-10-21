@@ -12,14 +12,17 @@
 - 社媒平台不在这个仓库：是 Annulo 插件 **social**（github.com/annulo/plugins），模板在 `annulo.json` 的 `"plugins"` 里声明，项目新建、升级时 Annulo 装进 `plugins/social/`。
   改社媒平台的脚本、写作任务、写法、定时任务、skill 都在插件仓库里改，不要在模板里另写一份；
 - **参考代码**（没有稳定接口、只能操作网页的东西，比如在 AI 网页上提问）在 github.com/annulo/references：复制进用它的模板或共用模块的 `local/`，文件头记下复制自哪个提交，references 更新了在这里同步、发版。网站运营的 AI 搜索检测用它的 `aichat/`（`core/features/websites/local/aichat.ts`、`_aichat_*.ts`）；
-- `publish/`：组装、试用、发布脚本（`publish.py`，公共部分在 `lib.py`，外贸的发布脚本也 import 它）、`targets.json`（每个模板带不带 core、启用哪些模块）、测试（`tests/`）。其余（本文件、README）不会发出去。
+- `publish/`：组装、试用、发布脚本（`publish.py`，公共部分在 `lib.py`，外贸的发布脚本也 import 它）、`targets.json`（每个模板带不带 core、启用哪些模块）、类型检查（`check.mjs`）、测试（`tests/`）。其余（本文件、README、`package.json`、`tsconfig.base.json`）不会发出去。
 
 ## 试用、提交、发布
 
 1. 在模板目录或 `core/` 里改，不用先提交；
 2. `python3 publish/publish.py <模板> --local [项目目录]` 把工作区的改动用到本地 Annulo 项目（默认 Annulo 当前打开的项目）：只写模板改了的文件，项目自己也改过、按行合不上的列出来不动；
    本机函数马上生效（`annulo run`），页面在 Annulo 里自动刷新；改了 `backend/func` 才加 `--push`。对着真实页面、真实账号试，要改就回第 1 步。不要在项目里改完再搬回来；
-3. 跑测试：`python3 -m unittest discover -s publish/tests -p 'test_*.py'`，`node --test publish/tests/*.test.mjs`（要 esbuild，没全局装就用 `ESBUILD_MODULE=<esbuild 包目录>` 指过去）；
+3. 类型检查：`npm run check [模板…]`（第一次先在仓库根目录 `npm install`；插件仓库要在旁边的 `../annulo-plugins-public`，模板 import 的插件文件从那里找）。
+   它按 `targets.json` 照发布时怎么组装（core、启用的模块、插件叠成一个目录）给每个模板查一遍；`--local` 会顺便跑、有错只提醒，发版前有错就停。
+   依赖的版本跟着运行时的 importMap（平台默认的那份和模板的 `talizen.config.ts`），那边升级了这边 `package.json` 一起改；
+   跑测试：`python3 -m unittest discover -s publish/tests -p 'test_*.py'`，`node --test publish/tests/*.test.mjs`（要 esbuild，没全局装就用 `ESBUILD_MODULE=<esbuild 包目录>` 指过去）；
 4. `git commit` 自己改的文件（别 `git add -A`：常有别人同时在改），`git push`，或者提 PR；
 5. 发版（维护者）：**每个模板自己发版本、自己的版本号**（和插件仓库一样），tag 是 `<模板>/vX.Y.Z`。先在模板的 `changelog.yaml` 最上面写这一版（`version` 加 `zh`、`en`… 各语言一段；写短：一两句话说最重要的变化，中文大概 60 字以内，不逐条列细节），提交推送，
    再 `python3 publish/publish.py <模板> --note "<English note>" --tag vX.Y.Z`（先 `--dry-run`：看 release 分支会改什么、这个模板现在是哪一版；新版本要比它高）。

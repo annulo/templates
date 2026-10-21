@@ -467,7 +467,7 @@ export default function Index() {
             render()
           )}
         </div>
-        <PublishProgress />
+        <PublishProgress onOpen={(id) => go("content", { article: id })} />
       </main>
     </div>
   );

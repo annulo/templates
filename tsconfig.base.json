@@ -1,0 +1,17 @@
+{
+  // 模板的类型检查（npm run check）。每个模板一份 tsconfig.<模板>.json：rootDirs 把 core/ 和模板目录叠成一个目录，
+  // 和发布出去的样子一样（core 的文件拷进产物、路径不变），模板里 import '../components/X' 能找到 core 里的 X
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true
+  }
+}

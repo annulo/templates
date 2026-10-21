@@ -83,7 +83,7 @@ export function evidenceFor(ctx: any, topic: any, articleId?: string) {
     if (sourceIds.has(r.source_id)) return false;
     sourceIds.add(r.source_id);
     return true;
-  }).map((r: any) => json(r.snapshot, {}));
+  }).map((r: any) => json(r.snapshot, {} as any));
   const products = ids
     .map((id) => ctx.db.get("products", id))
     .filter((p: any) => p && p.status !== "hidden")

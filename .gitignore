@@ -2,3 +2,6 @@
 .build/
 __pycache__/
 .DS_Store
+
+# 类型检查的依赖（npm install）
+node_modules/

@@ -220,7 +220,7 @@ export default function Index() {
   }, [loadProfileRow, loadChannels])
 
   // 还没填项目资料时用空名称占位，总览顶部会提示去「项目设置」填定位
-  const ctx: Ctx | null = profile === undefined ? null : { profile: profile ?? EMPTY_PROFILE, channels, stats, days, go, reloadChannels: loadChannels, reloadProfile: loadProfileRow, rev, checklist, setupOpen, openWizard, toggleSetup: () => setSetupOpen((open) => !open) }
+  const ctx: Ctx | null = profile === undefined ? null : { profile: profile ?? EMPTY_PROFILE, channels, stats, days, go, reloadChannels: loadChannels, reloadProfile: loadProfileRow, rev, checklist, setupOpen, openWizard, offline: !shuttle && computer?.online === false, toggleSetup: () => setSetupOpen((open) => !open) }
 
   const navView = view
   // 页面标题跟着当前页走：Shuttle 顶栏的标签页、浏览器标签都显示它

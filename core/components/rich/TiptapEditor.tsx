@@ -7,6 +7,8 @@ import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
 import ImageBase from '@tiptap/extension-image'
+// 只要表格扩展给编辑器加的命令类型（insertTable）；扩展本身在 mdExtensions.ts 里按需加载，这行编译后会被去掉
+import type {} from '@tiptap/extension-table'
 import { Bold, Code, Heading2, Heading3, ImageIcon, Images, Italic, Link2, List, ListOrdered, Minus, Pilcrow, Quote, SquareCode, Strikethrough, Table2, Unlink, Upload, type LucideIcon } from 'lucide-react'
 import { uploadFile } from '../../lib/shuttle'
 import { fileSrc } from '../../lib/files'
@@ -85,7 +87,7 @@ const Video = Node.create<SrcOptions>({
       return { type: 'video', raw: m[0], src: attr('src') ?? '', width: Number(attr('width')) || null, height: Number(attr('height')) || null }
     },
   },
-  parseMarkdown: (token: { src: string; width: number | null; height: number | null }, h: { createNode: (type: string, attrs: Record<string, unknown>) => unknown }) => h.createNode('video', { src: token.src, width: token.width, height: token.height }),
+  parseMarkdown: (token, h) => h.createNode('video', { src: token.src, width: token.width, height: token.height }),
   renderMarkdown: (node: { attrs?: { src?: string; width?: number | null; height?: number | null } }) => {
     const a = node.attrs ?? {}
     return `<video src="${a.src ?? ''}"${a.width ? ` width="${a.width}"` : ''}${a.height ? ` height="${a.height}"` : ''} controls></video>`

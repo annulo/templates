@@ -137,6 +137,21 @@ def release(name, note, version, dry_run):
     lib.sync_site_help(ROOT.parent)
 
 
+def typecheck(target, block):
+    """类型检查（publish/check.mjs，要先在仓库根目录 npm install）：发版前有错就停；--local 只提醒，照样写进项目"""
+    if not (ROOT / 'node_modules').exists():
+        msg = '没装类型检查的依赖：在仓库根目录 npm install'
+        if block:
+            raise SystemExit(msg)
+        lib.warn(msg + '（这次先跳过检查）')
+        return
+    r = subprocess.run(['node', 'publish/check.mjs', target], cwd=ROOT)
+    if r.returncode and block:
+        raise SystemExit('类型检查有错，先改掉再发（npm run check ' + target + '）')
+    if r.returncode:
+        lib.warn('类型检查有错（上面），先照样写进项目')
+
+
 def main():
     ap = argparse.ArgumentParser(description='发布 github.com/annulo/templates 的模板（main 是源码，成品在 release 分支，每个模板自己的 <模板>/vX.Y.Z）')
     ap.add_argument('target', choices=sorted(TARGETS), help='模板名')
@@ -147,6 +162,7 @@ def main():
     ap.add_argument('--push', action='store_true', help='和 --local 一起用：写完 annulo push 推到 creght（改了 backend/func 时要；页面不用推）')
     a = ap.parse_args()
     if a.local is not None:
+        typecheck(a.target, False)
         theirs = compose(a.target, lib.worktree_files(ROOT, ['core/', f'{a.target}/']), '工作区')
         lib.apply_local(a.target, theirs, a.local, a.push, [site(a.target)], BUILD)
         return
@@ -154,6 +170,7 @@ def main():
         raise SystemExit('发版本要带 --tag vX.Y.Z 和 --note（英文）「这版改了什么」：提交说明和 tag 说明用它，升级卡片读 changelog.yaml（只看改动用 --dry-run）')
     if a.note and re.search(r'[\u4e00-\u9fff]', a.note):
         raise SystemExit('--note 只写英文：各语言的升级说明写在 <模板>/changelog.yaml')
+    typecheck(a.target, not a.dry_run)
     release(a.target, a.note, a.tag, a.dry_run)
 
 
