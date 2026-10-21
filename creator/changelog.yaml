@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.16.5
+  zh: "内容的文件夹找不到时（比如改了项目名），会提示你去找回，不再自动建一份残缺的；「另写一篇」不用再选类型。"
+  en: "If a content folder can't be found (for example after renaming the project), you're asked to find it instead of getting an incomplete copy; \"Write another\" no longer asks for a type."
 - version: 0.16.4
   zh: "帮助手册按现在的界面重写、换了新截图；发布时默认选中的文案和视频配套，视频能先播放预览；「交给 AI」的预设都能用了，列表上能看到 AI 正在做哪条。"
   en: "The help guide is rewritten for the current screens with new screenshots; the publish dialog picks a matching copy and video by default and lets you preview videos; all AI presets are available, and the list shows which piece AI is working on."
