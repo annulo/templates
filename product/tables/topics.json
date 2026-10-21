@@ -18,7 +18,7 @@
       },
       "source": {
         "type": "string",
-        "description": "来源：manual / agent / search / geo / research"
+        "description": "来源：manual / agent / search / geo / research / keyword（关键词页转的）"
       },
       "status": {
         "type": "string",

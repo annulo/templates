@@ -1,11 +1,11 @@
 ---
 name: search-console
-description: 搜索表现和改站复查：独立站在 Google 搜索里的点击、曝光、排名（Search Console，本机函数 gsc.*，表 search_pages、search_daily），找出点击率偏低的页面改标题和描述、差一点上首页的页面补内容，有搜索需求没页面的词进选题；上线过的改动（体检修复、新文章、改标题）17 天后自动对比前后数据（review.*，表 site_changes）。用户说「GSC」「Search Console」「搜索表现」「点击率」「排名」「关键词」「改标题」「补内容」「改完有没有效果」「复查」时用它。
+description: 搜索表现和改站复查：独立站在 Google 搜索里的点击、曝光、排名（Search Console，本机函数 gsc.*，表 search_pages、search_daily），找出点击率偏低的页面改标题和描述、差一点上首页的页面补内容，有搜索需求没页面的词进选题；上线过的改动（体检修复、新文章、改标题）17 天后自动对比前后数据（review.*，表 site_changes）。用户说「GSC」「Search Console」「搜索表现」「点击率」「排名」「关键词」「改标题」「补内容」「改完有没有效果」「复查」「挖关键词」「长尾词」时用它。
 ---
 
 # 搜索表现（GSC）和改站复查
 
-页面：后台左侧「搜索表现」，里面两个 tab：搜索表现、改动复查。
+页面：后台左侧「搜索表现」（外贸叫「谷歌排名」），里面几个 tab：搜索表现、关键词、改动复查（外贸还有流量下滑、GA4）。
 
 ## 连接和关联
 
@@ -34,6 +34,15 @@ description: 搜索表现和改站复查：独立站在 Google 搜索里的点�
   期望值只用来挑明显偏低的页面，不要当成承诺给用户。
 - 搜索词选题：当前 28 天按搜索词看，非噪音、曝光 ≥ 30、平均排名 > 15（站内没有排得上的页面）的词，每次同步按曝光最多加 10 个进 `topics`
   （`source: 'search'`，`search_query / search_impressions / search_position`）；同一个搜索词已有选题（任何状态）就不再加，还是 idea 的会更新曝光和排名。
+
+## 关键词机会（挖词、筛词、分桶）
+
+页面：「谷歌排名」里的「关键词」tab。表 `keywords`，本机函数 `keywords.*`（`local/keywords.ts`），设计见 `docs/keywords.md`。
+
+- 用户要「挖关键词」「哪些词能做起来」「找长尾词」时，照任务 `tasks/keyword-research.md` 做（页面上的「挖一批关键词」就是它）：
+  `keywords.expand` 扩词（下拉联想 + GSC 搜索词）→ `keywords.context` 拿待筛的词 → 你判断相关性、意图、主题 → `keywords.save` 存回。
+- 分桶（`bucket`）由 `keywords.refresh` 按 GSC 算，只看事实：排前 3 是 `ranking`，排 4~30 且曝光 ≥ 10 是 `quick_win`，其余 `unchecked`。不要编搜索量、难度、排名。
+- 快赢的词给它曝光最多的页面（`gsc_page` / `search_page_id`）补内容，走下面「补内容」的流程；还没排名的按主题 `keywords.toTopic` 转成选题（`topics.source=keyword`）。
 
 回答「搜索表现怎么样」「哪些词带来流量」这类问题，用 `db_query` / `db_aggregate` 查 `search_pages`、`search_daily`，或者跑 gsc.summary，不要自己调 GSC 接口。
 

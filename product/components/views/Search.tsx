@@ -55,7 +55,8 @@ import {
 } from "../../lib/shuttle";
 import Select from "../Select";
 import SitePicker from "../SitePicker";
-import type { Ctx } from "./types";
+import Keywords from "../Keywords";
+import type { Ctx, View } from "./types";
 import { numLocale, tr } from "../../lib/i18n";
 import { useCanRun } from "../../lib/useShuttle";
 
@@ -151,7 +152,13 @@ export default function Search({
   );
   const channel = sites.find((c) => c.id === params.channel) ?? sites[0];
   const tab =
-    params.tab === "review" ? "review" : params.tab === "ga4" ? "ga4" : "pages";
+    params.tab === "review"
+      ? "review"
+      : params.tab === "ga4"
+        ? "ga4"
+        : params.tab === "keywords"
+          ? "keywords"
+          : "pages";
   const ga4Days = [7, 30, 90].includes(Number(params.ga4_days))
     ? Number(params.ga4_days)
     : 30;
@@ -301,6 +308,7 @@ export default function Search({
             onChange={(v) => setParam("tab", v)}
             options={[
               { value: "pages", label: tr("search.tab_pages") },
+              { value: "keywords", label: tr("search.tab_keywords") },
               { value: "ga4", label: tr("search.tab_ga4") },
               {
                 value: "review",
@@ -400,6 +408,13 @@ export default function Search({
         </Notice>
       ) : tab === "review" ? (
         <Review changes={changes} channel={channel} onChanged={load} />
+      ) : tab === "keywords" ? (
+        <Keywords
+          key={channel.id}
+          channel={channel}
+          rev={ctx.rev}
+          onGo={(v, p) => ctx.go(v as View, p)}
+        />
       ) : !channel.gsc_property || channel.gsc_link_disabled ? (
         <LinkProperty channel={channel} onLinked={() => ctx.reloadChannels()} />
       ) : pages === null ? (
