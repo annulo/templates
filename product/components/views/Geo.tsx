@@ -1,7 +1,8 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ExternalLink, Lightbulb, ListPlus, Loader2, MessageCircle, Pause, Pencil, Play, Plus, RotateCw, Settings2, Sparkles, Trash2 } from 'lucide-react'
 import { Badge, Button, Dialog, ErrorDetails, Field, Notice, Panel, PageHeader, Skeleton, cx, fmtTime, inputCls, toast, type Tone } from '../ui'
-import { dbCreate, dbDelete, dbList, dbPatch, geoBatchDoneText, geoBatchOf, geoSummary, geoUnseen, newestFirst, runLocal, type Article, type Channel, type GeoQuestion, type GeoResult, type GeoRun, type GeoSummary, type SearchPage, isSite } from '../../lib/shuttle'
+import { dbCreate, dbDelete, dbList, dbPatch, geoBatchDoneText, geoBatchOf, geoSummary, geoUnseen, newestFirst, runLocal, type Article, type Channel, type GeoQuestion, type GeoResult, type GeoRun, type GeoSummary, type SearchPage, type Topic, isSite } from '../../lib/shuttle'
+import { topicsFrom } from '../../lib/origins'
 import SitePicker from '../SitePicker'
 import Markdown from '../Markdown'
 import { GeoEnginesBar, GeoEnginesDialog, useGeoEngines } from '../GeoEngines'
@@ -64,6 +65,9 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
   const [results, setResults] = useState<GeoResult[]>([])
   const [pages, setPages] = useState<SearchPage[]>([])
   const [articles, setArticles] = useState<Article[]>([])
+  /** 写成的选题和它们的文章（不分网站：文章不一定填了 channel_id）：问题下面显示这个问题写成了什么、发布后有没有被引用 */
+  const [topics, setTopics] = useState<Topic[]>([])
+  const [allArticles, setAllArticles] = useState<Article[]>([])
   /** 品牌词（小写）：资料里的品牌词、公司名、网站名。问题里带着它的算品牌问题（和 local/geo.ts 的 isBrandQ 一样） */
   const [brands, setBrands] = useState<string[]>([])
   const [error, setError] = useState('')
@@ -107,7 +111,8 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
       })
     // 「AI 推荐了谁」对照用：GSC 的页面和搜索词、本站文章；读不到（没连 Google、表没建）就不显示这些提示
     dbList('search_pages').then((l) => setPages(l.filter((x) => x.channel_id === channel.id))).catch(() => setPages([]))
-    dbList('articles').then((l) => setArticles(l.filter((x) => x.channel_id === channel.id))).catch(() => setArticles([]))
+    dbList('articles').then((l) => (setArticles(l.filter((x) => x.channel_id === channel.id)), setAllArticles(l))).catch(() => (setArticles([]), setAllArticles([])))
+    dbList('topics').then(setTopics).catch(() => setTopics([]))
     dbList('profile')
       .then((l) => {
         const p = [...l].sort((a, b) => (Date.parse(a.created_at || '') || 0) - (Date.parse(b.created_at || '') || 0))[0]
@@ -232,6 +237,11 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
       return only ? ch === only : ch && ch !== 'fresh'
     }))
   const scrollTo = (q?: GeoQuestion) => q && document.getElementById(`geo-q-${q.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  // 从选题的「来源」点过来（?q=问题 id）：定位到那个问题
+  useEffect(() => {
+    if (!params.q || !questions?.length) return
+    setTimeout(() => scrollTo(questions.find((q) => q.id === params.q)), 300)
+  }, [params.q, questions?.length])
   useEffect(() => {
     if (!jump || !sums.length) return
     setJump(false)
@@ -424,7 +434,7 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
                 )}
                 <Matrix cols={cols} head={tr('geo.m_rec_head', { n: recQs.length })} sub={(c) => <RecColHead runs={runs} eng={c.key} />}>
                   {recQs.map((q) => (
-                    <RecRow key={q.id} q={q} cols={cols} get={get} askingOf={askingOf} changeOf={changeOf} channel={channel} onChanged={load} onEdit={() => setEditing(q)} hint={<Hints q={q} pages={pages} articles={articles} />} />
+                    <RecRow key={q.id} q={q} cols={cols} get={get} askingOf={askingOf} changeOf={changeOf} channel={channel} onChanged={load} onEdit={() => setEditing(q)} hint={<Hints q={q} pages={pages} articles={articles} linked={<Linked ctx={ctx} q={q} topics={topics} articles={allArticles} results={results} />} />} />
                   ))}
                 </Matrix>
                 <p className="text-xs leading-relaxed text-muted-foreground">{tr('geo.m_rec_legend')}</p>
@@ -1047,9 +1057,9 @@ function CitedSites({ sites, total }: { sites: { host: string; ours: boolean; qu
 }
 
 /** 推荐类问题旁边的对照：这些词在 Google 上排第几（GSC），本站有没有回答它的文章 */
-function Hints({ q, pages, articles }: { q: GeoQuestion; pages: SearchPage[]; articles: Article[] }) {
+function Hints({ q, pages, articles, linked }: { q: GeoQuestion; pages: SearchPage[]; articles: Article[]; linked?: ReactNode }) {
   const kws = splitTerms(q.keywords)
-  if (!kws.length) return null
+  if (!kws.length) return <>{linked}</>
   let best: { query: string; position: number; page: string } | null = null
   for (const p of pages)
     for (const x of jsonArr<{ query: string; position: number }>(p.top_queries))
@@ -1058,8 +1068,40 @@ function Hints({ q, pages, articles }: { q: GeoQuestion; pages: SearchPage[]; ar
   return (
     <span className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
       {pages.length > 0 && (best ? <span>{tr('geo.hint_rank', { q: best.query, n: best.position.toFixed(1), page: best.page.replace(/^https?:\/\/[^/]+/, '') || '/' })}</span> : <span className="text-amber-600 dark:text-amber-400">{tr('geo.hint_no_rank')}</span>)}
-      {related ? <span>{tr('geo.hint_article', { t: related.title })}</span> : <span className="text-amber-600 dark:text-amber-400">{tr('geo.hint_no_article')}</span>}
+      {linked || (related ? <span>{tr('geo.hint_article', { t: related.title })}</span> : <span className="text-amber-600 dark:text-amber-400">{tr('geo.hint_no_article')}</span>)}
     </span>
+  )
+}
+
+/**
+ * 这个问题写成的选题（选题的出处里记着它）、文章发没发、发布后各 AI 有没有引用本站。没有就是 null，Hints 照旧按关键词猜相关文章。
+ * 整行在问题的按钮里面，不能再放按钮：用 role=link 的 span，点了不展开那一行
+ */
+function Linked({ ctx, q, topics, articles, results }: { ctx: Ctx; q: GeoQuestion; topics: Topic[]; articles: Article[]; results: GeoResult[] }) {
+  const own = topicsFrom(topics, 'geo_question', q.id).filter((t) => t.status !== 'dropped')
+  if (!own.length) return null
+  const go = (e: { stopPropagation: () => void }, extra: Record<string, string>) => {
+    e.stopPropagation()
+    ;(ctx.go as (v: string, p?: Record<string, string>) => void)('content', { workspace: 'website', ...extra })
+  }
+  const link = (label: string, extra: Record<string, string>, cls = '') => (
+    <span role="link" tabIndex={0} onClick={(e) => go(e, extra)} onKeyDown={(e) => e.key === 'Enter' && go(e, extra)} className={cx('cursor-pointer hover:underline', cls)}>{label}</span>
+  )
+  return (
+    <>
+      {own.map((t) => {
+        const a = articles.find((x) => x.id === t.article_id) ?? articles.find((x) => x.topic_id === t.id)
+        const at = a?.status === 'published' ? a.published_at : ''
+        const cited = at ? new Set(results.filter((r) => r.question_id === q.id && r.cited && String(r.created_at) > String(at)).map((r) => r.engine)).size : 0
+        return (
+          <span key={t.id} className="inline-flex flex-wrap items-center gap-x-2">
+            {link(tr('origin.geo_linked', { t: t.title }), { topic: t.id }, 'text-primary-text')}
+            {a && link(tr('origin.geo_article', { t: a.title, s: tr(at ? 'origin.st_published' : 'origin.st_draft') }), { article: a.id })}
+            {at && <span className={cited ? 'text-emerald-600 dark:text-emerald-400' : ''}>{cited ? tr('origin.geo_after', { n: cited }) : tr('origin.geo_after_none')}</span>}
+          </span>
+        )
+      })}
+    </>
   )
 }
 

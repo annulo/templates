@@ -167,3 +167,28 @@ export function mergeSources(a: string | undefined, b: string): string {
   for (const s of b.split(',').map((x) => x.trim()).filter(Boolean)) if (!list.includes(s)) list.push(s)
   return list.join(',')
 }
+
+/** 同一个页面：不管协议、www、结尾的 /、#片段、?参数 */
+export function samePage(a?: string, b?: string): boolean {
+  const n = (u?: string) => String(u ?? '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[?#].*$/, '').replace(/\/+$/, '')
+  return !!n(a) && n(a) === n(b)
+}
+
+export type KwMetrics = { clicks: number; impressions: number; position: number }
+
+/**
+ * 一个词在改动前后 14 天（GSC）的结论，只看事实：
+ * - 前后都没曝光：''（没数据）；以前没曝光、现在有了：better（开始有排名了）；以前有、现在没了：worse；
+ * - 都有：排名往前 2 位以上 better、往后 2 位以上 worse，其余 flat。
+ *   不看曝光：排名差不多时曝光的多少跟着搜的人多少走（季节、行情），不是这次改动的效果（和 review.ts 页面复查的口径一样）。
+ */
+export function keywordVerdict(before: KwMetrics, after: KwMetrics): '' | 'better' | 'flat' | 'worse' {
+  const hadB = before.impressions > 0, hadA = after.impressions > 0
+  if (!hadB && !hadA) return ''
+  if (!hadB) return 'better'
+  if (!hadA) return 'worse'
+  const d = before.position - after.position
+  if (d >= 2) return 'better'
+  if (d <= -2) return 'worse'
+  return 'flat'
+}

@@ -13,7 +13,7 @@ annulo run topics.context --input '{"channel_id":"<id>","question_ids":["<id>"]}
 ```
 
 输出里：`brief` 是项目定位、目标客户、语气、关键词；`existing` 是已有选题（包括写完的、放弃的）；`site.digest` 是站点首页和几个页面的内容；`products` 是产品目录（选题可以围绕主推产品和用户会搜的词）；
-从 GEO 出时还有 `geo_questions`（没被引用的问题）。`geo_questions` 是空的就告诉用户现在没有没被引用的问题，不用出。
+从 GEO 出时还有 `geo_questions`（没被引用的问题，带 `topic_titles` 的是已经写成过选题的：别再出一个意思一样的，确实要换角度另写就在 `angle` 里说清和那篇有什么不同）。`geo_questions` 是空的就告诉用户现在没有没被引用的问题，不用出。
 自媒体选题（`workspace` 不是 website）有已发内容的数据时还有 `performance`：近半年发的内容按平台分开排，`top` 浏览最多、`rising` 近 7 天涨得最快、`low` 发出去一周以上浏览最少，每条有标题、切入点或正文摘要、浏览、互动率（`engagement_rate`）、近 7 天增长；`note` 说明口径。
 
 ## 2. 怎么写
@@ -32,16 +32,16 @@ annulo run topics.context --input '{"channel_id":"<id>","question_ids":["<id>"]}
 
 ## 4. 存
 
-写成 JSON 文件再存；从 GEO 出的 `source` 填 `geo`，否则不填：
+写成 JSON 文件再存；从 GEO 出的 `source` 填 `geo`，否则不填。**从 GEO 出的每个选题都要带 `question_ids`**：它回答的是 `geo_questions` 里哪几个问题（id 照抄，一个选题可以覆盖几个相近的问题）。这样从 AI 搜索的问题能找到写成的选题和文章，文章发布后能看出有没有被引用；没带 `topics.save` 会报错：
 
 ```bash
 cat > /tmp/topics.json <<'JSON'
-{ "source": "geo", "ideas": [ { "title": "…", "angle": "…", "keywords": "…" } ] }
+{ "source": "geo", "ideas": [ { "title": "…", "angle": "…", "keywords": "…", "question_ids": ["<geo_questions 里的 id>"] } ] }
 JSON
 annulo run topics.save --input @/tmp/topics.json
 ```
 
-返回的 `skipped` 是和已有选题重复、没存的。存完回复用户：列出存了哪些标题，请到对应「网站内容」或「自媒体内容」中挑着写。未给出归属的旧任务仍会保留在「待确认归属」。
+选题的出处和出它的对话由 `topics.save` 记下（选题详情里的「来源」），不用写进 `angle`。返回的 `skipped` 是和已有选题重复、没存的；`linked` 是标题和已有选题一样、把这次的问题并到那个选题上的。存完回复用户：列出存了哪些标题，请到对应「网站内容」或「自媒体内容」中挑着写。未给出归属的旧任务仍会保留在「待确认归属」。
 
 先读 product-growth skill。topics.context 提供产品事实、用户场景、增长机会和已有主题；围绕真实产品能力与用户问题出选题。需要多平台主题计划时使用 plan-campaign。
 

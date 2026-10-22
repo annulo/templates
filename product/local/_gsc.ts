@@ -71,10 +71,17 @@ async function accountFor(ctx: any, property: string): Promise<string> {
   return owner.get(property) ?? list[0]
 }
 
-/** searchAnalytics.query。page 给了就只看这些页面（equals，多个用 OR：一组 filters 里 GSC 是 AND，所以每页一次，调用方自己合） */
-export async function query(ctx: any, property: string, opts: { start: string; end: string; dimensions: string[]; rowLimit?: number; page?: string }): Promise<Row[]> {
+/**
+ * searchAnalytics.query。page 给了就只看这个页面、query 给了就只看这个搜索词（都是 equals，两个都给是 AND）；
+ * 多个页面要 OR 时每页查一次，调用方自己合（一组 filters 里 GSC 是 AND）
+ */
+export async function query(ctx: any, property: string, opts: { start: string; end: string; dimensions: string[]; rowLimit?: number; page?: string; query?: string }): Promise<Row[]> {
   const body: any = { startDate: opts.start, endDate: opts.end, dimensions: opts.dimensions, rowLimit: opts.rowLimit ?? 1000, dataState: 'final' }
-  if (opts.page) body.dimensionFilterGroups = [{ filters: [{ dimension: 'page', operator: 'equals', expression: opts.page }] }]
+  const filters = [
+    ...(opts.page ? [{ dimension: 'page', operator: 'equals', expression: opts.page }] : []),
+    ...(opts.query ? [{ dimension: 'query', operator: 'equals', expression: opts.query }] : []),
+  ]
+  if (filters.length) body.dimensionFilterGroups = [{ filters }]
   const r = await call(ctx, 'POST', `/sites/${encodeURIComponent(property)}/searchAnalytics/query`, body, await accountFor(ctx, property))
   return r?.rows ?? []
 }

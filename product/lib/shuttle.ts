@@ -604,6 +604,10 @@ export type Topic = {
   search_impressions?: number;
   search_position?: number;
   created_at?: string;
+  /** 出处 JSON 数组：从哪些记录来的（AI 搜索问题、关键词、竞品页面…），用 core/lib/origins.ts 的 originsOf 读 */
+  origins?: string;
+  /** 出这个选题的对话 */
+  chat_id?: string;
 };
 
 export type ArticleStatus =

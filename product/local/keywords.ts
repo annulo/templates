@@ -3,6 +3,8 @@ import { profile } from './_ai'
 import { brandTerms, DAY, isNoise, notConnected, query, ymd } from './_gsc'
 import { bucketOf, gscByKeyword, MODIFIERS, mergeSources, normKey, ownDomains, parseSuggest, pushRank, scoreOf, serpFacts, splitTerms, suggestUrl, usable, type Bucket } from './_keywords'
 import { searchMany } from './serp'
+import { mergeOrigins } from './_origins'
+import { originsJson } from '../lib/origins'
 
 // 只读写表的：手机上也能看、能改状态、能转选题
 export const cloud = ['list', 'context', 'save', 'setStatus', 'toTopic', 'markSeen', 'add']
@@ -461,9 +463,11 @@ export function toTopic(input: { ids: string[] }, ctx: any) {
         source: 'keyword', status: 'idea', search_query: main.keyword,
         ...(main.gsc_impressions ? { search_impressions: main.gsc_impressions, search_position: main.gsc_position } : {}),
         workspace: 'website', content_type: 'article', created_at: now,
+        origins: originsJson(ks.map((k) => ({ type: 'keyword', id: k.id, label: k.keyword, channel_id: k.channel_id }))),
+        ...(ctx.chat_id ? { chat_id: String(ctx.chat_id) } : {}),
       })
       created.push(main.keyword)
-    }
+    } else mergeOrigins(ctx, topic, ks.map((k) => ({ type: 'keyword', id: k.id, label: k.keyword, channel_id: k.channel_id })))
     for (const k of ks) ctx.db.update('keywords', k.id, { topic_id: topic.id, status: 'targeting', seen: true })
   }
   return { created }
