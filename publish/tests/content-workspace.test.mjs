@@ -10,6 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'content-workspace-'));
 fs.cpSync(path.join(root, 'product'), temp, { recursive: true });
 fs.cpSync(path.join(root, 'core/local'), path.join(temp, 'local'), { recursive: true });
+fs.cpSync(path.join(root, 'core/lib'), path.join(temp, 'lib'), { recursive: true });
 fs.cpSync(path.join(root, 'core/features/websites'), temp, { recursive: true });
 await build({ stdin: { contents: "export * from './lib/contentWorkspace'; export * as workspace from './local/content-workspace'; export * as topics from './local/topics';", resolveDir: temp },
   bundle: true, platform: 'node', format: 'esm', outfile: path.join(temp, 'test.mjs'), logLevel: 'silent',

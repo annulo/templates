@@ -10,6 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'inspiration-test-'))
 fs.cpSync(path.join(root, 'product'), temp, { recursive: true })
 fs.cpSync(path.join(root, 'core/local'), path.join(temp, 'local'), { recursive: true })
+fs.cpSync(path.join(root, 'core/lib'), path.join(temp, 'lib'), { recursive: true })
 fs.cpSync(path.join(root, 'core/features/websites'), temp, { recursive: true })
 await build({ stdin: { contents: "export * as inspiration from './local/inspiration'; export * as topics from './local/topics'; export * as content from './local/content';", resolveDir: temp }, outfile: path.join(temp, 'test.mjs'), bundle: true, platform: 'node', format: 'esm', plugins: [{ name: 'social-stub', setup(b) { b.onResolve({ filter: /plugins\/social\// }, (a) => ({ path: a.path, namespace: 'social-stub' })); b.onLoad({ filter: /.*/, namespace: 'social-stub' }, () => ({ contents: `export const FIELDS = {}; export async function summary() { return [] }
 export const CONTENT_TYPES = ['article', 'post', 'video'];

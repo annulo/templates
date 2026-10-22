@@ -70,8 +70,9 @@ function fakeCtx(tables, extra = {}) {
 const prelude = `const L = (ctx, zh, en) => ctx.locale === 'en' ? en : zh; const profile = ctx => (ctx.db.query('profile').list[0] ?? { name: '' });
 const DAY = 86400000; const ymd = ms => new Date(ms).toISOString().slice(0, 10); const brandTerms = () => ['acme']; const isNoise = (q, b) => b.some(x => q.toLowerCase().includes(x)); const notConnected = () => false;
 const query = async () => []; `
-const kwPure = fs.readFileSync(new URL('../../core/features/websites/local/_keywords.ts', import.meta.url), 'utf8').replace(/^import .*$/gm, '')
-const fn = await load('keywords.ts', prelude + kwPure)
+const pure = (f) => fs.readFileSync(new URL(`../../core/${f}`, import.meta.url), 'utf8').replace(/^import .*$/gm, '')
+const kwPure = pure('features/websites/local/_keywords.ts')
+const fn = await load('keywords.ts', prelude + kwPure + pure('lib/origins.ts') + pure('features/websites/local/_origins.ts'))
 
 test('expand falls back to Bing, drops brand words, and stores raw rows', async () => {
   const tables = { channels: [{ id: 'c1', name: 'Site', type: 'creght_site' }], profile: [{ name: 'Acme', keywords: 'grow light' }], products: [{ name: 'LED panel', moq: '100' }] }
@@ -115,6 +116,9 @@ test('save reviews raw rows, records the chat, and toTopic groups by cluster', (
   const t = fn.toTopic({ ids: ['k1', 'k2'] }, ctx)
   assert.deepEqual(t.created, ['grow light factory']) // 标题用曝光最多的词
   assert.equal(tables.topics[0].source, 'keyword')
+  // 出处：这个主题的两个词，和转选题的对话
+  assert.deepEqual(JSON.parse(tables.topics[0].origins).map((o) => [o.type, o.id, o.label]), [['keyword', 'k1', 'grow light manufacturer'], ['keyword', 'k2', 'grow light factory']])
+  assert.equal(tables.topics[0].chat_id, 'chat-1')
   assert.ok(['k1', 'k2'].every((id) => tables.keywords.find((k) => k.id === id).status === 'targeting'))
 })
 

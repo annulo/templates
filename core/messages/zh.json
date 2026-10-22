@@ -497,5 +497,27 @@
     "zoom_out": "缩小",
     "load_failed": "这张图读不出来，换一张试试",
     "export_failed": "裁剪失败，再试一次"
+  },
+  "origin": {
+    "title": "来源",
+    "topic": "选题",
+    "by_chat": "查看出这个选题的对话",
+    "manual": "手动添加",
+    "none": "没有记下来源（之前生成的选题）",
+    "geo_linked": "已写成选题：{t}",
+    "geo_article": "文章：{t}（{s}）",
+    "geo_after": "发布后{n}个 AI 引用了本站",
+    "geo_after_none": "发布后还没被引用，等下次检测",
+    "st_draft": "草稿",
+    "st_published": "已发布",
+    "t_geo_question": "AI 搜索问题",
+    "t_search_query": "谷歌搜索词",
+    "t_keyword": "关键词",
+    "t_competitor_page": "竞品页面",
+    "t_competitor": "竞品",
+    "t_inspiration_source": "灵感",
+    "t_opportunity": "增长机会",
+    "t_campaign": "主题计划",
+    "t_marketing_plan": "营销计划"
   }
 }

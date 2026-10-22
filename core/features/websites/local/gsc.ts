@@ -1,6 +1,7 @@
 import { L } from './_i18n'
 import { profile, projectBrief, siteBase } from './_ai'
 import { brandTerms, DAY, expectedCtr, isNoise, matchProperty, nonBrand, notConnected, opportunity, pickQueryTopics, query, sites, ymd, type Row } from './_gsc'
+import { originsJson } from '../lib/origins'
 
 // 要电脑的（浏览器、本机授权、密钥、外部接口）：手机上点了转给电脑上开着的 Shuttle 跑（设置 → 远程访问）
 export const remote = ['day', 'link', 'properties', 'range', 'sync', 'unlink']
@@ -214,6 +215,7 @@ function writeQueryTopics(rows: Row[], brands: string[], ctx: any) {
     ctx.db.insert('topics', {
       title: q, angle: L(ctx, `搜索需求：近 28 天曝光 ${r.impressions}、平均排名 ${pos}，站内还没有排得上的页面`, `Search demand: ${r.impressions} impressions in 28 days, average position ${pos}, and no page of yours ranks for it yet`), keywords: q,
       source: 'search', status: 'idea', search_query: q, search_impressions: r.impressions, search_position: pos, created_at: now,
+      origins: originsJson([{ type: 'search_query', id: q, label: q }]),
     })
   }
   return picked.length

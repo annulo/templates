@@ -95,6 +95,14 @@
       "workflow_stages": {
         "type": "string",
         "description": "按工作区保存的手动任务进度 JSON：website / social；空值恢复自动判断，不代替发布或排期记录"
+      },
+      "origins": {
+        "type": "string",
+        "description": "出处 JSON 数组 [{ type, id, label, channel_id? }]：这个选题是从哪些记录来的（geo_question AI 搜索问题、keyword 关键词、search_query 谷歌搜索词、competitor_page 竞品页面、competitor 竞品、inspiration_source 灵感来源…），label 是生成时的快照；core/lib/origins.ts 读写"
+      },
+      "chat_id": {
+        "type": "string",
+        "description": "出这个选题的对话（助手出的、在对话里转的才有）"
       }
     },
     "required": [

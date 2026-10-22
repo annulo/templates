@@ -497,5 +497,27 @@
     "zoom_out": "Zoom out",
     "load_failed": "This image can't be read; try another one",
     "export_failed": "Cropping failed; try again"
+  },
+  "origin": {
+    "title": "Origin",
+    "topic": "Topic",
+    "by_chat": "Open the chat that suggested it",
+    "manual": "Added by hand",
+    "none": "No origin recorded (older topic)",
+    "geo_linked": "Topic: {t}",
+    "geo_article": "Article: {t} ({s})",
+    "geo_after": "Cited by {n} AI since publishing",
+    "geo_after_none": "Not cited since publishing yet; wait for the next check",
+    "st_draft": "draft",
+    "st_published": "published",
+    "t_geo_question": "AI search question",
+    "t_search_query": "Google query",
+    "t_keyword": "Keyword",
+    "t_competitor_page": "Competitor page",
+    "t_competitor": "Competitor",
+    "t_inspiration_source": "Inspiration",
+    "t_opportunity": "Growth opportunity",
+    "t_campaign": "Campaign",
+    "t_marketing_plan": "Marketing plan"
   }
 }

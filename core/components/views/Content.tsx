@@ -21,6 +21,7 @@ import { clearUnsaved, readUnsaved, writeUnsaved } from '../../lib/unsaved'
 import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, runLocal, runTask, type Article, type ArticleStatus, type Publication, type SocialPost, type Topic, type TopicStatus } from '../../lib/shuttle'
 import type { Ctx } from './types'
 import { numLocale, tr } from '../../lib/i18n'
+import { ArticleOrigins } from '../Origins'
 
 // label 按当前语言取（getter）
 const lbl = (key: string, tone: Tone) => ({ get label() { return tr(key) }, tone })
@@ -719,7 +720,8 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
             <ArticleView a={a} />
           </div>
         )}
-        {(source || derived.length > 0) && <div className="mt-6 space-y-1.5 border-t border-border pt-4 text-sm">
+        {(source || derived.length > 0 || a.topic_id) && <div className="mt-6 space-y-1.5 border-t border-border pt-4 text-sm">
+          <ArticleOrigins ctx={ctx} a={a} all={all} />
           {source && <p className="text-muted-foreground">{tr('article.from_source')}<button type="button" onClick={() => open(source.id)} className="ml-1 cursor-pointer text-primary-text hover:underline">{source.title}</button></p>}
           {derived.length > 0 && <div><p className="text-muted-foreground">{tr('article.derived')}</p><ul className="mt-1 space-y-1">{derived.map((d) => <li key={d.id} className="flex items-center gap-2"><TypeBadge type={typeOf(d)} /><button type="button" onClick={() => open(d.id)} className="min-w-0 cursor-pointer truncate text-left text-primary-text hover:underline">{d.title}</button></li>)}</ul></div>}
         </div>}
