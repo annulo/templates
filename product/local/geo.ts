@@ -384,7 +384,7 @@ async function checkOne(input: Input, ctx: any) {
       }
     }),
   )
-  const ok = outs.filter((o: any) => !o.error)
+  const ok = outs.filter((o): o is Exclude<typeof o, { error: string }> => !('error' in o && o.error))
   if (!ok.length) throw new Error(outs.map((o: any) => o.error).join(L(ctx, '；', '; ')).slice(0, 800))
   const sums = ok.map((o: any) => o.summary as Summary)
   ctx.progress({
@@ -637,7 +637,7 @@ const siteHost = (site?: string) => hostOf(WEB_URLS[site ?? ''] ?? '')
 async function loadWebUrls(ctx: any) {
   if (Object.keys(WEB_URLS).length) return
   try {
-    WEB_URLS = Object.fromEntries((await aichatSites(null, ctx)).map((x: any) => [x.id, x.url]))
+    WEB_URLS = Object.fromEntries((await aichatSites()).map((x: any) => [x.id, x.url]))
   } catch {}
 }
 

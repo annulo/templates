@@ -21,7 +21,7 @@
 // 页面用 lib/shuttle.ts 里的封装（listCreghtSites / addSiteChannel / removeChannel / channelStats / visitOverview）。
 
 import { L } from './_i18n'
-import { adminLink as creghtAdminLink, sites as allSites, status as siteStatus, visits } from './_creght'
+import { adminLink as creghtAdminLink, hostOf, mcpState, previewURL, sites as allSites, status as siteStatus, visits } from './_creght'
 // 社媒的数据由社媒插件算（github.com/annulo/plugins 的 social，装在 plugins/social/）：和社媒页显示的是同一份
 import { summary as socialSummary } from '../plugins/social/local/stats'
 import { normalizeURL, secretName, wp } from './_wp'
@@ -32,15 +32,9 @@ export const cloud = ['stats', 'overview']
 // 要电脑的（浏览器、本机授权、密钥、外部接口）：手机上点了转给电脑上开着的 Shuttle 跑（设置 → 远程访问）
 export const remote = ['access', 'add', 'adminLink', 'fromURL', 'match', 'remove', 'sites', 'wpPrepare', 'wpVerify']
 
-type Channel = { id: string; type: string; name: string; project_id?: string; site_id?: string; preview_url?: string; wp_user?: string; wp_secret?: string; created_at?: string }
+type Channel = { id: string; type: string; name: string; project_id?: string; site_id?: string; api_host?: string; preview_url?: string; wp_user?: string; wp_secret?: string; created_at?: string }
 
 const CHANNEL_TYPES = ['creght_site', 'wordpress']
-
-/** 预览地址和 creght CLI 的算法一致：预览环境是 API host 的子域名 */
-function previewURL(ctx: any, siteID: string) {
-  const host = /^https?:\/\/([^/]+)/.exec(String(ctx.workspace?.api_host ?? 'https://creght.cn'))?.[1] ?? 'creght.cn'
-  return `https://${siteID}.preview.${host}/`
-}
 
 /** Shuttle 的项目（运营后台）不是要运营的网站：列站点、加渠道时排除（老版本 Shuttle 没有这个字段，就不排除） */
 const isShuttleProject = (ctx: any, projectID: string) => ((ctx.workspace?.shuttle_projects as string[] | undefined) ?? []).includes(projectID)
@@ -98,7 +92,8 @@ export async function add(input: { type?: string; project_id: string; site_id: s
   if (!site) throw new Error(L(ctx, '你的 creght 账号下没有这个站点', "Your creght account doesn't have this site"))
   const cur = ctx.db.query('channels', { where: { type, project_id: site.project_id, site_id: site.site_id }, limit: 1 }).list
   if (cur.length) throw new Error(L(ctx, `「${site.site_name}」已经添加过了`, `"${site.site_name}" is already added`))
-  return ctx.db.insert('channels', { type, name: site.site_name, project_id: site.project_id, site_id: site.site_id, preview_url: previewURL(ctx, site.site_id) })
+  // api_host：站点在哪个 creght 区域，之后读写都走那个区域的 MCP（_creght.ts）
+  return ctx.db.insert('channels', { type, name: site.site_name, project_id: site.project_id, site_id: site.site_id, api_host: site.api_host, preview_url: previewURL(ctx, site.site_id, site.api_host) })
 }
 
 /** creght 渲染的页面里带 window.__DATA__ = { projectId, siteId, provider: { url } }：自定义域名也认得出，不用连 MCP */
@@ -115,8 +110,6 @@ async function creghtPage(url: string) {
   const host = /^https?:\/\/(?:www\.)?([^/]+)/.exec(String(data.provider?.url ?? ''))?.[1] ?? ''
   return { project_id: String(data.projectId), site_id: String(data.siteId), title, host }
 }
-
-const mcpState = (ctx: any) => (ctx.mcp.servers() as { name: string; status: string }[]).find((s) => s.name === 'creght')?.status ?? ''
 
 const bareHost = (url: string) => { try { return new URL(url).host.replace(/^www\./, '') } catch { return '' } }
 
@@ -136,19 +129,21 @@ export async function fromURL(input: { url: string }, ctx: any) {
   if (!page || isShuttleProject(ctx, page.project_id)) return null
   const cur = ctx.db.query('channels', { where: { type: 'creght_site', project_id: page.project_id, site_id: page.site_id }, limit: 1 }).list[0]
   if (cur) return cur
-  if (mcpState(ctx) === 'connected') {
+  const apiHost = page.host ? `https://${page.host}` : ''
+  if (mcpState(ctx, apiHost) === 'connected') {
     try { return await add({ project_id: page.project_id, site_id: page.site_id }, ctx) } catch { /* 不在账号下、MCP 读失败：下面照样加，渠道页提示 */ }
   }
   const name = page.title.split(/\s+[|–—-]\s+/)[0] || String(input.url).replace(/^https?:\/\//, '').replace(/\/$/, '')
-  const preview_url = page.host ? `https://${page.site_id}.preview.${page.host}/` : previewURL(ctx, page.site_id)
-  return ctx.db.insert('channels', { type: 'creght_site', name, project_id: page.project_id, site_id: page.site_id, preview_url })
+  const preview_url = previewURL(ctx, page.site_id, apiHost)
+  return ctx.db.insert('channels', { type: 'creght_site', name, project_id: page.project_id, site_id: page.site_id, api_host: apiHost || undefined, preview_url })
 }
 
 export async function access(input: { id: string }, ctx: any) {
   const ch: Channel | null = ctx.db.get('channels', input?.id)
   if (!ch || ch.type !== 'creght_site') return { state: 'ok' }
-  const st = mcpState(ctx)
-  if (!st || st === 'disabled') return { state: 'no_mcp' }
+  const host = hostOf(ctx, ch.project_id!)
+  const st = mcpState(ctx, host)
+  if (!st || st === 'disabled') return { state: 'no_mcp', api_host: host }
   if (st === 'needs_auth') return { state: 'needs_auth' }
   // 直接读站点状态：list_sites 不一定列出账号能读的全部站点（比如别的 Annulo 项目里的站点），只拿它判断会误报
   let err: Error
@@ -160,7 +155,7 @@ export async function access(input: { id: string }, ctx: any) {
   }
   try {
     const list = await allSites(ctx)
-    return list.some((s) => s.project_id === ch.project_id) ? { state: 'failed', error: err.message } : { state: 'not_in_account' }
+    return list.some((s) => s.project_id === ch.project_id && s.api_host === host) ? { state: 'failed', error: err.message } : { state: 'not_in_account' }
   } catch (e) {
     return { state: 'failed', error: (e as Error).message }
   }
@@ -207,7 +202,7 @@ export async function stats(input: { days?: number }, ctx: any) {
     if (c.type !== 'creght_site') {
       try {
         const { top, ...s } = socialSummary({ channel_id: c.id, days }, ctx)
-        social.push({ id: c.id, name: c.name, type: c.type, ...s, top: top.slice(0, 3).map((p) => ({ title: p.title, views: p.views, gain: p.gain })) })
+        social.push({ id: c.id, name: c.name, type: c.type, ...s, top: top.slice(0, 3).map((p) => ({ title: p.title, views: (p as { views?: number | null }).views, gain: p.gain })) })
       } catch (e: any) {
         failed.push({ id: c.id, name: c.name, type: c.type, error: e.message })
       }

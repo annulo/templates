@@ -31,7 +31,7 @@ export function saveBrief(
     throw new Error(L(ctx, "请填写选题", "Enter a topic title."));
   const b = input.brief || {};
   const product_ids = Array.isArray(b.product_ids)
-    ? [...new Set(b.product_ids.map(String))]
+    ? [...new Set<string>(b.product_ids.map(String))]
     : [];
   product_ids.forEach((id) => requireRow(ctx, "products", id));
   const brief: any = { product_ids };

@@ -35,8 +35,8 @@ export function PresetChips({ presets, picked, onPick, onManage, emptyText }: { 
 }
 
 /** 现在的要求是不是某个预设（做法、类型、要求都没改过） */
-export const pickedPreset = (presets: Preset[] | null, mode: PresetMode, type: ArticleType, prompt: string) =>
-  (presets ?? []).find((p) => p.mode === mode && (mode === 'here' || p.type === type) && p.prompt.trim() === prompt.trim())
+export const pickedPreset = (presets: Preset[] | null, mode: PresetMode, type: ArticleType, prompt: string, untyped = false) =>
+  (presets ?? []).find((p) => p.mode === mode && (mode === 'here' || untyped || p.type === type) && p.prompt.trim() === prompt.trim())
 
 /** 把这次的要求存成一条预设。here 的记下用在哪种文章上（types） */
 export async function savePreset(mode: PresetMode, type: ArticleType, prompt: string) {
@@ -46,8 +46,11 @@ export async function savePreset(mode: PresetMode, type: ArticleType, prompt: st
 
 type Draft = { preset?: Preset; mode: PresetMode; type: ArticleType; types: ArticleType[]; name: string; prompt: string }
 
-/** 管理预设：列出全部，每条能改名字、做法、类型、要求，能删；模板自带的改过能「恢复默认」 */
-export function PresetsDialog({ open, presets, here, onClose, onChanged }: { open: boolean; presets: Preset[]; here: boolean; onClose: () => void; onChanged: () => Promise<unknown> }) {
+/**
+ * 管理预设：列出全部，每条能改名字、做法、类型、要求，能删；模板自带的改过能「恢复默认」。
+ * untyped：内容没有类型（自媒体的内容文件夹），不选做成哪种、用在哪些类型上，做成什么写在要求里
+ */
+export function PresetsDialog({ open, presets, here, untyped = false, onClose, onChanged }: { open: boolean; presets: Preset[]; here: boolean; untyped?: boolean; onClose: () => void; onChanged: () => Promise<unknown> }) {
   const [editing, setEditing] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -79,7 +82,7 @@ export function PresetsDialog({ open, presets, here, onClose, onChanged }: { ope
     {here && !d.preset?.builtin && <Field group label={tr('presets.mode')}>
       <Segmented<PresetMode> value={d.mode} onChange={(m) => setEditing({ ...d, mode: m })} options={[{ value: 'here', label: tr('presets.mode_here') }, { value: 'new', label: tr('presets.mode_new') }]} />
     </Field>}
-    {d.mode === 'new'
+    {untyped ? null : d.mode === 'new'
       ? <Field group label={tr('presets.type')}>
         <Segmented<ArticleType> value={d.type} onChange={(t) => setEditing({ ...d, type: t })} options={ARTICLE_TYPES.map((t) => ({ value: t, label: TYPE_META[t].label }))} />
       </Field>
@@ -87,13 +90,14 @@ export function PresetsDialog({ open, presets, here, onClose, onChanged }: { ope
         <div className="flex flex-wrap gap-1.5">{ARTICLE_TYPES.map((t) => <button key={t} type="button" onClick={() => toggleType(d, t)} className={cx('inline-flex h-7 cursor-pointer items-center gap-1 rounded-md border px-2 text-xs', d.types.includes(t) ? 'border-primary/50 bg-primary/10 text-primary-text' : 'border-border text-muted-foreground hover:bg-accent')}>{d.types.includes(t) && <Check className="size-3.5" />}{TYPE_META[t].label}</button>)}</div>
       </Field>}
     <Field label={tr('presets.prompt')}>
-      <textarea rows={4} value={d.prompt} onChange={(e) => setEditing({ ...d, prompt: e.target.value })} placeholder={d.mode === 'here' ? tr('presets.here_ph') : tr(`article.rewrite_ph_${d.type}`)} className={cx(inputCls, 'py-2')} />
+      <textarea rows={4} value={d.prompt} onChange={(e) => setEditing({ ...d, prompt: e.target.value })} placeholder={d.mode === 'here' ? tr('presets.here_ph') : untyped ? tr('article.fork_ph') : tr(`article.rewrite_ph_${d.type}`)} className={cx(inputCls, 'py-2')} />
     </Field>
     <div className="flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={() => setEditing(null)}>{tr('common.cancel')}</Button><Button size="sm" disabled={busy || !d.prompt.trim()} onClick={save}><Check />{tr('common.save')}</Button></div>
   </div>
 
   const icon = 'cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground'
-  const badge = (p: Preset) => p.mode === 'new' ? <TypeBadge type={p.type} className="mt-0.5" /> : <span className="mt-0.5 inline-flex shrink-0 items-center rounded-md border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{tr('presets.mode_here')}</span>
+  const modeTag = (label: string) => <span className="mt-0.5 inline-flex shrink-0 items-center rounded-md border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{label}</span>
+  const badge = (p: Preset) => p.mode === 'here' ? modeTag(tr('presets.mode_here')) : untyped ? modeTag(tr('presets.mode_new')) : <TypeBadge type={p.type} className="mt-0.5" />
   return <Dialog open={open} onClose={onClose} title={tr('article.presets_manage')} width={600} footer={<Button size="sm" variant="outline" onClick={onClose}>{tr('common.close')}</Button>}>
     <div className="space-y-2">
       {!presets.length && !editing && <p className="text-sm text-muted-foreground">{tr('article.presets_none')}</p>}

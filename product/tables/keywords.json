@@ -1,0 +1,113 @@
+{
+  "name": "关键词",
+  "desc": "挖出来的关键词：keywords.expand 从种子词扩出来（下拉联想、GSC 搜索词），助手按任务 keyword-research 筛掉不相关的、标意图、归主题，keywords.refresh 每周按 GSC 更新曝光和排名、算分桶",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "keyword": {
+        "type": "string",
+        "description": "关键词原文（同一个网站里按小写去重）"
+      },
+      "lang": {
+        "type": "string",
+        "description": "联想用的语言（hl），比如 en"
+      },
+      "country": {
+        "type": "string",
+        "description": "联想用的国家（gl），比如 us"
+      },
+      "sources": {
+        "type": "string",
+        "description": "从哪来，逗号分隔：suggest（搜索引擎下拉联想）/ gsc（本站已有曝光的搜索词）/ agent（助手补的）/ manual（用户加的）"
+      },
+      "seed": {
+        "type": "string",
+        "description": "从哪个种子词扩出来的"
+      },
+      "suggest_engine": {
+        "type": "string",
+        "description": "联想来自哪个搜索引擎：google / bing（Google 访问不了时用 Bing）"
+      },
+      "status": {
+        "type": "string",
+        "description": "raw 刚挖出来还没筛 / idea 筛过、值得看 / targeting 在做 / dismissed 不要"
+      },
+      "intent": {
+        "type": "string",
+        "description": "搜索意图（助手标）：buy 找供应商、要采购 / compare 对比选型 / research 了解知识 / other"
+      },
+      "cluster": {
+        "type": "string",
+        "description": "主题（助手归的）：同一个主题的词用一个页面去做"
+      },
+      "note": {
+        "type": "string",
+        "description": "助手的说明：为什么值得做、或者为什么不要"
+      },
+      "target_page": {
+        "type": "string",
+        "description": "打算用哪个页面去做（站内已有页面的 URL）；空是要写新内容"
+      },
+      "gsc_impressions": {
+        "type": "number",
+        "description": "最近 28 天这个词在 Google 的曝光（GSC，词完全一样才算）"
+      },
+      "gsc_clicks": {
+        "type": "number",
+        "description": "最近 28 天的点击"
+      },
+      "gsc_position": {
+        "type": "number",
+        "description": "最近 28 天的平均排名"
+      },
+      "gsc_page": {
+        "type": "string",
+        "description": "这个词曝光最多的本站页面"
+      },
+      "search_page_id": {
+        "type": "string",
+        "description": "gsc_page 在 search_pages 里的记录 id（补内容、复查都挂在那条上）"
+      },
+      "gsc_at": {
+        "type": "string",
+        "description": "GSC 数据更新时间"
+      },
+      "bucket": {
+        "type": "string",
+        "description": "分桶（keywords.refresh 按规则算）：quick_win 已经排在 4~30 位、补一补能上去 / ranking 已经排在前 3 / unchecked 还没有排名数据"
+      },
+      "score": {
+        "type": "number",
+        "description": "机会分：同一桶里排序用"
+      },
+      "topic_id": {
+        "type": "string",
+        "description": "转成的选题（topics）"
+      },
+      "chat_id": {
+        "type": "string",
+        "description": "筛这批词的那段对话（页面上「继续对话」回到这里）"
+      },
+      "seen": {
+        "type": "boolean",
+        "description": "看过了（去掉「新」标识）"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "挖出来的时间"
+      },
+      "reviewed_at": {
+        "type": "string",
+        "description": "助手筛过的时间"
+      }
+    },
+    "required": [
+      "channel_id",
+      "keyword"
+    ]
+  }
+}

@@ -20,6 +20,10 @@
         "type": "string",
         "description": "creght_site：站点 id"
       },
+      "api_host": {
+        "type": "string",
+        "description": "creght_site：站点在哪个 creght 区域（https://creght.com）；空是项目所在的区域。读写走那个区域的 MCP（local/_creght.ts）"
+      },
       "wp_user": {
         "type": "string",
         "description": "wordpress：登录用户名（应用密码存在本机密钥里，不进表）"

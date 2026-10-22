@@ -1,29 +1,83 @@
-// creght 站点渠道的数据读写：走 creght 的 MCP（Shuttle 的 设置 → MCP 里的 creght，第一次用要授权）。
+// creght 站点渠道的数据读写：走 creght 的 MCP（Annulo 连着 creght 时内置的，不用授权）。
 // 文件名以 _ 开头：不作为可调用的函数，只给别的文件 import。站点源码的同步不在这里，用 creght CLI。
+//
+// creght 有几个分开的区域（creght.cn、creght.com、talizen.com），站点各在各的区域。项目所在区域的 MCP 叫 creght；
+// 用户在 Annulo 的 设置 → 连接 里另外连上的区域各有一个：creght-cn、creght-com、talizen（Annulo 能力版本 53 起）。
+// 渠道表记着站点在哪个区域（channels.api_host，空是项目所在的区域），这里按 project_id 查出来选 MCP，调用的地方不用管。
 
 import { L } from './_i18n'
 
-export type Site = { project_id: string; site_id: string; project_name: string; site_name: string }
+export type Site = { project_id: string; site_id: string; project_name: string; site_name: string; api_host: string }
 
-/** 账号下的全部站点（平台按登录账号返回，读不到别人的） */
-export async function sites(ctx: any): Promise<Site[]> {
-  return (await ctx.mcp('creght', 'list_sites', {}))?.sites ?? []
+const norm = (h: string) => String(h ?? '').trim().replace(/\/+$/, '').toLowerCase()
+
+/** 项目所在的区域 */
+export const homeHost = (ctx: any) => norm(ctx.workspace?.api_host || 'https://creght.cn')
+
+/** 别的区域的 MCP 名字（和 Annulo 的 creghtMCPName 一样） */
+const OTHER: Record<string, string> = { 'https://creght.cn': 'creght-cn', 'https://creght.com': 'creght-com', 'https://talizen.com': 'talizen' }
+
+/** host 区域的 creght MCP 名字：项目所在的区域（或者没写）是 creght */
+export function mcpName(ctx: any, host?: string) {
+  const h = norm(host ?? '')
+  if (!h || h === homeHost(ctx)) return 'creght'
+  return OTHER[h] ?? 'creght-' + h.replace(/^https?:\/\//, '').replace(/[.:]/g, '-')
 }
 
-/** 发布状态：published、live_url（自定义域名优先，没发布过是空）、preview_url、system_domain、domains[] */
-export function status(ctx: any, projectID: string, siteID: string) {
-  return ctx.mcp('creght', 'site_status', { project_id: projectID, site_id: siteID })
+/** host 区域的 MCP 的状态：connected / needs_auth / failed / disabled，没有是空 */
+export function mcpState(ctx: any, host?: string): string {
+  const name = mcpName(ctx, host)
+  return (ctx.mcp.servers() as { name: string; status: string }[]).find((s) => s.name === name)?.status ?? ''
+}
+
+/** 站点在哪个区域：渠道表里记的，没记（老渠道、还没加成渠道）是项目所在的区域 */
+export function hostOf(ctx: any, projectID: string): string {
+  const ch = ctx.db.query('channels', { where: { type: 'creght_site', project_id: projectID }, limit: 1 }).list[0]
+  return norm(ch?.api_host) || homeHost(ctx)
+}
+
+/** 调站点所在区域的 creght MCP。host 不写就按 project_id 查渠道表 */
+function call(ctx: any, projectID: string, tool: string, args: Record<string, unknown>, host?: string) {
+  return ctx.mcp(mcpName(ctx, host ?? hostOf(ctx, projectID)), tool, args)
+}
+
+/** 账号下的全部站点：项目所在的区域，加上另外连着的区域（各区域的账号各是各的）。每个站点带上它在哪个区域（api_host）。
+ *  项目所在区域读失败就报错；别的区域读失败只记日志，不拖累别的 */
+export async function sites(ctx: any): Promise<Site[]> {
+  const home = homeHost(ctx)
+  const list: Site[] = ((await ctx.mcp('creght', 'list_sites', {}))?.sites ?? []).map((s: Site) => ({ ...s, api_host: home }))
+  for (const [host, name] of Object.entries(OTHER)) {
+    if (host === home || mcpState(ctx, host) !== 'connected') continue
+    try {
+      list.push(...((await ctx.mcp(name, 'list_sites', {}))?.sites ?? []).map((s: Site) => ({ ...s, api_host: host })))
+    } catch (e: any) {
+      ctx.log(L(ctx, `读不到 ${host} 的站点：`, `Couldn't read sites on ${host}: `) + e.message)
+    }
+  }
+  return list
+}
+
+/** 预览地址和 creght CLI 的算法一致：预览环境是站点所在区域的 API host 的子域名 */
+export function previewURL(ctx: any, siteID: string, host?: string) {
+  const domain = /^https?:\/\/([^/]+)/.exec(norm(host ?? '') || homeHost(ctx))?.[1] ?? 'creght.cn'
+  return `https://${siteID}.preview.${domain}/`
+}
+
+/** 发布状态：published、live_url（自定义域名优先，没发布过是空）、preview_url、system_domain、domains[]。
+ *  还没加成渠道的站点（向导里选站点时）要写 host */
+export function status(ctx: any, projectID: string, siteID: string, host?: string) {
+  return call(ctx, projectID, 'site_status', { project_id: projectID, site_id: siteID }, host)
 }
 
 /** 站点后台（editor / cms / forms / domains / analytics / settings）的一次性登录跳转链接：60 秒内打开一次有效，打开就是登录状态。
  *  链接等于临时登录凭证：只给用户本人当场打开，不存表、不写进页面 */
 export function adminLink(ctx: any, projectID: string, siteID: string, target = 'editor'): Promise<{ url: string; target_url: string; expires_at: string }> {
-  return ctx.mcp('creght', 'admin_link', { project_id: projectID, site_id: siteID, target })
+  return call(ctx, projectID, 'admin_link', { project_id: projectID, site_id: siteID, target })
 }
 
 /** 把站点当前的远端版本（预览里看到的）发布上线，返回发布后的状态（字段同 status） */
 export function sitePublish(ctx: any, projectID: string, siteID: string, note?: string) {
-  return ctx.mcp('creght', 'site_publish', { project_id: projectID, site_id: siteID, note: note ?? '' })
+  return call(ctx, projectID, 'site_publish', { project_id: projectID, site_id: siteID, note: note ?? '' })
 }
 
 /** 访问概览：summary、trend（按天）、breakdowns（各维度 Top N）。平台按 UTC 日期分组，起点取 UTC 零点 */
@@ -31,27 +85,27 @@ export function visits(ctx: any, projectID: string, siteID: string, days: number
   const n = Math.min(Math.max(Math.floor(days) || 30, 1), 365)
   const end = new Date()
   const start = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()) - (n - 1) * 86400_000
-  return ctx.mcp('creght', 'visit_stats', { project_id: projectID, site_id: siteID, start_at: Math.floor(start / 1000), end_at: Math.floor(end.getTime() / 1000), limit: 20 })
+  return call(ctx, projectID, 'visit_stats', { project_id: projectID, site_id: siteID, start_at: Math.floor(start / 1000), end_at: Math.floor(end.getTime() / 1000), limit: 20 })
 }
 
 /** 按起止时间取访问概览（毫秒时间戳），breakdowns.url 里是页面的 PV。改站复查拿改动前后两段对比用 */
 export function visitsBetween(ctx: any, projectID: string, siteID: string, startMs: number, endMs: number, limit = 100) {
-  return ctx.mcp('creght', 'visit_stats', { project_id: projectID, site_id: siteID, start_at: Math.floor(startMs / 1000), end_at: Math.floor(endMs / 1000), limit })
+  return call(ctx, projectID, 'visit_stats', { project_id: projectID, site_id: siteID, start_at: Math.floor(startMs / 1000), end_at: Math.floor(endMs / 1000), limit })
 }
 
 /** CMS 集合里的内容（collection 写 key 或 id 都行） */
 export async function contents(ctx: any, projectID: string, collection: string, limit = 20): Promise<any[]> {
-  return (await ctx.mcp('creght', 'cms_content_list', { project_id: projectID, collection, limit }))?.list ?? []
+  return (await call(ctx, projectID, 'cms_content_list', { project_id: projectID, collection, limit }))?.list ?? []
 }
 
 /** 新建一条内容，立即上线，返回 id */
 export async function createContent(ctx: any, projectID: string, collection: string, slug: string, body: Record<string, unknown>): Promise<string> {
-  return (await ctx.mcp('creght', 'cms_content_create', { project_id: projectID, collection, slug, body }))?.id
+  return (await call(ctx, projectID, 'cms_content_create', { project_id: projectID, collection, slug, body }))?.id
 }
 
 /** 更新一条内容（body 和已有内容合并），立即上线 */
 export function updateContent(ctx: any, projectID: string, collection: string, id: string, slug: string, body: Record<string, unknown>) {
-  return ctx.mcp('creght', 'cms_content_update', { project_id: projectID, collection, id, slug, body })
+  return call(ctx, projectID, 'cms_content_update', { project_id: projectID, collection, id, slug, body })
 }
 
 // ---- 表单（询盘线索用，local/leads.ts）----
@@ -68,7 +122,7 @@ export type Form = { id: string; key?: string; name?: string; desc?: string; fie
 /** 站点所在项目下的表单 */
 export async function forms(ctx: any, projectID: string): Promise<Form[]> {
   try {
-    return (await ctx.mcp('creght', 'form_list', { project_id: projectID }))?.forms ?? []
+    return (await call(ctx, projectID, 'form_list', { project_id: projectID }))?.forms ?? []
   } catch (e) {
     throw formToolError(ctx, e)
   }
@@ -100,7 +154,7 @@ export async function formSubmissions(ctx: any, projectID: string, opts: { curso
   if (opts.since) args.since = opts.since
   if (opts.form_id) args.form_id = opts.form_id
   try {
-    const r = await ctx.mcp('creght', 'form_submissions', args)
+    const r = await call(ctx, projectID, 'form_submissions', args)
     return { submissions: r?.submissions ?? [], next_cursor: String(r?.next_cursor ?? opts.cursor ?? ''), has_more: !!r?.has_more }
   } catch (e) {
     throw formToolError(ctx, e)
@@ -115,7 +169,7 @@ export type FormWebhook = { id: string; url: string; form_ids?: string[]; secret
 /** 注册：form_ids 不传就是项目下全部表单（包括以后新建的）。secret 只在这里返回一次 */
 export async function formWebhookCreate(ctx: any, projectID: string, url: string): Promise<{ webhook: FormWebhook; secret: string }> {
   try {
-    const r = await ctx.mcp('creght', 'form_webhook_create', { project_id: projectID, url })
+    const r = await call(ctx, projectID, 'form_webhook_create', { project_id: projectID, url })
     return { webhook: { ...r?.webhook, id: String(r?.webhook?.id ?? '') }, secret: String(r?.secret ?? '') }
   } catch (e) {
     throw formToolError(ctx, e)
@@ -124,15 +178,15 @@ export async function formWebhookCreate(ctx: any, projectID: string, url: string
 
 /** 项目下的 webhook，每个带最近 10 次投递（recent_deliveries） */
 export async function formWebhookList(ctx: any, projectID: string): Promise<(FormWebhook & { recent_deliveries?: any[] })[]> {
-  return (await ctx.mcp('creght', 'form_webhook_list', { project_id: projectID }))?.webhooks ?? []
+  return (await call(ctx, projectID, 'form_webhook_list', { project_id: projectID }))?.webhooks ?? []
 }
 
 export async function formWebhookDelete(ctx: any, projectID: string, webhookID: string) {
-  return await ctx.mcp('creght', 'form_webhook_delete', { project_id: projectID, webhook_id: webhookID })
+  return await call(ctx, projectID, 'form_webhook_delete', { project_id: projectID, webhook_id: webhookID })
 }
 
 /** 同步发一条 form.test 事件，返回这次投递的 status_code / error / response（平台包在 delivery 里） */
 export async function formWebhookTest(ctx: any, projectID: string, webhookID: string): Promise<{ status_code?: number; error?: string; response?: string }> {
-  const r = await ctx.mcp('creght', 'form_webhook_test', { project_id: projectID, webhook_id: webhookID })
+  const r = await call(ctx, projectID, 'form_webhook_test', { project_id: projectID, webhook_id: webhookID })
   return r?.delivery ?? r ?? {}
 }

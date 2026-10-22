@@ -45,4 +45,6 @@ export type Ctx = {
   /** 从起步清单去别的页面做一步：那个页面顶上有「做完回到起步配置」 */
   goFromSetup: (v: View, extra?: Record<string, string>) => void;
   openWizard: (step?: string) => void;
+  /** 不在 Annulo 里、项目所有者的电脑也没开：要电脑做的按钮灰掉（没跟踪电脑状态的模板不传） */
+  offline?: boolean;
 };

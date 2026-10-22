@@ -1161,7 +1161,7 @@ function ImportDialog({
         </Field>
         {error && <Notice tone="error">{error}</Notice>}
         {result && (
-          <Notice tone={result.preview ? undefined : "ok"}>
+          <Notice tone={result.preview ? undefined : "info"}>
             {r(result.preview ? "import_preview" : "import_done", result)}
             {result.warnings?.map((w: string, i: number) => (
               <p key={i} className="mt-2 text-xs">

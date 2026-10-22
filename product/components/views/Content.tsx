@@ -848,9 +848,9 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite, inspiration 
                   <button className="cursor-pointer text-left text-sm font-medium hover:text-primary-text" onClick={() => setBriefTopic(t)}>{t.title}</button>
                   <Badge tone={TOPIC_STATUS[t.status]?.tone}>{TOPIC_STATUS[t.status]?.label}</Badge>
                   {t.source === 'agent' && <span className="text-[10px] text-muted-foreground">{tr('content.by_agent')}</span>}
-                  {t.source === 'search' && (
+                  {(t.source === 'search' || t.source === 'keyword') && (
                     <span className="rounded border border-border px-1.5 py-px text-[10px] text-muted-foreground" title={t.search_position ? tr('content.search_pos', { n: t.search_position }) : undefined}>
-                      {tr('content.from_search')}{t.search_impressions ? tr('content.impressions', { n: t.search_impressions.toLocaleString(numLocale()) }) : ''}
+                      {tr(t.source === 'keyword' ? 'content.from_keyword' : 'content.from_search')}{t.search_impressions ? tr('content.impressions', { n: t.search_impressions.toLocaleString(numLocale()) }) : ''}
                     </span>
                   )}
                 </div>

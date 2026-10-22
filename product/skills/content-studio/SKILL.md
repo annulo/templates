@@ -5,6 +5,8 @@ description: 内容生产：出选题、按项目资料写文章（长文、图�
 
 # 内容
 
+> **内容有文件夹的项目（自媒体工作台）**：内容没有类型，也没有「改写」按钮，下面讲文章类型、改写（`rewrite-article`）、`content.save` 存正文的部分不适用，照 ANNULO.md「内容没有类型」「内容文件夹」和任务 `work-on-content` 做。要发到别的平台，就在这条内容的文件夹里做一份那个平台用的文案和图，发布时挑。
+
 数据在业务表里，读用 `db_query` / `db_aggregate`，写调本机函数（`annulo run <文件>.<函数> --input '<JSON>'`，见 ops-backend skill「读写业务表」）。
 
 - `profile`：项目资料（只有一行：定位、写给谁、语气、关键词……，字段含义见 ANNULO.md / SHUTTLE.md）。**写任何内容前先读它**，写出来的东西要符合它。
