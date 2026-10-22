@@ -57,27 +57,87 @@ export function splitTerms(...texts: (string | undefined)[]): string[] {
   return out
 }
 
-export type Bucket = 'quick_win' | 'ranking' | 'unchecked'
+export type Bucket = 'quick_win' | 'ranking' | 'open' | 'mixed' | 'hard' | 'unchecked'
+
+/** 查 Google 结果页时记下的事实（keywords.serp 写）：我们排第几（前 10 里没有是 0），前 10 里弱位置、强站各几个 */
+export type SerpFacts = { serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number }
 
 /**
- * 分桶（只看事实：GSC 里这个词本站排第几、有多少曝光）：
- * 排在前 3 是 ranking；排在 4~30 且曝光 ≥ 10 是 quick_win（已经有页面在排，补一补能往前挪）；其余（没数据、排得太后、曝光太少）是 unchecked。
- * 第二期查 Google 搜索结果页后，unchecked 再分成 open（前 10 里有弱位置）和 hard（大站霸屏）。
+ * 分桶，只看事实，GSC 优先（是本站真实的平均排名）：
+ * - GSC：排在前 3 是 ranking；排在 4~30 且曝光 ≥ 10 是 quick_win（已经有页面在排，补一补能往前挪）；
+ * - 没有 GSC 数据、查过 Google 结果页的：我们在前 3 是 ranking、在 4~10 是 quick_win；不在前 10 的看前 10 都是谁：
+ *   弱位置（论坛问答、社媒、B2B 平台的商品页）≥ 3 个是 open（Google 找不到像样的专门页面，新写一篇有机会）；
+ *   弱位置 ≤ 1 个、强站（零售电商、百科）≥ 4 个是 hard；其余 mixed；
+ * - 都没有是 unchecked。
  */
-export function bucketOf(k: { gsc_impressions?: number; gsc_position?: number }): Bucket {
+export function bucketOf(k: { gsc_impressions?: number; gsc_position?: number } & SerpFacts): Bucket {
   const imp = k.gsc_impressions ?? 0
   const pos = k.gsc_position ?? 0
-  if (!imp || !pos) return 'unchecked'
-  if (pos <= 3) return 'ranking'
-  if (pos <= 30 && imp >= 10) return 'quick_win'
-  return 'unchecked'
+  if (imp && pos) {
+    if (pos <= 3) return 'ranking'
+    if (pos <= 30 && imp >= 10) return 'quick_win'
+  }
+  if (!k.serp_at) return 'unchecked'
+  const sp = k.serp_position ?? 0
+  if (sp && sp <= 3) return 'ranking'
+  if (sp) return 'quick_win'
+  if ((k.serp_weak ?? 0) >= 3) return 'open'
+  if ((k.serp_weak ?? 0) <= 1 && (k.serp_strong ?? 0) >= 4) return 'hard'
+  return 'mixed'
 }
 
-/** 机会分：快赢的按曝光乘离首页远近（4~10 位最值，11~20 次之，21~30 再次）；其余按曝光。只用来在同一桶里排序 */
-export function scoreOf(k: { gsc_impressions?: number; gsc_position?: number }, bucket: Bucket): number {
+/** 结果网站的类型里哪些算弱位置、哪些算强站（类型见 _serp_common.ts 的 kindOf） */
+export const WEAK_KINDS = ['forum', 'social', 'b2b']
+export const STRONG_KINDS = ['marketplace', 'reference']
+
+const hostOf = (u: string) => {
+  try {
+    return new URL(/^https?:\/\//.test(u) ? u : `https://${u}`).hostname.toLowerCase().replace(/^www\./, '')
+  } catch {
+    return ''
+  }
+}
+const sameSite = (domain: string, list: string[]) => list.some((d) => d && (domain === d || domain.endsWith('.' + d) || d.endsWith('.' + domain)))
+
+/** 本站的域名：GSC 属性（sc-domain: 或网址）、访问地址、GSC 里出现过的页面 */
+export function ownDomains(...urls: (string | undefined)[]): string[] {
+  return [...new Set(urls.map((u) => hostOf(String(u ?? '').replace(/^sc-domain:/, ''))).filter(Boolean))]
+}
+
+/**
+ * 一次 Google 结果页 → 存进 keywords 的事实：我们排第几、弱位置和强站各几个、前 10 条（类型里本站标 ours、在盯的竞品标 competitor）。
+ * results 是参考代码 serp.ts 的结果（带 kind）。
+ */
+export function serpFacts(results: { position: number; url: string; domain: string; kind: string; title: string }[], ours: string[], competitors: string[]) {
+  let position = 0, weak = 0, strong = 0
+  const top = results.slice(0, 10).map((r) => {
+    const kind = sameSite(r.domain, ours) ? 'ours' : sameSite(r.domain, competitors) ? 'competitor' : r.kind
+    if (kind === 'ours' && !position) position = r.position
+    if (WEAK_KINDS.includes(kind)) weak++
+    if (STRONG_KINDS.includes(kind)) strong++
+    return { p: r.position, domain: r.domain, kind, title: String(r.title ?? '').slice(0, 120), url: r.url }
+  })
+  return { serp_position: position, serp_weak: weak, serp_strong: strong, serp_results: JSON.stringify(top) }
+}
+
+/** 排名历史：每天一条（同一天后来的覆盖前面的），最多留 26 条（半年的每周） */
+export function pushRank(history: string | undefined, entry: { d: string; p: number; s: 'gsc' | 'serp' }): string {
+  let list: { d: string; p: number; s: string }[] = []
+  try {
+    list = JSON.parse(history || '[]')
+  } catch {}
+  list = list.filter((x) => !(x.d === entry.d && x.s === entry.s))
+  list.push(entry)
+  list.sort((a, b) => a.d.localeCompare(b.d))
+  return JSON.stringify(list.slice(-26))
+}
+
+/** 机会分：快赢的按曝光乘离首页远近（4~10 位最值，11~20 次之，21~30 再次）；新机会按弱位置多少；其余按曝光。只用来在同一桶里排序 */
+export function scoreOf(k: { gsc_impressions?: number; gsc_position?: number } & SerpFacts, bucket: Bucket): number {
   const imp = k.gsc_impressions ?? 0
+  if (bucket === 'open') return 100 + (k.serp_weak ?? 0) * 10 // 弱位置越多越好做
   if (bucket !== 'quick_win') return imp
-  const pos = k.gsc_position ?? 99
+  const pos = k.gsc_position || k.serp_position || 99
   const w = pos <= 10 ? 1 : pos <= 20 ? 0.7 : 0.4
   return Math.round(imp * w)
 }

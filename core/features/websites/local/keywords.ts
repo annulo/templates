@@ -1,13 +1,14 @@
 import { L } from './_i18n'
 import { profile } from './_ai'
 import { brandTerms, DAY, isNoise, notConnected, query, ymd } from './_gsc'
-import { bucketOf, gscByKeyword, MODIFIERS, mergeSources, normKey, parseSuggest, scoreOf, splitTerms, suggestUrl, usable, type Bucket } from './_keywords'
+import { bucketOf, gscByKeyword, MODIFIERS, mergeSources, normKey, ownDomains, parseSuggest, pushRank, scoreOf, serpFacts, splitTerms, suggestUrl, usable, type Bucket } from './_keywords'
+import { searchMany } from './serp'
 
 // 只读写表的：手机上也能看、能改状态、能转选题
 export const cloud = ['list', 'context', 'save', 'setStatus', 'toTopic', 'markSeen', 'add']
 
-// 要出网（联想接口）、要 Google 授权的：手机上点了转给电脑上开着的 Annulo 跑
-export const remote = ['expand', 'refresh']
+// 要出网（联想接口）、要 Google 授权、要开用户 Chrome 的：手机上点了转给电脑上开着的 Annulo 跑
+export const remote = ['expand', 'refresh', 'serp']
 
 // 关键词挖掘：哪些词值得做、能做起来（设计见 docs/keywords.md）。
 //
@@ -15,6 +16,8 @@ export const remote = ['expand', 'refresh']
 //       从种子词扩词：种子默认取项目资料的关键词和产品，每个种子拼上修饰词（外贸默认 manufacturer、supplier…，见 _keywords.ts 的 MODIFIERS）去拉搜索引擎的下拉联想
 //       （先 Google，访问不了换 Bing）；再把本站在 GSC 里已有曝光的非品牌搜索词也加进来。新词 status=raw，等助手筛。连了 GSC 顺手 refresh
 //   keywords.refresh({ channel_id?, manual? })   按 GSC 最近 28 天更新每个词的曝光、排名、曝光最多的页面，按规则分桶（定时任务每周一次）
+//   keywords.serp({ channel_id, ids?, limit? })   在用户自己的 Chrome 里查 Google 结果页（serp.ts，复制自 annulo/references 的 serp/），
+//                                                记前 10 名的事实（我们排第几、论坛 / B2B 平台 / 电商 / 百科各几个），没有 GSC 数据的词据此分成 open / mixed / hard
 //   keywords.list({ channel_id })                页面用：全部词（不含 raw 的明细只给条数）、分桶条数、最近一次筛词的对话
 //   keywords.context({ channel_id, limit? })     给助手筛词用（任务 tasks/keyword-research.md）：待筛的词、已有主题、项目资料、产品、站内页面
 //   keywords.save({ channel_id, items })         助手筛完存回：items 每条 { id 或 keyword, keep, intent, cluster, note, target_page? }，没有的词新建（source=agent）
@@ -23,7 +26,8 @@ export const remote = ['expand', 'refresh']
 //   keywords.add({ channel_id, keywords })       用户手动加词（逗号、换行分开），status=raw
 //   keywords.markSeen({ channel_id, ids? })      去掉「新」标识
 //
-// 分桶只看事实（GSC 里本站排第几、有多少曝光），规则在 _keywords.ts 的 bucketOf；相不相关、什么意图、归哪个主题要理解，交给助手。
+// 分桶只看事实（GSC 里本站排第几、有多少曝光；Google 结果页前 10 都是谁），规则在 _keywords.ts 的 bucketOf；相不相关、什么意图、归哪个主题要理解，交给助手。
+// 在做的词每次 refresh、serp 记一条排名历史（rank_history）。
 
 type Channel = { id: string; name: string; type: string; preview_url?: string; gsc_property?: string; gsc_link_disabled?: boolean }
 type Keyword = {
@@ -31,6 +35,7 @@ type Keyword = {
   status?: string; intent?: string; cluster?: string; note?: string; target_page?: string
   gsc_impressions?: number; gsc_clicks?: number; gsc_position?: number; gsc_page?: string; search_page_id?: string; gsc_at?: string
   bucket?: Bucket; score?: number; topic_id?: string; chat_id?: string; seen?: boolean; created_at?: string; reviewed_at?: string
+  serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_results?: string; serp_error?: string; rank_history?: string
 }
 
 const WINDOW = 28
@@ -38,6 +43,8 @@ const LAG = 3 // GSC 数据延迟 2~3 天
 const MAX_SEEDS = 12
 const MAX_NEW = 300 // 一次最多新加多少个词
 const MAX_GSC = 30 // 从 GSC 带进来的搜索词最多几个（按曝光）
+const SERP_LIMIT = 20 // 一次最多查几个词的 Google 结果页（每个之间歇 6~10 秒，查多了会要验证码）
+const SERP_STALE = 28 * DAY // 查过的词多久以后再查
 const STATUSES = ['idea', 'targeting', 'dismissed']
 const INTENTS = ['buy', 'compare', 'research', 'other']
 
@@ -204,10 +211,12 @@ async function refreshChannel(ch: Channel, ctx: any) {
   for (const k of rowsOf(ctx, ch.id)) {
     const g = gsc.get(normKey(k.keyword))
     const m = { gsc_impressions: g?.impressions ?? 0, gsc_clicks: g?.clicks ?? 0, gsc_position: g?.position ?? 0, gsc_page: g?.page ?? '' }
-    const bucket = bucketOf(m)
-    const body = { ...m, search_page_id: (m.gsc_page && pageId.get(m.gsc_page)) || '', bucket, score: scoreOf(m, bucket) }
+    const bucket = bucketOf({ ...k, ...m })
+    const body: Record<string, unknown> = { ...m, search_page_id: (m.gsc_page && pageId.get(m.gsc_page)) || '', bucket, score: scoreOf({ ...k, ...m }, bucket) }
+    // 在做的词记排名历史（GSC 没有这个词时不记：没排名不等于掉了，可能只是这周没人搜）
+    if (k.status === 'targeting' && m.gsc_position) body.rank_history = pushRank(k.rank_history, { d: range.end, p: m.gsc_position, s: 'gsc' })
     counts[bucket] = (counts[bucket] ?? 0) + 1
-    const same = (Object.keys(body) as (keyof typeof body)[]).every((f) => (k[f] ?? (typeof body[f] === 'number' ? 0 : '')) === body[f])
+    const same = Object.keys(body).every((f) => ((k as any)[f] ?? (typeof body[f] === 'number' ? 0 : '')) === body[f])
     if (same) continue
     // 新进快赢的词标「新」（筛过的才算，raw 的还没给用户看）
     const fresh = bucket === 'quick_win' && k.bucket !== 'quick_win' && k.status !== 'raw'
@@ -238,7 +247,83 @@ export async function refresh(input: { channel_id?: string; manual?: boolean }, 
   return { list }
 }
 
-const ORDER: Record<string, number> = { quick_win: 0, unchecked: 1, ranking: 2 }
+/** 要不要查 Google 结果页：筛过的词里 GSC 分不出快赢、已排上的，和 GSC 没排名的在做的词；查过的 28 天后再查 */
+function needsSerp(k: Keyword, now: number): boolean {
+  if (k.status !== 'idea' && k.status !== 'targeting') return false
+  const byGsc = bucketOf({ gsc_impressions: k.gsc_impressions, gsc_position: k.gsc_position })
+  if (byGsc !== 'unchecked' && !(k.status === 'targeting' && !k.gsc_position)) return false
+  return !k.serp_at || now - Date.parse(k.serp_at) > SERP_STALE
+}
+
+/**
+ * 查 Google 结果页：没有 GSC 排名可看的词（还没有曝光、或者 GSC 分不出快赢）和在做的词，没查过的先查，查过的 28 天后再查。
+ * 在用户自己的 Chrome 里一个窗口依次查，碰到验证码就停：已经查到的照样存，报错里说查了几个。
+ */
+export async function serp(input: { channel_id?: string; ids?: string[]; limit?: number }, ctx: any) {
+  const ch = channelOf(ctx, input?.channel_id)
+  const rows = rowsOf(ctx, ch.id)
+  const now = Date.now()
+  let todo: Keyword[]
+  if (input?.ids?.length) {
+    const ids = new Set(input.ids)
+    todo = rows.filter((k) => ids.has(k.id))
+  } else {
+    todo = rows
+      .filter((k) => needsSerp(k, now))
+      .sort((a, b) => Number(!!a.serp_at) - Number(!!b.serp_at) || Number(b.status === 'targeting') - Number(a.status === 'targeting') || (a.serp_at ?? '').localeCompare(b.serp_at ?? ''))
+  }
+  todo = todo.slice(0, Math.min(Math.max(1, Number(input?.limit) || SERP_LIMIT), 50))
+  if (!todo.length) return { checked: 0, message: L(ctx, '没有要查的词：筛过的词都有 Google 排名数据，或者最近 4 周查过了', 'Nothing to check: reviewed keywords all have Google ranking data or were checked in the last 4 weeks') }
+
+  // 本站：GSC 属性、访问地址、GSC 里出现过的页面的域名；竞品：在盯的（外贸才有竞品表）
+  let pages: { page: string }[] = []
+  try {
+    pages = ctx.db.query('search_pages', { where: { channel_id: ch.id }, limit: 50 }).list
+  } catch {}
+  const ours = ownDomains(ch.gsc_property, ch.preview_url, ...pages.map((p) => p.page))
+  let competitors: string[] = []
+  try {
+    competitors = ownDomains(...ctx.db.query('competitors', { limit: 500 }).list.filter((c: any) => c.status !== 'rejected' && c.status !== 'suggested').map((c: any) => c.host || c.url))
+  } catch {}
+
+  const byKey = new Map(todo.map((k) => [normKey(k.keyword), k]))
+  const counts: Record<string, number> = {}
+  let checked = 0, stopped = ''
+  const errors: string[] = []
+  // 联想时用的市场（lang / country）不一样的分开查
+  const groups = new Map<string, Keyword[]>()
+  for (const k of todo) groups.set(`${k.lang || 'en'}|${k.country || 'us'}`, [...(groups.get(`${k.lang || 'en'}|${k.country || 'us'}`) ?? []), k])
+  for (const [market, ks] of groups) {
+    if (stopped) break
+    const [hl, gl] = market.split('|')
+    const r = await searchMany({ queries: ks.map((k) => k.keyword), hl, gl }, ctx, (q, res, err) => {
+      const k = byKey.get(normKey(q))
+      if (!k) return
+      ctx.progress({ done: checked + errors.length + 1, total: todo.length, message: L(ctx, `查 Google：${q}`, `Checking Google: ${q}`) })
+      if (!res) {
+        if (err?.code !== 'captcha' && err?.code !== 'consent') ctx.db.update('keywords', k.id, { serp_error: String(err?.message ?? err).slice(0, 300) })
+        return
+      }
+      const at = new Date().toISOString()
+      const facts = serpFacts(res.results, ours, competitors)
+      const next = { ...k, ...facts, serp_at: at }
+      const bucket = bucketOf(next)
+      counts[bucket] = (counts[bucket] ?? 0) + 1
+      ctx.db.update('keywords', k.id, {
+        ...facts, serp_at: at, serp_error: '', bucket, score: scoreOf(next, bucket),
+        ...(k.status === 'targeting' ? { rank_history: pushRank(k.rank_history, { d: at.slice(0, 10), p: facts.serp_position, s: 'serp' }) } : {}),
+        ...(bucket !== k.bucket && (bucket === 'open' || bucket === 'quick_win') ? { seen: false } : {}),
+      })
+      checked++
+    })
+    stopped = r.stopped
+    errors.push(...r.errors.map((e) => `${e.query}: ${e.message}`))
+  }
+  if (stopped) throw new Error(L(ctx, `查了 ${checked} 个词后停下了（结果已经存好）：${stopped}`, `Stopped after ${checked} keywords (those are saved): ${stopped}`))
+  return { checked, buckets: counts, ...(errors.length ? { errors } : {}) }
+}
+
+const ORDER: Record<string, number> = { quick_win: 0, open: 1, mixed: 2, unchecked: 3, hard: 4, ranking: 5 }
 
 export function list(input: { channel_id?: string }, ctx: any) {
   const rows = rowsOf(ctx, input?.channel_id)
@@ -250,6 +335,7 @@ export function list(input: { channel_id?: string }, ctx: any) {
   return {
     list: reviewed,
     raw: raw.length,
+    serp_pending: rows.filter((k) => needsSerp(k, Date.now())).length,
     raw_sample: raw.sort((a, b) => (b.gsc_impressions ?? 0) - (a.gsc_impressions ?? 0)).slice(0, 30).map((k) => k.keyword),
     chat_id: last?.chat_id ?? '',
     reviewed_at: last?.reviewed_at ?? '',

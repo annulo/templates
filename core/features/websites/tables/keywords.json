@@ -1,6 +1,6 @@
 {
   "name": "关键词",
-  "desc": "挖出来的关键词：keywords.expand 从种子词扩出来（下拉联想、GSC 搜索词），助手按任务 keyword-research 筛掉不相关的、标意图、归主题，keywords.refresh 每周按 GSC 更新曝光和排名、算分桶",
+  "desc": "挖出来的关键词：keywords.expand 从种子词扩出来（下拉联想、GSC 搜索词），助手按任务 keyword-research 筛掉不相关的、标意图、归主题，keywords.refresh 每周按 GSC 更新曝光和排名、keywords.serp 在用户 Chrome 里查 Google 结果页，按规则分桶",
   "json_schema": {
     "type": "object",
     "properties": {
@@ -78,11 +78,39 @@
       },
       "bucket": {
         "type": "string",
-        "description": "分桶（keywords.refresh 按规则算）：quick_win 已经排在 4~30 位、补一补能上去 / ranking 已经排在前 3 / unchecked 还没有排名数据"
+        "description": "分桶（按规则算，见 docs/keywords.md）：quick_win 已经排在 4~30 位、补一补能上去 / ranking 已经排在前 3 / open 前 10 里论坛、社媒、B2B 平台多，新写有机会 / mixed 有竞争 / hard 电商、百科霸屏 / unchecked 还没有排名数据、也没查过 Google 结果页"
       },
       "score": {
         "type": "number",
         "description": "机会分：同一桶里排序用"
+      },
+      "serp_at": {
+        "type": "string",
+        "description": "上次查 Google 结果页的时间（keywords.serp）"
+      },
+      "serp_position": {
+        "type": "number",
+        "description": "Google 结果页前 10 里本站排第几，不在前 10 是 0"
+      },
+      "serp_weak": {
+        "type": "number",
+        "description": "前 10 里弱位置的个数：论坛问答、社媒、B2B 平台商品页"
+      },
+      "serp_strong": {
+        "type": "number",
+        "description": "前 10 里强站的个数：零售电商、百科"
+      },
+      "serp_results": {
+        "type": "string",
+        "description": "前 10 条（JSON）：[{ p, domain, kind, title, url }]，kind 是 ours / competitor / b2b / marketplace / forum / social / reference / site"
+      },
+      "serp_error": {
+        "type": "string",
+        "description": "上次查 Google 结果页出的错"
+      },
+      "rank_history": {
+        "type": "string",
+        "description": "在做的词的排名历史（JSON）：[{ d 日期, p 排名（serp 不在前 10 是 0）, s 来源 gsc / serp }]，最多 26 条"
       },
       "topic_id": {
         "type": "string",

@@ -117,3 +117,30 @@ test('save reviews raw rows, records the chat, and toTopic groups by cluster', (
   assert.equal(tables.topics[0].source, 'keyword')
   assert.ok(['k1', 'k2'].every((id) => tables.keywords.find((k) => k.id === id).status === 'targeting'))
 })
+
+test('without GSC, Google results decide open / mixed / hard', () => {
+  const at = '2026-10-22T00:00:00Z'
+  assert.equal(kw.bucketOf({ serp_at: at, serp_position: 2 }), 'ranking')
+  assert.equal(kw.bucketOf({ serp_at: at, serp_position: 7 }), 'quick_win')
+  assert.equal(kw.bucketOf({ serp_at: at, serp_weak: 3, serp_strong: 5 }), 'open')
+  assert.equal(kw.bucketOf({ serp_at: at, serp_weak: 1, serp_strong: 4 }), 'hard')
+  assert.equal(kw.bucketOf({ serp_at: at, serp_weak: 2, serp_strong: 1 }), 'mixed')
+  // GSC 有排名时以 GSC 为准
+  assert.equal(kw.bucketOf({ gsc_impressions: 40, gsc_position: 15, serp_at: at, serp_weak: 0, serp_strong: 9 }), 'quick_win')
+})
+
+test('Google results become facts: our position, weak and strong counts, competitors marked', () => {
+  const r = (p, domain, kind) => ({ position: p, url: `https://${domain}/x`, domain, kind, title: 't' })
+  const ours = kw.ownDomains('sc-domain:acme.com', 'https://p2.preview.creght.cn/', 'https://www.acme.com/a')
+  assert.deepEqual(ours, ['acme.com', 'p2.preview.creght.cn'])
+  const f = kw.serpFacts([r(1, 'alibaba.com', 'b2b'), r(2, 'reddit.com', 'forum'), r(3, 'amazon.com', 'marketplace'), r(4, 'rival.com', 'site'), r(5, 'shop.acme.com', 'site')], ours, ['rival.com'])
+  assert.deepEqual([f.serp_position, f.serp_weak, f.serp_strong], [5, 2, 1])
+  assert.deepEqual(JSON.parse(f.serp_results).map((x) => x.kind), ['b2b', 'forum', 'marketplace', 'competitor', 'ours'])
+})
+
+test('rank history keeps one entry per day and source, oldest first', () => {
+  let h = kw.pushRank('', { d: '2026-10-01', p: 18, s: 'gsc' })
+  h = kw.pushRank(h, { d: '2026-10-08', p: 12, s: 'gsc' })
+  h = kw.pushRank(h, { d: '2026-10-08', p: 11, s: 'gsc' })
+  assert.deepEqual(JSON.parse(h).map((x) => x.p), [18, 11])
+})
