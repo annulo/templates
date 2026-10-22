@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Check, FileText, Film, HardDrive, Image as ImageIcon, Library, Loader2, Newspaper, Play, Send, X } from 'lucide-react'
+import { AlertTriangle, Check, Crop, FileText, Film, Hand, HardDrive, Image as ImageIcon, Library, Loader2, Newspaper, Play, Send, Wand2, X } from 'lucide-react'
 import AssetPicker from './AssetPicker'
+import ImageCropper from './ImageCropper'
 import Lightbox from './Lightbox'
 import RichEditor from './RichEditor'
 import { ChannelAvatar, PlatformTag } from './ArticlePublish'
@@ -10,7 +11,8 @@ import { IMAGE, MD, VIDEO, base, fmtSize, isDraft, joinPath, parent, workSrc, ty
 import { enqueue } from '../lib/publishQueue'
 import { fileSrc } from '../lib/files'
 import { tr, useT } from '../lib/i18n'
-import { dbList, runLocal, uploadLocalFile, type Article } from '../lib/shuttle'
+import { dbList, openChat, runLocal, runTask, uploadLocalFile, type Article } from '../lib/shuttle'
+import { CHANNEL_TYPES } from '../lib/channels'
 import { SOCIAL, loggedInElsewhere, useElsewhere } from '../lib/social'
 import { FIELDS } from '../plugins/social/local/_fields'
 import { lengthOn, supports } from '../local/_types'
@@ -21,7 +23,10 @@ import type { Ctx } from './views/types'
 //   文字：从文件夹里挑一份 .md（开头 --- 包住的 title、tags 填进标题和话题，能当场改）；
 //   图片、视频：文件夹里的直接点选，也能从资料库选。挑了文案自动配上和它在同一个目录的图、视频（用户自己点过的不动）。
 //   三样都能「上传本机」：传上来的文件复制进这条内容的文件夹（folder.importLocal），和文件夹里原有的一样点选、发布。
-//   视频封面（小红书、抖音用，插件 FIELDS 的 videoCover）：文件夹里的图点选或从资料库选；内容上设过封面就用它，没有就挑文件夹里名字带「封面 / cover」的图，都没有用平台默认的那一帧。
+//   视频封面（插件 FIELDS 的 videoCover）：平台要的比例不一样（FIELDS 的 coverRatio：小红书、抖音 3:4，B站 4:3），按勾的账号分成几组、每组挑一张，
+//   文件夹里的图点选或从资料库选；默认用名字带「封面 / cover」、比例对得上这组的图，没有就用内容上设过的或最新的那张「封面」，都没有用平台默认的那一帧。
+//   比例不对的提示会被裁，能当场裁（ImageCropper，裁好的存进文件夹），裁了不合适再交给 AI 重做。
+//   填好交给我（FIELDS 的 handOver）：勾了的账号插件在浏览器里填好不点发布，窗口交给用户自己调（封面、合集…）、自己发；排期的不行（到点没人接手）。
 // 选好账号、现在发或排期：folder.publish 每个账号新建一条帖子（存的就是这次挑的内容，排期到点照它发），放进后台发布队列。
 
 /** 文案：名字带「文案 / copy」的 md，或者开头写了 title 的 md（见组件里的 isCopy）；成片：名字带「成片 / final」的视频（挑选规则，弹窗里有说明） */
@@ -67,6 +72,16 @@ function htmlPlain(html: string) {
   return out.join('\n\n')
 }
 
+/** 封面比例的组：'3:4'；没写比例的平台归到 'any'（不检查比例） */
+const ratioKey = (r?: [number, number]) => (r ? `${r[0]}:${r[1]}` : 'any')
+/** 图片的宽高比和要的比例差多少算「会被裁」：3% 以内看不出来 */
+const offRatio = (d: { w: number; h: number } | undefined, r?: [number, number]) => !!d && !!r && Math.abs(d.w / d.h - r[0] / r[1]) / (r[0] / r[1]) > 0.03
+/** 图片的比例写成人看得懂的（1080×1920 → 9:16），认不出常见比例就写宽×高 */
+const ratioText = (d: { w: number; h: number }) => {
+  for (const [a, b] of [[1, 1], [3, 4], [4, 3], [9, 16], [16, 9], [2, 3], [3, 2], [4, 5], [5, 4], [21, 9]]) if (Math.abs(d.w / d.h - a / b) / (a / b) < 0.03) return `${a}:${b}`
+  return `${d.w}×${d.h}`
+}
+
 /** 按文件夹里有什么猜发成什么：有视频发视频，有图发图文，都没有发长文 */
 const guessKind = (files: Entry[]): Kind => (files.some((e) => VIDEO.test(e.path)) ? 'video' : files.some((e) => IMAGE.test(e.path)) ? 'post' : 'article')
 /** 离 dir 最近的：同一个目录里的优先，再是它下面的，最后是别处的 */
@@ -92,8 +107,17 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   const [video, setVideo] = useState<Media | null>(null)
   // 用户自己点过图片、视频就不再跟着文案自动换
   const [touched, setTouched] = useState({ images: false, video: false })
-  // 视频封面：null 是平台默认的那一帧
-  const [cover, setCover] = useState<Media | null>(null)
+  // 视频封面：按比例分组（ratioKey），每组一张；没在 covers 里的组用 autoCover 挑的，null 是平台默认的那一帧
+  const [baseCover, setBaseCover] = useState<Media | null>(null)
+  const [covers, setCovers] = useState<Record<string, Media | null>>({})
+  // 文件夹里的图、上传、资料库选的封面给哪一组（只有一组时就是它）
+  const [coverKey, setCoverKey] = useState('')
+  // 图片的宽高（封面比例检查用）：文件夹里的图在缩略图加载时记下，别的用到时读
+  const [dims, setDims] = useState<Record<string, { w: number; h: number }>>({})
+  const noteDim = (ref: string, w: number, h: number) => { if (w && h) setDims((d) => (d[ref]?.w === w && d[ref]?.h === h ? d : { ...d, [ref]: { w, h } })) }
+  const [cropping, setCropping] = useState<{ key: string; ratio: [number, number]; m: Media } | null>(null)
+  // 填好交给我的账号
+  const [manual, setManual] = useState<string[]>([])
   const [picker, setPicker] = useState<'image' | 'video' | 'cover' | null>(null)
   // 上传本机：给哪一栏传（配图可以一次传几张），进度 0–1，null 是没在传
   const fileInput = useRef<HTMLInputElement>(null)
@@ -144,13 +168,13 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   // 打开时：读文件夹，猜发成什么，挑文案（名字带「文案 / copy」的优先，再是离视频近的），配好图、视频
   useEffect(() => {
     if (!open) return
-    setFiles(null); setError(''); setResult({}); setPicked([]); setAt(''); setMoreCopies(false); setTitled(new Set()); userPicked.current = false; setTouched({ images: false, video: false })
+    setFiles(null); setError(''); setResult({}); setPicked([]); setManual([]); setCovers({}); setCoverKey(''); setAt(''); setMoreCopies(false); setTitled(new Set()); userPicked.current = false; setTouched({ images: false, video: false })
     runLocal<{ path: string; entries: Entry[] }>('folder.list', { article_id: article.id }).then((r) => {
       const fs = r.entries.filter((e) => !e.dir)
       setRoot(r.path)
       setFiles(fs)
       const named = fs.filter((e) => IMAGE.test(e.path) && /封面|cover/i.test(base(e.path))).sort((a, b) => b.mtime - a.mtime)[0]
-      setCover(article.video_cover ? { ref: article.video_cover, src: fileSrc(article.video_cover), name: t('from_library') } : named ? { ref: named.path, src: workSrc(`${r.path}/${named.path}`), name: named.path } : null)
+      setBaseCover(article.video_cover ? { ref: article.video_cover, src: fileSrc(article.video_cover), name: t('from_library') } : named ? { ref: named.path, src: workSrc(`${r.path}/${named.path}`), name: named.path } : null)
       const k = guessKind(fs)
       setKind(k)
       const mds = fs.filter((e) => MD.test(e.path) && !isDraft(e.path))
@@ -210,6 +234,40 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   const machine = useElsewhere(ctx.channels)
   const accounts = ctx.channels.filter((ch) => !!SOCIAL[ch.type])
   const coverUsed = kind === 'video' && accounts.some((ch) => FIELDS[ch.type]?.videoCover)
+  // 封面分组：勾了能设封面的账号就按它们分，没勾就按所有能设封面的账号先摆出来
+  const coverAccounts = accounts.filter((ch) => FIELDS[ch.type]?.videoCover)
+  const coverPicked = coverAccounts.filter((ch) => picked.includes(ch.id))
+  const coverGroups = (() => {
+    const m = new Map<string, { key: string; ratio?: [number, number]; platforms: string[] }>()
+    for (const ch of coverPicked.length ? coverPicked : coverAccounts) {
+      const ratio = FIELDS[ch.type]?.coverRatio
+      const g = m.get(ratioKey(ratio)) ?? { key: ratioKey(ratio), ratio, platforms: [] }
+      const label = CHANNEL_TYPES[ch.type as keyof typeof CHANNEL_TYPES]?.label ?? ch.type
+      if (!g.platforms.includes(label)) g.platforms.push(label)
+      m.set(g.key, g)
+    }
+    return [...m.values()]
+  })()
+  const activeKey = coverGroups.some((g) => g.key === coverKey) ? coverKey : coverGroups[0]?.key ?? ''
+  // 文件夹里名字带「封面」的图（新的在前）：比例对得上这组的优先当默认
+  const namedCovers = useMemo(() => folderImages.filter((e) => /封面|cover/i.test(base(e.path))).sort((a, b) => b.mtime - a.mtime), [folderImages])
+  const coverOf = (key: string, ratio?: [number, number]): Media | null => {
+    if (key in covers) return covers[key]
+    const fit = ratio && namedCovers.find((e) => dims[e.path] && !offRatio(dims[e.path], ratio))
+    return fit ? media(fit.path) : baseCover
+  }
+  const setCover = (m: Media | null, key = activeKey) => setCovers((c) => ({ ...c, [key]: m }))
+  // 名字带「封面」的图和选中的封面先量好宽高：挑默认、提示会不会被裁都要用
+  useEffect(() => {
+    if (!coverUsed) return
+    const want = [...namedCovers.map((e) => media(e.path)), ...coverGroups.map((g) => coverOf(g.key, g.ratio)).filter((m): m is Media => !!m)]
+    for (const m of want) {
+      if (dims[m.ref]) continue
+      const i = new Image()
+      i.onload = () => noteDim(m.ref, i.naturalWidth, i.naturalHeight)
+      i.src = m.src
+    }
+  }, [coverUsed, namedCovers, covers, baseCover, root])
   const blocked = (ch: { type: string; login_status?: string } & Parameters<typeof loggedInElsewhere>[0]) => !supports(FIELDS[ch.type], kind) ? t('unsupported', { kind: t(`kind_${kind}`) })
     : loggedInElsewhere(ch, machine) ? t('on_machine', { name: loggedInElsewhere(ch, machine) })
     : ch.login_status === 'expired' ? t('expired') : ''
@@ -217,6 +275,8 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   useEffect(() => { setPicked((l) => l.filter((id) => { const ch = accounts.find((c) => c.id === id); return ch && !blocked(ch) })) }, [kind])
   const content = { type: kind, title, body, tags: JSON.stringify(tagList), images: JSON.stringify(images.map((i) => i.ref)), video: video?.ref ?? '' }
 
+  /** 每个勾了的、能设封面的账号用它那一组的封面 */
+  const coverCovers = () => Object.fromEntries(coverPicked.map((ch) => { const r = FIELDS[ch.type]?.coverRatio; return [ch.id, coverOf(ratioKey(r), r)?.ref ?? ''] }))
   const missing = kind === 'post' && !images.length ? t('need_images') : kind === 'video' && !video ? t('need_video') : !body.trim() && kind !== 'video' ? t('need_text') : ''
   const go = async () => {
     setRunning(true); setError('')
@@ -224,10 +284,15 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     if (at && !(ts > Date.now())) { setError(t('future_time')); setRunning(false); return }
     try {
       const r = await runLocal<{ ready: { channel_id: string; post_id: string }[]; problems: { channel_id: string; problems: string[] }[] }>('folder.publish', {
-        article_id: article.id, kind, title, body, tags: tagList, images: images.map((i) => i.ref), video: video?.ref ?? '', ...(kind === 'video' ? { video_cover: cover?.ref ?? '' } : {}), channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}),
+        article_id: article.id, kind, title, body, tags: tagList, images: images.map((i) => i.ref), video: video?.ref ?? '',
+        ...(kind === 'video' ? { video_cover: coverOf(coverGroups[0]?.key ?? '', coverGroups[0]?.ratio)?.ref ?? '', video_covers: coverCovers() } : {}),
+        channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}),
       })
       const name = (id: string) => accounts.find((c) => c.id === id)?.name ?? ''
-      if (!ts && r.ready.length) enqueue(r.ready.map((p) => ({ article_id: article.id, article_title: title || article.title, channel_id: p.channel_id, channel_name: name(p.channel_id), post_id: p.post_id })))
+      // 交给我的排在最后：它要等人在窗口里点发布（最多 30 分钟），别让自动发的跟着等
+      const handed = (id: string) => !ts && manual.includes(id)
+      const ready = [...r.ready].sort((a, b) => Number(handed(a.channel_id)) - Number(handed(b.channel_id)))
+      if (!ts && ready.length) enqueue(ready.map((p) => ({ article_id: article.id, article_title: title || article.title, channel_id: p.channel_id, channel_name: name(p.channel_id), post_id: p.post_id, ...(handed(p.channel_id) ? { manual: true as const } : {}) })))
       if (r.ready.length) toast(ts ? t('scheduled_toast', { n: r.ready.length }) : t('started_toast', { n: r.ready.length }))
       if (!r.problems.length) { onClose(); return }
       setResult(Object.fromEntries(r.problems.map((p) => [p.channel_id, p.problems.join('；')])))
@@ -235,8 +300,8 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     } catch (e) { setError((e as Error).message) } finally { setRunning(false) }
   }
 
-  /** 上传本机：每个文件存成本机文件，复制进内容文件夹的最外层（重名的在名字后面加序号），再选上 */
-  const uploadLocal = async (list: File[]) => {
+  /** 上传本机：每个文件存成本机文件，复制进内容文件夹的最外层（重名的在名字后面加序号），再选上（what 是给哪一栏，封面给 key 那一组） */
+  const uploadLocal = async (list: File[], what = uploadFor, key = activeKey) => {
     if (!list.length) return
     setUploading(0); setError('')
     try {
@@ -253,12 +318,30 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
         added.push(r.ref.startsWith('local:') ? (await runLocal<{ path: string }>('folder.importLocal', { article_id: article.id, url: r.ref, to })).path : r.ref)
       }
       // 先记下用户自己点过，不然文件列表一变，自动挑图、视频的会把刚传的换掉
-      if (uploadFor === 'image') { setTouched((x) => ({ ...x, images: true })); setImages((l) => [...l, ...added.filter((p) => !l.some((m) => m.ref === p)).map(media)]) }
-      if (uploadFor === 'video') { setTouched((x) => ({ ...x, video: true })); setVideo(media(added[0])) }
-      if (uploadFor === 'cover') setCover(media(added[0]))
+      if (what === 'image') { setTouched((x) => ({ ...x, images: true })); setImages((l) => [...l, ...added.filter((p) => !l.some((m) => m.ref === p)).map(media)]) }
+      if (what === 'video') { setTouched((x) => ({ ...x, video: true })); setVideo(media(added[0])) }
+      if (what === 'cover') setCover(media(added[0]), key)
       const r = await runLocal<{ path: string; entries: Entry[] }>('folder.list', { article_id: article.id })
       setFiles(r.entries.filter((e) => !e.dir))
     } catch (e) { setError((e as Error).message) } finally { setUploading(null) }
+  }
+  /** 裁好的封面存进文件夹（「原名 3x4.jpg」，和上传本机一样复制进最外层），选给裁的那一组 */
+  const saveCrop = async (image: Blob) => {
+    const c = cropping
+    if (!c) return
+    const stem = isUrl(c.m.ref) ? t('cover_file') : base(c.m.ref).replace(/\.[^.]+$/, '')
+    setUploadFor('cover')
+    setCoverKey(c.key)
+    await uploadLocal([new File([image], `${stem} ${c.ratio[0]}x${c.ratio[1]}.jpg`, { type: 'image/jpeg' })], 'cover', c.key)
+    setCropping(null)
+  }
+  /** 裁了不合适：交给 AI 照这个比例重做一张，放进文件夹（在这条内容上做，右侧看过程）；做好再回来选 */
+  const redoCover = async (g: { key: string; platforms: string[] }) => {
+    try {
+      const r = await runTask('work-on-content', { article_id: article.id, note: t('cover_redo_note', { ratio: g.key, platforms: g.platforms.join('、') }) })
+      openChat(r.chat_id)
+      toast(t('cover_redo_started'))
+    } catch (e) { setError((e as Error).message) }
   }
   /** 一栏右上角的按钮：上传本机、从资料库选 */
   const pickers = (what: 'image' | 'video' | 'cover') => <span className="flex gap-1">
@@ -352,18 +435,39 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
           {coverUsed && <div>
             {section(t('video_cover'), pickers('cover'))}
             <p className="mb-2 text-xs text-muted-foreground">{t('video_cover_hint')}</p>
-            <div className="flex flex-wrap items-start gap-2">
-              <button type="button" onClick={() => setCover(null)} className={cx('flex h-24 w-[72px] cursor-pointer items-center justify-center rounded-md border px-1 text-center text-xs text-muted-foreground', !cover ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:bg-muted')}>{t('cover_default')}</button>
-              {cover && <div className="relative h-24 w-[72px] overflow-hidden rounded-md border border-primary ring-2 ring-primary/40" title={cover.name}>
-                <img src={cover.src} alt="" className="size-full object-cover" />
-                <Check className="absolute top-1 right-1 size-4 rounded-full bg-primary p-0.5 text-primary-foreground" />
-              </div>}
-            </div>
+            {/* 每种比例一组（小红书、抖音 3:4，B站 4:3）：几组时点哪组，下面的图、上传、资料库就给哪组 */}
+            <div className="space-y-2">{coverGroups.map((g) => {
+              const m = coverOf(g.key, g.ratio)
+              const d = m ? dims[m.ref] : undefined
+              const off = offRatio(d, g.ratio)
+              const many = coverGroups.length > 1
+              const on = many && g.key === activeKey
+              const w = g.ratio ? Math.round((96 * g.ratio[0]) / g.ratio[1]) : 72
+              return <div key={g.key} onClick={() => setCoverKey(g.key)} className={cx('flex flex-wrap items-start gap-3 rounded-lg border p-2', on ? 'border-primary/50 bg-primary/5' : 'border-border', many && 'cursor-pointer')}>
+                <div className="w-24 shrink-0 pt-0.5">
+                  <div className="text-sm font-medium">{g.ratio ? t('cover_group', { ratio: g.key }) : t('video_cover')}</div>
+                  <div className="text-xs leading-relaxed text-muted-foreground">{g.platforms.join('、')}</div>
+                </div>
+                <button type="button" onClick={(ev) => { ev.stopPropagation(); setCoverKey(g.key); setCover(null, g.key) }} style={{ width: w }} className={cx('flex h-24 shrink-0 cursor-pointer items-center justify-center rounded-md border px-1 text-center text-xs text-muted-foreground', !m ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:bg-muted')}>{t('cover_default')}</button>
+                {m && <div style={{ width: w }} className="relative h-24 shrink-0 overflow-hidden rounded-md border border-primary bg-black ring-2 ring-primary/40" title={m.name}>
+                  <img src={m.src} alt="" onLoad={(ev) => noteDim(m.ref, ev.currentTarget.naturalWidth, ev.currentTarget.naturalHeight)} className="size-full object-cover" />
+                  <Check className="absolute top-1 right-1 size-4 rounded-full bg-primary p-0.5 text-primary-foreground" />
+                </div>}
+                {/* 比例不对：平台会裁掉一块，先在这里裁，裁了不合适再交给 AI 重做；比例对的也能裁（调构图） */}
+                {m && g.ratio && <div className="min-w-0 flex-1 basis-48 space-y-1.5">
+                  {off && d && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-700 dark:text-amber-400"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{t('cover_off', { now: ratioText(d), ratio: g.key, platforms: g.platforms.join('、') })}</p>}
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button size="sm" variant={off ? 'outline' : 'ghost'} feedback={false} onClick={(ev) => { ev.stopPropagation(); setCropping({ key: g.key, ratio: g.ratio!, m }) }}><Crop />{t('crop_go', { ratio: g.key })}</Button>
+                    {off && <Button size="sm" variant="ghost" feedback={false} needsShuttle onClick={(ev) => { ev.stopPropagation(); void redoCover(g) }}><Wand2 />{t('cover_redo')}</Button>}
+                  </div>
+                </div>}
+              </div>
+            })}</div>
             {folderImages.length > 0 && <>
-              <p className="mt-3 mb-1.5 text-xs text-muted-foreground">{t('cover_folder')}</p>
+              <p className="mt-3 mb-1.5 text-xs text-muted-foreground">{coverGroups.length > 1 ? t('cover_folder_for', { ratio: activeKey }) : t('cover_folder')}</p>
               <div className="flex flex-wrap gap-1.5">
-                {folderImages.map((e) => { const on = cover?.ref === e.path; return <button key={e.path} type="button" title={e.path} onClick={() => setCover(on ? null : media(e.path))} className={cx('relative size-12 cursor-pointer overflow-hidden rounded border', on ? 'border-primary ring-2 ring-primary/40' : 'border-border opacity-70 hover:opacity-100')}>
-                  <img src={workSrc(`${root}/${e.path}`)} alt="" loading="lazy" className="size-full object-cover" />
+                {folderImages.map((e) => { const on = coverOf(activeKey, coverGroups.find((g) => g.key === activeKey)?.ratio)?.ref === e.path; return <button key={e.path} type="button" title={e.path} onClick={() => setCover(on ? null : media(e.path))} className={cx('relative size-12 cursor-pointer overflow-hidden rounded border', on ? 'border-primary ring-2 ring-primary/40' : 'border-border opacity-70 hover:opacity-100')}>
+                  <img src={workSrc(`${root}/${e.path}`)} alt="" loading="lazy" onLoad={(ev) => noteDim(e.path, ev.currentTarget.naturalWidth, ev.currentTarget.naturalHeight)} className="size-full object-cover" />
                   {on && <Check className="absolute right-0.5 bottom-0.5 size-3.5 rounded-full bg-primary p-0.5 text-primary-foreground" />}
                 </button> })}
               </div>
@@ -377,14 +481,22 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
                 const why = blocked(ch)
                 const { length, max } = lengthOn(content, ch.type)
                 const was = sent[ch.id]
+                const canHand = !!FIELDS[ch.type]?.handOver && picked.includes(ch.id) && !why
+                const handed = canHand && !at && manual.includes(ch.id)
                 const note = result[ch.id] ? <span className="text-destructive">{result[ch.id]}</span>
                   : why || (max > 0 && length > max ? <span className="text-amber-700 dark:text-amber-400">{t('too_long', { n: length, max })}</span>
+                    : handed ? <span className="text-primary-text">{t('manual_on')}</span>
                     : was ? <span className="text-primary-text">{t(was.status === 'published' ? 'sent_before' : 'scheduled_before', { at: fmtTime(was.at) })}</span>
                     : '')
                 return <label key={ch.id} className={cx('flex items-center gap-3 rounded-lg border px-3 py-2', why ? 'cursor-default border-border opacity-60' : picked.includes(ch.id) ? 'cursor-pointer border-primary/50 bg-primary/5' : 'cursor-pointer border-border hover:bg-accent/50')}>
                   <input type="checkbox" disabled={!!why || running} checked={picked.includes(ch.id)} onChange={() => setPicked((l) => l.includes(ch.id) ? l.filter((x) => x !== ch.id) : [...l, ch.id])} className="size-4 accent-primary" />
                   <ChannelAvatar ch={ch} />
                   <span className="min-w-0 flex-1"><span className="flex min-w-0 items-center gap-2"><span className="truncate text-sm font-medium">{ch.name}</span><PlatformTag type={ch.type} /></span><span className="block text-xs leading-relaxed text-muted-foreground">{note}</span></span>
+                  {/* 填好交给我：插件填好不点发布，窗口交给用户调封面、选合集…自己发；排期的到点没人接手，不能选 */}
+                  {canHand && <button type="button" aria-pressed={handed} disabled={running || !!at} title={at ? t('manual_scheduled') : t('manual_hint')}
+                    onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); setManual((l) => (l.includes(ch.id) ? l.filter((x) => x !== ch.id) : [...l, ch.id])) }}
+                    className={cx('inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs disabled:cursor-default disabled:opacity-50', handed ? 'border-primary/50 bg-primary/10 text-primary-text' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground')}>
+                    <Hand className="size-3.5" />{t('manual')}</button>}
                   {result[ch.id] && <Badge tone="bad">{t('not_passed')}</Badge>}
                 </label>
               })}</div>}
@@ -396,6 +508,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
       )}
       <input ref={fileInput} type="file" className="hidden" multiple={uploadFor === 'image'} accept={uploadFor === 'video' ? 'video/*' : 'image/*'} onChange={(e) => { void uploadLocal([...(e.target.files ?? [])]); e.target.value = '' }} />
       {preview && <Lightbox src={preview} video onClose={() => setPreview('')} />}
+      {cropping && <ImageCropper open src={cropping.m.src} ratio={cropping.ratio} onClose={() => setCropping(null)} onDone={saveCrop} />}
       <AssetPicker open={!!picker} kind={picker === 'video' ? 'video' : 'image'} max={picker === 'image' ? undefined : 1} onClose={() => setPicker(null)} onPick={(urls) => {
         if (picker === 'video' && urls[0]) { setTouched((x) => ({ ...x, video: true })); setVideo(media(urls[0])) }
         if (picker === 'cover' && urls[0]) setCover(media(urls[0]))

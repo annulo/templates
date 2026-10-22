@@ -833,6 +833,16 @@
     "src_creght": "creght 访问统计",
     "sep": "："
   },
+  "crop": {
+    "title": "裁成 {ratio}",
+    "hint": "拖动图片调整位置，用滑块或滚轮缩放。框里的部分就是裁出来的图。",
+    "use": "用这张",
+    "zoom": "缩放",
+    "zoom_in": "放大",
+    "zoom_out": "缩小",
+    "load_failed": "这张图读不出来，换一张试试",
+    "export_failed": "裁剪失败，再试一次"
+  },
   "common": {
     "just_now": "刚刚",
     "min_ago": "{n} 分钟前",
@@ -2185,7 +2195,7 @@
     "video": "视频",
     "no_videos": "文件夹里没有视频，从资料库选一个。",
     "video_cover": "视频封面",
-    "video_cover_hint": "小红书、抖音用；不选就用平台默认的那一帧",
+    "video_cover_hint": "小红书、抖音、B站 用；不选就用平台默认的那一帧。比例不对平台会裁掉一块，可以先在这里裁",
     "cover_default": "平台默认",
     "cover_folder": "文件夹里的图（点一张当封面）",
     "upload_local": "上传",
@@ -2207,6 +2217,18 @@
     "close": "关闭",
     "cancel": "取消",
     "schedule_go": "排期到 {n} 个账号",
-    "go": "发布到 {n} 个账号"
+    "go": "发布到 {n} 个账号",
+    "cover_group": "{ratio} 封面",
+    "cover_off": "这张是 {now}，{platforms} 会裁成 {ratio}，可能裁掉重要的部分",
+    "crop_go": "裁成 {ratio}",
+    "cover_redo": "让 AI 重做",
+    "cover_redo_note": "给这条内容做一张 {ratio} 的视频封面（用在 {platforms}），存进文件夹，文件名带「封面」和比例（比如「封面 {ratio}.png」）。",
+    "cover_redo_started": "已经交给 AI 做封面，做好后重新打开发布，在这里选",
+    "cover_folder_for": "文件夹里的图（点一张当 {ratio} 封面）",
+    "cover_file": "封面",
+    "manual": "填好交给我",
+    "manual_hint": "在浏览器里填好标题、正文、视频、封面，不点发布，把窗口交给你：调好封面、选好合集这些，再自己点发布",
+    "manual_on": "会填好交给你：在弹出的窗口里调整好，自己点发布，发出去这里会记下",
+    "manual_scheduled": "排期的到点自动发，没人接手，不能选「填好交给我」"
   }
 }

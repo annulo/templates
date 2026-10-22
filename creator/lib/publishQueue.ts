@@ -19,6 +19,8 @@ export type PublishJob = {
   /** Facebook API：只核对上次结果，或用户已确认原帖未发布。 */
   check_only?: true
   confirm_unpublished?: true
+  /** 填好交给我（社媒插件 publish 的 manual）：浏览器里填好不点发布，窗口交给用户自己调、自己发 */
+  manual?: true
   /** 网站的发布脚本（<publisher>.publish）；社媒没有 */
   publisher?: string
   state: 'queued' | 'running' | 'ok' | 'error'
@@ -84,7 +86,7 @@ async function work() {
           if (jobs.find((x) => x.key === j.key)?.want_show) void showRun(id).catch(() => {})
         } }
         if (j.publisher) await runLocal(`${j.publisher}.publish`, { article_id: j.article_id }, onEvent, opts)
-        else await runLocal('social/social.publish', { post_id: j.post_id, ...(j.check_only ? { check_only: true } : {}), ...(j.confirm_unpublished ? { confirm_unpublished: true } : {}) }, onEvent, opts)
+        else await runLocal('social/social.publish', { post_id: j.post_id, ...(j.check_only ? { check_only: true } : {}), ...(j.confirm_unpublished ? { confirm_unpublished: true } : {}), ...(j.manual ? { manual: true } : {}) }, onEvent, opts)
         patch(j.key, { state: 'ok', step: '', run_id: undefined, finished_at: Date.now() })
       } catch (e) {
         const stopped = jobs.find((x) => x.key === j.key)?.stopped

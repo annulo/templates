@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.16.6
+  zh: "发布视频时按平台分开选封面，比例不对能当场裁；可以选「填好交给我」，自己调好封面、合集再发。手机上的发布记录排版也理顺了。"
+  en: "When publishing a video, covers are picked per platform ratio and can be cropped on the spot; choose \"Hand over to me\" to adjust the cover or collection and publish yourself. Publish records also read better on phones."
 - version: 0.16.5
   zh: "内容的文件夹找不到时（比如改了项目名），会提示你去找回，不再自动建一份残缺的；「另写一篇」不用再选类型。"
   en: "If a content folder can't be found (for example after renaming the project), you're asked to find it instead of getting an incomplete copy; \"Write another\" no longer asks for a type."
