@@ -2,6 +2,7 @@ import { L } from './_i18n'
 import { visitsBetween } from './_creght'
 import { DAY, notConnected, query, ymd } from './_gsc'
 import { trackChange, WINDOW_DAYS, type ChangeKind } from './_review'
+import { reviewKeywords } from './_keyword_track'
 
 // 要电脑的（浏览器、本机授权、密钥、外部接口）：手机上点了转给电脑上开着的 Shuttle 跑（设置 → 远程访问）
 export const remote = ['check', 'track']
@@ -19,6 +20,7 @@ export const remote = ['check', 'track']
 //   结论：主指标（GSC 用点击，没有 GSC 用 PV）变化超过 +15% 算 better、低于 -15% 算 worse，其余 flat；
 //   GSC 下点击掉了但曝光也同比例掉（点击率没降，± 15% 以内）时算 flat：是搜索量整体变了，不是改动的问题。
 //   两边都没数据（样本太小：前后点击或 PV 加起来 < 10）算 no_data。
+//   挂在这条改动上的关键词（上线时 _keyword_track.ts 挂的），按每个词读 GSC 前后两段，各写一句结论到 keywords.review_*。
 
 type Change = { id: string; channel_id: string; kind: ChangeKind; ref_id: string; title: string; pages?: string; live_at: string; review_at: string; status: string }
 type Channel = { id: string; name: string; project_id?: string; site_id?: string; gsc_property?: string }
@@ -132,6 +134,12 @@ async function reviewOne(c: Change, ctx: any) {
     } catch (e: any) {
       if (!notConnected(e)) ctx.log(L(ctx, `「${c.title}」读 GSC 失败，改用访问统计：`, `Reading GSC for "${c.title}" failed, using visit stats instead: `) + e.message)
       b = a = null
+    }
+    // 挂在这条改动上的关键词各自出结论（按搜索词读 GSC）；出错不影响页面的复查
+    try {
+      await reviewKeywords(ctx, c, ch.gsc_property, before, after)
+    } catch (e: any) {
+      if (!notConnected(e)) ctx.log(L(ctx, `「${c.title}」的关键词复查失败：`, `Keyword review for "${c.title}" failed: `) + e.message)
     }
   }
   let res = b && a ? judge(b, a, ctx) : { verdict: '' as const, summary: '' }

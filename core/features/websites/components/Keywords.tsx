@@ -20,6 +20,7 @@ type Keyword = {
   gsc_impressions?: number; gsc_clicks?: number; gsc_position?: number; gsc_page?: string; search_page_id?: string
   bucket?: Bucket; score?: number; topic_id?: string; seen?: boolean
   serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_results?: string; serp_error?: string; rank_history?: string
+  target_page?: string; live_at?: string; review_verdict?: string; review_summary?: string
 }
 type SerpRow = { p: number; domain: string; kind: string; title: string; url: string }
 type Rank = { d: string; p: number; s: 'gsc' | 'serp' }
@@ -225,6 +226,7 @@ function Row({ k, isNew, channel, onChanged, onGo }: { k: Keyword; isNew: boolea
           )}
         </div>
         <SerpLine k={k} />
+        <LoopLine k={k} />
         {k.note && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{k.note}</p>}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1">
@@ -297,6 +299,33 @@ function SerpLine({ k }: { k: Keyword }) {
             </li>
           ))}
         </ol>
+      )}
+    </div>
+  )
+}
+
+const VERDICT_TONE: Record<string, Tone> = { better: 'ok', flat: 'default', worse: 'bad', no_data: 'default' }
+const REVIEW_DAYS = 17 // 和 _review.ts 的 REVIEW_DELAY_DAYS 一样：上线 17 天后复查
+
+/** 闭环：目标页面、哪天上线、什么时候复查；复查过的写这个词自己的结论（排名、曝光前后） */
+function LoopLine({ k }: { k: Keyword }) {
+  if (!k.target_page && !k.live_at) return null
+  const day = (iso: string) => new Date(iso).toLocaleDateString(numLocale(), { month: 'numeric', day: 'numeric' })
+  const page = k.target_page ? (
+    <a href={k.target_page} target="_blank" rel="noreferrer" className="truncate font-mono hover:text-primary-text" title={k.target_page}>{pathOf(k.target_page)}</a>
+  ) : null
+  return (
+    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground tabular-nums">
+      <span>{tr('keywords.target_page')}</span>
+      {page}
+      {k.live_at && !k.review_verdict && (
+        <span>{tr('keywords.live_wait', { live: day(k.live_at), review: day(new Date(Date.parse(k.live_at) + REVIEW_DAYS * 86400_000).toISOString()) })}</span>
+      )}
+      {k.review_verdict && (
+        <>
+          <Badge tone={VERDICT_TONE[k.review_verdict] ?? 'default'}>{tr(`keywords.verdict_${k.review_verdict}`)}</Badge>
+          <span>{k.review_summary}</span>
+        </>
       )}
     </div>
   )

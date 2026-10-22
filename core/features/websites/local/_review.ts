@@ -1,8 +1,9 @@
 // 改站复查的「上线」记录（文件名以 _ 开头：只给别的文件 import）。
 // 体检问题被标成已解决（audit.ts）、文章发布（content.ts）、改标题描述点了「已上线」、补内容推了预览（review.track）时调 trackChange，
-// 建一条 site_changes（等数据）；review.check 到期对比改动前后 14 天，写结论。
+// 建一条 site_changes（等数据），相关的关键词挂上（_keyword_track.ts）；review.check 到期对比改动前后 14 天，写结论。
 
 import { L } from './_i18n'
+import { linkKeywords } from './_keyword_track'
 
 export const REVIEW_DELAY_DAYS = 17 // GSC 延迟约 3 天 + 改动后 14 天的窗口
 export const WINDOW_DAYS = 14
@@ -19,7 +20,7 @@ export function trackChange(
   const live = c.live_at ? new Date(c.live_at) : new Date()
   if (isNaN(live.getTime())) throw new Error(L(ctx, '上线时间不对：', 'Invalid go-live time: ') + c.live_at)
   const now = new Date().toISOString()
-  return ctx.db.insert('site_changes', {
+  const row = ctx.db.insert('site_changes', {
     channel_id: c.channel_id,
     kind: c.kind,
     ref_table: REF_TABLE[c.kind],
@@ -31,4 +32,11 @@ export function trackChange(
     status: 'waiting',
     created_at: now,
   })
+  // 这次改动对应的关键词挂上，复查时各自出结论（docs/keywords.md「闭环」）；出错不影响记改动
+  try {
+    linkKeywords(ctx, row)
+  } catch (e: any) {
+    ctx.log(L(ctx, '关键词没挂上这次改动：', 'Could not link keywords to this change: ') + (e?.message ?? e))
+  }
+  return row
 }

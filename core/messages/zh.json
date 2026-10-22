@@ -483,7 +483,13 @@
     "kind_forum": "论坛问答",
     "kind_social": "社媒",
     "kind_reference": "百科",
-    "kind_site": "网站"
+    "kind_site": "网站",
+    "target_page": "目标页面",
+    "live_wait": "{live} 上线，{review} 复查这个词",
+    "verdict_better": "变好了",
+    "verdict_flat": "没变化",
+    "verdict_worse": "变差了",
+    "verdict_no_data": "没数据"
   },
   "search": {
     "tab_keywords": "关键词"

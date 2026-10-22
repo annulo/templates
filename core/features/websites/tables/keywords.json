@@ -116,6 +116,34 @@
         "type": "string",
         "description": "转成的选题（topics）"
       },
+      "article_id": {
+        "type": "string",
+        "description": "写成的文章（选题写成文章、发布后挂上）"
+      },
+      "change_id": {
+        "type": "string",
+        "description": "目标页面上线的那次改动（site_changes：发布文章、改标题描述、补内容），17 天后复查时按这个词出结论"
+      },
+      "live_at": {
+        "type": "string",
+        "description": "目标页面上线的时间"
+      },
+      "review_verdict": {
+        "type": "string",
+        "description": "这个词的复查结论：better / flat / worse / no_data（前后都没曝光）"
+      },
+      "review_summary": {
+        "type": "string",
+        "description": "复查的一句话：排名、曝光、点击前后各多少"
+      },
+      "review_before": {
+        "type": "string",
+        "description": "上线前 14 天这个词的 GSC 数据（JSON）：{ clicks, impressions, position }"
+      },
+      "review_after": {
+        "type": "string",
+        "description": "上线 3 天后起 14 天的 GSC 数据（JSON），格式同上"
+      },
       "chat_id": {
         "type": "string",
         "description": "筛这批词的那段对话（页面上「继续对话」回到这里）"

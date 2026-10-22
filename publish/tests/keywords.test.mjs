@@ -148,3 +148,41 @@ test('rank history keeps one entry per day and source, oldest first', () => {
   h = kw.pushRank(h, { d: '2026-10-08', p: 11, s: 'gsc' })
   assert.deepEqual(JSON.parse(h).map((x) => x.p), [18, 11])
 })
+
+test('same page ignores protocol, www, trailing slash and query', () => {
+  assert.ok(kw.samePage('https://www.acme.com/a/', 'http://acme.com/a?x=1#y'))
+  assert.ok(!kw.samePage('https://acme.com/a', 'https://acme.com/b'))
+  assert.ok(!kw.samePage('', ''))
+})
+
+test('keyword verdict after a change goes live', () => {
+  const m = (impressions, position, clicks = 0) => ({ impressions, position, clicks })
+  assert.equal(kw.keywordVerdict(m(0, 0), m(0, 0)), '')
+  assert.equal(kw.keywordVerdict(m(0, 0), m(12, 25)), 'better')
+  assert.equal(kw.keywordVerdict(m(30, 12), m(0, 0)), 'worse')
+  assert.equal(kw.keywordVerdict(m(30, 18), m(28, 11)), 'better')
+  assert.equal(kw.keywordVerdict(m(30, 8), m(30, 11)), 'worse')
+  assert.equal(kw.keywordVerdict(m(15, 4.3), m(9, 3.8)), 'flat') // 曝光少了是搜的人少了，不算改动变差
+  assert.equal(kw.keywordVerdict(m(20, 9), m(22, 9.5)), 'flat')
+})
+
+const track = await load('_keyword_track.ts', `const L = (ctx, zh, en) => zh; const ymd = ms => new Date(ms).toISOString().slice(0, 10);
+let gscRows = {}; const query = async (ctx, p, o) => gscRows[o.start + '|' + o.query] ?? [];
+${kwPure}`)
+
+test('publishing an article links its topic keywords; a page change links that page\'s keywords', () => {
+  const tables = { articles: [{ id: 'a1', topic_id: 't1' }], keywords: [
+    { id: 'k1', channel_id: 'c1', keyword: 'grow light factory', status: 'idea', topic_id: 't1' },
+    { id: 'k2', channel_id: 'c1', keyword: 'grow light oem', status: 'dismissed', topic_id: 't1' },
+    { id: 'k3', channel_id: 'c1', keyword: 'led panel', status: 'idea', gsc_page: 'https://www.acme.com/led/' },
+    { id: 'k4', channel_id: 'c2', keyword: 'grow light factory', status: 'idea', topic_id: 't1' },
+  ] }
+  const ctx = fakeCtx(tables)
+  const n = track.linkKeywords(ctx, { id: 'ch1', channel_id: 'c1', kind: 'article', ref_id: 'a1', pages: '["https://acme.com/blog/x"]', live_at: '2026-10-01T00:00:00Z' })
+  assert.equal(n, 1)
+  const k1 = tables.keywords.find((k) => k.id === 'k1')
+  assert.deepEqual([k1.change_id, k1.status, k1.target_page, k1.article_id], ['ch1', 'targeting', 'https://acme.com/blog/x', 'a1'])
+  assert.equal(track.linkKeywords(ctx, { id: 'ch2', channel_id: 'c1', kind: 'search_content', ref_id: 'sp9', pages: '["https://acme.com/led"]', live_at: '2026-10-02T00:00:00Z' }), 1)
+  assert.equal(tables.keywords.find((k) => k.id === 'k3').change_id, 'ch2')
+  assert.equal(track.linkKeywords(ctx, { id: 'ch3', channel_id: 'c1', kind: 'issue_fix', ref_id: 'x', pages: '["https://acme.com/led"]', live_at: '2026-10-02T00:00:00Z' }), 0)
+})
