@@ -1727,7 +1727,7 @@
     "video": "Video",
     "no_videos": "No videos in the folder; pick one from the library.",
     "video_cover": "Video cover",
-    "video_cover_hint": "Used by Xiaohongshu and Douyin; without one they use the platform's default frame",
+    "video_cover_hint": "Used by Xiaohongshu, Douyin and Bilibili; leave it empty to use the platform's default frame. A cover in the wrong ratio gets cropped by the platform, so you can crop it here first",
     "cover_default": "Platform default",
     "cover_folder": "Images in the folder (click one to use it as the cover)",
     "upload_local": "Upload",
@@ -1749,6 +1749,18 @@
     "close": "Close",
     "cancel": "Cancel",
     "schedule_go": "Schedule to {n} accounts",
-    "go": "Publish to {n} accounts"
+    "go": "Publish to {n} accounts",
+    "cover_group": "{ratio} cover",
+    "cover_off": "This one is {now}; {platforms} will crop it to {ratio} and may cut off something important",
+    "crop_go": "Crop to {ratio}",
+    "cover_redo": "Ask AI to redo",
+    "cover_redo_note": "Make a {ratio} video cover for this content (for {platforms}) and save it in the folder, with 'cover' and the ratio in the file name (e.g. 'cover {ratio}.png').",
+    "cover_redo_started": "AI is making the cover; reopen Publish when it's done and pick it here",
+    "cover_folder_for": "Images in the folder (click one to use as the {ratio} cover)",
+    "cover_file": "cover",
+    "manual": "Hand over to me",
+    "manual_hint": "Fill in the title, text, video and cover in the browser without clicking Publish, then hand the window to you: adjust the cover, pick a collection and so on, and click Publish yourself",
+    "manual_on": "Will be filled in and handed to you: adjust it in the window that opens and click Publish yourself; it's recorded here once it goes out",
+    "manual_scheduled": "Scheduled posts go out on their own with no one to take over, so they can't be handed to you"
   }
 }

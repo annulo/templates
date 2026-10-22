@@ -468,5 +468,15 @@
   },
   "search": {
     "tab_keywords": "关键词"
+  },
+  "crop": {
+    "title": "裁成 {ratio}",
+    "hint": "拖动图片调整位置，用滑块或滚轮缩放。框里的部分就是裁出来的图。",
+    "use": "用这张",
+    "zoom": "缩放",
+    "zoom_in": "放大",
+    "zoom_out": "缩小",
+    "load_failed": "这张图读不出来，换一张试试",
+    "export_failed": "裁剪失败，再试一次"
   }
 }

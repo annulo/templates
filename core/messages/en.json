@@ -468,5 +468,15 @@
   },
   "search": {
     "tab_keywords": "Keywords"
+  },
+  "crop": {
+    "title": "Crop to {ratio}",
+    "hint": "Drag the image to position it; zoom with the slider or the scroll wheel. What's inside the frame is the cropped image.",
+    "use": "Use this",
+    "zoom": "Zoom",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "load_failed": "This image can't be read; try another one",
+    "export_failed": "Cropping failed; try again"
   }
 }

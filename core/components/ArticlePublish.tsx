@@ -207,14 +207,19 @@ function PostSnapshot({ p }: { p: SocialPost }) {
   </div>
 }
 
-/** detailed 的发布记录：互动数据一个个列出来（阅读、点赞、评论、收藏、分享），旁边能马上重新采集这个账号 */
+/**
+ * detailed 的发布记录：互动数据一个个列出来（阅读、点赞、评论、收藏、分享），旁边能马上重新采集这个账号。
+ * 手机上五项排成等宽的一行、只留图标和数（名字在 title 里），采集时间和更新按钮另起一行，不挤在一起折行
+ */
 function PostMetrics({ p, onChanged }: { p: SocialPost; onChanged: () => void }) {
   const items: [typeof Eye, 'views' | 'likes' | 'comments' | 'collects' | 'shares'][] = [[Eye, 'views'], [Heart, 'likes'], [MessageCircle, 'comments'], [Bookmark, 'collects'], [Share2, 'shares']]
   return <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-    {items.map(([Icon, k]) => <span key={k} className="inline-flex items-center gap-1.5 text-sm tabular-nums" title={tr(`article.metric_${k}`)}><Icon className="size-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">{tr(`article.metric_${k}`)}</span>{metricText(p, k)}</span>)}
-    <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
-      {p.metrics_at ? tr('article.metrics_at', { when: fmtTime(p.metrics_at) }) : tr('article.metrics_none')}
-      <RunButton inline watch fn="social/social.collect" input={{ channel_id: p.channel_id }} icon={RefreshCw} variant="ghost" onDone={onChanged}>{tr('article.metrics_refresh')}</RunButton>
+    <div className="grid w-full grid-cols-5 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-x-4 sm:gap-y-1.5">
+      {items.map(([Icon, k]) => <span key={k} className="inline-flex min-w-0 items-center gap-1.5 text-sm tabular-nums" title={tr(`article.metric_${k}`)}><Icon className="size-3.5 shrink-0 text-muted-foreground" /><span className="hidden text-xs text-muted-foreground sm:inline">{tr(`article.metric_${k}`)}</span><span className="truncate">{metricText(p, k)}</span></span>)}
+    </div>
+    <span className="flex w-full min-w-0 items-center justify-between gap-1 text-xs text-muted-foreground sm:ml-auto sm:w-auto sm:justify-start">
+      <span className="shrink-0">{p.metrics_at ? tr('article.metrics_at', { when: fmtTime(p.metrics_at) }) : tr('article.metrics_none')}</span>
+      <span className="flex min-w-0 justify-end"><RunButton inline watch fn="social/social.collect" input={{ channel_id: p.channel_id }} icon={RefreshCw} variant="ghost" onDone={onChanged}>{tr('article.metrics_refresh')}</RunButton></span>
     </span>
   </div>
 }
@@ -283,7 +288,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
             {ch ? <button type="button" onClick={() => ctx.go('social', { section: 'data', account: ch.id })} title={tr('article.open_account_data')} className="shrink-0 cursor-pointer rounded-full"><ChannelAvatar ch={ch} /></button> : <span className="size-7 shrink-0 rounded-full bg-muted" />}
             <span className="min-w-0 flex-1">
               {/* 名字后面跟一个平台标签：几个账号可能同名（bysir / Bysir），只看名字分不清发到了哪个平台 */}
-              {ch ? <span className="flex min-w-0 items-center gap-2">
+              {ch ? <span className="flex min-w-0 items-center gap-2 overflow-hidden">
                   <button type="button" onClick={() => ctx.go('social', { section: 'data', account: ch.id })} title={tr('article.open_account_data')} className="min-w-0 cursor-pointer truncate text-left text-sm font-medium hover:text-primary-text hover:underline">{ch.name}</button>
                   {CHANNEL_TYPES[ch.type] && <PlatformTag type={ch.type} />}
                 </span>
@@ -292,7 +297,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
                 {p.status === 'published' ? <>{fmtTime(p.published_at)}{p.metrics_at && !detailed ? ` · ${metricsLine(p)}` : ''}</> : p.status === 'removed' ? tr('social.removed_from', { when: fmtTime(p.removed_at), p: ch ? CHANNEL_TYPES[ch.type]?.label : '' }) : legacy ? tr('article.legacy_version') : ch ? CHANNEL_TYPES[ch.type]?.label : ''}
               </span>
             </span>
-            {p.post_url && p.status === 'published' && <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text">{tr('content.view_live')}<ArrowUpRight className="size-3" /></a>}
+            {p.post_url && p.status === 'published' && <a href={p.post_url} target="_blank" rel="noreferrer" aria-label={tr('content.view_live')} title={tr('content.view_live')} className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text"><span className="hidden sm:inline">{tr('content.view_live')}</span><ArrowUpRight className="size-4 sm:size-3" /></a>}
             {jobOf(p.id) ? <Badge tone="primary">{jobOf(p.id)!.state === 'running' ? tr('meta.social_status.publishing') : tr('article.pub_queued')}</Badge> : <Badge tone={statusTone(p.status)}>{tr(`meta.social_status.${p.status}`)}</Badge>}
             {p.status === 'published' && !jobOf(p.id) && ch && (
               <DeleteMenu label={CHANNEL_TYPES[ch.type]?.label ?? ''} busy={busy === 'remove' + p.id} disabled={!!busy}

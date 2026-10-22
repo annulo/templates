@@ -176,9 +176,10 @@ const isRef = (u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/|loca
  *
  *   kind     发成什么：post 图文（纯文字 + 配图）/ video 视频（简介 + 视频）/ article 长文（HTML 正文，图在正文里）
  *   images   配图：文件夹里的路径（相对这条内容的文件夹）或资料库的地址；video 同样。长文正文里 <img> 的相对路径也换成本机文件
- *   video_cover  视频封面（小红书、抖音用），同样是文件夹里的路径或资料库地址；空字符串是用平台默认的那一帧，不传用内容上设的
+ *   video_cover  视频封面（小红书、抖音、B站用），同样是文件夹里的路径或资料库地址；空字符串是用平台默认的那一帧，不传用内容上设的
+ *   video_covers 按账号给的封面（账号 id → 封面，写法同 video_cover）：平台要的比例不一样时各用各的，给了的账号不看 video_cover
  */
-export function publish(input: { article_id: string; kind: 'post' | 'video' | 'article'; title?: string; body?: string; tags?: string[]; images?: string[]; video?: string; video_cover?: string; cover_text?: string; category?: string; channel_ids: string[]; scheduled_at?: string }, ctx: any) {
+export function publish(input: { article_id: string; kind: 'post' | 'video' | 'article'; title?: string; body?: string; tags?: string[]; images?: string[]; video?: string; video_cover?: string; video_covers?: Record<string, string>; cover_text?: string; category?: string; channel_ids: string[]; scheduled_at?: string }, ctx: any) {
   const a = article(ctx, input.article_id)
   const dir = dirOf(ctx, a.id)
   const kind = input.kind
@@ -206,7 +207,10 @@ export function publish(input: { article_id: string; kind: 'post' | 'video' | 'a
     const ch = ctx.db.get('social_accounts', id)
     if (!ch) { problems.push({ channel_id: id, problems: [L(ctx, '没有这个账号', 'No such account')] }); continue }
     if (!supports(FIELDS[ch.type], kind)) { problems.push({ channel_id: id, problems: [L(ctx, '这个平台不发这种内容', "This platform doesn't take this kind of post")] }); continue }
-    const postId = ctx.db.insert('social_posts', { ...fromContent(content, ch.type), channel_id: id, article_id: a.id, source: 'shuttle', status: at ? 'scheduled' : 'approved', scheduled_at: at, created_at: now, updated_at: now }).id
+    // 每个账号可以有自己的封面（video_covers：账号 id → 封面）：平台要的比例不一样（小红书、抖音 3:4，B站 4:3），发布弹窗按比例分组挑
+    const own = kind === 'video' ? input.video_covers?.[id] : undefined
+    const mine = own === undefined ? content : { ...content, video_cover: own ? ref(String(own)) : '' }
+    const postId = ctx.db.insert('social_posts', { ...fromContent(mine, ch.type), channel_id: id, article_id: a.id, source: 'shuttle', status: at ? 'scheduled' : 'approved', scheduled_at: at, created_at: now, updated_at: now }).id
     let found: string[] = []
     try { found = check({ post_id: postId }, ctx)?.problems ?? [] } catch (e: any) { found = [e?.message ?? String(e)] }
     if (found.length) { ctx.db.delete('social_posts', postId); problems.push({ channel_id: id, problems: found }); continue }

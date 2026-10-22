@@ -1,3 +1,6 @@
+- version: 0.15.5
+  zh: "修了接入网站时等资料会出错、发布进度上「查看」点不开；手机上的发布记录排版也理顺了。"
+  en: "Fixed an error while waiting for site details during setup and the View button on publishing progress; publish records also read better on phones."
 - version: 0.15.4
   zh: "「交给 AI」的说明和自带预设改得更通用，做的配图、视频默认就用到这篇上。"
   en: "The \"Hand to AI\" hint and built-in presets are more general, and images or videos it makes are used on the article by default."
