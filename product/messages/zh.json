@@ -890,7 +890,18 @@
     "t_inspiration_source": "灵感",
     "t_opportunity": "增长机会",
     "t_campaign": "主题计划",
-    "t_marketing_plan": "营销计划"
+    "t_marketing_plan": "营销计划",
+    "filter": "来源",
+    "filter_all": "全部来源",
+    "k_geo": "AI 搜索",
+    "k_keyword": "SEO 关键词",
+    "k_search": "谷歌搜索词",
+    "k_competitor": "竞品",
+    "k_inspiration": "灵感 / 调研",
+    "k_plan": "运营计划",
+    "k_topic": "选题",
+    "k_rewrite": "改写 / 复制",
+    "k_direct": "直接写"
   },
   "common": {
     "just_now": "刚刚",

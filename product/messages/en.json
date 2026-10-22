@@ -890,7 +890,18 @@
     "t_inspiration_source": "Inspiration",
     "t_opportunity": "Growth opportunity",
     "t_campaign": "Campaign",
-    "t_marketing_plan": "Marketing plan"
+    "t_marketing_plan": "Marketing plan",
+    "filter": "Origin",
+    "filter_all": "All origins",
+    "k_geo": "AI search",
+    "k_keyword": "SEO keyword",
+    "k_search": "Google query",
+    "k_competitor": "Competitor",
+    "k_inspiration": "Inspiration / research",
+    "k_plan": "Plan",
+    "k_topic": "Topic",
+    "k_rewrite": "Rewrite / copy",
+    "k_direct": "Written directly"
   },
   "common": {
     "just_now": "just now",

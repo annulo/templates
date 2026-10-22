@@ -1,3 +1,6 @@
+- version: 0.15.8
+  zh: "网站和自媒体内容能按来源筛选：AI 搜索、SEO 关键词、谷歌搜索词、灵感、运营计划、改写或直接写。"
+  en: "Website and social content can be filtered by origin: AI search, SEO keyword, Google query, inspiration, plan, rewrite or written directly."
 - version: 0.15.7
   zh: "关键词能看出做了有没有用：页面上线 17 天后，每个词自动对比前后排名；选题也记下来自哪个关键词、哪个问题。"
   en: "Keywords now show whether the work paid off: 17 days after a page goes live, each keyword's ranking is compared before and after; topics also record which keyword or question they came from."
