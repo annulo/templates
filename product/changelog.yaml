@@ -1,6 +1,9 @@
 - version: 0.15.5
   zh: "搜索页多了「关键词」：从产品词扩出关键词，按排名分出快赢的词，能转成选题。还修了接入网站时等资料会出错、发布进度上「查看」点不开。"
   en: "The Search page has a new Keywords tab: keywords are expanded from your product terms, quick wins are picked out by ranking, and they can become topics. Also fixed an error while waiting for site details during setup and the View button on publishing progress."
+- version: 0.15.6
+  zh: "数据页说明改成社媒每天采集一次。"
+  en: "The stats page now says social stats are collected once a day."
 - version: 0.15.4
   zh: "「交给 AI」的说明和自带预设改得更通用，做的配图、视频默认就用到这篇上。"
   en: "The \"Hand to AI\" hint and built-in presets are more general, and images or videos it makes are used on the article by default."

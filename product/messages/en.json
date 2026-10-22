@@ -2304,7 +2304,7 @@
     "platform_note": "These posts were published directly on the platforms and found during collection. They don't belong to any content yet. Use Add to content to link one to existing content or save it as content, and its data counts toward that content.",
     "show_more": "Show more ({n} left)",
     "performance": "Performance after publishing",
-    "performance_note": "One chart per platform version, each on its own scale (platforms differ by orders of magnitude). Numbers are the latest collected totals; collection runs every 6 hours.",
+    "performance_note": "One chart per platform version, each on its own scale (platforms differ by orders of magnitude). Numbers are the latest collected totals; collection runs once a day.",
     "metric_short_views": "Views",
     "metric_short_likes": "Likes",
     "metric_short_collects": "Saves",

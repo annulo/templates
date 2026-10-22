@@ -219,12 +219,12 @@ Facebook 公共主页使用官方 API 连接时，近期帖子、数据表现和
 
 ## 采集数据
 
-每 6 小时自动采集一次粉丝和每条帖子的数据（Annulo 要开着）。在平台上直接发的帖子也会收进来。
+每天自动采集一次粉丝和每条帖子的数据（Annulo 要开着），时间前后随机错开，免得太规律被平台当成脚本；想改频率在 设置 → 定时任务 里点「改时间」。在平台上直接发的帖子也会收进来。
 要最新的：账号卡片上「立即采集」，或者「账号概览」里「全部重新采集」（一个一个账号来）；内容的发布记录里也有「更新数据」。采集要打开浏览器跑一会儿，太频繁可能被平台限流。
 
 ## 发布、采集失败了
 
-平台改版后，发帖、采集的流程可能走不通。登录有没有过期，每 6 小时的自动采集会顺带检查。
+平台改版后，发帖、采集的流程可能走不通。登录有没有过期，每天的自动采集会顺带检查。
 - 走不通时，账号卡片上会说是哪一步，运营总览的「今日工作」会出现「社媒发布流程需要修复」。点「交给助手修」，助手照失败时的截图更新这个平台的发布脚本；
 - 改完再真做一次：采集失败的点「立即采集」，发布失败的在那条内容的发布记录里点「重新发布」。成功了，失败的提示就消失；
 - 一直显示「发布中」、其实没在跑（比如发到一半关了 Annulo）：点「标记为发布失败」再重新发。重新发布前会先去平台上找这一条，已经发出去的不会重发。
@@ -278,12 +278,12 @@ For Facebook Pages connected through the official API, "View comments" is availa
 
 ## Collecting stats
 
-Followers and every post's numbers are collected every 6 hours (Annulo must be open). Posts you made directly on the platform are picked up too.
+Followers and every post's numbers are collected once a day (Annulo must be open), at a randomized time so the platforms don't take it for a script; to change how often, click "Reschedule" in Settings → Scheduled tasks. Posts you made directly on the platform are picked up too.
 For the latest numbers: "Collect now" on the account card, "Collect all again" on the Accounts tab (one account at a time), or "Refresh data" in a piece's publishing records. Collecting runs a browser for a while; doing it too often can get you rate-limited.
 
 ## When publishing or collecting fails
 
-When a platform changes its pages, posting or collecting can break. Whether the login has expired is checked by the automatic collection every 6 hours.
+When a platform changes its pages, posting or collecting can break. Whether the login has expired is checked by the daily automatic collection.
 - When it fails, the card says which step, and "Social publishing needs repair" appears in Today's work on the overview. Click "Have the assistant fix it"; the assistant updates that platform's posting script from the failure screenshot;
 - Then do it for real once more: "Collect now" for a failed collection, "Publish again" in the piece's publishing records for a failed post. Once it works, the failure notice goes away;
 - Stuck on "Publishing" but nothing is running (say, Annulo was closed mid-post): click "Mark as failed" and publish again. A retry first looks for the post on the platform, so one that already went out isn't posted twice.
@@ -754,7 +754,7 @@ export const settings: Article = {
 |---|---|
 | 写每周总结（交给助手） | 7 天 |
 | 发布到点的社媒帖子 | 各平台 5~15 分钟 |
-| 采集社媒数据 | 各平台 6 小时 |
+| 采集社媒数据 | 各平台每天一次（时间随机错开） |
 
 没有某个平台的账号时，那个平台的任务什么都不做。**只在 Annulo 开着的时候跑**，关机或退出期间错过的，下次打开时补跑一次。
 
@@ -796,7 +796,7 @@ Settings → Schedules lists what the back office runs by itself. Each shows its
 |---|---|
 | Write the weekly summary (handed to the assistant) | 7 days |
 | Publish social posts that are due | 5–15 minutes per platform |
-| Collect social stats | 6 hours per platform |
+| Collect social stats | Once a day per platform (randomized time) |
 
 A platform's tasks do nothing when you have no account on it. **They only run while Annulo is open**; anything missed while the computer was off or Annulo was closed runs once when you open it again.
 
@@ -854,7 +854,7 @@ X 登录后一直跳验证的，可以让助手看一下（X 可能识别了自�
 
 ## 数字对不上 / 显示 0
 
-- 社媒数据每 6 小时采集一次，要最新的点「立即采集」「全部重新采集」，或者发布记录里的「更新数据」；
+- 社媒数据每天采集一次，要最新的点「立即采集」「全部重新采集」，或者发布记录里的「更新数据」；
 - 每天的变化要采集过两天以上才有，刚加的账号先只显示累计值；
 - 各平台的浏览、点赞口径不同（比如 LinkedIn 是展示、YouTube 是播放），不要加在一起比。
 
@@ -900,7 +900,7 @@ The back office needs to be opened in Annulo; on a phone, sign in with your creg
 
 ## Numbers look wrong or show 0
 
-- Social stats are collected every 6 hours; click "Collect now", "Collect all again" or "Refresh data" in the publishing records for the latest;
+- Social stats are collected once a day; click "Collect now", "Collect all again" or "Refresh data" in the publishing records for the latest;
 - Daily changes need at least two days of collection; a newly added account shows totals only at first;
 - Platforms count differently (LinkedIn counts impressions, YouTube counts plays, for example), so don't add them up.
 
