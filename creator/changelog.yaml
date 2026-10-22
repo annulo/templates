@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.16.7
+  zh: "帮助手册写明社媒数据改成每天采集一次、时间随机错开，频率可以在设置里改。"
+  en: "The help now says social stats are collected once a day at a randomized time, and the frequency can be changed in Settings."
 - version: 0.16.6
   zh: "发布视频时按平台分开选封面，比例不对能当场裁；可以选「填好交给我」，自己调好封面、合集再发。手机上的发布记录排版也理顺了。"
   en: "When publishing a video, covers are picked per platform ratio and can be cropped on the spot; choose \"Hand over to me\" to adjust the cover or collection and publish yourself. Publish records also read better on phones."
