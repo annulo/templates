@@ -1,7 +1,7 @@
 # 关键词机会：哪些词能做起来
 
 页面「谷歌排名 / 搜索表现 → 关键词」（`components/Keywords.tsx`，外贸和产品运营的 `Search.tsx` 各加一个 tab）、本机函数 `local/keywords.ts`（纯函数在 `_keywords.ts`，测试 `publish/tests/keywords.test.mjs`）、
-表 `keywords`、任务 `tasks/keyword-research.md`、写法 `prompts/keyword-research.md`、定时任务 `schedules/keywords.refresh.json`。改这块之前先读这篇；改了设计就同步改这里。
+表 `keywords`、任务 `tasks/keyword-research.md`、写法 `prompts/keyword-research.md`、定时任务 `schedules/keywords.refresh.json`、查 Google 结果页的参考代码 `local/serp.ts`。改这块之前先读这篇；改了设计就同步改这里。
 
 ## 要回答什么
 
@@ -16,7 +16,7 @@
 ## 流程
 
 ```
-种子词 → 扩词（expand，函数）→ 筛词归主题（任务，助手）→ 分桶（refresh，函数，每周）→ 快赢补页面 / 其余转选题 → 在做的每周看排名
+种子词 → 扩词（expand，函数）→ 筛词归主题（任务，助手）→ 分桶（refresh 每周按 GSC；serp 用户点了查 Google 结果页）→ 快赢补页面 / 新机会转选题 → 在做的看排名历史
 ```
 
 1. **扩词** `keywords.expand`：种子默认取项目资料 `keywords`、产品的关键词和名称、产品分类（助手可以自己挑种子再跑）。
@@ -38,12 +38,21 @@
 国内网络连 `suggestqueries.google.com` 常常一直等不报错：先用 Google 问第一条，8 秒没回来或失败就整批换 Bing（`api.bing.com/osjson.aspx`，返回格式一样），`keywords.suggest_engine` 记着用的哪个。
 Bing 的联想和 Google 不完全一样，但「有人这么搜」这个事实成立，拿来扩长尾词够用。两个都不通时只用 GSC 的词，返回里 `engine` 是空的，助手会告诉用户。
 
-## 第二期（还没做）：查 Google 搜索结果页，分出「新机会」和「难」
+## 查 Google 结果页：分出新机会、有竞争、难（第二期）
 
-`unchecked` 的词光看 GSC 判断不了能不能赢。第二期在用户自己的 Chrome 里打开 Google 搜索结果页（`ctx.browser.open({ profile: '@user' })`，和 aichat 一样，用户已经能上 Google），记前 10 名的事实：
-域名、页面类型（产品页、分类页、文章、论坛、B2B 平台、大品牌）、有没有在盯的竞品、我们排第几。按规则把 `unchecked` 分成 `open`（前 10 里有论坛、B2B 平台、内容薄的小站）和 `hard`（大品牌、Amazon 霸屏）。
-读结果页的代码做成参考代码（`annulo/references` 加 `serp/google/`，验证日期和 `MAINTAIN.md`），复制进 `local/`。量要小（一次几十个词）、间隔长，遇到验证码就停下来提示用户。
-在做的词 GSC 没曝光的，每周用它抽查排名，存每周快照画趋势。
+`unchecked` 的词光看 GSC 判断不了能不能赢。「查 Google 结果页」（`keywords.serp`）在用户自己的 Chrome 里打开 Google 搜这个词（`serp.ts`、`_serp_*.ts`，复制自 annulo/references 的 `serp/`，
+文件头记着提交；`ctx.browser.open({ profile: '@user' })`，要装 Annulo 浏览器插件，第一次要用户在 Chrome 里允许 www.google.com），只记前 10 名的事实：
+
+- 每条的域名、类型：本站（GSC 属性、访问地址、GSC 里出现过的页面的域名）、在盯的竞品（外贸的 `competitors`）、B2B 平台、零售电商、论坛问答、社媒、百科、其它网站（类型按域名，列表在 `_serp_common.ts`）；
+- 本站排第几（`serp_position`，不在前 10 是 0），弱位置（论坛问答、社媒、B2B 平台商品页）几个、强站（零售电商、百科）几个。
+
+分桶仍是 `bucketOf`，GSC 有排名时以 GSC 为准；没有的按结果页：本站在前 3 是 `ranking`、4~10 是 `quick_win`；不在前 10 时弱位置 ≥ 3 是 `open`（Google 没找到像样的专门页面，认真写一篇有机会），
+弱位置 ≤ 1 且强站 ≥ 4 是 `hard`，其余 `mixed`。前 10 名在页面上点开能看，用户自己判断规则说得对不对。
+
+- **查哪些**：筛过的词里 GSC 分不出快赢、已排上的，和 GSC 没有排名的在做的词；没查过的先查，查过的 28 天后再查；一次最多 20 个。
+- **慢慢查**：同一个窗口依次查，每个之间歇 6~10 秒；碰到人机验证就停，已经查到的存好，报错写着查了几个、让用户在 Chrome 里做完验证再来。
+- **不放进定时任务**：会在用户屏幕上开 Chrome 窗口，定时任务碰到没允许的网站也直接报错。按钮由用户点。
+- **排名历史**（`rank_history`）：在做的词每次 `refresh`（GSC 有排名时）和 `serp` 各记一条，同一天同一来源只留一条，最多 26 条；页面上显示最近两次的变化。
 
 ## 以后
 

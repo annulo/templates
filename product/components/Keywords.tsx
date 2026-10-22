@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUpRight, EyeOff, FilePlus2, ListPlus, MessageCircle, Plus, RefreshCw, Sparkles, Target, Undo2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, EyeOff, FilePlus2, ListPlus, MessageCircle, Plus, RefreshCw, SearchCheck, Sparkles, Target, Undo2 } from 'lucide-react'
 import { Badge, Button, Notice, Panel, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from './ui'
 import RunButton from './RunButton'
 import { TaskButton, TaskLaunchButton } from './Task'
@@ -9,22 +9,35 @@ import { numLocale, tr } from '../lib/i18n'
 // 谷歌排名 → 关键词：挖出来、助手筛过的词，按 GSC 排名分桶（keywords.ts，设计见 docs/keywords.md）。
 // 「挖一批关键词」交给助手（tasks/keyword-research.md），筛完回到这里看；要调整就「继续对话」回到筛词的那段对话。
 // 快赢的词（已经排在 4~30 位）给它曝光最多的页面补内容（复用谷歌排名的 search-expand 任务）；还没排名的按主题转成选题去写。
+// 「查 Google 结果页」在用户自己的 Chrome 里看前 10 都是谁（keywords.serp），没有 GSC 数据的词分成新机会 / 有竞争 / 难；前 10 名点开能看。
 
 const RESEARCH_TASK = 'keyword-research'
 const EXPAND_TASK = 'search-expand'
 
-type Bucket = 'quick_win' | 'ranking' | 'unchecked'
+type Bucket = 'quick_win' | 'ranking' | 'open' | 'mixed' | 'hard' | 'unchecked'
 type Keyword = {
   id: string; keyword: string; status: string; intent?: string; cluster?: string; note?: string; sources?: string
   gsc_impressions?: number; gsc_clicks?: number; gsc_position?: number; gsc_page?: string; search_page_id?: string
   bucket?: Bucket; score?: number; topic_id?: string; seen?: boolean
+  serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_results?: string; serp_error?: string; rank_history?: string
 }
-type Data = { list: Keyword[]; raw: number; raw_sample: string[]; chat_id: string; reviewed_at: string; gsc_at: string }
+type SerpRow = { p: number; domain: string; kind: string; title: string; url: string }
+type Rank = { d: string; p: number; s: 'gsc' | 'serp' }
+type Data = { list: Keyword[]; raw: number; raw_sample: string[]; serp_pending: number; chat_id: string; reviewed_at: string; gsc_at: string }
 type Filter = Bucket | 'targeting' | 'dismissed'
 
 const INTENT: Record<string, Tone> = { buy: 'primary', compare: 'warn', research: 'default', other: 'default' }
 const num = (x?: number) => (x ?? 0).toLocaleString(numLocale())
 const pathOf = (u: string) => u.replace(/^https?:\/\/[^/]+/, '') || '/'
+const FILTERS: Filter[] = ['quick_win', 'open', 'mixed', 'unchecked', 'hard', 'ranking', 'targeting', 'dismissed']
+const KIND_TONE: Record<string, Tone> = { ours: 'ok', competitor: 'bad', b2b: 'primary', forum: 'primary', social: 'primary', marketplace: 'warn', reference: 'warn' }
+function parse<T>(s: string | undefined, fallback: T): T {
+  try {
+    return s ? (JSON.parse(s) as T) : fallback
+  } catch {
+    return fallback
+  }
+}
 
 const filterOf = (k: Keyword): Filter => (k.status === 'dismissed' ? 'dismissed' : k.status === 'targeting' ? 'targeting' : k.bucket ?? 'unchecked')
 
@@ -59,11 +72,11 @@ export default function Keywords({ channel, rev, onGo }: { channel: Channel; rev
   }, [rev])
 
   const counts = useMemo(() => {
-    const c: Record<Filter, number> = { quick_win: 0, unchecked: 0, ranking: 0, targeting: 0, dismissed: 0 }
+    const c = Object.fromEntries(FILTERS.map((f) => [f, 0])) as Record<Filter, number>
     for (const k of data?.list ?? []) c[filterOf(k)]++
     return c
   }, [data])
-  const active: Filter = filter || (counts.quick_win ? 'quick_win' : counts.targeting ? 'targeting' : 'unchecked')
+  const active: Filter = filter || (FILTERS.find((f) => counts[f] && f !== 'dismissed') ?? 'unchecked')
   const shown = (data?.list ?? []).filter((k) => filterOf(k) === active)
   const groups = useMemo(() => {
     const m = new Map<string, Keyword[]>()
@@ -104,6 +117,11 @@ export default function Keywords({ channel, rev, onGo }: { channel: Channel; rev
                 <MessageCircle /> {tr('keywords.continue_chat')}
               </Button>
             )}
+            {data.serp_pending > 0 && (
+              <RunButton inline watch fn="keywords.serp" input={{ channel_id: channel.id }} onDone={load} variant="ghost" icon={SearchCheck}>
+                {tr('keywords.serp_run', { n: Math.min(20, data.serp_pending) })}
+              </RunButton>
+            )}
             {gsc && data.list.length > 0 && (
               <RunButton inline fn="keywords.refresh" input={{ channel_id: channel.id, manual: true }} onDone={load} variant="ghost" icon={RefreshCw}>
                 {tr('keywords.refresh')}
@@ -135,7 +153,7 @@ export default function Keywords({ channel, rev, onGo }: { channel: Channel; rev
           <Segmented
             value={active}
             onChange={(v) => setFilter(v)}
-            options={(['quick_win', 'unchecked', 'ranking', 'targeting', 'dismissed'] as Filter[]).map((f) => ({ value: f, label: `${tr(`keywords.f_${f}`)} ${counts[f]}` }))}
+            options={FILTERS.filter((f) => counts[f] || f === active || f === 'quick_win' || f === 'unchecked').map((f) => ({ value: f, label: `${tr(`keywords.f_${f}`)} ${counts[f]}` }))}
           />
           <p className="text-xs text-muted-foreground">{tr(`keywords.f_${active}_hint`)}</p>
           {shown.length === 0 ? (
@@ -159,7 +177,7 @@ function Group({ cluster, list, fresh, filter, channel, onChanged, onGo }: { clu
         <span className="text-[13px] font-semibold">{cluster}</span>
         <span className="text-[11px] text-muted-foreground tabular-nums">{tr('keywords.group_meta', { n: list.length, imp: num(imp) })}</span>
         <span className="flex-1" />
-        {filter !== 'dismissed' && filter !== 'ranking' && open.length > 0 && (
+        {filter !== 'dismissed' && filter !== 'ranking' && filter !== 'hard' && open.length > 0 && (
           <RunButton inline fn="keywords.toTopic" input={{ ids: open.map((k) => k.id) }} onDone={onChanged} variant="ghost" icon={ListPlus}>
             {tr('keywords.to_topic')}
           </RunButton>
@@ -206,6 +224,7 @@ function Row({ k, isNew, channel, onChanged, onGo }: { k: Keyword; isNew: boolea
             <span>{tr('keywords.no_rank')}</span>
           )}
         </div>
+        <SerpLine k={k} />
         {k.note && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{k.note}</p>}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1">
@@ -236,6 +255,49 @@ function AddKeywords({ channel, onAdded }: { channel: Channel; onAdded: () => vo
       <RunButton inline fn="keywords.add" input={{ channel_id: channel.id, keywords: text }} onDone={() => (setText(''), onAdded())} variant="outline" icon={Plus}>
         {tr('keywords.add')}
       </RunButton>
+    </div>
+  )
+}
+
+/** Google 结果页的事实：我们排第几、前 10 里弱位置和强站各几个、在做的词的排名变化；点开看前 10 名 */
+function SerpLine({ k }: { k: Keyword }) {
+  const [open, setOpen] = useState(false)
+  const top = parse<SerpRow[]>(k.serp_results, [])
+  const hist = parse<Rank[]>(k.rank_history, [])
+  const trend = hist.length >= 2 ? [hist[hist.length - 2], hist[hist.length - 1]] : null
+  const pos = (r: Rank) => (r.p ? String(r.p) : '10+')
+  if (!k.serp_at && !trend && !k.serp_error) return null
+  return (
+    <div className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+        {k.serp_at && (
+          <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="inline-flex cursor-pointer items-center gap-1 hover:text-primary-text">
+            {tr('keywords.serp_line', { pos: k.serp_position ? String(k.serp_position) : tr('keywords.serp_not_top'), weak: k.serp_weak ?? 0, strong: k.serp_strong ?? 0 })}
+            <ChevronDown className={cx('size-3 transition-transform', open && 'rotate-180')} />
+          </button>
+        )}
+        {trend && (
+          <span className="inline-flex items-center gap-0.5" title={hist.map((r) => `${r.d} ${pos(r)}`).join('\n')}>
+            {tr('keywords.rank_trend', { from: pos(trend[0]), to: pos(trend[1]) })}
+            {(trend[1].p || 99) < (trend[0].p || 99) ? <ArrowUp className="size-3 text-emerald-600" /> : (trend[1].p || 99) > (trend[0].p || 99) ? <ArrowDown className="size-3 text-destructive" /> : null}
+          </span>
+        )}
+        {k.serp_at && <span className="text-muted-foreground/70">{tr('keywords.serp_at', { t: fmtTime(k.serp_at) })}</span>}
+        {k.serp_error && <span className="text-destructive">{k.serp_error}</span>}
+      </div>
+      {open && top.length > 0 && (
+        <ol className="mt-1.5 space-y-1 rounded-lg border border-border bg-muted/40 p-2">
+          {top.map((r) => (
+            <li key={r.p} className="flex min-w-0 items-center gap-2">
+              <span className="w-4 shrink-0 text-right">{r.p}</span>
+              <Badge tone={KIND_TONE[r.kind] ?? 'default'}>{tr(`keywords.kind_${r.kind}`)}</Badge>
+              <a href={r.url} target="_blank" rel="noreferrer" className="min-w-0 truncate hover:text-primary-text" title={r.title}>
+                <span className="font-medium text-foreground">{r.domain}</span> · {r.title}
+              </a>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   )
 }
