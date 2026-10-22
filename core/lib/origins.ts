@@ -57,3 +57,39 @@ export function originsOf(t: Record<string, any> | null | undefined): Origin[] {
 export function topicsFrom<T extends Record<string, any>>(topics: T[], type: string, id: string): T[] {
   return topics.filter((t) => originsOf(t).some((o) => o.type === type && o.id === id))
 }
+
+/** 内容列表「来源」筛选的几类：选题出处归一下，加上改写、没有选题直接写的 */
+export type ContentOrigin = 'geo' | 'keyword' | 'search' | 'competitor' | 'inspiration' | 'plan' | 'topic' | 'rewrite' | 'direct'
+export const CONTENT_ORIGINS: ContentOrigin[] = ['geo', 'keyword', 'search', 'competitor', 'inspiration', 'plan', 'topic', 'rewrite', 'direct']
+
+const ORIGIN_KIND: Record<string, ContentOrigin> = {
+  geo_question: 'geo', keyword: 'keyword', search_query: 'search', competitor_page: 'competitor', competitor: 'competitor',
+  inspiration_source: 'inspiration', opportunity: 'plan', campaign: 'plan', marketing_plan: 'plan',
+}
+// 没记 origins 的老选题按 topics.source 归
+const SOURCE_KIND: Record<string, ContentOrigin> = { geo: 'geo', keyword: 'keyword', search: 'search', gsc: 'search', competitor: 'competitor', research: 'inspiration', research_sources: 'inspiration', inspiration: 'inspiration', seo: 'keyword', marketing: 'plan', campaign: 'plan' }
+
+/**
+ * 一条内容（选题、文章，产品运营还有营销计划）属于哪几类来源，读的时候往回追，不存字段：
+ * 改写、复制的顺着 source_id 找到原文，算「改写」也算原文的来源；有选题看它的出处，出处都没记就是「选题」（AI 出的、手动加的）；
+ * 没有选题、没有计划的是「直接写」（对话里直接写的、导入的）。一个选题有几个出处就属于几类。
+ */
+export function contentOrigins(entry: { article?: any; topic?: any; plan?: any }, articles: any[], topics: any[]): ContentOrigin[] {
+  const kinds = new Set<ContentOrigin>()
+  let root = entry.article
+  for (let i = 0; root?.source_id && i < 10; i++) {
+    kinds.add('rewrite')
+    const up = articles.find((a) => a.id === root.source_id)
+    if (!up) break
+    root = up
+  }
+  const topic = (root && root !== entry.article ? topics.find((t) => t.id === root.topic_id) : undefined) || entry.topic || (root?.topic_id ? topics.find((t) => t.id === root.topic_id) : undefined)
+  if (entry.plan || root?.marketing_plan_id) kinds.add('plan')
+  if (topic) {
+    const before = kinds.size
+    for (const o of originsOf(topic)) if (ORIGIN_KIND[o.type]) kinds.add(ORIGIN_KIND[o.type])
+    if (SOURCE_KIND[topic.source]) kinds.add(SOURCE_KIND[topic.source])
+    if (kinds.size === before && !kinds.has('plan')) kinds.add('topic')
+  } else if (!kinds.has('plan')) kinds.add('direct')
+  return CONTENT_ORIGINS.filter((k) => kinds.has(k))
+}

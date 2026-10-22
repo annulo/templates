@@ -15,6 +15,7 @@ import { useProductData } from '../ProductFields'
 import { contentEntries, entryAccountIds, entryMetrics, legacyContentWorkspace, reviewWorkspace, type ContentData, type ContentEntry, type ContentStage, type ContentWorkspace } from '../../lib/contentWorkspace'
 import { dbCreate, dbPatch, isSite, runLocal } from '../../lib/shuttle'
 import { isEn, tr } from '../../lib/i18n'
+import { CONTENT_ORIGINS, contentOrigins, type ContentOrigin } from '../../lib/origins'
 import type { Ctx } from './types'
 
 export const w = (key: string, vars?: Record<string, unknown>) => tr('workspace.' + key, vars)
@@ -44,7 +45,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
   const stage = params.stage || (['draft', 'published'].includes(params.status) ? params.status : 'all')
   const [query, setQuery] = useState(''), [form, setForm] = useState<NewContent | null>(null)
   const [shown, setShown] = useState(PAGE)
-  useEffect(() => setShown(PAGE), [params.ownership, params.stage, params.account, params.sort, query])
+  useEffect(() => setShown(PAGE), [params.ownership, params.stage, params.account, params.origin, params.sort, query])
   const [busy, setBusy] = useState(false), [saveError, setSaveError] = useState(''), [requirements, setRequirements] = useState(false)
   const [rewrite, setRewrite] = useState<any>(null), [assignment, setAssignment] = useState<ContentEntry | null>(null), [assignmentScope, setAssignmentScope] = useState<ContentWorkspace>(workspace)
   const writer = useTask('write-article', reload), rewriter = useTask(REWRITE_TASK, reload)
@@ -53,7 +54,11 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
   const metrics = new Map(workspace === 'social' && data ? entries.map(e => [e.key, entryMetrics(e, data)] as const) : [])
   const sort = workspace === 'social' && ['views', 'gain'].includes(params.sort) ? params.sort : 'recent'
   const score = (e: ContentEntry) => { const m = metrics.get(e.key); return !m ? -1 : sort === 'views' ? m.views : m.gain ? m.gain.views : -1 }
+  // 来源（选题出处、改写、直接写）读的时候往回追，见 core/lib/origins.ts 的 contentOrigins
+  const origins = new Map(data ? entries.map(e => [e.key, e.post ? [] : contentOrigins(e, data.articles, data.topics)] as const) : [])
+  const origin = CONTENT_ORIGINS.includes(params.origin as ContentOrigin) ? params.origin as ContentOrigin : ''
   const rows = base.filter(e => (stage === 'all' || e.stage === stage)
+    && (!origin || origins.get(e.key)?.includes(origin))
     && (!params.account || entryAccountIds(e, data!, workspace).includes(params.account))
     && (!query.trim() || [e.title, e.topic?.angle, e.plan?.notes, e.article?.body, e.post?.body].join(' ').toLowerCase().includes(query.trim().toLowerCase())))
   if (sort !== 'recent') rows.sort((a, b) => score(b) - score(a))
@@ -91,7 +96,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
         await dbPatch('topics', topic.id, { article_id: article.id, status: 'done' })
         setParam('article', article.id)
       }
-      setParam('ownership', ''); setParam('stage', 'all'); setParam('account', ''); setQuery('')
+      setParam('ownership', ''); setParam('stage', 'all'); setParam('account', ''); setParam('origin', ''); setQuery('')
       setForm(null); reload()
     } catch (e) { setSaveError((e as Error).message) } finally { setBusy(false) }
   }
@@ -149,12 +154,14 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
         {reviewing ? <GrowthReviews ctx={ctx} workspace="social" /> : <>
         {params.ownership === 'unassigned' && <Notice>{w('unassigned_note')}</Notice>}
         {params.ownership === 'platform' && <Notice>{w('platform_note')}</Notice>}
-        <div className={cx('grid grid-cols-1 gap-3', workspace === 'social' ? 'sm:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_160px_176px_176px]' : 'sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_176px_192px]')}>
-          <input type="search" aria-label={w('search')} placeholder={w('search')} value={query} onChange={e => setQuery(e.target.value)} className={cx(inputCls, 'min-w-0 xl:col-span-1', workspace === 'social' ? 'sm:col-span-3' : 'sm:col-span-2')} />
+        <div className={cx('grid grid-cols-1 gap-3', workspace === 'social' ? 'sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_150px_160px_160px_150px]' : 'sm:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_160px_176px_176px]')}>
+          <input type="search" aria-label={w('search')} placeholder={w('search')} value={query} onChange={e => setQuery(e.target.value)} className={cx(inputCls, 'min-w-0 xl:col-span-1', workspace === 'social' ? 'sm:col-span-2' : 'sm:col-span-3')} />
           <Select ariaLabel={w('stage_filter')} value={stage} onChange={v => setParam('stage', v)} options={[
             { value: 'all', label: w('all_stages') }, ...stages.map(s => ({ value: s, label: `${w('stage_' + s)} ${base.filter(e => e.stage === s).length}` }))]} />
           <Select ariaLabel={w('account_filter')} value={params.account || ''} onChange={v => setParam('account', v)} options={[
             { value: '', label: w(workspace === 'website' ? 'all_sites' : 'all_accounts') }, ...accounts.map(c => ({ value: c.id, label: c.name }))]} />
+          <Select ariaLabel={tr('origin.filter')} value={origin} onChange={v => setParam('origin', v)} options={[
+            { value: '', label: tr('origin.filter_all') }, ...CONTENT_ORIGINS.map(k => ({ k, n: base.filter(e => origins.get(e.key)?.includes(k)).length })).filter(o => o.n || o.k === origin).map(o => ({ value: o.k, label: `${tr('origin.k_' + o.k)} ${o.n}` }))]} />
           {workspace === 'social' && <Select ariaLabel={w('sort')} value={sort} onChange={v => setParam('sort', v === 'recent' ? '' : v)} options={[
             { value: 'recent', label: w('sort_recent') }, { value: 'views', label: w('sort_views') }, { value: 'gain', label: w('sort_gain') }]} />}
         </div>
@@ -165,6 +172,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <TypeBadge type={entry.article?.type || entry.topic?.content_type || entry.plan?.content_type || (entry.post?.video ? 'video' : workspace === 'website' ? 'article' : 'post')} />
                 <span>{destination(entry)}</span>
+                {origins.get(entry.key)?.filter(k => k !== 'topic' && k !== 'direct').map(k => <span key={k}>{tr('origin.k_' + k)}</span>)}
                 {entry.post && <span>{w('from_platform')}</span>}
                 {entry.plan?.content_id && <span>{entry.plan.content_id}</span>}
                 {entry.workspaces.length > 1 && <span>{w('shared_content')}</span>}
