@@ -124,6 +124,10 @@
         "type": "string",
         "description": "这条内容的文件夹，相对项目工作目录（ctx.fs.root）的路径，比如「内容/宣传片」；local/folder.ts 建、改名时维护"
       },
+      "folder_id": {
+        "type": "string",
+        "description": "这条内容的产物文件夹 id（Annulo 59 起的 ctx.folders）：文件夹被挪了、改了名也找得到，用户电脑上的助手按它同步（annulo folder pull / push）；老 Annulo 上是空的，只用 folder"
+      },
       "chat_id": {
         "type": "string",
         "description": "最近一次在对话里改这条内容的文件夹的对话 id（folder.create / write 时记 ctx.chat_id），页面上「继续对话」回到它"

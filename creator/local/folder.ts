@@ -5,6 +5,9 @@ import { check } from '../plugins/social/local/social'
 
 // 内容文件夹（本机函数，Annulo 在用户电脑上执行，不经过模型；设计见 docs/content-model.md）：
 // 每条内容一个文件夹，在项目工作目录（ctx.fs.root，本机是 ~/Annulo/<项目名>）的「内容/」下，文章表 folder 字段记它相对工作目录的路径。
+// 新版 Annulo（59 起）上它是一个产物文件夹（ctx.folders）：带 id（folder_id），挪了、改了名也找得到；团队服务器上，
+// 用户电脑上的 Claude Code 按文件夹拉下来做、做完推回去（annulo folder pull / push）。文件夹里的 .annuloignore 列不同步的中间产物
+// （草稿视频、草稿音频、渲染缓存放 草稿/），建文件夹时写一份默认的。老 Annulo 没有 ctx.folders，只用路径，照旧能用。
 // 稿子、脚本、文案、视频、参考都是里面的文件，可以分目录；页面列出、编辑它们，助手在对话里直接读写这个目录。
 // 页面预览图片、视频用 /_annulo/work-files/<root 下的路径>（components/Folder.tsx），不经过这里。
 //
@@ -45,9 +48,37 @@ function rel(ctx: any, p?: string) {
   return s
 }
 
+// 默认的 .annuloignore：做视频、配音时的中间产物不同步到服务器、不给同事（只留在做的人电脑上）
+const IGNORE = `# 这个文件夹里不同步的文件（写法照 .gitignore）：做的过程中的中间产物，只留在做的人电脑上
+# 草稿视频、草稿音频、试渲染的片段放进 草稿/；成片、定稿的文案放在外面
+草稿/
+drafts/
+cache/
+*.tmp
+`
+
+/** 新版 Annulo：把这条内容的文件夹登记成产物文件夹（有 id），第一次写一份默认的 .annuloignore；老版本什么都不做 */
+function asArtifact(ctx: any, a: any, dir: string) {
+  if (!ctx.folders || !dir) return
+  const f = ctx.folders.create(dir, { name: a.title || '' })
+  if (f?.id && f.id !== a.folder_id) {
+    ctx.db.update('articles', a.id, { folder_id: f.id })
+    a.folder_id = f.id
+  }
+  if (!ctx.fs.stat(`${dir}/.annuloignore`)) ctx.fs.write(`${dir}/.annuloignore`, IGNORE)
+}
+
 /** 这条内容的文件夹（相对工作目录）；create 时没有就起一个名字（内容的标题，重名的加 id 后四位） */
 function folderOf(ctx: any, a: any, create: boolean) {
   let dir = String(a.folder ?? '')
+  // 产物文件夹按 id 找：被人挪了、改了名（在别的电脑上、页面外面）也跟得上
+  if (a.folder_id && ctx.folders) {
+    const f = ctx.folders.get(a.folder_id)
+    if (f && f.path !== dir) {
+      ctx.db.update('articles', a.id, { folder: f.path })
+      a.folder = dir = f.path
+    }
+  }
   if (dir || !create) return dir
   const parent = L(ctx, '内容', 'Content')
   let name = safeName(a.title || '') || a.id
@@ -77,8 +108,10 @@ export function create(input: { article_id: string }, ctx: any) {
   ctx.fs.mkdir(dir)
   // 稿子：最外层的 稿子.md（英文界面 brief.md），老项目搬过来的、用户改了名的都不再建
   if (!ctx.fs.list(dir).length) ctx.fs.write(`${dir}/${L(ctx, '稿子.md', 'brief.md')}`, '')
+  asArtifact(ctx, a, dir)
   rememberChat(ctx, a.id)
-  return { dir: `${ctx.fs.root}/${dir}`, path: dir }
+  // folder_id：用户电脑上的助手用它把文件夹拉下来（dir 是服务器上的位置，那台电脑上没有；工作目录在对象存储里时是 s3://…）
+  return { dir: `${ctx.fs.root}/${dir}`, path: dir, folder_id: a.folder_id || '', local: ctx.fs.kind !== 's3' }
 }
 
 export function list(input: { article_id: string }, ctx: any) {
@@ -159,7 +192,8 @@ export function retitle(input: { article_id: string; title: string }, ctx: any) 
   if (ctx.fs && dir && old && (base === old || base === `${old} ${a.id.slice(-4)}`) && safeName(title)) {
     const to = `${dir.slice(0, dir.lastIndexOf('/') + 1)}${safeName(title)}`
     if (to !== dir && !ctx.fs.stat(to) && ctx.fs.stat(dir)) {
-      ctx.fs.move(dir, to)
+      if (a.folder_id && ctx.folders) ctx.folders.move(a.folder_id, to) // 产物文件夹：id 不变，索引跟着改
+      else ctx.fs.move(dir, to)
       patch.folder = to
     }
   }

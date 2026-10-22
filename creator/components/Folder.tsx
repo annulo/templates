@@ -103,7 +103,8 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
   const isOpen = (p: string) => openDirs[p] ?? (sel === p || sel.startsWith(p + '/'))
   const selected = entries.find((e) => e.path === sel)
   // 网格：不分目录，所有文件铺平；稿子排第一，其余最近改的在前
-  const files = useMemo(() => entries.filter((e) => !e.dir).sort((x, y) => Number(isDraft(y.path)) - Number(isDraft(x.path)) || y.mtime - x.mtime), [entries])
+  // 中间产物（草稿/、drafts/ 里的草稿视频、草稿音频，.annuloignore 默认不同步）不进网格，树里还看得到
+  const files = useMemo(() => entries.filter((e) => !e.dir && !/^(草稿|drafts)\//.test(e.path)).sort((x, y) => Number(isDraft(y.path)) - Number(isDraft(x.path)) || y.mtime - x.mtime), [entries])
   // 只有一个文件：打开时直接打开它。只自动选一次：用户按返回退回全部文件后不能又被选回去，不然退不出来
   const only = files.length === 1 ? files[0].path : ''
   // 网格里每一层（全部文件、某个目录）各记各的滚动位置：点开稿子滚到底再返回，回到点开它时的地方，不停在网格底部；
