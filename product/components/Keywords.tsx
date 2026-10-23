@@ -19,18 +19,20 @@ type Keyword = {
   id: string; keyword: string; status: string; intent?: string; cluster?: string; note?: string; sources?: string
   gsc_impressions?: number; gsc_clicks?: number; gsc_position?: number; gsc_page?: string; search_page_id?: string
   bucket?: Bucket; score?: number; topic_id?: string; seen?: boolean
-  serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_results?: string; serp_error?: string; rank_history?: string
+  serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_competitors?: string; serp_results?: string; serp_error?: string; rank_history?: string
   target_page?: string; live_at?: string; review_verdict?: string; review_summary?: string
 }
 type SerpRow = { p: number; domain: string; kind: string; title: string; url: string }
 type Rank = { d: string; p: number; s: 'gsc' | 'serp' }
 type Data = { list: Keyword[]; raw: number; raw_sample: string[]; serp_pending: number; chat_id: string; reviewed_at: string; gsc_at: string }
-type Filter = Bucket | 'targeting' | 'dismissed'
+// rival：竞品在前 10、我们不在（和分桶交叉，单独一类，和 _keywords.ts 的 rivalOnly 同一个口径）
+type Filter = Bucket | 'rival' | 'targeting' | 'dismissed'
 
 const INTENT: Record<string, Tone> = { buy: 'primary', compare: 'warn', research: 'default', other: 'default' }
 const num = (x?: number) => (x ?? 0).toLocaleString(numLocale())
 const pathOf = (u: string) => u.replace(/^https?:\/\/[^/]+/, '') || '/'
-const FILTERS: Filter[] = ['quick_win', 'open', 'mixed', 'unchecked', 'hard', 'ranking', 'targeting', 'dismissed']
+const FILTERS: Filter[] = ['quick_win', 'rival', 'open', 'mixed', 'unchecked', 'hard', 'ranking', 'targeting', 'dismissed']
+const rivalOnly = (k: Keyword) => !!k.serp_at && !!k.serp_competitors && k.status !== 'dismissed' && !k.serp_position && !(k.gsc_position && k.gsc_position <= 10)
 const KIND_TONE: Record<string, Tone> = { ours: 'ok', competitor: 'bad', b2b: 'primary', forum: 'primary', social: 'primary', marketplace: 'warn', reference: 'warn' }
 function parse<T>(s: string | undefined, fallback: T): T {
   try {
@@ -74,11 +76,14 @@ export default function Keywords({ channel, rev, onGo }: { channel: Channel; rev
 
   const counts = useMemo(() => {
     const c = Object.fromEntries(FILTERS.map((f) => [f, 0])) as Record<Filter, number>
-    for (const k of data?.list ?? []) c[filterOf(k)]++
+    for (const k of data?.list ?? []) {
+      c[filterOf(k)]++
+      if (rivalOnly(k)) c.rival++
+    }
     return c
   }, [data])
   const active: Filter = filter || (FILTERS.find((f) => counts[f] && f !== 'dismissed') ?? 'unchecked')
-  const shown = (data?.list ?? []).filter((k) => filterOf(k) === active)
+  const shown = (data?.list ?? []).filter((k) => (active === 'rival' ? rivalOnly(k) : filterOf(k) === active))
   const groups = useMemo(() => {
     const m = new Map<string, Keyword[]>()
     for (const k of shown) m.set(k.cluster || tr('keywords.no_cluster'), [...(m.get(k.cluster || tr('keywords.no_cluster')) ?? []), k])
@@ -275,6 +280,7 @@ function SerpLine({ k }: { k: Keyword }) {
         {k.serp_at && (
           <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="inline-flex cursor-pointer items-center gap-1 hover:text-primary-text">
             {tr('keywords.serp_line', { pos: k.serp_position ? String(k.serp_position) : tr('keywords.serp_not_top'), weak: k.serp_weak ?? 0, strong: k.serp_strong ?? 0 })}
+            {k.serp_competitors && <span className="text-destructive">{tr('keywords.serp_rivals', { d: k.serp_competitors.split(',').join('、') })}</span>}
             <ChevronDown className={cx('size-3 transition-transform', open && 'rotate-180')} />
           </button>
         )}

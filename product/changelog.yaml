@@ -1,3 +1,6 @@
+- version: 0.15.9
+  zh: "关键词能从竞品的产品挖词，查 Google 结果页时单独列出竞品在排、我们不在的词。"
+  en: "Keywords can be mined from competitors' products, and Google result checks list the keywords where competitors rank and you don't."
 - version: 0.15.8
   zh: "网站和自媒体内容能按来源筛选：AI 搜索、SEO 关键词、谷歌搜索词、灵感、运营计划、改写或直接写。"
   en: "Website and social content can be filtered by origin: AI search, SEO keyword, Google query, inspiration, plan, rewrite or written directly."

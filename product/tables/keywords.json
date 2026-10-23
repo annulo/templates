@@ -22,7 +22,7 @@
       },
       "sources": {
         "type": "string",
-        "description": "从哪来，逗号分隔：suggest（搜索引擎下拉联想）/ gsc（本站已有曝光的搜索词）/ agent（助手补的）/ manual（用户加的）"
+        "description": "从哪来，逗号分隔：suggest（搜索引擎下拉联想）/ gsc（本站已有曝光的搜索词）/ agent（助手补的）/ competitor（从竞品的产品词扩出来的）/ manual（用户加的）"
       },
       "seed": {
         "type": "string",
@@ -99,6 +99,10 @@
       "serp_strong": {
         "type": "number",
         "description": "前 10 里强站的个数：零售电商、百科"
+      },
+      "serp_competitors": {
+        "type": "string",
+        "description": "前 10 里在盯的竞品域名，逗号分隔（竞品在排、我们不在的词在页面上单独列出来）"
       },
       "serp_results": {
         "type": "string",

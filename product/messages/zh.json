@@ -735,7 +735,10 @@
     "verdict_better": "变好了",
     "verdict_flat": "没变化",
     "verdict_worse": "变差了",
-    "verdict_no_data": "没数据"
+    "verdict_no_data": "没数据",
+    "f_rival": "竞品在排",
+    "f_rival_hint": "查 Google 结果页时，你在盯的竞品排在前 10、你不在的词：竞品已经证明这些词有人搜、能做，按主题转成选题去追。",
+    "serp_rivals": " · 竞品 {d}"
   },
   "search": {
     "tab_keywords": "关键词",

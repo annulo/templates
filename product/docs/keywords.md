@@ -54,6 +54,15 @@ Bing 的联想和 Google 不完全一样，但「有人这么搜」这个事实�
 - **不放进定时任务**：会在用户屏幕上开 Chrome 窗口，定时任务碰到没允许的网站也直接报错。按钮由用户点。
 - **排名历史**（`rank_history`）：在做的词每次 `refresh`（GSC 有排名时）和 `serp` 各记一条，同一天同一来源只留一条，最多 26 条；页面上显示最近两次的变化。
 
+## 竞品：从竞品挖词，竞品在排、我们不在
+
+竞品是外贸才有的（`competitors` 表、`competitors.pages` 读 sitemap），core 里按「有就用」：
+
+- **从竞品挖词**：`keywords.context` 给出在盯的竞品（`competitors`，没有竞品表就是空的）。任务 `keyword-research` 里助手用 `competitors.pages` 读每家的产品页，
+  从网址和标题挑产品词当种子，`keywords.expand` 带 `seed_source: "competitor"`，扩出来的词来源记 `competitor`。挑词是判断，留给助手；函数不认识竞品的网站结构。
+- **竞品在排、我们不在**：查 Google 结果页时（`serpFacts`）在盯的竞品在前 10 的记进 `serp_competitors`；竞品在、本站不在（GSC 也没排进前 10）的词，页面上单独一类「竞品在排」（`rivalOnly`，和分桶交叉）。
+  外贸增长机会出一条 `keyword_competitor`。竞品已经证明这个词有人搜、能排上去，是最能说服用户去做的事实。
+
 ## 闭环：词 → 页面上线 → 这个词涨没涨
 
 转成选题、补内容之后要能看出这个词有没有因此涨上来，所以挂在已有的「改动复查」上（`_review.ts`、`review.ts`），不另起一套：
