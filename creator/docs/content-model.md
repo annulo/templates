@@ -25,7 +25,7 @@
 - **文案**是名字带「文案」的 `.md`（英文 `copy.md`）：开头 `---` 包住 `title:`、`tags:`，下面是正文或视频简介。
 - **长文**是 Markdown：图片放旁边目录、用相对路径（`![](图/1.png)`），视频写成单独一行的 `<video src width height controls></video>`。页面上用富文本编辑器直接读写 md（官方的 `@tiptap/markdown`，不经过 HTML；`components/rich/mdExtensions.ts` 加了表格、任务列表，改了转义和表格的写法，让读进来再存回去尽量不改原文），能切到源码。开头的 `---` 头不进编辑器，原样留着。
 - **产物**就是文件夹里的文件，不再是资料库里带 `article_id` 的一条。资料库只放几条内容都会用到的素材。
-- **内容没有类型**，**发布是挑选**：点「发布」挑这次发成什么（图文 / 视频 / 长文），文字从文件夹里挑一份 `.md`（标题、话题当场能改），图文挑一组图、视频挑一个视频（文件夹里的直接点选，也能从资料库选），再选账号。打开时按文件夹里有什么猜发成什么（有视频发视频，有图发图文，否则长文）；挑了文案，同一个目录里的图、视频自动配上（自己点过的不动）。每个账号新建一条帖子，**存什么发什么**：排期到点照帖子发，不再按文章重新生成。同一条内容可以发好几次（A、B 两支各发一次），没有「正在使用」。
+- **内容没有类型**，**发布是挑选**：点「发布」挑这次发成什么（图文 / 视频 / 长文），文字从文件夹里挑一份 `.md`（标题、话题当场能改），图文挑一组图、视频挑一个视频（文件夹里的直接点选，也能从资料库选），再选账号。打开时按文件夹里有什么猜发成什么（有视频发视频，有图发图文，否则长文）；挑了文案，同一个目录里的图、视频自动配上（自己点过的不动）。每个账号新建一条帖子，**存什么发什么**：排期到点照帖子发，不再按文章重新生成。帖子里记的是文件夹里那个文件的引用（不复制一份），排期以后文件改过了、或者找不到了，到点不发，帖子标成失败写明原因，用户看过点「重发」发现在的版本。同一条内容可以发好几次（A、B 两支各发一次），没有「正在使用」。
 - **发布记录**：每条显示这次发的是什么（第一张图或视频、标题），阅读、点赞、评论、收藏、分享一个个列出来，能马上「更新数据」（重新采集这个账号）。
 - **交给 AI 只有一个入口**：顶上的「交给 AI」。文件夹那排不放「继续对话」「在对话里改」（和它重复）；要接着改，在右侧对话历史里回到那段对话，或者引用这条内容新开一段。在对话里跑 `folder.create` / `folder.write` 仍会把对话记到 `articles.chat_id`。
 - 交给 AI「在这条上做」是自媒体自己的任务 `tasks/work-on-content.md`：做出来的都放进文件夹，不 `annulo upload`、不 `assets.add`。
@@ -44,9 +44,9 @@
 
 ## 实现
 
-- **Annulo 原语**（能力版本 46，`internal/localfn/fs.go`、`internal/server/workfiles.go`）：本机函数的 `ctx.fs` 读写项目工作目录（`list / stat / read / write / mkdir / move / trash / copy / toLocal / open`），`ctx.workspace.work_dir` 是这个目录；页面用 `/_annulo/work-files/<路径>` 显示里面的图片、视频。`creator/annulo.json` 的 `min_annulo_api` 是 46。
+- **Annulo 原语**（能力版本 46，`internal/localfn/fs.go`、`internal/server/workfiles.go`）：本机函数的 `ctx.fs` 读写项目工作目录（`list / stat / read / write / mkdir / move / trash / copy / ref / resolve / toLocal / open`），`ctx.workspace.work_dir` 是这个目录；页面用 `/_annulo/work-files/<路径>` 显示里面的图片、视频。能力版本 62 起 `ctx.fs.ref(path)` 给文件的引用（`folder:<文件夹 id>/<路径>#<版本>`，文件夹改名、挪位置也找得到；不在产物文件夹里是 `work:<路径>#<版本>`），`b.upload` 直接认，`ctx.fs.resolve(ref)` 看现在在哪、还在不在、改过没有，页面用 `/_annulo/work-ref/<引用>` 显示。`creator/annulo.json` 的 `min_annulo_api` 是 46：老 Annulo 没有 `ref`，发布时照旧用 `toLocal` 复制成本机文件。
 - **模板**：自媒体的内容中心是从 core 分出来的一份 `components/views/CreatorContent.tsx`（`pages/index.tsx` 用它），文件夹在 `components/Folder.tsx`，本机函数 `local/folder.ts`；编辑器的 md 扩展 `components/rich/mdExtensions.ts`；发布、搬老数据时的 md ↔ HTML 在 `lib/mdhtml.ts`（marked、turndown）。这些包都在 `talizen.config.ts` 的 importMap 里。
-- 发布：`components/FolderPublish.tsx` 挑内容，`folder.publish` 把文件夹里的文件存成本机文件（`local:<name>`），按插件的 `fromContent` 生成每个账号的帖子、过平台检查，页面放进发布队列。发布记录用 core 的 `PublishRecords`（`detailed`）。社媒插件 0.8.3 起排期到点照帖子发。
+- 发布：`components/FolderPublish.tsx` 挑内容，`folder.publish` 把要发的文件夹里的文件记成引用（`ctx.fs.ref`，0.19.0 起；以前是 `toLocal` 复制成 `local:<name>`，发帖的视频因此在 `~/.annulo/files/` 里多一个名字，搬项目时还得认出是同一个文件），资料库的地址原样用，按插件的 `fromContent` 生成每个账号的帖子、过平台检查，页面放进发布队列。发布记录用 core 的 `PublishRecords`（`detailed`）。社媒插件 0.8.3 起排期到点照帖子发，0.8.23 起认引用、到点先查文件（`_source.ts` 的 `fileRefProblems`）。
 
 ## 还没做的
 
