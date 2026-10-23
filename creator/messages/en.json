@@ -2232,7 +2232,11 @@
     "sync_away": "{who} still has {n} files that weren't uploaded ({size}, {time})",
     "sync_show": "Show them",
     "sync_hide": "Hide",
-    "sync_away_hint": "These are unsynced work-in-progress files (draft video, draft audio). To share one, have that computer move it out of the drafts folder and push again."
+    "sync_away_hint": "These are unsynced work-in-progress files (draft video, draft audio). To share one, have that computer move it out of the drafts folder and push again.",
+    "upload": "Upload",
+    "uploading": "Uploading from {machine}…",
+    "upload_failed": "{machine} couldn't upload it: {error}",
+    "missing_desc_server": "The files may still be on your computer (this folder wasn't picked when the project was moved up): click Upload and Annulo on your computer will send this folder up (it has to be on and connected to this server). If it isn't there either, click Rebuild."
   },
   "fpub": {
     "title": "Publish",
