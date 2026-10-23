@@ -138,7 +138,7 @@ test('Google results become facts: our position, weak and strong counts, competi
   const ours = kw.ownDomains('sc-domain:acme.com', 'https://p2.preview.creght.cn/', 'https://www.acme.com/a')
   assert.deepEqual(ours, ['acme.com', 'p2.preview.creght.cn'])
   const f = kw.serpFacts([r(1, 'alibaba.com', 'b2b'), r(2, 'reddit.com', 'forum'), r(3, 'amazon.com', 'marketplace'), r(4, 'rival.com', 'site'), r(5, 'shop.acme.com', 'site')], ours, ['rival.com'])
-  assert.deepEqual([f.serp_position, f.serp_weak, f.serp_strong], [5, 2, 1])
+  assert.deepEqual([f.serp_position, f.serp_weak, f.serp_strong, f.serp_competitors], [5, 2, 1, 'rival.com'])
   assert.deepEqual(JSON.parse(f.serp_results).map((x) => x.kind), ['b2b', 'forum', 'marketplace', 'competitor', 'ours'])
 })
 
@@ -185,4 +185,13 @@ test('publishing an article links its topic keywords; a page change links that p
   assert.equal(track.linkKeywords(ctx, { id: 'ch2', channel_id: 'c1', kind: 'search_content', ref_id: 'sp9', pages: '["https://acme.com/led"]', live_at: '2026-10-02T00:00:00Z' }), 1)
   assert.equal(tables.keywords.find((k) => k.id === 'k3').change_id, 'ch2')
   assert.equal(track.linkKeywords(ctx, { id: 'ch3', channel_id: 'c1', kind: 'issue_fix', ref_id: 'x', pages: '["https://acme.com/led"]', live_at: '2026-10-02T00:00:00Z' }), 0)
+})
+
+test('competitor ranks and we do not', () => {
+  const at = '2026-10-23T00:00:00Z'
+  assert.ok(kw.rivalOnly({ serp_at: at, serp_competitors: 'rival.com', serp_position: 0, status: 'idea' }))
+  assert.ok(!kw.rivalOnly({ serp_at: at, serp_competitors: 'rival.com', serp_position: 6, status: 'idea' }))
+  assert.ok(!kw.rivalOnly({ serp_at: at, serp_competitors: 'rival.com', gsc_position: 8, status: 'idea' }))
+  assert.ok(!kw.rivalOnly({ serp_at: at, serp_competitors: '', status: 'idea' }))
+  assert.ok(!kw.rivalOnly({ serp_at: at, serp_competitors: 'rival.com', status: 'dismissed' }))
 })

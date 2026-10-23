@@ -105,19 +105,21 @@ export function ownDomains(...urls: (string | undefined)[]): string[] {
 }
 
 /**
- * 一次 Google 结果页 → 存进 keywords 的事实：我们排第几、弱位置和强站各几个、前 10 条（类型里本站标 ours、在盯的竞品标 competitor）。
+ * 一次 Google 结果页 → 存进 keywords 的事实：我们排第几、弱位置和强站各几个、在前 10 的竞品域名、前 10 条（类型里本站标 ours、在盯的竞品标 competitor）。
  * results 是参考代码 serp.ts 的结果（带 kind）。
  */
 export function serpFacts(results: { position: number; url: string; domain: string; kind: string; title: string }[], ours: string[], competitors: string[]) {
   let position = 0, weak = 0, strong = 0
+  const rivals: string[] = []
   const top = results.slice(0, 10).map((r) => {
     const kind = sameSite(r.domain, ours) ? 'ours' : sameSite(r.domain, competitors) ? 'competitor' : r.kind
     if (kind === 'ours' && !position) position = r.position
+    if (kind === 'competitor' && !rivals.includes(r.domain)) rivals.push(r.domain)
     if (WEAK_KINDS.includes(kind)) weak++
     if (STRONG_KINDS.includes(kind)) strong++
     return { p: r.position, domain: r.domain, kind, title: String(r.title ?? '').slice(0, 120), url: r.url }
   })
-  return { serp_position: position, serp_weak: weak, serp_strong: strong, serp_results: JSON.stringify(top) }
+  return { serp_position: position, serp_weak: weak, serp_strong: strong, serp_competitors: rivals.join(','), serp_results: JSON.stringify(top) }
 }
 
 /** 排名历史：每天一条（同一天后来的覆盖前面的），最多留 26 条（半年的每周） */
@@ -191,4 +193,10 @@ export function keywordVerdict(before: KwMetrics, after: KwMetrics): '' | 'bette
   if (d >= 2) return 'better'
   if (d <= -2) return 'worse'
   return 'flat'
+}
+
+/** 竞品在排、我们不在：查过 Google 结果页，在盯的竞品在前 10、本站不在（GSC 也没有排进前 10） */
+export function rivalOnly(k: { serp_at?: string; serp_competitors?: string; serp_position?: number; gsc_position?: number; status?: string }): boolean {
+  if (!k.serp_at || !k.serp_competitors || k.status === 'dismissed' || k.status === 'raw') return false
+  return !k.serp_position && !(k.gsc_position && k.gsc_position <= 10)
 }

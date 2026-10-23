@@ -15,6 +15,17 @@ annulo run keywords.expand --input '{"channel_id":"<id>"}'
 `{"channel_id":"<id>","seeds":["…","…"],"modifiers":["…"],"lang":"en","country":"us"}`。
 `lang` / `country` 按写法里的目标市场填（默认英语、美国）；`modifiers` 是拼在每个种子词后面去拉联想的修饰词，写法里给了就照写法传，没给就不传（外贸默认 manufacturer、supplier、wholesale 这类，别的业务默认 best、vs、alternative、pricing 这类）。
 
+**有在盯的竞品时**（第 2 步 `keywords.context` 的 `competitors` 不是空的；这一步可以在第 2 步之后回来做），再从竞品挖一批：竞品卖的产品，买家一定会搜。
+每家竞品读一次它的产品页（没有产品页就读落地页）：
+
+```bash
+annulo run competitors.pages --input '{"id":"<competitors 里的 id>","kind":"product","limit":200}'
+```
+
+从网址的最后一段（slug）和标题里挑出 5~12 个**产品词**（去掉竞品的品牌名、型号编号、颜色尺寸这种变体），和我们的产品对得上的优先，再扩一次：
+`{"channel_id":"<id>","seeds":["…"],"seed_source":"competitor"}`。扩出来的词来源会记成 `competitor`，筛的时候照常判断相不相关。
+用户说「从竞品挖词」时就做这一步；`competitors` 是空的或者没有 `competitors.pages`（不是外贸模板）就跳过，告诉用户先在「竞品」里加几家在盯的。
+
 返回里：`engine` 是联想用的哪个搜索引擎（`google`，访问不了时 `bing`；空的就是两个都访问不了，只有 GSC 的词），`added` 是新加了几个，`raw` 是现在待筛的总数，`gsc_error` 是读 GSC 出的错（没关联 Search Console 时没有排名数据，不影响筛词）。
 
 ## 2. 拿上下文
@@ -24,7 +35,7 @@ annulo run keywords.context --input '{"channel_id":"<id>"}'
 ```
 
 输出里：`raw` 是待筛的词（`gsc_impressions` / `gsc_position` 是本站在 Google 已有的曝光和排名，`seed` 是从哪个种子扩出来的），`raw_total` 比 `raw` 多时分几批做；
-`clusters` 是之前已经归好的主题（同一类的词沿用这些名字），`dismissed` 是之前不要的词（不要再加回来）；`profile`、`products` 是公司和产品，`site_pages` 是本站在 Google 有曝光的页面和它们的搜索词。
+`competitors` 是在盯的竞品（用法见第 1 步），`clusters` 是之前已经归好的主题（同一类的词沿用这些名字），`dismissed` 是之前不要的词（不要再加回来）；`profile`、`products` 是公司和产品，`site_pages` 是本站在 Google 有曝光的页面和它们的搜索词。
 
 ## 3. 怎么筛
 

@@ -1,7 +1,7 @@
 import { L } from './_i18n'
 import { profile } from './_ai'
 import { brandTerms, DAY, isNoise, notConnected, query, ymd } from './_gsc'
-import { bucketOf, gscByKeyword, MODIFIERS, mergeSources, normKey, ownDomains, parseSuggest, pushRank, scoreOf, serpFacts, splitTerms, suggestUrl, usable, type Bucket } from './_keywords'
+import { bucketOf, rivalOnly, gscByKeyword, MODIFIERS, mergeSources, normKey, ownDomains, parseSuggest, pushRank, scoreOf, serpFacts, splitTerms, suggestUrl, usable, type Bucket } from './_keywords'
 import { searchMany } from './serp'
 import { mergeOrigins } from './_origins'
 import { originsJson } from '../lib/origins'
@@ -14,7 +14,7 @@ export const remote = ['expand', 'refresh', 'serp']
 
 // 关键词挖掘：哪些词值得做、能做起来（设计见 docs/keywords.md）。
 //
-//   keywords.expand({ channel_id, seeds?, modifiers?, lang?, country?, max_seeds? })
+//   keywords.expand({ channel_id, seeds?, modifiers?, lang?, country?, max_seeds?, seed_source? })   seed_source: 'competitor' 时种子是竞品的产品词
 //       从种子词扩词：种子默认取项目资料的关键词和产品，每个种子拼上修饰词（外贸默认 manufacturer、supplier…，见 _keywords.ts 的 MODIFIERS）去拉搜索引擎的下拉联想
 //       （先 Google，访问不了换 Bing）；再把本站在 GSC 里已有曝光的非品牌搜索词也加进来。新词 status=raw，等助手筛。连了 GSC 顺手 refresh
 //   keywords.refresh({ channel_id?, manual? })   按 GSC 最近 28 天更新每个词的曝光、排名、曝光最多的页面，按规则分桶（定时任务每周一次）
@@ -37,7 +37,7 @@ type Keyword = {
   status?: string; intent?: string; cluster?: string; note?: string; target_page?: string
   gsc_impressions?: number; gsc_clicks?: number; gsc_position?: number; gsc_page?: string; search_page_id?: string; gsc_at?: string
   bucket?: Bucket; score?: number; topic_id?: string; chat_id?: string; seen?: boolean; created_at?: string; reviewed_at?: string
-  serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_results?: string; serp_error?: string; rank_history?: string
+  serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_competitors?: string; serp_results?: string; serp_error?: string; rank_history?: string
 }
 
 const WINDOW = 28
@@ -98,7 +98,7 @@ function modifiersOf(given: string[] | string | undefined, lang: string, ctx: an
   return MODIFIERS[trade ? 'trade' : 'general'][lang.startsWith('zh') ? 'zh' : 'en']
 }
 
-export async function expand(input: { channel_id?: string; seeds?: string[] | string; modifiers?: string[] | string; lang?: string; country?: string; max_seeds?: number }, ctx: any) {
+export async function expand(input: { channel_id?: string; seeds?: string[] | string; modifiers?: string[] | string; lang?: string; country?: string; max_seeds?: number; seed_source?: string }, ctx: any) {
   const ch = channelOf(ctx, input?.channel_id)
   const lang = String(input?.lang || 'en').toLowerCase()
   const country = String(input?.country || 'us').toLowerCase()
@@ -120,6 +120,8 @@ export async function expand(input: { channel_id?: string; seeds?: string[] | st
     else found.set(k, { keyword: kw.trim(), seed, sources: source })
   }
 
+  // 种子来自竞品的产品、分类页时（助手按任务从 competitors.pages 挑的），扩出来的词来源记 competitor
+  const suggestSource = input?.seed_source === 'competitor' ? 'suggest,competitor' : 'suggest'
   // 1. 下拉联想：每个种子词本身 + 拼上修饰词。先用 Google 试第一条，访问不了（国内网络）整批换 Bing
   let engine: 'google' | 'bing' | '' = ''
   if (seeds.length) {
@@ -146,7 +148,7 @@ export async function expand(input: { channel_id?: string; seeds?: string[] | st
         const res = await ctx.fetchAll(part.map((x) => suggestUrl(engine as 'google' | 'bing', x.q, lang, country)))
         for (let j = 0; j < part.length; j++) {
           if (!res[j]?.ok) continue
-          for (const s of parseSuggest(await textOf(res[j]))) take(s, part[j].seed, 'suggest')
+          for (const s of parseSuggest(await textOf(res[j]))) take(s, part[j].seed, suggestSource)
         }
         ctx.progress({ done: Math.min(qs.length, i + BATCH), total: qs.length })
       }
@@ -338,6 +340,7 @@ export function list(input: { channel_id?: string }, ctx: any) {
     list: reviewed,
     raw: raw.length,
     serp_pending: rows.filter((k) => needsSerp(k, Date.now())).length,
+    rival_only: rows.filter(rivalOnly).length,
     raw_sample: raw.sort((a, b) => (b.gsc_impressions ?? 0) - (a.gsc_impressions ?? 0)).slice(0, 30).map((k) => k.keyword),
     chat_id: last?.chat_id ?? '',
     reviewed_at: last?.reviewed_at ?? '',
@@ -361,8 +364,14 @@ export function context(input: { channel_id?: string; limit?: number }, ctx: any
     pages = ctx.db.query('search_pages', { where: { channel_id: ch.id }, limit: 1000 }).list
   } catch {}
   const p = profile(ctx)
+  // 在盯的竞品（外贸才有竞品表，没有就是空的）：助手可以读它们的产品、分类页当种子词
+  let competitors: { id: string; name: string; host: string }[] = []
+  try {
+    competitors = ctx.db.query('competitors', { where: { status: 'active' }, limit: 50 }).list.map((c: any) => ({ id: c.id, name: c.name, host: c.host }))
+  } catch {}
   return {
     channel: { id: ch.id, name: ch.name, url: ch.preview_url, gsc: gscReady(ch) },
+    competitors,
     raw,
     raw_total: rows.filter((k) => k.status === 'raw').length,
     clusters: [...clusters].map(([name, n]) => ({ name, keywords: n })),

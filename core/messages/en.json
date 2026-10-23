@@ -489,7 +489,10 @@
     "verdict_better": "Better",
     "verdict_flat": "No change",
     "verdict_worse": "Worse",
-    "verdict_no_data": "No data"
+    "verdict_no_data": "No data",
+    "f_rival": "Competitors rank",
+    "f_rival_hint": "Keywords where a competitor you track is in Google's top 10 and you aren't: they've proven people search it and it can be won. Turn a topic into a content idea and go after it.",
+    "serp_rivals": " · competitors {d}"
   },
   "search": {
     "tab_keywords": "Keywords"
