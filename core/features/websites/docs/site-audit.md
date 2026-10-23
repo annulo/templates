@@ -13,3 +13,13 @@
 ## 关键词检查
 
 体检顺带查关键词的页面问题（`_audit_keywords.ts`）：页面的主词没用在标题和 H1 里（`keyword_missing`）、几个页面在抢同一个词（`keyword_cannibal`）。没挖过关键词的项目没有这两项。规则见 `docs/keywords.md`「页面体检」。
+
+## AI 爬虫准入
+
+robots.txt 读到了，再逐个看几个 AI 爬虫（`AI_BOTS`：OAI-SearchBot、ChatGPT-User、PerplexityBot、Claude-SearchBot 是搜索类，GPTBot、ClaudeBot、Google-Extended、Bytespider、CCBot 是训练类），记成一个站点级问题 `ai_crawlers`：
+- 有专门写给这个爬虫的组就用那组，没有就用 `*`；`Disallow: /`（或 `/*`）没有 Allow 算整站禁止，同时放行了部分路径算部分放行；只禁止后台、购物车这类路径不算拦（几乎每个站都这样，不影响 AI 读内容）。
+- 搜索类被整站禁止是 high（AI 搜索时读不到这个站），只部分放行是 medium；只拦了训练类是 low，说明里写「有意拦的可以忽略」。
+- 没有 robots.txt、读不到的不判断（前者等于全放行，后者已经有「无法确认」）。
+- 预览地址不判断（渠道还没发布、用预览地址体检时，或者网址是 `*.preview.*`）：creght 的预览本来就是 `Disallow: /`，第一次本机试的时候就误报成了严重问题。
+
+这是 AI 引用分的第三种分（设计见仓库根目录 `docs/ai-citation-score.md`），这一版只记问题，不单独打 0–100 分：网站检查的总分已经按它扣了。

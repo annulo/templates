@@ -68,6 +68,16 @@ annulo run content.save --input @/tmp/article.json
 
 content.save 报错（比如长文正文是 Markdown、太短，笔记正文带了 HTML）就按报错改了再存。存完回复用户：标题、一句话讲了什么、配了几张图（视频类型说有没有配上视频），最后给出新文章的链接 `[打开「标题」](/?view=content&article=<content.save 返回的 article_id>)`，满意了在文章页点「发布」选网站和账号发出去。
 
+**长文存完先看 AI 引用分**（回复用户之前；图文笔记、视频不用）：
+
+```bash
+annulo run aeo.article --input '{"article_id":"<content.save 返回的 article_id>"}'
+```
+
+`failed` 是整篇没过的项，`weakest` 是最弱的几段（`n` 是第几段，`missing` 是缺什么）。`grade` 是 C、D、F 就照它改一轮，用 `content.update` 存（只传改了的字段）：
+只改点名的段落和没过的项；补不了的（产品目录、企业资料里没有可写的数据，没有可链的页面）就不补，**不为凑分编数据、加无关链接**。改一轮就停，不反复刷分。
+回复里加一句分数（比如「AI 引用分 B 级，82 分」），还差的项说一下为什么没改。
+
 
 ## 产品运营上下文
 

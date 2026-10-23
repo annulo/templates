@@ -47,6 +47,8 @@ annulo run content.update --input @/tmp/article-update.json
 能改的字段：`title`、`summary`、`body`、`tags`（数组），长文还有 `slug`、`keywords`，图文笔记还有 `images`（数组）、`cover_text`，视频还有 `video`、`category`。
 存完回复用户：改了哪几处（一两句），最后给出这篇的链接 `[打开「标题」](/?view=content&article=<article_id>)`。已经发出去的网站和账号不会跟着变，要更新就在文章页再发一次。
 
+长文存完跑一次 `annulo run aeo.article --input '{"article_id":"<article_id>"}'`，回复里带一句现在的 AI 引用分。要求是「按 AI 引用分改」（文章页「交给 AI 改这几处」发来的）时，只改它点名的段落和项，改完再跑一次看分数变了没有；补不了的不编。
+
 
 ## 产品运营上下文
 

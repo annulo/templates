@@ -32,6 +32,7 @@ WordPress 没有预览环境，改了就上线。每个改动先告诉用户改�
    - H1、alt、内容：页面组件；CMS 驱动的内容用 `creght content update`；
    - 结构化数据：metadata 里的 JSON-LD 或 head 注入；
    - sitemap / robots / llms.txt：`sitemap.ts`、`robots.ts`、`llms.ts`（先读 platform-endpoints.md）；
+   - robots.txt 拦了 AI 爬虫（`ai_crawlers`）：搜索类的（OAI-SearchBot、ChatGPT-User、PerplexityBot、Claude-SearchBot）去掉对它们的 `Disallow: /`；只拦了训练类的（GPTBot、ClaudeBot、Google-Extended…）先问用户是不是有意的，是就标 `ignored`；
    - 页面太慢：先找原因（SSR 里请求了慢接口、图片过大），给用户说明，不确定就不改。
 3. `creght push` 只更新预览。把修改涉及的问题 status 改成 `fixing`（`annulo run records.patch --input '{"table":"site_issues","id":"<id>","data":{"status":"fixing"}}'`），告诉用户在渠道的预览地址确认，确认后在「站点体检」页点「确认上线」（**不要自己 publish**）。
 4. 「确认上线」跑的是本机函数 `audit.publish`：发布站点 → 按线上地址再体检一次 → 修好的变成 `fixed` 并自动进「改动复查」（17 天后对比修复前后的搜索点击 / 访问，见 search-console skill），

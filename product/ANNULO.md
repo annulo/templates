@@ -15,6 +15,7 @@
 | 灵感库 | research_sources、reference_creators、content_references；inspiration.list/saveSource/saveCreator/link/importLegacy；整理任务 review-inspiration，出选题传 source_ids |
 | 内容中心、素材、日历 | topics、articles、assets、publications；content.*、publish.prepare |
 | 网站运营 | channels、search_pages、site_issues、site_changes；channels.*、gsc.*、ga4.*、audit.*、review.* |
+| AI 引用分 | 长文好不好被 AI 读懂、引用：按正文现算、不存表（规则 core/local/_aeo.ts），文章页正文下面和发布弹窗里显示；aeo.article；写文章、改文章任务存完长文跑它。网站检查的 ai_crawlers 是 robots.txt 拦没拦 AI 爬虫 |
 | 自媒体 | 插件 social 的账号、帖子、采集与健康数据；social/social.* |
 | 总览与复盘 | today.list、reports.data/save |
 

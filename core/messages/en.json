@@ -562,5 +562,26 @@
     "k_topic": "Topic",
     "k_rewrite": "Rewrite / copy",
     "k_direct": "Written directly"
+  },
+  "aeo": {
+    "title": "AI citation score",
+    "badge": "{grade} · {score}",
+    "summary": "{checks} checks failed, {paras} weak paragraphs",
+    "all_good": "Easy for AI to read and quote",
+    "show": "See what lost points",
+    "hide": "Hide",
+    "hint": "How easily AI can read this article and quote it word for word. Rule-based (no AI model): every item is a fact counted from the body, and the score adds them up. A high score doesn't mean AI will recommend you; that's what the AI search checks measure.",
+    "failed": "Article checks that failed",
+    "weakest": "Weakest paragraphs",
+    "para": "Paragraph {n}",
+    "now": " (now: {value})",
+    "fix": "Ask AI to fix these",
+    "fix_intro": "Improve this article for the AI citation score (now grade {grade}, {score}).",
+    "fix_para": "paragraph {n} lacks: {miss}",
+    "fix_paras": "Weakest paragraphs (counting paragraphs, lists and tables, not headings): {list}.",
+    "fix_checks": "Article checks that failed: {list}.",
+    "fix_rule": "Change only these, leave other paragraphs as they are. Use only data, models and certifications from the product catalog and company files; if they aren't there, leave them out. Never invent anything or add unrelated links for the score. Run aeo.article again when done.",
+    "publish_line": "AI citation score",
+    "publish_low": "AI will find this article hard to read and quote. Close this to see what lost points and ask AI to fix it, or publish anyway."
   }
 }

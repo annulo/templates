@@ -562,5 +562,26 @@
     "k_topic": "选题",
     "k_rewrite": "改写 / 复制",
     "k_direct": "直接写"
+  },
+  "aeo": {
+    "title": "AI 引用分",
+    "badge": "{grade} · {score}",
+    "summary": "{checks} 项没过，{paras} 段最弱",
+    "all_good": "AI 容易读懂、引用这篇",
+    "show": "看扣在哪",
+    "hide": "收起",
+    "hint": "AI 能不能读懂、愿不愿意原样引用这篇。按规则数出来的（不调模型）：每一项都是正文里能数到的事实，分数是它们的加总。分高不代表 AI 一定会推荐你，那要看「AI 搜索推荐」的实测。",
+    "failed": "整篇没过的项",
+    "weakest": "最弱的几段",
+    "para": "第 {n} 段",
+    "now": "（现在：{value}）",
+    "fix": "交给 AI 改这几处",
+    "fix_intro": "按 AI 引用分改这篇（现在 {grade} 级，{score} 分）。",
+    "fix_para": "第 {n} 段缺：{miss}",
+    "fix_paras": "最弱的几段（第几段只数段落、列表、表格，不数标题）：{list}。",
+    "fix_checks": "整篇没过：{list}。",
+    "fix_rule": "只改这些地方，其他段落不动；数据、型号、认证只用产品目录和企业资料里有的，没有就不写，不为凑分编造或加无关链接。改完跑 aeo.article 再看一遍。",
+    "publish_line": "AI 引用分",
+    "publish_low": "AI 不容易读懂、引用这篇。可以先关掉，在文章页看扣在哪、交给 AI 改；也可以照样发布。"
   }
 }

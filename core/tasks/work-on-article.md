@@ -36,6 +36,8 @@ JSON
 annulo run content.update --input @/tmp/article-update.json
 ```
 
+长文改完跑 `annulo run aeo.article --input '{"article_id":"<article_id>"}'` 看 AI 引用分（规则数出来的：哪几项没过、哪几段最弱）。`note` 是「按 AI 引用分改」（文章页「交给 AI 改这几处」发来的）时，只改它点名的段落和项，改完再跑一次，回复里说分数变化；补不了的（没有可写的数据、没有可链的页面）不编。
+
 ## 3. 做文件（要求里要图、视频、网页的时候）
 
 - **用什么做由你定**：图片可以用模型生成、用代码画（HTML + 截图、Pillow…）；视频可以用 Remotion、ffmpeg……`note` 里指定了就用它。缺的工具自己装（npm、pip、brew），装了什么在回复里说。

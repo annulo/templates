@@ -22,6 +22,7 @@ import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, run
 import type { Ctx } from './types'
 import { numLocale, tr } from '../../lib/i18n'
 import { ArticleOrigins } from '../Origins'
+import { AiScore, aiScoreOn } from '../AiScore'
 
 // label 按当前语言取（getter）
 const lbl = (key: string, tone: Tone) => ({ get label() { return tr(key) }, tone })
@@ -617,6 +618,13 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
     onChanged()
     open(r.article_id)
   }
+  // AI 引用分的「交给 AI 改」：先存，再交给「在这篇上做」（有的模板）或 AI 修改，说明里写着改哪几段
+  const fixScore = async (fix: string) => {
+    if (dirty && !(await saveEdit())) return
+    if (work) return void await startWork(work, a.id, fix)
+    setEditing(false)
+    await reviser.run({ article_id: a.id, note: fix })
+  }
   // 发布前有没保存的修改：先存，发出去的是保存后的内容
   const openPublish = async () => {
     if (dirty && !(await saveEdit())) return
@@ -720,6 +728,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
             <ArticleView a={a} />
           </div>
         )}
+        {type === 'article' && publishScope !== 'social' && aiScoreOn(ctx.channels) && <div className="mt-4"><AiScore a={editing ? draft : a} onFix={fixScore} disabled={locked || (!work && !reviser.shuttle)} /></div>}
         {(source || derived.length > 0 || a.topic_id) && <div className="mt-6 space-y-1.5 border-t border-border pt-4 text-sm">
           <ArticleOrigins ctx={ctx} a={a} all={all} />
           {source && <p className="text-muted-foreground">{tr('article.from_source')}<button type="button" onClick={() => open(source.id)} className="ml-1 cursor-pointer text-primary-text hover:underline">{source.title}</button></p>}

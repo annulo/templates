@@ -3,6 +3,7 @@ import { ArrowUpRight, ClipboardList, Link2, Loader, NotebookPen, Plus, Sparkles
 import { ArticleDetail, RowMore, removeArticle } from './Content'
 import { WritingBriefDialog } from '../ContentEvidence'
 import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
+import { AiScoreTag, aiScoreOn } from '../AiScore'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { aiWork } from '../Artifacts'
 import { GrowthReviews, MarketingImport, MarketingPlans } from '../MarketingWorkspace'
@@ -172,6 +173,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <TypeBadge type={entry.article?.type || entry.topic?.content_type || entry.plan?.content_type || (entry.post?.video ? 'video' : workspace === 'website' ? 'article' : 'post')} />
                 <span>{destination(entry)}</span>
+                {workspace === 'website' && entry.article && aiScoreOn(ctx.channels) && <AiScoreTag a={entry.article} />}
                 {origins.get(entry.key)?.filter(k => k !== 'topic' && k !== 'direct').map(k => <span key={k}>{tr('origin.k_' + k)}</span>)}
                 {entry.post && <span>{w('from_platform')}</span>}
                 {entry.plan?.content_id && <span>{entry.plan.content_id}</span>}

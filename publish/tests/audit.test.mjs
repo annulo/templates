@@ -49,3 +49,27 @@ test('HTML fallback/challenge and truncated responses do not establish missing f
   assert.ok(fileIssues(result).every(f => f.title.startsWith('无法确认')))
   assert.equal(fileIssues(result).length, 2)
 })
+const crawlers = result => result.found.find(f => f.check === 'ai_crawlers')
+test('robots.txt that blocks AI search crawlers is a high issue', async () => {
+  const { result } = await audit([response(200, 'User-agent: *\nDisallow: /admin\n\nUser-agent: OAI-SearchBot\nUser-agent: GPTBot\nDisallow: /\n\nUser-agent: PerplexityBot\nDisallow: /\nAllow: /blog/'), llms])
+  const f = crawlers(result)
+  assert.equal(f.severity, 'high')
+  assert.match(f.detail, /OAI-SearchBot（ChatGPT 搜索）：整站禁止/)
+  assert.match(f.detail, /GPTBot（OpenAI 训练）：整站禁止/)
+  assert.match(f.detail, /PerplexityBot（Perplexity）：只放行了部分路径/)
+  assert.doesNotMatch(f.detail, /ClaudeBot/)
+})
+test('blocking only training crawlers is low; path-only disallows and missing robots are fine', async () => {
+  assert.equal(crawlers((await audit([response(200, 'User-agent: GPTBot\nUser-agent: CCBot\nDisallow: /\n\nUser-agent: *\nAllow: /'), llms])).result).severity, 'low')
+  assert.equal(crawlers((await audit([response(200, 'User-agent: *\nDisallow: /cart\nDisallow: /admin/'), llms])).result), undefined)
+  assert.equal(crawlers((await audit([response(404, 'not found'), llms])).result), undefined)
+  assert.equal(crawlers((await audit([response(200, 'User-agent: *\nDisallow: /\nAllow: /'), llms])).result), undefined)
+})
+test('preview hosts are not checked for AI crawlers', async () => {
+  const calls = []
+  const ctx = { progress() {}, fetchAll: async urls => urls.map(u => u.endsWith('/robots.txt') ? response(200, 'User-agent: *\nDisallow: /') : u.endsWith('/llms.txt') ? llms : response(200, 'not html')) }
+  const old = global.fetch
+  global.fetch = async () => response(200, '<urlset></urlset>', 'application/xml')
+  try { assert.equal(crawlers(await inspect({ url: 'https://abc.preview.creght.cn/', max: 1 }, ctx)), undefined) }
+  finally { global.fetch = old }
+})
