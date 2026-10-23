@@ -217,3 +217,11 @@ test('competing pages: two of our pages with real impressions on one keyword', (
   assert.deepEqual(kw.competingPages([r('/a', 100, 8)]), [])
   assert.deepEqual(kw.competingPages([r('/', 78, 1), r('/b', 76, 1.2)]), []) // 品牌词几个页面都排第 1：不算抢
 })
+
+test('vocabulary keeps words seen twice or more; unrelated suggestions are dropped', () => {
+  const v = kw.vocabulary(['3D Particle Generator', 'Image to 3D particles', 'Nebula', 'particle maker', 'acme generator'], ['acme'], ['best', 'free'])
+  assert.deepEqual([...v].sort(), ['3d', 'generator', 'particle'])
+  assert.ok(kw.relevant('particle text generator', v))
+  assert.ok(!kw.relevant('nebula wallpaper 4k', v))
+  assert.ok(kw.relevant('anything', new Set(['a', 'b']))) // 词汇太少不筛
+})

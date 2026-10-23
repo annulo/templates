@@ -22,6 +22,9 @@
 1. **扩词** `keywords.expand`：种子默认取项目资料 `keywords`、产品的关键词和名称、产品分类（助手可以自己挑种子再跑）。
    每个种子词本身 + 拼上修饰词去拉下拉联想：外贸（产品有起订量、交期、认证）默认 manufacturer / supplier / factory / wholesale / OEM / custom / price…，其它业务默认 best / vs / alternative / pricing…；写法里给了 `modifiers` 就用写法的。
    再把本站 GSC 最近 28 天曝光前 30 的非品牌搜索词带进来（`sources` 记 `gsc`）。新词 `status=raw`，按小写去重，一次最多新加 300 个。
+   **降噪**：联想出来的词要和业务词汇（`vocabulary`）沾一个词才收。词汇是资料关键词、产品名 / 关键词 / 分类、GSC 的词、筛过留下的词里**出现两次以上**的词（去掉小词、品牌词、修饰词），
+   只出现一次的不算：资料里写了一个功能名「Nebula」，拿它联想出来的是星云壁纸、投影仪。明确给的种子信得过，它们的词直接算进去；GSC 的词不筛；词汇不到 3 个时不筛。
+   在测试项目（Particleify）上回放：助手筛掉的 139 个联想词里能提前挡掉 106 个（76%），留下的 19 个一个不误伤。返回 `filtered` 和举例，助手觉得挡错了可以 `no_filter`。
 2. **筛词** 任务 `keyword-research`：助手拿 `keywords.context`（待筛的词、已有主题、不要过的词、项目资料、产品、站内有曝光的页面），每个词给结论（`keep`、`intent`、`cluster`、`note`、可选 `target_page`），`keywords.save` 存回，可以补少量它确定买家会搜的词（`sources=agent`）。
    「需求」类任务：写法（目标市场、要哪类词、修饰词）用户能改，在页面「挖一批关键词」弹窗里。保存时存 `ctx.chat_id`，页面「继续对话」回到这段对话接着调。
 3. **分桶** `keywords.refresh`（扩词后顺手跑一次，之后每周一次）：GSC 最近 28 天按 `query` 和 `query + page` 各读一次，词完全一样（小写、合并空白）才算。

@@ -1,7 +1,7 @@
 import { L } from './_i18n'
 import { profile } from './_ai'
 import { brandTerms, DAY, isNoise, notConnected, query, ymd } from './_gsc'
-import { bucketOf, competingPages, onPageFacts, rivalOnly, gscByKeyword, MODIFIERS, mergeSources, normKey, ownDomains, parseSuggest, pushRank, scoreOf, serpFacts, splitTerms, suggestUrl, usable, type Bucket } from './_keywords'
+import { bucketOf, competingPages, relevant, vocabulary, onPageFacts, rivalOnly, gscByKeyword, MODIFIERS, mergeSources, normKey, ownDomains, parseSuggest, pushRank, scoreOf, serpFacts, splitTerms, suggestUrl, usable, type Bucket } from './_keywords'
 import { searchMany } from './serp'
 import { mergeOrigins } from './_origins'
 import { originsJson } from '../lib/origins'
@@ -14,7 +14,8 @@ export const remote = ['expand', 'refresh', 'serp', 'onpage']
 
 // 关键词挖掘：哪些词值得做、能做起来（设计见 docs/keywords.md）。
 //
-//   keywords.expand({ channel_id, seeds?, modifiers?, lang?, country?, max_seeds?, seed_source? })   seed_source: 'competitor' 时种子是竞品的产品词
+//   keywords.expand({ channel_id, seeds?, modifiers?, lang?, country?, max_seeds?, seed_source?, no_filter? })   seed_source: 'competitor' 时种子是竞品的产品词；
+//       联想出来的词和业务词汇（_keywords.ts 的 vocabulary）一个词都不沾的不收，no_filter: true 不筛
 //       从种子词扩词：种子默认取项目资料的关键词和产品，每个种子拼上修饰词（外贸默认 manufacturer、supplier…，见 _keywords.ts 的 MODIFIERS）去拉搜索引擎的下拉联想
 //       （先 Google，访问不了换 Bing）；再把本站在 GSC 里已有曝光的非品牌搜索词也加进来。新词 status=raw，等助手筛。连了 GSC 顺手 refresh
 //   keywords.refresh({ channel_id?, manual? })   按 GSC 最近 28 天更新每个词的曝光、排名、曝光最多的页面，按规则分桶（定时任务每周一次）
@@ -100,7 +101,7 @@ function modifiersOf(given: string[] | string | undefined, lang: string, ctx: an
   return MODIFIERS[trade ? 'trade' : 'general'][lang.startsWith('zh') ? 'zh' : 'en']
 }
 
-export async function expand(input: { channel_id?: string; seeds?: string[] | string; modifiers?: string[] | string; lang?: string; country?: string; max_seeds?: number; seed_source?: string }, ctx: any) {
+export async function expand(input: { channel_id?: string; seeds?: string[] | string; modifiers?: string[] | string; lang?: string; country?: string; max_seeds?: number; seed_source?: string; no_filter?: boolean }, ctx: any) {
   const ch = channelOf(ctx, input?.channel_id)
   const lang = String(input?.lang || 'en').toLowerCase()
   const country = String(input?.country || 'us').toLowerCase()
@@ -114,9 +115,25 @@ export async function expand(input: { channel_id?: string; seeds?: string[] | st
   const existing = rowsOf(ctx, ch.id)
   const byKey = new Map(existing.map((k) => [normKey(k.keyword), k]))
   const found = new Map<string, { keyword: string; seed: string; sources: string }>()
+  // 降噪：联想出来的词要沾上业务词汇（资料关键词、产品、GSC 的词、筛过留下的词里出现两次以上的词）；
+  // 明确给的种子（助手挑的、用户给的、竞品的产品词）是信得过的，它们的词也算进去。GSC 的词本来就是真实需求，不筛
+  const products = productsOf(ctx)
+  const vocab = vocabulary(
+    [
+      ...splitTerms(p.keywords), ...products.flatMap((x) => [x.name, x.category, ...splitTerms(x.keywords)]),
+      ...existing.filter((k) => (k.sources ?? '').includes('gsc') || k.status === 'idea' || k.status === 'targeting').map((k) => k.keyword),
+    ].filter(Boolean) as string[],
+    brands, modifiersOf(input?.modifiers, lang, ctx),
+  )
+  if (given.length) for (const s of given) for (const w of normKey(s).split(' ')) if (w.length > 1) vocab.add(w)
+  const dropped = new Set<string>()
   const take = (kw: string, seed: string, source: string) => {
     const k = normKey(kw)
     if (!usable(kw) || isNoise(kw, brands)) return
+    if (!input?.no_filter && source !== 'gsc' && !relevant(kw, vocab)) {
+      if (!byKey.has(k)) dropped.add(kw.trim())
+      return
+    }
     const f = found.get(k)
     if (f) f.sources = mergeSources(f.sources, source)
     else found.set(k, { keyword: kw.trim(), seed, sources: source })
@@ -188,7 +205,7 @@ export async function expand(input: { channel_id?: string; seeds?: string[] | st
     added++
   }
   const refreshed = gscReady(ch) && !gscNote ? await refreshChannel(ch, ctx).catch((e) => ((gscNote = (e as Error).message), null)) : null
-  return { seeds, engine, found: found.size, added, raw: rowsOf(ctx, ch.id).filter((k) => k.status === 'raw').length, refreshed, ...(gscNote ? { gsc_error: gscNote } : {}) }
+  return { seeds, engine, found: found.size, added, filtered: dropped.size, filtered_sample: [...dropped].slice(0, 15), vocabulary: [...vocab].slice(0, 40), raw: rowsOf(ctx, ch.id).filter((k) => k.status === 'raw').length, refreshed, ...(gscNote ? { gsc_error: gscNote } : {}) }
 }
 
 async function textOf(r: any): Promise<string> {

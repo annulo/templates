@@ -253,3 +253,23 @@ export function competingPages(rows: GscRow[], minShare = 0.2): { page: string; 
   if (list.some((p) => p.position <= 3)) return []
   return list.filter((p) => p.impressions >= Math.max(3, list[0].impressions * minShare)).slice(0, 5)
 }
+
+// ---- 扩词降噪：联想出来的词和业务一个词都不沾的，不收 ----
+
+/**
+ * 业务词汇：项目资料的关键词、产品名、产品关键词、产品分类、GSC 已有曝光的词里，在两个以上地方出现过的词（去掉小词、品牌词、修饰词）。
+ * 只出现一次的不算（比如资料里写了一个功能名「Nebula」：拿它去联想会冒出星云壁纸、投影仪，正是要挡掉的）。
+ */
+export function vocabulary(terms: string[], brands: string[] = [], modifiers: string[] = []): Set<string> {
+  const skip = new Set([...brands.map((b) => b.toLowerCase()), ...modifiers.flatMap((m) => tokens(m)), 'free', 'online', 'near', 'me', 'cheap'])
+  const df = new Map<string, number>()
+  for (const t of terms) for (const w of new Set(tokens(t).filter((w) => !STOP.has(w) && !skip.has(w) && w.length > 1).map(stem))) df.set(w, (df.get(w) ?? 0) + 1)
+  return new Set([...df].filter(([, n]) => n >= 2).map(([w]) => w))
+}
+
+/** 联想出来的词里有没有业务词汇里的词；词汇太少（不到 3 个）时不筛，都算相关 */
+export function relevant(q: string, vocab: Set<string>): boolean {
+  if (vocab.size < 3) return true
+  if (/[぀-ヿ㐀-鿿가-힯]/.test(q)) return [...vocab].some((w) => q.toLowerCase().includes(w))
+  return tokens(q).map(stem).some((w) => vocab.has(w))
+}
