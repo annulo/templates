@@ -57,5 +57,5 @@
 
 内容文件夹同时是 Annulo 的**产物文件夹**（Annulo 仓库 `docs/collab-local-agent.md`）：`folder.create` 调 `ctx.folders.create`，文章表多一个 `folder_id`。
 - 挪了、改了名按 id 找回来（`folderOf`），改名走 `ctx.folders.move`；老 Annulo 没有 `ctx.folders`，只用 `folder` 路径，照旧能用（`min_annulo_api` 不用调）。
-- 团队服务器上，用户电脑上的 Claude Code 拿 `folder.create` 返回的 `folder_id` 把文件夹拉下来做、做完推回去（`annulo folder pull / push`，任务 `tasks/work-on-content.md` 写了）。
+- 团队服务器上，用户电脑上的 Claude Code 拿 `folder.create` 返回的 `folder_id` 把文件夹拉下来做、做完推回去（`annulo fs pull / push`，只看一两个文件用 `annulo fs ls / get / put`，任务 `tasks/work-on-content.md` 写了）。
 - **中间产物不同步**：建文件夹时写一份默认的 `.annuloignore`（`草稿/`、`drafts/`、`cache/`、`*.tmp`）。做视频时的草稿视频、草稿音频、试渲染的片段放进 `草稿/`，只留在做的人电脑上；成片、定稿的文案放外面。页面的网格不显示 `草稿/` 里的文件，树里还看得到。

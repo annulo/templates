@@ -14,12 +14,13 @@ annulo run folder.create --input '{"article_id":"<article_id>"}'   # → { dir, 
 annulo run work.context --input '{"article_id":"<article_id>"}'
 ```
 
-**文件夹不在你手边的时候**：你在用户自己的电脑上跑（系统提示里有「你在用户自己的电脑上」），或者 `local` 是 false（工作目录在对象存储里），`dir` 这个路径你直接读写不了。这时先把它拉到这台电脑上，在拉下来的目录里做，做完推回去：
+**文件夹不在你手边的时候**：你在用户自己的电脑上跑（系统提示里有「你在用户自己的电脑上」），或者 `local` 是 false（工作目录在对象存储里），`dir` 这个路径你直接读写不了，都用 `annulo fs`（`<path>` 是 `folder.create` 返回的 `path`）：
 
 ```bash
-annulo folder pull <folder_id> "<本机目录，比如 ~/Annulo-work/这条内容的名字>"   # 之后下面说的 <dir> 都是这个本机目录
-# …… 做 ……
-cd "<本机目录>" && annulo folder push      # 两边都改了的两份都留，看它的提示；没推上去的文件用户和同事看不到
+annulo fs ls "<path>"                          # 先看里面有什么（只列清单，不下载；视频这类大文件别急着拉）
+annulo fs get "<path>/稿子.md" /tmp/稿子.md     # 只看、只改一两个文件：取下来，改完 annulo fs put <本机文件> "<path>/稿子.md"
+annulo fs pull "<path>" "<本机目录，比如 ~/Annulo-work/这条内容的名字>"   # 要在整个文件夹里干活（做视频、做一组图）：拉下来，之后下面说的 <dir> 都是这个本机目录
+cd "<本机目录>" && annulo fs push              # 做完推回去：只推改过的；两边都改了的两份都留，看它的提示；没推上去的文件用户和同事看不到
 ```
 
 `folder_id` 是空的（老版本 Annulo）就照旧直接用 `dir`。
