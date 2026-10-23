@@ -498,7 +498,24 @@
     "d_google": "Google",
     "d_history": "Ranking",
     "d_review": "After going live",
-    "d_serp": "Google top 10"
+    "d_serp": "Google top 10",
+    "onpage_used": "Used on the page:",
+    "onpage_help": "What is this?",
+    "oh_title": "Is \"{kw}\" used on the page?",
+    "oh_close": "Got it",
+    "oh_fix": "Have the assistant rewrite title & description",
+    "oh_intro": "Checks whether \"{kw}\" appears in these places on the target page {page}. Google mostly reads the title and H1 to understand what a page is about; the description is the two lines under the title in search results and affects whether people click.",
+    "oh_has": "contains it",
+    "oh_missing": "doesn't contain it",
+    "oh_title_why": "The text on the browser tab and the big blue line in search results. Most important: Google and buyers read it first.",
+    "oh_h1_why": "The big heading at the top of the page body. Tells Google and readers what the page is about; best kept in line with the title.",
+    "oh_desc_why": "The two lines under the title in search results. Doesn't directly affect ranking, but using the keyword and saying what's offered gets more clicks.",
+    "oh_url_why": "Having the keyword in the URL helps a little, but isn't worth changing the URL (that needs a redirect and old rankings dip first).",
+    "oh_now": "Now: {t}",
+    "oh_empty": "Not found on the page",
+    "oh_primary": "This is the page's main keyword (the one with the most impressions on this page). When it's missing from the title or H1, Site audit reports it: work it in naturally without stuffing — one or two main keywords per title is enough.",
+    "oh_not_primary": "This page's main keyword is a different one, so this is just for reference, not an issue: a title only fits one or two main keywords. To rank for this one, cover it in a section of the body, or write a separate page.",
+    "oh_rule": "How it's judged: ignoring small words like for, the, vs, every word must appear (plurals and order don't matter); Chinese terms must appear as a whole. Checked {t} (Site audit checks weekly)."
   },
   "search": {
     "tab_keywords": "Keywords"

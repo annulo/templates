@@ -4,7 +4,7 @@
 //   - keyword_missing：筛过的词（值得看、在做）的目标页面（没有目标页面用 GSC 曝光最多的页面），标题或 H1 没用上这个页面的主词。
 //     一个页面的标题只放得下一两个主词：每个页面只看主词（曝光最多的，一样多时在做的优先），别的词记下事实、不算问题；
 //   - keyword_cannibal：几个本站页面在抢同一个词（keywords.refresh 从 GSC 算的 gsc_pages）。
-// 顺带把每个词的检查结果写回 keywords.onpage，关键词页点开一个词能看到标题、H1、描述、网址各用没用上。
+// 顺带把每个词的检查结果（标题、H1、描述、网址各用没用上，和页面上现在写的文字）写回 keywords.onpage，关键词页点开一个词能看到、点「看说明」看弹窗。
 // 没有关键词表（老项目、没挖过词）就什么都不做。
 
 import { isEn } from './_i18n'
@@ -58,7 +58,8 @@ export async function keywordChecks(channelId: string, pages: P[], ctx: any, rea
     const p = target ? byPath.get(pathKey(target)) : undefined
     if (!p) continue
     const main = primary.get(pathKey(target))?.id === k.id
-    const f = { ...onPageFacts(target, p, k.keyword, at), primary: main }
+    // 连页面上现在写的标题、H1、描述一起存：关键词页的说明弹窗里给用户看「现在写的是什么」
+    const f = { ...onPageFacts(target, p, k.keyword, at), primary: main, title_text: p.title.trim().slice(0, 160), h1_text: (p.h1[0] ?? '').trim().slice(0, 160), desc_text: p.description.trim().slice(0, 240) }
     ctx.db.update('keywords', k.id, { onpage: JSON.stringify(f) })
     if (!main || (f.title && f.h1)) continue
     const m = missing.get(target) ?? { title: [], h1: [] }

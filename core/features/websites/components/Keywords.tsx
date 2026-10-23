@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, EyeOff, FilePlus2, ListPlus, MessageCircle, Plus, RefreshCw, SearchCheck, ShieldCheck, Sparkles, Target, Undo2, X } from 'lucide-react'
-import { Badge, Button, Notice, Panel, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from './ui'
+import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, EyeOff, FilePlus2, ListPlus, MessageCircle, Plus, RefreshCw, SearchCheck, ShieldCheck, Sparkles, Target, Undo2, X } from 'lucide-react'
+import { Badge, Button, Dialog, Notice, Panel, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from './ui'
 import RunButton from './RunButton'
 import { TaskButton, TaskLaunchButton } from './Task'
 import { openChat, runLocal, type Channel } from '../lib/shuttle'
@@ -16,6 +16,7 @@ import { numLocale, tr } from '../lib/i18n'
 
 const RESEARCH_TASK = 'keyword-research'
 const EXPAND_TASK = 'search-expand'
+const META_TASK = 'search-meta' // 标题、描述没用上这个词：谷歌排名现成的改标题描述任务
 
 type Bucket = 'quick_win' | 'ranking' | 'open' | 'mixed' | 'hard' | 'unchecked'
 type Keyword = {
@@ -25,7 +26,7 @@ type Keyword = {
   serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_competitors?: string; serp_results?: string; serp_error?: string; rank_history?: string
   target_page?: string; live_at?: string; review_verdict?: string; review_summary?: string; onpage?: string; gsc_pages?: string
 }
-type OnPage = { page: string; title: boolean; h1: boolean; description: boolean; url: boolean; checked_at: string; error?: string; primary?: boolean }
+type OnPage = { page: string; title: boolean; h1: boolean; description: boolean; url: boolean; checked_at: string; error?: string; primary?: boolean; title_text?: string; h1_text?: string; desc_text?: string }
 type Competing = { page: string; impressions: number; position: number }
 type SerpRow = { p: number; domain: string; kind: string; title: string; url: string }
 type Rank = { d: string; p: number; s: 'gsc' | 'serp' }
@@ -280,6 +281,7 @@ function Row({ k, tab, isNew, onChanged }: { k: Keyword; tab: Tab; isNew: boolea
 
 /** 点开一个词：Google 排名、目标页面用没用上、几个页面在抢、排名历史、复查结论、Google 前 10、助手的说明，和改状态 */
 function Details({ k, onChanged }: { k: Keyword; onChanged: () => void }) {
+  const [help, setHelp] = useState(false)
   const top = parse<SerpRow[]>(k.serp_results, [])
   const hist = parse<Rank[]>(k.rank_history, [])
   const o = onpageOf(k)
@@ -311,13 +313,16 @@ function Details({ k, onChanged }: { k: Keyword; onChanged: () => void }) {
         <div className="space-y-0.5">
           <a href={pageOf(k)} target="_blank" rel="noreferrer" className="font-mono hover:text-primary-text">{pathOf(pageOf(k))}</a>
           {o && !o.error && (
-            <div className="flex flex-wrap gap-x-2.5 text-[11px]">
+            <button onClick={() => setHelp(true)} className="flex cursor-pointer flex-wrap items-center gap-x-2.5 text-left text-[11px] hover:text-primary-text">
+              <span className="text-muted-foreground">{tr('keywords.onpage_used')}</span>
               {mark(o.title, tr('keywords.onpage_title'))}
               {mark(o.h1, 'H1')}
               {mark(o.description, tr('keywords.onpage_desc'))}
               {pathOf(o.page) !== '/' && mark(o.url, tr('keywords.onpage_url'))}
-            </div>
+              <span className="inline-flex items-center gap-0.5 text-primary-text"><CircleHelp className="size-3" />{tr('keywords.onpage_help')}</span>
+            </button>
           )}
+          {o && !o.error && <OnPageDialog open={help} onClose={() => setHelp(false)} k={k} o={o} onChanged={onChanged} />}
           {rivals.length > 1 && (
             <div className="text-[11px] text-amber-700 dark:text-amber-400">
               {tr('keywords.competing', { n: rivals.length, pages: rivals.map((p) => tr('keywords.competing_page', { page: pathOf(p.page), pos: p.position })).join('、') })}
@@ -377,5 +382,53 @@ function AddKeywords({ channel, onAdded }: { channel: Channel; onAdded: () => vo
         {tr('keywords.add')}
       </RunButton>
     </div>
+  )
+}
+
+/** 「这个词用没用上」的说明：标题、H1、描述、网址各是什么、为什么重要、页面上现在写的是什么、有没有这个词，算不算问题、怎么改 */
+function OnPageDialog({ open, onClose, k, o, onChanged }: { open: boolean; onClose: () => void; k: Keyword; o: OnPage; onChanged: () => void }) {
+  const items: { key: string; label: string; ok: boolean; text?: string }[] = [
+    { key: 'title', label: tr('keywords.onpage_title'), ok: o.title, text: o.title_text },
+    { key: 'h1', label: 'H1', ok: o.h1, text: o.h1_text },
+    { key: 'desc', label: tr('keywords.onpage_desc'), ok: o.description, text: o.desc_text },
+    ...(pathOf(o.page) !== '/' ? [{ key: 'url', label: tr('keywords.onpage_url'), ok: o.url, text: pathOf(o.page) }] : []),
+  ]
+  const fixable = !!k.search_page_id && (!o.title || !o.description)
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      width={560}
+      title={tr('keywords.oh_title', { kw: k.keyword })}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>{tr('keywords.oh_close')}</Button>
+          {fixable && (
+            <TaskButton task={META_TASK} input={{ id: k.search_page_id }} match={(r) => r.input?.id === k.search_page_id} onFinished={() => (onClose(), onChanged())} variant="default" icon={Sparkles}>
+              {tr('keywords.oh_fix')}
+            </TaskButton>
+          )}
+        </>
+      }
+    >
+      <div className="space-y-3 text-xs leading-relaxed">
+        <p className="text-muted-foreground">{tr('keywords.oh_intro', { kw: k.keyword, page: pathOf(o.page) })}</p>
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {items.map((it) => (
+            <div key={it.key} className="space-y-1 p-3">
+              <div className="flex items-center gap-2">
+                {it.ok ? <Check className="size-3.5 text-emerald-600" /> : <X className="size-3.5 text-amber-600" />}
+                <span className="font-semibold">{it.label}</span>
+                <span className={cx('text-[11px]', it.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400')}>{tr(it.ok ? 'keywords.oh_has' : 'keywords.oh_missing')}</span>
+              </div>
+              <p className="text-muted-foreground">{tr(`keywords.oh_${it.key}_why`)}</p>
+              <p className="rounded bg-muted/60 px-2 py-1">{it.text ? tr('keywords.oh_now', { t: it.text }) : tr('keywords.oh_empty')}</p>
+            </div>
+          ))}
+        </div>
+        <p className="rounded-lg bg-muted/40 p-2.5">{tr(o.primary ? 'keywords.oh_primary' : 'keywords.oh_not_primary')}</p>
+        <p className="text-[11px] text-muted-foreground">{tr('keywords.oh_rule', { t: fmtTime(o.checked_at) })}</p>
+      </div>
+    </Dialog>
   )
 }
