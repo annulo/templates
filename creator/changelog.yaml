@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.18.0
+  zh: "内容文件夹里标出哪些文件不同步（草稿这些只在本机），还能看到谁的电脑上有没传上来的文件。"
+  en: "Content folders mark which files don't sync (drafts stay on your computer) and show whose computer still has files that weren't uploaded."
 - version: 0.17.1
   zh: "在自己电脑上做内容时只取要用的文件，不再整个文件夹拉下来。"
   en: "When working on a piece from your own computer, only the files needed are fetched instead of the whole folder."

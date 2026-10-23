@@ -2220,7 +2220,19 @@
     "pick_copy": "Copy",
     "pick_no_copy": "No copy",
     "pick_hint": "Each publish adds a record below with the title, text and video it used. You can publish one piece several times with different files.",
-    "title_hint": "Double-click to rename"
+    "title_hint": "Double-click to rename",
+    "local_only": "This computer",
+    "local_only_tip": "Not synced (.annuloignore): stays on this computer, isn't uploaded to the team server or backed up",
+    "not_synced": "Not synced",
+    "not_synced_tip": "Not synced (.annuloignore): stays on the server; teammates' computers don't pull it",
+    "sync_here_local": "{n} files stay on this computer only ({size}, work-in-progress in {rules}): not uploaded to the team server or backed up.",
+    "sync_here_server": "{n} files aren't synced ({size}, work-in-progress in {rules}): they stay on the server and teammates' computers don't pull them.",
+    "sync_see_tree": "Show in tree",
+    "sync_who": "{user}'s computer ({machine})",
+    "sync_away": "{who} still has {n} files that weren't uploaded ({size}, {time})",
+    "sync_show": "Show them",
+    "sync_hide": "Hide",
+    "sync_away_hint": "These are unsynced work-in-progress files (draft video, draft audio). To share one, have that computer move it out of the drafts folder and push again."
   },
   "fpub": {
     "title": "Publish",
