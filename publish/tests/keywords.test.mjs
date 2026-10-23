@@ -195,3 +195,25 @@ test('competitor ranks and we do not', () => {
   assert.ok(!kw.rivalOnly({ serp_at: at, serp_competitors: '', status: 'idea' }))
   assert.ok(!kw.rivalOnly({ serp_at: at, serp_competitors: 'rival.com', status: 'dismissed' }))
 })
+
+test('has keyword: all meaningful words, plurals and order do not matter; CJK as a whole', () => {
+  assert.ok(kw.hasKeyword('LED Grow Lights Manufacturer | Acme', 'led grow light manufacturer'))
+  assert.ok(kw.hasKeyword('Manufacturer of LED grow lights', 'led grow light manufacturer'))
+  assert.ok(!kw.hasKeyword('LED Grow Lights | Acme', 'led grow light manufacturer'))
+  assert.ok(kw.hasKeyword('Best batteries for solar', 'battery for solar'))
+  assert.ok(kw.hasKeyword('家用储能电池厂家 - 某某', '储能电池厂家'))
+  assert.ok(!kw.hasKeyword('储能 电池', '储能电池厂家'))
+})
+
+test('on-page facts check title, H1, description and URL', () => {
+  const f = kw.onPageFacts('https://acme.com/products/led-grow-light-manufacturer/', { title: 'LED Grow Lights | Acme', h1: ['LED grow light manufacturer'], description: '' }, 'led grow light manufacturer', 't')
+  assert.deepEqual([f.title, f.h1, f.description, f.url], [false, true, false, true])
+})
+
+test('competing pages: two of our pages with real impressions on one keyword', () => {
+  const r = (page, impressions, position) => ({ keys: ['q', page], clicks: 0, impressions, position })
+  assert.deepEqual(kw.competingPages([r('/a', 100, 8), r('/b', 30, 15.26)]).map((p) => [p.page, p.position]), [['/a', 8], ['/b', 15.3]])
+  assert.deepEqual(kw.competingPages([r('/a', 100, 8), r('/b', 5, 40)]), [])
+  assert.deepEqual(kw.competingPages([r('/a', 100, 8)]), [])
+  assert.deepEqual(kw.competingPages([r('/', 78, 1), r('/b', 76, 1.2)]), []) // 品牌词几个页面都排第 1：不算抢
+})

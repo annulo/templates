@@ -1,7 +1,7 @@
 import { L } from './_i18n'
 import { profile } from './_ai'
 import { brandTerms, DAY, isNoise, notConnected, query, ymd } from './_gsc'
-import { bucketOf, rivalOnly, gscByKeyword, MODIFIERS, mergeSources, normKey, ownDomains, parseSuggest, pushRank, scoreOf, serpFacts, splitTerms, suggestUrl, usable, type Bucket } from './_keywords'
+import { bucketOf, competingPages, onPageFacts, rivalOnly, gscByKeyword, MODIFIERS, mergeSources, normKey, ownDomains, parseSuggest, pushRank, scoreOf, serpFacts, splitTerms, suggestUrl, usable, type Bucket } from './_keywords'
 import { searchMany } from './serp'
 import { mergeOrigins } from './_origins'
 import { originsJson } from '../lib/origins'
@@ -10,7 +10,7 @@ import { originsJson } from '../lib/origins'
 export const cloud = ['list', 'context', 'save', 'setStatus', 'toTopic', 'markSeen', 'add']
 
 // 要出网（联想接口）、要 Google 授权、要开用户 Chrome 的：手机上点了转给电脑上开着的 Annulo 跑
-export const remote = ['expand', 'refresh', 'serp']
+export const remote = ['expand', 'refresh', 'serp', 'onpage']
 
 // 关键词挖掘：哪些词值得做、能做起来（设计见 docs/keywords.md）。
 //
@@ -20,6 +20,7 @@ export const remote = ['expand', 'refresh', 'serp']
 //   keywords.refresh({ channel_id?, manual? })   按 GSC 最近 28 天更新每个词的曝光、排名、曝光最多的页面，按规则分桶（定时任务每周一次）
 //   keywords.serp({ channel_id, ids?, limit? })   在用户自己的 Chrome 里查 Google 结果页（serp.ts，复制自 annulo/references 的 serp/），
 //                                                记前 10 名的事实（我们排第几、论坛 / B2B 平台 / 电商 / 百科各几个），没有 GSC 数据的词据此分成 open / mixed / hard
+//   keywords.onpage({ channel_id?, ids? })       目标页面（没有就用曝光最多的页面）的标题、H1、描述、网址里有没有用上这个词（refresh 后也跑一次）
 //   keywords.list({ channel_id })                页面用：全部词（不含 raw 的明细只给条数）、分桶条数、最近一次筛词的对话
 //   keywords.context({ channel_id, limit? })     给助手筛词用（任务 tasks/keyword-research.md）：待筛的词、已有主题、项目资料、产品、站内页面
 //   keywords.save({ channel_id, items })         助手筛完存回：items 每条 { id 或 keyword, keep, intent, cluster, note, target_page? }，没有的词新建（source=agent）
@@ -37,6 +38,7 @@ type Keyword = {
   status?: string; intent?: string; cluster?: string; note?: string; target_page?: string
   gsc_impressions?: number; gsc_clicks?: number; gsc_position?: number; gsc_page?: string; search_page_id?: string; gsc_at?: string
   bucket?: Bucket; score?: number; topic_id?: string; chat_id?: string; seen?: boolean; created_at?: string; reviewed_at?: string
+  onpage?: string; gsc_pages?: string
   serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_competitors?: string; serp_results?: string; serp_error?: string; rank_history?: string
 }
 
@@ -204,6 +206,12 @@ async function refreshChannel(ch: Channel, ctx: any) {
     query(ctx, ch.gsc_property!, { ...range, dimensions: ['query', 'page'], rowLimit: 10000 }),
   ])
   const gsc = gscByKeyword(byQuery, byQueryPage)
+  // 同一个词几个本站页面在抢（自己和自己抢）
+  const perQuery = new Map<string, typeof byQueryPage>()
+  for (const r of byQueryPage) {
+    const q = normKey(r.keys[0])
+    perQuery.set(q, [...(perQuery.get(q) ?? []), r])
+  }
   let pages: { id: string; page: string }[] = []
   try {
     pages = ctx.db.query('search_pages', { where: { channel_id: ch.id }, limit: 1000 }).list
@@ -216,7 +224,8 @@ async function refreshChannel(ch: Channel, ctx: any) {
     const g = gsc.get(normKey(k.keyword))
     const m = { gsc_impressions: g?.impressions ?? 0, gsc_clicks: g?.clicks ?? 0, gsc_position: g?.position ?? 0, gsc_page: g?.page ?? '' }
     const bucket = bucketOf({ ...k, ...m })
-    const body: Record<string, unknown> = { ...m, search_page_id: (m.gsc_page && pageId.get(m.gsc_page)) || '', bucket, score: scoreOf({ ...k, ...m }, bucket) }
+    const rivals = competingPages(perQuery.get(normKey(k.keyword)) ?? [])
+    const body: Record<string, unknown> = { ...m, search_page_id: (m.gsc_page && pageId.get(m.gsc_page)) || '', bucket, score: scoreOf({ ...k, ...m }, bucket), gsc_pages: rivals.length ? JSON.stringify(rivals) : '' }
     // 在做的词记排名历史（GSC 没有这个词时不记：没排名不等于掉了，可能只是这周没人搜）
     if (k.status === 'targeting' && m.gsc_position) body.rank_history = pushRank(k.rank_history, { d: range.end, p: m.gsc_position, s: 'gsc' })
     counts[bucket] = (counts[bucket] ?? 0) + 1
@@ -242,7 +251,14 @@ export async function refresh(input: { channel_id?: string; manual?: boolean }, 
   const list: any[] = []
   for (const ch of chs) {
     try {
-      list.push(await refreshChannel(ch, ctx))
+      const r: any = await refreshChannel(ch, ctx)
+      // 顺带体检目标页面；页面打不开不影响排名的更新
+      try {
+        r.onpage = await onpageChannel(ch, ctx)
+      } catch (e: any) {
+        ctx.log(L(ctx, '页面体检没做成：', 'On-page check failed: ') + (e?.message ?? e))
+      }
+      list.push(r)
     } catch (e) {
       if (!input?.manual && notConnected(e)) return { skipped: L(ctx, '还没连接 Google', 'Google not connected') }
       throw e
@@ -325,6 +341,47 @@ export async function serp(input: { channel_id?: string; ids?: string[]; limit?:
   }
   if (stopped) throw new Error(L(ctx, `查了 ${checked} 个词后停下了（结果已经存好）：${stopped}`, `Stopped after ${checked} keywords (those are saved): ${stopped}`))
   return { checked, buckets: counts, ...(errors.length ? { errors } : {}) }
+}
+
+const MAX_ONPAGE = 40 // 一次最多读几个页面
+
+/** 体检目标页面：按页面分组读一次，每个词记标题、H1、描述、网址里有没有它（keywords.onpage） */
+async function onpageChannel(ch: Channel, ctx: any, ids?: string[]) {
+  const want = ids?.length ? new Set(ids) : null
+  const rows = rowsOf(ctx, ch.id).filter((k) => (want ? want.has(k.id) : k.status === 'idea' || k.status === 'targeting') && (k.target_page || k.gsc_page))
+  const byPage = new Map<string, Keyword[]>()
+  for (const k of rows) {
+    const page = (k.target_page || k.gsc_page)!
+    byPage.set(page, [...(byPage.get(page) ?? []), k])
+  }
+  const pages = [...byPage.keys()].slice(0, MAX_ONPAGE)
+  const at = new Date().toISOString()
+  let checked = 0, missing = 0
+  for (let i = 0; i < pages.length; i += 8) {
+    const part = pages.slice(i, i + 8)
+    ctx.progress({ done: i, total: pages.length, message: L(ctx, '检查目标页面有没有用上关键词', 'Checking whether target pages use their keywords') })
+    const res = await ctx.fetchAll(part)
+    for (let j = 0; j < part.length; j++) {
+      const r = res[j]
+      let doc = { title: '', h1: [] as string[], description: '' }, error = ''
+      if (r?.ok) {
+        const d = ctx.html(await r.text())
+        doc = { title: d.find('title')[0]?.text ?? '', h1: d.find('h1').map((h: any) => String(h.text ?? '')), description: d.find('meta[name="description" i]')[0]?.attrs?.content ?? '' }
+      } else error = L(ctx, `打不开（${r?.status ?? r?.error ?? '网络错误'}）`, `Couldn't open (${r?.status ?? r?.error ?? 'network error'})`)
+      for (const k of byPage.get(part[j]) ?? []) {
+        const f = error ? { page: part[j], title: false, h1: false, description: false, url: false, checked_at: at, error } : onPageFacts(part[j], doc, k.keyword, at)
+        if (!error && (!f.title || !f.h1)) missing++
+        ctx.db.update('keywords', k.id, { onpage: JSON.stringify(f) })
+        checked++
+      }
+    }
+  }
+  return { pages: pages.length, keywords: checked, missing_title_or_h1: missing }
+}
+
+export async function onpage(input: { channel_id?: string; ids?: string[] }, ctx: any) {
+  const ch = channelOf(ctx, input?.channel_id)
+  return onpageChannel(ch, ctx, input?.ids)
 }
 
 const ORDER: Record<string, number> = { quick_win: 0, open: 1, mixed: 2, unchecked: 3, hard: 4, ranking: 5 }

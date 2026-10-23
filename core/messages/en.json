@@ -492,7 +492,17 @@
     "verdict_no_data": "No data",
     "f_rival": "Competitors rank",
     "f_rival_hint": "Keywords where a competitor you track is in Google's top 10 and you aren't: they've proven people search it and it can be won. Turn a topic into a content idea and go after it.",
-    "serp_rivals": " · competitors {d}"
+    "serp_rivals": " · competitors {d}",
+    "f_issue": "Page issues",
+    "f_issue_hint": "The target page's title or H1 doesn't use the keyword, or several of your pages compete for it on Google (dragging each other down). Rewrite the title and description where it's missing; where pages compete, pick one main page and refocus or link the others to it, or merge them.",
+    "onpage_run": "Check pages",
+    "onpage_label": "Page {page}:",
+    "onpage_title": "title",
+    "onpage_desc": "description",
+    "onpage_url": "URL",
+    "competing": "{n} pages compete for this keyword: {pages}",
+    "competing_page": "{page} (position {pos})",
+    "fix_meta": "Rewrite title & description"
   },
   "search": {
     "tab_keywords": "Keywords"

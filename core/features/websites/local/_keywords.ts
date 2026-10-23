@@ -200,3 +200,56 @@ export function rivalOnly(k: { serp_at?: string; serp_competitors?: string; serp
   if (!k.serp_at || !k.serp_competitors || k.status === 'dismissed' || k.status === 'raw') return false
   return !k.serp_position && !(k.gsc_position && k.gsc_position <= 10)
 }
+
+// ---- 页面体检：目标页面有没有用上这个词、几个本站页面在抢同一个词 ----
+
+// 不算数的小词：页面上有没有它们不影响「用没用上这个词」
+const STOP = new Set(['a', 'an', 'the', 'of', 'for', 'to', 'in', 'on', 'and', 'or', 'with', 'by', 'at', 'from', 'vs', 'is', 'are', 'how', 'what', 'best'])
+// 本机函数的运行环境不支持正则的 \p{L}：按 ASCII 标点和常见的全角标点、破折号切
+const tokens = (s: string) => String(s ?? '').toLowerCase().replace(/[\s!-\/:-@[-`{-~\u2010-\u2027\u3000-\u303f\uff01-\uff0f\uff1a-\uff20\u00b7]+/g, ' ').trim().split(' ').filter(Boolean)
+const stem = (w: string) => (w.length > 3 && w.endsWith('ies') ? w.slice(0, -3) + 'y' : w.length > 3 && /[^s]s$/.test(w) ? w.slice(0, -1) : w)
+
+/**
+ * 一段文字里有没有用上这个词：中文日文这类不分词的，整个词原样出现才算；
+ * 其余按词比，去掉小词（for、the、vs…）后每个词都出现才算，单复数算一个（lights = light）。顺序不管。
+ */
+export function hasKeyword(text: string, keyword: string): boolean {
+  const kw = String(keyword ?? '').trim().toLowerCase()
+  if (!kw) return false
+  if (/[぀-ヿ㐀-鿿가-힯]/.test(kw)) return String(text ?? '').toLowerCase().replace(/\s+/g, '').includes(kw.replace(/\s+/g, ''))
+  const have = new Set(tokens(text).map(stem))
+  const need = tokens(kw).filter((w) => !STOP.has(w)).map(stem)
+  return need.length > 0 && need.every((w) => have.has(w))
+}
+
+export type OnPage = { page: string; title: boolean; h1: boolean; description: boolean; url: boolean; checked_at: string; error?: string }
+
+/** 页面的标题、H1、描述、网址里各有没有这个词（网址把 - _ / 当空格） */
+export function onPageFacts(page: string, doc: { title: string; h1: string[]; description: string }, keyword: string, at: string): OnPage {
+  let path = page
+  try {
+    path = decodeURIComponent(new URL(page).pathname)
+  } catch {}
+  return {
+    page, checked_at: at,
+    title: hasKeyword(doc.title, keyword),
+    h1: doc.h1.some((h) => hasKeyword(h, keyword)),
+    description: hasKeyword(doc.description, keyword),
+    url: hasKeyword(path.replace(/[-_/.]+/g, ' '), keyword),
+  }
+}
+
+/**
+ * 自己和自己抢：GSC 里同一个词有两个以上本站页面有曝光，第二个的曝光至少是第一个的 20%（零星出现一次的不算），
+ * 而且没有一个排进前 3（已经有页面排在前面就不是问题：品牌词常常几个页面都排第 1），
+ * 返回这几个页面（曝光从多到少，最多 5 个）；不算抢就返回空数组。
+ */
+export function competingPages(rows: GscRow[], minShare = 0.2): { page: string; impressions: number; position: number }[] {
+  const list = rows
+    .filter((r) => r.impressions > 0)
+    .sort((a, b) => b.impressions - a.impressions)
+    .map((r) => ({ page: r.keys[1], impressions: r.impressions, position: Math.round(r.position * 10) / 10 }))
+  if (list.length < 2 || list[1].impressions < Math.max(3, list[0].impressions * minShare)) return []
+  if (list.some((p) => p.position <= 3)) return []
+  return list.filter((p) => p.impressions >= Math.max(3, list[0].impressions * minShare)).slice(0, 5)
+}

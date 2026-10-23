@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, EyeOff, FilePlus2, ListPlus, MessageCircle, Plus, RefreshCw, SearchCheck, Sparkles, Target, Undo2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, ScanSearch, X, EyeOff, FilePlus2, ListPlus, MessageCircle, Plus, RefreshCw, SearchCheck, Sparkles, Target, Undo2 } from 'lucide-react'
 import { Badge, Button, Notice, Panel, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from './ui'
 import RunButton from './RunButton'
 import { TaskButton, TaskLaunchButton } from './Task'
@@ -13,6 +13,7 @@ import { numLocale, tr } from '../lib/i18n'
 
 const RESEARCH_TASK = 'keyword-research'
 const EXPAND_TASK = 'search-expand'
+const META_TASK = 'search-meta' // 目标页面标题、描述没用上这个词：交给谷歌排名现成的改标题描述任务
 
 type Bucket = 'quick_win' | 'ranking' | 'open' | 'mixed' | 'hard' | 'unchecked'
 type Keyword = {
@@ -20,18 +21,28 @@ type Keyword = {
   gsc_impressions?: number; gsc_clicks?: number; gsc_position?: number; gsc_page?: string; search_page_id?: string
   bucket?: Bucket; score?: number; topic_id?: string; seen?: boolean
   serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_competitors?: string; serp_results?: string; serp_error?: string; rank_history?: string
-  target_page?: string; live_at?: string; review_verdict?: string; review_summary?: string
+  target_page?: string; live_at?: string; review_verdict?: string; review_summary?: string; onpage?: string; gsc_pages?: string
 }
+type OnPage = { page: string; title: boolean; h1: boolean; description: boolean; url: boolean; checked_at: string; error?: string }
+type Competing = { page: string; impressions: number; position: number }
 type SerpRow = { p: number; domain: string; kind: string; title: string; url: string }
 type Rank = { d: string; p: number; s: 'gsc' | 'serp' }
 type Data = { list: Keyword[]; raw: number; raw_sample: string[]; serp_pending: number; chat_id: string; reviewed_at: string; gsc_at: string }
 // rival：竞品在前 10、我们不在（和分桶交叉，单独一类，和 _keywords.ts 的 rivalOnly 同一个口径）
-type Filter = Bucket | 'rival' | 'targeting' | 'dismissed'
+// issue：页面体检有问题（目标页面标题或 H1 没用上这个词，或者几个本站页面在抢）
+type Filter = Bucket | 'rival' | 'issue' | 'targeting' | 'dismissed'
 
 const INTENT: Record<string, Tone> = { buy: 'primary', compare: 'warn', research: 'default', other: 'default' }
 const num = (x?: number) => (x ?? 0).toLocaleString(numLocale())
 const pathOf = (u: string) => u.replace(/^https?:\/\/[^/]+/, '') || '/'
-const FILTERS: Filter[] = ['quick_win', 'rival', 'open', 'mixed', 'unchecked', 'hard', 'ranking', 'targeting', 'dismissed']
+const FILTERS: Filter[] = ['quick_win', 'rival', 'issue', 'open', 'mixed', 'unchecked', 'hard', 'ranking', 'targeting', 'dismissed']
+const onpageOf = (k: Keyword) => parse<OnPage | null>(k.onpage, null)
+const competingOf = (k: Keyword) => parse<Competing[]>(k.gsc_pages, [])
+const hasIssue = (k: Keyword) => {
+  if (k.status === 'dismissed') return false
+  const o = onpageOf(k)
+  return (!!o && !o.error && (!o.title || !o.h1)) || competingOf(k).length > 1
+}
 const rivalOnly = (k: Keyword) => !!k.serp_at && !!k.serp_competitors && k.status !== 'dismissed' && !k.serp_position && !(k.gsc_position && k.gsc_position <= 10)
 const KIND_TONE: Record<string, Tone> = { ours: 'ok', competitor: 'bad', b2b: 'primary', forum: 'primary', social: 'primary', marketplace: 'warn', reference: 'warn' }
 function parse<T>(s: string | undefined, fallback: T): T {
@@ -79,11 +90,12 @@ export default function Keywords({ channel, rev, onGo }: { channel: Channel; rev
     for (const k of data?.list ?? []) {
       c[filterOf(k)]++
       if (rivalOnly(k)) c.rival++
+      if (hasIssue(k)) c.issue++
     }
     return c
   }, [data])
   const active: Filter = filter || (FILTERS.find((f) => counts[f] && f !== 'dismissed') ?? 'unchecked')
-  const shown = (data?.list ?? []).filter((k) => (active === 'rival' ? rivalOnly(k) : filterOf(k) === active))
+  const shown = (data?.list ?? []).filter((k) => (active === 'rival' ? rivalOnly(k) : active === 'issue' ? hasIssue(k) : filterOf(k) === active))
   const groups = useMemo(() => {
     const m = new Map<string, Keyword[]>()
     for (const k of shown) m.set(k.cluster || tr('keywords.no_cluster'), [...(m.get(k.cluster || tr('keywords.no_cluster')) ?? []), k])
@@ -126,6 +138,11 @@ export default function Keywords({ channel, rev, onGo }: { channel: Channel; rev
             {data.serp_pending > 0 && (
               <RunButton inline watch fn="keywords.serp" input={{ channel_id: channel.id }} onDone={load} variant="ghost" icon={SearchCheck}>
                 {tr('keywords.serp_run', { n: Math.min(20, data.serp_pending) })}
+              </RunButton>
+            )}
+            {data.list.some((k) => k.target_page || k.gsc_page) && (
+              <RunButton inline fn="keywords.onpage" input={{ channel_id: channel.id }} onDone={load} variant="ghost" icon={ScanSearch}>
+                {tr('keywords.onpage_run')}
               </RunButton>
             )}
             {gsc && data.list.length > 0 && (
@@ -232,6 +249,7 @@ function Row({ k, isNew, channel, onChanged, onGo }: { k: Keyword; isNew: boolea
         </div>
         <SerpLine k={k} />
         <LoopLine k={k} />
+        <PageCheck k={k} />
         {k.note && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{k.note}</p>}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1">
@@ -245,6 +263,14 @@ function Row({ k, isNew, channel, onChanged, onGo }: { k: Keyword; isNew: boolea
             </Button>
           </>
         )}
+        {k.status !== 'dismissed' && k.bucket !== 'quick_win' && k.search_page_id && (() => {
+          const o = onpageOf(k)
+          return o && !o.error && (!o.title || !o.description) ? (
+            <TaskButton task={META_TASK} input={{ id: k.search_page_id }} match={(r) => r.input?.id === k.search_page_id} onFinished={onChanged} variant="outline" icon={Sparkles}>
+              {tr('keywords.fix_meta')}
+            </TaskButton>
+          ) : null
+        })()}
         {k.status === 'idea' && status('targeting', tr('keywords.target'), Target)}
         {k.status === 'targeting' && status('idea', tr('keywords.untarget'), Undo2)}
         {k.status === 'dismissed' ? status('idea', tr('keywords.restore'), Undo2) : status('dismissed', tr('keywords.dismiss'), EyeOff)}
@@ -332,6 +358,43 @@ function LoopLine({ k }: { k: Keyword }) {
           <Badge tone={VERDICT_TONE[k.review_verdict] ?? 'default'}>{tr(`keywords.verdict_${k.review_verdict}`)}</Badge>
           <span>{k.review_summary}</span>
         </>
+      )}
+    </div>
+  )
+}
+
+/** 页面体检：目标页面的标题、H1、描述、网址里有没有这个词；几个本站页面在抢同一个词 */
+function PageCheck({ k }: { k: Keyword }) {
+  const o = onpageOf(k)
+  const rivals = competingOf(k)
+  if (!o && rivals.length < 2) return null
+  const mark = (ok: boolean, label: string) => (
+    <span className={cx('inline-flex items-center gap-0.5', !ok && 'text-amber-700 dark:text-amber-400')}>
+      {ok ? <Check className="size-3 text-emerald-600" /> : <X className="size-3" />}
+      {label}
+    </span>
+  )
+  return (
+    <div className="mt-0.5 space-y-0.5 text-[11px] text-muted-foreground">
+      {o && (
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5" title={o.page}>
+          <span>{tr('keywords.onpage_label', { page: pathOf(o.page) })}</span>
+          {o.error ? (
+            <span className="text-destructive">{o.error}</span>
+          ) : (
+            <>
+              {mark(o.title, tr('keywords.onpage_title'))}
+              {mark(o.h1, 'H1')}
+              {mark(o.description, tr('keywords.onpage_desc'))}
+              {pathOf(o.page) !== '/' && mark(o.url, tr('keywords.onpage_url'))}
+            </>
+          )}
+        </div>
+      )}
+      {rivals.length > 1 && (
+        <div className="text-amber-700 dark:text-amber-400">
+          {tr('keywords.competing', { n: rivals.length, pages: rivals.map((p) => tr('keywords.competing_page', { page: pathOf(p.page), pos: p.position })).join('、') })}
+        </div>
       )}
     </div>
   )
