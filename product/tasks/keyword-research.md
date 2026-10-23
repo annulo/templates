@@ -22,9 +22,13 @@ annulo run keywords.expand --input '{"channel_id":"<id>"}'
 annulo run competitors.pages --input '{"id":"<competitors 里的 id>","kind":"product","limit":200}'
 ```
 
+报「网站拦截了自动读取」时加 `"browser": true` 再读一次（用用户自己的浏览器读 sitemap）。
+
 从网址的最后一段（slug）和标题里挑出 5~12 个**产品词**（去掉竞品的品牌名、型号编号、颜色尺寸这种变体），和我们的产品对得上的优先，再扩一次：
 `{"channel_id":"<id>","seeds":["…"],"seed_source":"competitor"}`。扩出来的词来源会记成 `competitor`，筛的时候照常判断相不相关。
 用户说「从竞品挖词」时就做这一步；`competitors` 是空的或者没有 `competitors.pages`（不是外贸模板）就跳过，告诉用户先在「竞品」里加几家在盯的。
+
+联想出来的词会先过一遍降噪：和业务词汇（`vocabulary`：资料关键词、产品、GSC 的词、筛过留下的词里出现两次以上的词，加上你明确给的种子）一个词都不沾的不收，`filtered` 是挡掉了几个、`filtered_sample` 是举例。看例子里有该留的（业务词汇太窄），就把对应的产品词当种子再扩一次（给的种子的词会算进词汇），实在不行带 `"no_filter": true`。
 
 返回里：`engine` 是联想用的哪个搜索引擎（`google`，访问不了时 `bing`；空的就是两个都访问不了，只有 GSC 的词），`added` 是新加了几个，`raw` 是现在待筛的总数，`gsc_error` 是读 GSC 出的错（没关联 Search Console 时没有排名数据，不影响筛词）。
 

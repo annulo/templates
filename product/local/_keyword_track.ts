@@ -2,7 +2,7 @@
 //
 // 改动上线时（trackChange）linkKeywords 把相关的词挂到这条改动上：
 //   - 发布文章：选题 → 文章，转成这个选题的词（keywords.topic_id = 文章的 topic_id）；
-//   - 改标题描述、补内容：这个页面（search_pages）的词——search_page_id 一样，或者目标页面、曝光最多的页面就是它。
+//   - 改标题描述、补内容、修好关键词的体检问题（keyword_missing / keyword_cannibal）：这些页面的词——search_page_id 一样，或者目标页面、曝光最多的页面就是它。
 //   挂上的词记 change_id、live_at、目标页面（没有的话），标成在做；以前的复查结论清掉。
 // 复查时（review.check）reviewKeywords 按每个词读 GSC 改动前后 14 天，写这个词自己的结论（页面整体的结论照旧在 site_changes）。
 
@@ -32,9 +32,11 @@ function pagesOf(c: Change): string[] {
   }
 }
 
-/** 改动上线：把相关的词挂上。只管文章和搜索页面的改动（体检修复多是全站的事，不按词算）。返回挂了几个 */
+/** 改动上线：把相关的词挂上。只管文章、搜索页面的改动和关键词的体检问题。返回挂了几个 */
 export function linkKeywords(ctx: any, c: Change): number {
-  if (!['article', 'search_meta', 'search_content'].includes(c.kind)) return 0
+  // 体检修复只管关键词那两项（_audit_keywords.ts）：改的就是这几个词的页面；别的体检问题多是全站的事，不按词算
+  const kwFix = c.kind === 'issue_fix' && /^keyword_/.test(ctx.db.get('site_issues', c.ref_id)?.check ?? '')
+  if (!kwFix && !['article', 'search_meta', 'search_content'].includes(c.kind)) return 0
   const pages = pagesOf(c)
   const all = keywordsOf(ctx, c.channel_id).filter((k) => k.status !== 'dismissed' && k.status !== 'raw')
   let hit: Kw[] = []
@@ -42,7 +44,7 @@ export function linkKeywords(ctx: any, c: Change): number {
     const topic = ctx.db.get('articles', c.ref_id)?.topic_id
     hit = topic ? all.filter((k) => k.topic_id === topic) : []
   } else {
-    hit = all.filter((k) => k.search_page_id === c.ref_id || pages.some((p) => samePage(p, k.target_page) || samePage(p, k.gsc_page)))
+    hit = all.filter((k) => (!kwFix && k.search_page_id === c.ref_id) || pages.some((p) => samePage(p, k.target_page) || samePage(p, k.gsc_page)))
   }
   for (const k of hit)
     ctx.db.update('keywords', k.id, {

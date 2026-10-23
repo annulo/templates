@@ -72,6 +72,14 @@
         "type": "string",
         "description": "gsc_page 在 search_pages 里的记录 id（补内容、复查都挂在那条上）"
       },
+      "gsc_pages": {
+        "type": "string",
+        "description": "自己和自己抢：GSC 里这个词有两个以上本站页面有曝光时，这几个页面（JSON）[{ page, impressions, position }]；不抢是空"
+      },
+      "onpage": {
+        "type": "string",
+        "description": "目标页面体检（站点体检写，JSON）：{ page, title, h1, description, url（各有没有用上这个词）, primary（是不是这个页面的主词）, title_text, h1_text, desc_text（页面上现在写的）, checked_at, error? }"
+      },
       "gsc_at": {
         "type": "string",
         "description": "GSC 数据更新时间"

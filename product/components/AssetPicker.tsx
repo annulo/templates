@@ -121,7 +121,7 @@ export default function AssetPicker({ open, kind = 'image', max, onClose, onPick
                   {a.kind === 'video' ? (
                     <video src={fileSrc(a.url)} muted preload="metadata" className="aspect-square w-full bg-muted object-cover" />
                   ) : (
-                    <img src={a.url?.startsWith('local:') ? fileSrc(a.url) : shuttleImage(a.url)} alt={a.name ?? ''} loading="lazy" className="aspect-square w-full bg-muted object-cover" />
+                    <img src={/^(local|folder|work):/.test(a.url ?? '') ? fileSrc(a.url) : shuttleImage(a.url)} alt={a.name ?? ''} loading="lazy" className="aspect-square w-full bg-muted object-cover" />
                   )}
                   {on && (
                     <span className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">

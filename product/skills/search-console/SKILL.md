@@ -44,6 +44,7 @@ description: 搜索表现和改站复查：独立站在 Google 搜索里的点�
 - 分桶（`bucket`）只看事实，不要编搜索量、难度、排名：`keywords.refresh` 按 GSC 算（排前 3 是 `ranking`，排 4~30 且曝光 ≥ 10 是 `quick_win`）；
   没有 GSC 排名的词，用户点「查 Google 结果页」（`keywords.serp`，在用户的 Chrome 里搜，会开窗口）后按前 10 名分：弱位置（论坛、社媒、B2B 平台）≥ 3 是 `open`，被电商、百科霸屏是 `hard`，其余 `mixed`；都没有是 `unchecked`。
   用户问「这个词好不好做」时，先看这个词的 `serp_results`（前 10 名和类型）和 `bucket`，照事实说。
+- 页面体检：`keywords.onpage` 看目标页面的标题、H1、描述、网址有没有用上这个词（存 `onpage`）；`gsc_pages` 不是空的是几个本站页面在抢这个词（都没排进前 3）。用户问「为什么这个词排不上去」时先看这两样。
 - 快赢的词给它曝光最多的页面（`gsc_page` / `search_page_id`）补内容，走下面「补内容」的流程；还没排名的按主题 `keywords.toTopic` 转成选题（`topics.source=keyword`）。
 
 回答「搜索表现怎么样」「哪些词带来流量」这类问题，用 `db_query` / `db_aggregate` 查 `search_pages`、`search_daily`，或者跑 gsc.summary，不要自己调 GSC 接口。

@@ -13,6 +13,7 @@
 import { sitePublish, status } from './_creght'
 import { isEn, L } from './_i18n'
 import { trackChange } from './_review'
+import { keywordChecks } from './_audit_keywords'
 
 // 要电脑的（浏览器、本机授权、密钥、外部接口）：手机上点了转给电脑上开着的 Shuttle 跑（设置 → 远程访问）
 export const remote = ['run', 'publish']
@@ -224,6 +225,48 @@ async function crawl(base: string, max: number, ctx: any) {
   return { root, robots, llms, has_sitemap: fromSitemap.length > 0, pages }
 }
 
+/**
+ * AI 爬虫（docs/site-audit.md「AI 爬虫准入」）。search：拦了 ChatGPT、Perplexity 这些搜索时就读不到这个站，AI 搜索推荐不到你；
+ * 其余是训练用的，拦了只影响以后的模型知不知道你，有的公司是有意拦的。
+ */
+const AI_BOTS = [
+  { ua: 'OAI-SearchBot', zh: 'ChatGPT 搜索', en: 'ChatGPT search', search: true },
+  { ua: 'ChatGPT-User', zh: 'ChatGPT 替用户打开网页', en: 'ChatGPT browsing for users', search: true },
+  { ua: 'PerplexityBot', zh: 'Perplexity', en: 'Perplexity', search: true },
+  { ua: 'Claude-SearchBot', zh: 'Claude 搜索', en: 'Claude search', search: true },
+  { ua: 'GPTBot', zh: 'OpenAI 训练', en: 'OpenAI training', search: false },
+  { ua: 'ClaudeBot', zh: 'Anthropic 训练', en: 'Anthropic training', search: false },
+  { ua: 'Google-Extended', zh: 'Google Gemini 训练', en: 'Google Gemini training', search: false },
+  { ua: 'Bytespider', zh: '字节跳动（豆包）', en: 'ByteDance (Doubao)', search: false },
+  { ua: 'CCBot', zh: 'Common Crawl（很多模型的训练数据）', en: 'Common Crawl (training data for many models)', search: false },
+]
+
+/**
+ * robots.txt 对某个爬虫：blocked 整站禁止（Disallow: /，没有 Allow）；partial 整站禁止但放行了部分路径；allowed 其余。
+ * 只禁止后台、购物车这类路径不算拦（几乎每个站都这样，不影响 AI 读内容）。有专门写给它的组就用那组，没有就用 *。
+ */
+function robotsAccess(text: string, ua: string): 'allowed' | 'partial' | 'blocked' {
+  const groups: { agents: string[]; rules: { allow: boolean; path: string }[] }[] = []
+  let cur: (typeof groups)[number] | null = null
+  for (const raw of text.split(/\r?\n/)) {
+    const m = raw.replace(/#.*/, '').match(/^\s*([a-z-]+)\s*:\s*(.*?)\s*$/i)
+    if (!m) continue
+    const key = m[1].toLowerCase()
+    if (key === 'user-agent') {
+      if (!cur || cur.rules.length) groups.push((cur = { agents: [], rules: [] }))
+      cur.agents.push(m[2].toLowerCase())
+    } else if ((key === 'allow' || key === 'disallow') && cur) {
+      cur.rules.push({ allow: key === 'allow', path: m[2] })
+    }
+  }
+  const name = ua.toLowerCase()
+  const g = groups.find((x) => x.agents.some((a) => a !== '*' && name.includes(a))) ?? groups.find((x) => x.agents.includes('*'))
+  if (!g) return 'allowed'
+  const root = g.rules.some((r) => !r.allow && (r.path === '/' || r.path === '/*'))
+  if (!root) return 'allowed'
+  return g.rules.some((r) => r.allow && r.path && r.path !== '/' && r.path !== '/*') ? 'partial' : g.rules.some((r) => r.allow && (r.path === '/' || r.path === '/*')) ? 'allowed' : 'blocked'
+}
+
 type Found = { check: string; severity: 'high' | 'medium' | 'low'; title: string; detail: string; pages: string[] }
 
 /** 检查清单：每项的严重程度固定 */
@@ -300,6 +343,20 @@ function checks(site: Awaited<ReturnType<typeof crawl>>, preview: boolean, ctx: 
           : `本次无法确认 ${site.root}/${name}（${file.reason}）。请稍后重试，不能据此认定文件缺失。`)
     }
   }
+  // AI 爬虫准入：robots.txt 读到了才判断（没有 robots.txt 等于全放行）。预览地址本来就禁止所有爬虫（creght 的预览是 Disallow: /），不算
+  if (site.robots.state === 'present' && !preview && !/\.preview\./.test(hostOf(site.root))) {
+    const access = AI_BOTS.map((b) => ({ ...b, state: robotsAccess(site.robots.text, b.ua) })).filter((b) => b.state !== 'allowed')
+    if (access.length) {
+      const search = access.filter((b) => b.search)
+      const severity: Found['severity'] = search.some((b) => b.state === 'blocked') ? 'high' : search.length ? 'medium' : 'low'
+      const line = (b: (typeof access)[number]) => en ? `${b.ua} (${b.en}): ${b.state === 'blocked' ? 'blocked' : 'only some paths allowed'}` : `${b.ua}（${b.zh}）：${b.state === 'blocked' ? '整站禁止' : '只放行了部分路径'}`
+      site1('ai_crawlers', severity, en ? 'robots.txt blocks AI crawlers' : 'robots.txt 拦了 AI 爬虫', true,
+        (en ? `${access.map(line).join('; ')}. ` : `${access.map(line).join('；')}。`) +
+        (search.length
+          ? (en ? 'Blocked search crawlers mean ChatGPT / Perplexity can\'t read the site when answering, so AI search won\'t recommend you. Remove the Disallow: / for them in robots.txt.' : '搜索类爬虫被拦，ChatGPT、Perplexity 回答问题时读不到这个站，AI 搜索就推荐不到你。在 robots.txt 里去掉对它们的 Disallow: /。')
+          : (en ? 'These are training crawlers: blocking them only affects whether future models know you. Ignore this if it is intentional.' : '这些是训练用的爬虫，拦了只影响以后的模型知不知道你；如果是有意拦的，可以忽略。')))
+    }
+  }
   return out
 }
 
@@ -308,7 +365,7 @@ function score(found: Found[], total: number) {
   const base = { high: 12, medium: 5, low: 2 }
   let s = 100
   for (const f of found) {
-    const perPage = f.pages.length > 1 || !['sitemap', 'structured_data', 'robots', 'llms_txt'].includes(f.check)
+    const perPage = f.pages.length > 1 || !['sitemap', 'structured_data', 'robots', 'llms_txt', 'ai_crawlers'].includes(f.check)
     s -= base[f.severity] * (perPage && total ? 0.5 + (0.5 * f.pages.length) / total : 1)
   }
   return Math.max(0, Math.round(s))
@@ -378,6 +435,16 @@ async function runOne(input: { channel_id?: string; max?: number; dry?: boolean 
   ctx.progress({ done: 0, message: L(ctx, `开始体检 ${t.url}${t.preview ? '（还没发布，用预览地址）' : ''}`, `Auditing ${t.url}${t.preview ? " (not published yet, using the preview URL)" : ''}`) })
   const site = await crawl(t.url, Math.min(Math.max(input.max ?? DEFAULT_MAX, 1), 200), ctx)
   const found = checks(site, t.preview, ctx)
+  // 关键词的目标页面有没有用上这个词、几个页面抢一个词（_audit_keywords.ts）；出错不影响体检
+  try {
+    const host = hostOf(t.url)
+    found.push(...(await keywordChecks(ch.id, site.pages, ctx, async (urls) => {
+      const rs = await ctx.fetchAll(urls)
+      return Promise.all(urls.map((u, i) => page(rs[i], u, host, ctx)))
+    })))
+  } catch (e: any) {
+    ctx.log(L(ctx, '关键词检查没做成：', 'Keyword checks failed: ') + (e?.message ?? e))
+  }
   const total = site.pages.filter((p) => p.html).length
   if (input.dry)
     return {

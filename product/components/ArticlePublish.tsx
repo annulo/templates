@@ -28,6 +28,7 @@ import { dbDelete, dbPatch, isSite, openChat, runLocal, runTask, shuttleImage, t
 import { SOCIAL, loggedInElsewhere, useElsewhere } from '../lib/social'
 import { FIELDS } from '../plugins/social/local/_fields'
 import { lengthOn, supports } from '../local/_types'
+import { AiScoreBadge, useAiScore } from './AiScore'
 import type { Ctx } from './views/types'
 
 // 文章的发布：一篇文章就是要发的内容，「发布」里勾选支持这种类型的账号（可以多选），现在发或者定个时间；
@@ -117,6 +118,9 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
   const [result, setResult] = useState<Record<string, RowState>>({})
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
+  // 发到网站的长文：显示 AI 引用分，D、F 级多提醒一句，不拦发布（docs/ai-citation-score.md）
+  const aiScore = useAiScore(article)
+  const scoreShown = t === 'article' && !!aiScore && picked.some((id) => isSite(accounts.find((ch) => ch.id === id)))
   useEffect(() => { if (open) { setPicked(targetAccount && !blocked(targetAccount) ? [targetAccount.id] : []); setResult({}); setError(''); setWhen('now'); setAt(nextHour()) } }, [open, article.id, targetAccountId])
 
   // 不能选的原因：平台不支持这种类型、网站没配好发布、登录在别的电脑、登录过期
@@ -181,6 +185,10 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
         <p className="text-sm text-muted-foreground">{tr(scope ? 'article.pub_hint_' + scope : 'article.pub_hint')}</p>
         {targetAccountId && <Notice>{tr('article.pub_target_account', {name:targetAccount?.name || tr('article.pub_target_missing')})}</Notice>}
         <div className="max-h-80 space-y-1 overflow-y-auto">{[...usable, ...accounts.filter((ch) => !usable.includes(ch))].map(row)}</div>
+        {scoreShown && aiScore && <div className="space-y-2">
+          <p className="flex items-center gap-2 text-sm">{tr('aeo.publish_line', { grade: aiScore.grade, score: aiScore.score })}<AiScoreBadge r={aiScore} /></p>
+          {(aiScore.grade === 'D' || aiScore.grade === 'F') && <Notice>{tr('aeo.publish_low')}</Notice>}
+        </div>}
         {!!unsupported.length && <p className="text-xs leading-relaxed text-muted-foreground">{tr(scope ? 'article.pub_rewrite_hint_' + scope : 'article.pub_rewrite_hint', { type: TYPE_META[t].label })}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); onRewrite() }}>{tr('article.rewrite')}</button></p>}
         {<div className="space-y-2 border-t border-border pt-3">
           <div className="flex flex-wrap gap-4 text-sm">
