@@ -9,3 +9,7 @@
 - 沿用 robots / llms_txt 检查键，避免重复创建同类问题；无法确认时保留该问题，避免把旧问题错误标记为已解决。
 
 验证：`node --test publish/tests/audit.test.mjs`；在本地项目通过 `annulo run audit.inspect` 检查真实网站。`llms.txt` 的文件名带 s。
+
+## 关键词检查
+
+体检顺带查关键词的页面问题（`_audit_keywords.ts`）：页面的主词没用在标题和 H1 里（`keyword_missing`）、几个页面在抢同一个词（`keyword_cannibal`）。没挖过关键词的项目没有这两项。规则见 `docs/keywords.md`「页面体检」。

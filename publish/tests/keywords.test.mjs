@@ -225,3 +225,23 @@ test('vocabulary keeps words seen twice or more; unrelated suggestions are dropp
   assert.ok(!kw.relevant('nebula wallpaper 4k', v))
   assert.ok(kw.relevant('anything', new Set(['a', 'b']))) // 词汇太少不筛
 })
+
+const auditKw = await load('_audit_keywords.ts', `const isEn = () => false; ${kwPure}`)
+
+test('site audit flags only each page\'s main keyword, and competing pages', async () => {
+  const tables = { keywords: [
+    { id: 'k1', channel_id: 'c1', keyword: 'led grow light manufacturer', status: 'idea', gsc_page: 'https://acme.com/led', gsc_impressions: 50 },
+    { id: 'k2', channel_id: 'c1', keyword: 'grow light oem', status: 'idea', gsc_page: 'https://acme.com/led', gsc_impressions: 5 },
+    { id: 'k3', channel_id: 'c1', keyword: 'grow tent', status: 'idea', target_page: 'https://acme.com/tent', gsc_pages: JSON.stringify([{ page: 'https://acme.com/tent', position: 12 }, { page: 'https://acme.com/blog/tent', position: 18 }]) },
+  ] }
+  const ctx = fakeCtx(tables)
+  const pages = [{ url: 'https://preview.example/led/', html: true, title: 'LED Grow Light Manufacturer', h1: ['Our lights'], description: '' }]
+  const read = async (urls) => urls.map((u) => ({ url: u, html: true, title: 'Grow Tent', h1: ['Grow tent'], description: '' }))
+  const found = await auditKw.keywordChecks('c1', pages, ctx, read)
+  const missing = found.find((f) => f.check === 'keyword_missing')
+  assert.deepEqual(missing.pages, ['https://acme.com/led']) // 按路径对上预览地址
+  assert.match(missing.detail, /H1 没用上「led grow light manufacturer」/)
+  assert.doesNotMatch(missing.detail, /grow light oem/) // 不是主词的不算
+  assert.ok(found.some((f) => f.check === 'keyword_cannibal'))
+  assert.equal(JSON.parse(tables.keywords[1].onpage).primary, false)
+})

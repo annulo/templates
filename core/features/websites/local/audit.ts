@@ -13,6 +13,7 @@
 import { sitePublish, status } from './_creght'
 import { isEn, L } from './_i18n'
 import { trackChange } from './_review'
+import { keywordChecks } from './_audit_keywords'
 
 // 要电脑的（浏览器、本机授权、密钥、外部接口）：手机上点了转给电脑上开着的 Shuttle 跑（设置 → 远程访问）
 export const remote = ['run', 'publish']
@@ -378,6 +379,16 @@ async function runOne(input: { channel_id?: string; max?: number; dry?: boolean 
   ctx.progress({ done: 0, message: L(ctx, `开始体检 ${t.url}${t.preview ? '（还没发布，用预览地址）' : ''}`, `Auditing ${t.url}${t.preview ? " (not published yet, using the preview URL)" : ''}`) })
   const site = await crawl(t.url, Math.min(Math.max(input.max ?? DEFAULT_MAX, 1), 200), ctx)
   const found = checks(site, t.preview, ctx)
+  // 关键词的目标页面有没有用上这个词、几个页面抢一个词（_audit_keywords.ts）；出错不影响体检
+  try {
+    const host = hostOf(t.url)
+    found.push(...(await keywordChecks(ch.id, site.pages, ctx, async (urls) => {
+      const rs = await ctx.fetchAll(urls)
+      return Promise.all(urls.map((u, i) => page(rs[i], u, host, ctx)))
+    })))
+  } catch (e: any) {
+    ctx.log(L(ctx, '关键词检查没做成：', 'Keyword checks failed: ') + (e?.message ?? e))
+  }
   const total = site.pages.filter((p) => p.html).length
   if (input.dry)
     return {
