@@ -6,7 +6,7 @@ import { check } from '../plugins/social/local/social'
 // 内容文件夹（本机函数，Annulo 在用户电脑上执行，不经过模型；设计见 docs/content-model.md）：
 // 每条内容一个文件夹，在项目工作目录（ctx.fs.root，本机是 ~/Annulo/<项目名>）的「内容/」下，文章表 folder 字段记它相对工作目录的路径。
 // 新版 Annulo（59 起）上它是一个产物文件夹（ctx.folders）：带 id（folder_id），挪了、改了名也找得到；团队服务器上，
-// 用户电脑上的 Claude Code 按文件夹拉下来做、做完推回去（annulo folder pull / push）。文件夹里的 .annuloignore 列不同步的中间产物
+// 用户电脑上的 Claude Code 按文件夹拉下来做、做完推回去（annulo fs pull / push）。文件夹里的 .annuloignore 列不同步的中间产物
 // （草稿视频、草稿音频、渲染缓存放 草稿/），建文件夹时写一份默认的。老 Annulo 没有 ctx.folders，只用路径，照旧能用。
 // 稿子、脚本、文案、视频、参考都是里面的文件，可以分目录；页面列出、编辑它们，助手在对话里直接读写这个目录。
 // 页面预览图片、视频用 /_annulo/work-files/<root 下的路径>（components/Folder.tsx），不经过这里。

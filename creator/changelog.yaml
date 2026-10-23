@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.17.1
+  zh: "在自己电脑上做内容时只取要用的文件，不再整个文件夹拉下来。"
+  en: "When working on a piece from your own computer, only the files needed are fetched instead of the whole folder."
 - version: 0.17.0
   zh: "每条内容的文件夹能在团队服务器和自己电脑之间同步，草稿视频、草稿音频放进「草稿/」不上传；内容列表能按来源筛选。"
   en: "Each piece's folder can sync between your team's server and your own computer, with draft videos and audio kept in drafts/; the content list can filter by origin."
