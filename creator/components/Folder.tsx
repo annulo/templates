@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, Clapperboard, CloudOff, Laptop, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Clapperboard, CloudOff, CloudUpload, Laptop, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, fmtTime, inputCls } from './ui'
 import { fileSrc, filesOf } from '../lib/files'
@@ -50,7 +50,7 @@ const toneOf = (e: Entry) => e.dir ? 'text-muted-foreground' : VIDEO.test(e.path
 export default function Folder({ article: a, onChanged, sel: selProp, setSel: setSelProp }: { article: Article; onChanged: () => void; sel?: string; setSel?: (p: string, replace?: boolean) => void }) {
   const { t } = useT('folder')
   const id = a.id
-  const [state, setState] = useState<{ dir: string; path: string; entries: Entry[]; can_open?: boolean; missing?: boolean; root?: string; sync?: SyncStatus | null } | null>(null)
+  const [state, setState] = useState<{ dir: string; path: string; entries: Entry[]; can_open?: boolean; missing?: boolean; root?: string; sync?: SyncStatus | null; can_upload?: boolean; upload?: { state: string; machine?: string; error?: string } | null } | null>(null)
   const [error, setError] = useState('')
   const [selLocal, setSelLocal] = useState('')
   const sel = setSelProp ? selProp ?? '' : selLocal
@@ -267,8 +267,11 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
             <p className="font-medium">{t('missing')}</p>
             <p className="mt-0.5 break-all text-xs text-muted-foreground">{where}</p>
           </div>
-          <p className="text-muted-foreground">{t('missing_desc')}</p>
+          <p className="text-muted-foreground">{t(state.can_upload ? 'missing_desc_server' : 'missing_desc')}</p>
+          {state.upload?.state === 'failed' && <p className="text-xs text-destructive">{t('upload_failed', { machine: state.upload.machine ?? '', error: state.upload.error ?? '' })}</p>}
           <div className="flex flex-wrap items-center gap-1.5">
+            {/* 团队服务器上：文件还在电脑上没传上来，让点的人的电脑传 */}
+            {state.can_upload && <Button size="sm" disabled={state.upload?.state === 'running'} onClick={() => void call('upload').then(load).catch((e) => setError((e as Error).message))}>{state.upload?.state === 'running' ? <Loader2 className="animate-spin" /> : <CloudUpload />}{state.upload?.state === 'running' ? t('uploading', { machine: state.upload.machine ?? '' }) : t('upload')}</Button>}
             {state.can_open && <Button size="sm" variant="outline" onClick={() => void call('openRoot').catch((e) => setError((e as Error).message))}><FolderOpen />{t('missing_open')}</Button>}
             <Button size="sm" variant="outline" onClick={() => void load()}><RefreshCw />{t('missing_retry')}</Button>
             <Button size="sm" variant="ghost" disabled={creating} onClick={() => void build()}>{creating ? <Loader2 className="animate-spin" /> : <FolderPlus />}{t('missing_rebuild')}</Button>

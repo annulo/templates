@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.18.1
+  zh: "团队服务器上内容的文件夹还留在电脑上时，点「上传」就能让你的电脑把它传上来。"
+  en: "When a piece's folder is still on your computer, click Upload on the team server and your computer sends it up."
 - version: 0.18.0
   zh: "内容文件夹里标出哪些文件不同步（草稿这些只在本机），还能看到谁的电脑上有没传上来的文件。"
   en: "Content folders mark which files don't sync (drafts stay on your computer) and show whose computer still has files that weren't uploaded."

@@ -114,13 +114,25 @@ export function create(input: { article_id: string }, ctx: any) {
   return { dir: `${ctx.fs.root}/${dir}`, path: dir, folder_id: a.folder_id || '', local: ctx.fs.kind !== 's3' }
 }
 
+/** 团队服务器的页面上点「上传」：让点的人的电脑（连着服务器的 Annulo）把这条内容的文件夹推上来，后台推，页面每 4 秒重读看进度 */
+export function upload(input: { article_id: string }, ctx: any) {
+  need(ctx)
+  const dir = folderOf(ctx, article(ctx, input.article_id), false)
+  if (!dir) throw new Error(L(ctx, '这条内容还没有文件夹', "This content doesn't have a folder yet"))
+  if (!ctx.folders?.canUpload) throw new Error(L(ctx, '只有团队服务器上能让电脑上传', 'Only a team server can ask a computer to upload'))
+  return ctx.folders.upload(dir)
+}
+
 export function list(input: { article_id: string }, ctx: any) {
   need(ctx)
   const a = article(ctx, input.article_id)
   const dir = folderOf(ctx, a, false)
   // can_open：本机版能用系统程序打开、在访达里显示；服务端部署不能，页面在新标签页打开预览地址
   const can_open = !!ctx.fs.canOpen
-  if (!dir || !ctx.fs.stat(dir)) return { dir: '', path: dir, entries: [], can_open, missing: !!dir, root: ctx.fs.root }
+  // 团队服务器上找不到（项目从电脑上搬上来、文件还留在电脑上）：能让点按钮的人的电脑把它传上来（Annulo 能力版本 61）
+  const can_upload = !!ctx.folders?.canUpload && !can_open
+  const upload = can_upload && dir ? ctx.folders.uploading(dir) : null
+  if (!dir || !ctx.fs.stat(dir)) return { dir: '', path: dir, entries: [], can_open, missing: !!dir, root: ctx.fs.root, can_upload, upload }
   // sync：哪些文件按 .annuloignore 不同步（草稿/ 这些），别人电脑上还有哪些没传上来（Annulo 能力版本 60 起有，老的没有就不显示）
   let sync = null
   try { sync = ctx.folders?.status ? ctx.folders.status(a.folder_id || dir) : null } catch { sync = null }
