@@ -164,7 +164,7 @@ export function BodyPreview({ html }: { html: string }) {
   ul,ol{padding-left:1.4em} blockquote{margin:1em 0;padding-left:1em;border-left:3px solid ${dark ? '#444' : '#ddd'};color:${dark ? '#aaa' : '#666'}}
   code{background:${dark ? '#2a2a2a' : '#f2f2f2'};padding:.1em .35em;border-radius:4px}
   table{border-collapse:collapse} td,th{border:1px solid ${dark ? '#3a3a3a' : '#ddd'};padding:.3em .6em}
-  </style><body>${html.replace(/(src=["'])local:/g, '$1/_shuttle/files/')}</body>`
+  </style><body>${html.replace(/(src=["'])local:/g, '$1/_shuttle/files/').replace(/(src=["'])((?:folder|work):[^"'#]*)(?:#[^"']*)?/g, (_m, a, r) => a + '/_shuttle/work-ref/' + encodeURIComponent(r))}</body>`
   const [h, setH] = useState(400)
   const bodyObserver = useRef<ResizeObserver | null>(null)
   useEffect(() => () => bodyObserver.current?.disconnect(), [])

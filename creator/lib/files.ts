@@ -22,8 +22,14 @@ export function mimeOf(a: { mime?: string; url?: string; kind?: string }): strin
 /** 资料库的大类（筛选用）：图片、视频、文字，其余都是 file */
 export const kindOfMime = (mime: string) => (mime.startsWith('video/') ? 'video' : mime.startsWith('image/') ? 'image' : 'file')
 
-/** 页面上用的地址：本机文件换成 Annulo 的地址，网址原样 */
-export const fileSrc = (url?: string) => (url?.startsWith('local:') ? '/_shuttle/files/' + url.slice(6) : url ?? '')
+/** 工作目录里文件的引用（ctx.fs.ref 给的 folder:<文件夹 id>/<路径>#<版本>、work:<路径>#<版本>，Annulo 能力版本 62）：社媒笔记要发的成片、封面就存它，不复制 */
+export const isWorkRef = (url?: string) => !!url && /^(folder|work):/.test(url)
+/** 这台电脑上的文件：本机文件 local:<name>，或工作目录里文件的引用 */
+export const isFileRef = (url?: string) => !!url && (url.startsWith('local:') || isWorkRef(url))
+
+/** 页面上用的地址：本机文件、工作目录文件的引用换成 Annulo 的地址，网址原样 */
+export const fileSrc = (url?: string) =>
+  url?.startsWith('local:') ? '/_shuttle/files/' + url.slice(6) : isWorkRef(url) ? '/_shuttle/work-ref/' + encodeURIComponent(url!.split('#')[0]) : url ?? ''
 
 /**
  * 用系统程序打开（网页用系统浏览器），reveal 时在访达 / 文件夹里显示：本机文件交给 Annulo（POST local/open，能力版本 43）；
@@ -32,7 +38,7 @@ export const fileSrc = (url?: string) => (url?.startsWith('local:') ? '/_shuttle
 export async function openFile(url?: string, reveal = false) {
   if (!url) return
   if (!url.startsWith('local:')) {
-    window.open(url, '_blank', 'noopener')
+    window.open(fileSrc(url), '_blank', 'noopener')
     return
   }
   const res = await fetch('/_shuttle/api/local/open', { method: 'POST', headers: { 'X-Shuttle': '1', 'content-type': 'application/json' }, body: JSON.stringify({ path: url, reveal }) })

@@ -749,7 +749,7 @@ function RawText({ path, mtime, call, reload, onBar }: { path: string; mtime: st
 /** 'A/B/C' → ['A', 'A/B', 'A/B/C'] */
 const crumbs = (dir: string) => (dir ? dir.split('/').map((_, i, a) => a.slice(0, i + 1).join('/')) : [])
 
-const isRelative = (src: string) => !!src && !/^(https?:|data:|local:|blob:|\/)/i.test(src)
+const isRelative = (src: string) => !!src && !/^(https?:|data:|local:|folder:|work:|blob:|\/)/i.test(src)
 export const joinPath = (dir: string, p: string) => {
   const out: string[] = []
   for (const x of (dir ? dir + '/' + p : p).split('/')) { if (x === '..') out.pop(); else if (x && x !== '.') out.push(x) }

@@ -741,7 +741,20 @@
     "verdict_better": "变好了",
     "verdict_flat": "没变化",
     "verdict_worse": "变差了",
-    "verdict_no_data": "没数据"
+    "verdict_no_data": "没数据",
+    "f_rival": "竞品在排",
+    "f_rival_hint": "查 Google 结果页时，你在盯的竞品排在前 10、你不在的词：竞品已经证明这些词有人搜、能做，按主题转成选题去追。",
+    "serp_rivals": " · 竞品 {d}",
+    "f_issue": "页面问题",
+    "f_issue_hint": "目标页面的标题或 H1 里没用上这个词，或者几个本站页面在 Google 上抢同一个词（排名互相拉低）。没用上的改标题描述；在抢的选一个主页面，别的页面改写重点、加内链指向它，或者合并。",
+    "onpage_run": "检查页面",
+    "onpage_label": "页面 {page}：",
+    "onpage_title": "标题",
+    "onpage_desc": "描述",
+    "onpage_url": "网址",
+    "competing": "{n} 个页面在抢这个词：{pages}",
+    "competing_page": "{page}（排 {pos}）",
+    "fix_meta": "改标题描述"
   },
   "search": {
     "tab_keywords": "关键词",
