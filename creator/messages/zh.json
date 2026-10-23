@@ -1694,7 +1694,19 @@
     "pick_copy": "文案",
     "pick_no_copy": "不用文案",
     "pick_hint": "每发一次在下面的发布记录里多一条，记着这次发的标题、正文和视频。同一条内容可以挑不同的文件发好几次。",
-    "title_hint": "双击改名"
+    "title_hint": "双击改名",
+    "local_only": "只在本机",
+    "local_only_tip": "按 .annuloignore 不同步：只在这台电脑上，不会传到团队服务器，也不备份",
+    "not_synced": "不同步",
+    "not_synced_tip": "按 .annuloignore 不同步：只在服务器上，别人的电脑拉不到",
+    "sync_here_local": "{n} 个文件只在这台电脑上（{size}，{rules} 里的中间产物），不会传到团队服务器，也不备份。",
+    "sync_here_server": "{n} 个文件不同步（{size}，{rules} 里的中间产物），只在服务器上，别人的电脑拉不到。",
+    "sync_see_tree": "在树里看",
+    "sync_who": "{user} 的电脑（{machine}）",
+    "sync_away": "{who}上还有 {n} 个文件没传上来（{size}，{time}）",
+    "sync_show": "看是哪些",
+    "sync_hide": "收起",
+    "sync_away_hint": "这些是不同步的中间产物（草稿视频、草稿音频这些）。要大家都看得到，让那台电脑把它挪出草稿目录再推上来。"
   },
   "fpub": {
     "title": "发布",

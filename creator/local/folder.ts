@@ -116,11 +116,15 @@ export function create(input: { article_id: string }, ctx: any) {
 
 export function list(input: { article_id: string }, ctx: any) {
   need(ctx)
-  const dir = folderOf(ctx, article(ctx, input.article_id), false)
+  const a = article(ctx, input.article_id)
+  const dir = folderOf(ctx, a, false)
   // can_open：本机版能用系统程序打开、在访达里显示；服务端部署不能，页面在新标签页打开预览地址
   const can_open = !!ctx.fs.canOpen
   if (!dir || !ctx.fs.stat(dir)) return { dir: '', path: dir, entries: [], can_open, missing: !!dir, root: ctx.fs.root }
-  return { dir: `${ctx.fs.root}/${dir}`, path: dir, entries: ctx.fs.list(dir), can_open }
+  // sync：哪些文件按 .annuloignore 不同步（草稿/ 这些），别人电脑上还有哪些没传上来（Annulo 能力版本 60 起有，老的没有就不显示）
+  let sync = null
+  try { sync = ctx.folders?.status ? ctx.folders.status(a.folder_id || dir) : null } catch { sync = null }
+  return { dir: `${ctx.fs.root}/${dir}`, path: dir, entries: ctx.fs.list(dir), can_open, sync }
 }
 
 export function read(input: { article_id: string; path: string }, ctx: any) {

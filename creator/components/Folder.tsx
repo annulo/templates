@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, Clapperboard, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Clapperboard, CloudOff, Laptop, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import RichEditor from './RichEditor'
-import { Button, Notice, Segmented, cx, inputCls } from './ui'
+import { Button, Notice, Segmented, cx, fmtTime, inputCls } from './ui'
 import { fileSrc, filesOf } from '../lib/files'
 import { isEn, useT } from '../lib/i18n'
 import { dbList, runLocal, type Article } from '../lib/shuttle'
@@ -15,6 +15,9 @@ import { TaskRunning, useTaskRuns } from './Task'
 // AI 在对话里改文件不经过表，没有推送：看得见时每 4 秒重读。发布在 FolderPublish.tsx：挑这次发成什么、用哪些文件。
 
 export type Entry = { path: string; dir: boolean; size: number; mtime: number }
+/** 产物文件夹的同步状态（Annulo ctx.folders.status）：ignored 是这里按 .annuloignore 不同步的，elsewhere 是别人电脑上只在那里的 */
+type LocalFile = { path: string; size: number; mtime: number }
+type SyncStatus = { ignore?: string[]; ignored?: LocalFile[]; elsewhere?: { user?: string; machine: string; at: string; files: LocalFile[] }[] }
 type Call = <T>(fn: string, input?: Record<string, unknown>) => Promise<T>
 
 export const TEXT = /\.(md|markdown|txt|json|ya?ml|csv|srt|vtt|html?|css|tsx?|jsx?|py|sh)$/i
@@ -47,7 +50,7 @@ const toneOf = (e: Entry) => e.dir ? 'text-muted-foreground' : VIDEO.test(e.path
 export default function Folder({ article: a, onChanged, sel: selProp, setSel: setSelProp }: { article: Article; onChanged: () => void; sel?: string; setSel?: (p: string, replace?: boolean) => void }) {
   const { t } = useT('folder')
   const id = a.id
-  const [state, setState] = useState<{ dir: string; path: string; entries: Entry[]; can_open?: boolean; missing?: boolean; root?: string } | null>(null)
+  const [state, setState] = useState<{ dir: string; path: string; entries: Entry[]; can_open?: boolean; missing?: boolean; root?: string; sync?: SyncStatus | null } | null>(null)
   const [error, setError] = useState('')
   const [selLocal, setSelLocal] = useState('')
   const sel = setSelProp ? selProp ?? '' : selLocal
@@ -99,6 +102,13 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
     for (const k in m) m[k].sort((x, y) => Number(y.dir) - Number(x.dir) || x.path.localeCompare(y.path, 'zh'))
     return m
   }, [entries])
+  // 不同步的：文件按 Annulo 给的清单；目录里的文件全都不同步，目录也算（草稿/）
+  const ignored = useMemo(() => {
+    const set = new Set((state?.sync?.ignored ?? []).map((f) => f.path))
+    for (const e of entries) if (e.dir) { const fs = entries.filter((x) => !x.dir && x.path.startsWith(e.path + '/')); if (fs.length && fs.every((x) => set.has(x.path))) set.add(e.path) }
+    return set
+  }, [entries, state?.sync])
+  const hiddenDrafts = entries.filter((e) => !e.dir && /^(草稿|drafts)\//.test(e.path)).length
   // 目录默认收起，只展开当前选中的文件（或目录）所在的那一路：几十个文件的目录不会一打开就把树撑得很长
   const isOpen = (p: string) => openDirs[p] ?? (sel === p || sel.startsWith(p + '/'))
   const selected = entries.find((e) => e.path === sel)
@@ -299,6 +309,7 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
             {e.dir ? (isOpen(e.path) ? <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />) : <span className="w-3.5 shrink-0" />}
             <Icon className={cx('size-4 shrink-0', toneOf(e))} />
             {nameOf(e, 'h-6')}
+            {ignored.has(e.path) && (ignored.has(parent(e.path)) ? null : <LocalTag local={!!state.can_open} />)}
           </button>}
         </div>
         {e.dir && isOpen(e.path) && (children[e.path] ?? []).map((k) => row(k, depth + 1))}
@@ -342,6 +353,7 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
       {/* 下面一行写这次交代的要求（「做个封面图，抖音和小红书的」），看得出它在做哪件事；没写要求才用通用的说明 */}
       <TaskRunning runs={runs} title={() => t('running')} desc={(r) => (typeof r.input?.note === 'string' && r.input.note.trim()) || t('running_desc')} />
       {error && <Notice tone="error">{error}</Notice>}
+      <SyncNote sync={state.sync} local={!!state.can_open} hiddenDrafts={view === 'grid' ? hiddenDrafts : 0} onTree={() => switchView('tree')} />
       {view === 'grid' ? (
         // 手机上铺满屏幕宽（抵掉页面左右 1rem 的内边距），只留上下分隔线：一层层卡片边框会把正文挤窄
         // scroll-mt：打开文件滚回开头时停在吸顶的头部下面，不被它盖住
@@ -378,6 +390,44 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
         onReveal={() => act(() => call('open', { path: menu.e.path, reveal: true }))}
         onDelete={() => act(async () => { await call('remove', { path: menu.e.path }); if (sel === menu.e.path || sel.startsWith(menu.e.path + '/')) setSel('') })} />}
     </section>
+  )
+}
+
+/** 树里不同步的文件、目录后面的小标签：本机版是「只在本机」（不传到团队服务器、不备份），服务端部署是「不同步」（别人电脑拉不到） */
+function LocalTag({ local }: { local: boolean }) {
+  const { t } = useT('folder')
+  return <span title={t(local ? 'local_only_tip' : 'not_synced_tip')} className="ml-1 inline-flex shrink-0 items-center gap-0.5 rounded bg-muted px-1 text-[10px] leading-4 text-muted-foreground">{local ? <Laptop className="size-2.5" /> : <CloudOff className="size-2.5" />}{t(local ? 'local_only' : 'not_synced')}</span>
+}
+
+/** 文件夹上面一行：哪些不同步；别人电脑上还有没传上来的（annulo fs pull / push 时报上来的），点开看是哪些 */
+function SyncNote({ sync, local, hiddenDrafts, onTree }: { sync?: SyncStatus | null; local: boolean; hiddenDrafts: number; onTree: () => void }) {
+  const { t } = useT('folder')
+  const [open, setOpen] = useState(false)
+  if (!sync) return null
+  const size = (fs: LocalFile[]) => fmtSize(fs.reduce((n, f) => n + f.size, 0))
+  const rules = (sync.ignore ?? []).filter((r) => r !== 'node_modules/').join('、')
+  const here = sync.ignored ?? []
+  const away = sync.elsewhere ?? []
+  if (!here.length && !away.length) return null
+  return (
+    <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+      {here.length > 0 && <p className="flex flex-wrap items-center gap-1.5">
+        {local ? <Laptop className="size-3.5 shrink-0" /> : <CloudOff className="size-3.5 shrink-0" />}
+        <span>{t(local ? 'sync_here_local' : 'sync_here_server', { n: here.length, size: size(here), rules })}</span>
+        {hiddenDrafts > 0 && <button type="button" onClick={onTree} className="cursor-pointer text-primary-text hover:underline">{t('sync_see_tree')}</button>}
+      </p>}
+      {away.map((c) => (
+        <div key={(c.user ?? '') + c.machine}>
+          <p className="flex flex-wrap items-center gap-1.5">
+            <Laptop className="size-3.5 shrink-0" />
+            <span>{t('sync_away', { who: c.user ? t('sync_who', { user: c.user, machine: c.machine }) : c.machine, n: c.files.length, size: size(c.files), time: fmtTime(c.at) })}</span>
+            <button type="button" onClick={() => setOpen(!open)} className="cursor-pointer text-primary-text hover:underline">{t(open ? 'sync_hide' : 'sync_show')}</button>
+          </p>
+          {open && <ul className="mt-1 ml-5 space-y-0.5 font-mono text-[11px]">{c.files.slice(0, 50).map((f) => <li key={f.path} className="truncate">{f.path} <span className="text-muted-foreground/70">{fmtSize(f.size)}</span></li>)}{c.files.length > 50 && <li>…</li>}</ul>}
+        </div>
+      ))}
+      {away.length > 0 && <p className="pl-5">{t('sync_away_hint')}</p>}
+    </div>
   )
 }
 
