@@ -217,7 +217,7 @@ export function retitle(input: { article_id: string; title: string }, ctx: any) 
   return { folder: patch.folder ?? dir }
 }
 
-const isRef = (u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/|local:)/.test(u)
+const isRef = (u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/|local:|folder:|work:)/.test(u)
 
 /**
  * 发布时挑好的内容发到几个账号：每个账号新建一条帖子（社媒插件的 social_posts，存的就是挑好的内容，排期到点照它发），
@@ -238,8 +238,9 @@ export function publish(input: { article_id: string; kind: 'post' | 'video' | 'a
   if (!ids.length) throw new Error(L(ctx, '要选至少一个账号', 'Pick at least one account'))
   const at = String(input.scheduled_at ?? '').trim()
   if (at && !(Date.parse(at) > Date.now() - 60_000)) throw new Error(L(ctx, '排期时间要选将来的时间', 'Pick a time in the future'))
-  // 文件夹里的文件存成本机文件（local:<name>，同一个文件没改过是同一个名字），资料库的地址原样用
-  const ref = (u: string) => (isRef(u) ? u : ctx.fs.toLocal(join(dir, rel(ctx, u))))
+  // 文件夹里的文件存它的引用（ctx.fs.ref：folder:<文件夹 id>/<路径>#<版本>，Annulo 能力版本 62），不复制：发的时候社媒插件照它从文件夹里取，
+  // 排期以后文件改过了到点会停下来让人看；老 Annulo 没有 ref，照旧存成本机文件（local:<name>）。资料库的地址原样用
+  const ref = (u: string) => (isRef(u) ? u : ctx.fs.ref ? ctx.fs.ref(join(dir, rel(ctx, u))) : ctx.fs.toLocal(join(dir, rel(ctx, u))))
   let body = String(input.body ?? '')
   if (kind === 'article') body = body.replace(/(<(?:img|video|source)\b[^>]*?\ssrc=")([^"]+)(")/gi, (_m, x, src, y) => x + ref(decodeURI(src)) + y)
   const content = {

@@ -40,7 +40,7 @@ type Kind = 'post' | 'video' | 'article'
 /** 选中的图片、视频：文件夹里的是相对路径，资料库的是地址 */
 type Media = { ref: string; src: string; name: string }
 
-const isUrl = (u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/|local:)/.test(u)
+const isUrl = (u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/|local:|folder:|work:)/.test(u)
 
 /** 文案 md：开头可以有 --- 包住的 title / tags，或者第一行 # 标题 */
 function parseCopy(text: string) {

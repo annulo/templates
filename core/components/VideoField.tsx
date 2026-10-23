@@ -30,7 +30,7 @@ export default function VideoField({ video, cover, onChange }: { video: string; 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm leading-none font-medium">
           {tr('social.f_video')}
-          {video.startsWith('local:') && <span className="ml-2 text-xs font-normal text-muted-foreground">{tr('social.local_file')}</span>}
+          {/^(local|folder|work):/.test(video) && <span className="ml-2 text-xs font-normal text-muted-foreground">{tr('social.local_file')}</span>}
         </span>
         <div className="flex gap-1">
           <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={(e) => { upload(e.target.files?.[0]); e.target.value = '' }} />
