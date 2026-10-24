@@ -10,7 +10,8 @@
 //   channels.fromURL({ url })             网址是 creght 站点（页面里有 window.__DATA__ 的 projectId、siteId）就加成独立站渠道，返回渠道；不是返回 null。
 //                                         没连 creght MCP、站点不在这个账号下也照样加，渠道页再提示（access）
 //   channels.match({ url })              这个网址已经是哪个网站渠道（域名一样，或者是同一个 creght 站点、自定义域名也认得），返回渠道；没有返回 null。不写数据
-//   channels.access({ id })               creght 站点渠道现在能不能读写：ok / no_mcp（没加或关掉了）/ needs_auth / not_in_account / failed
+//   channels.access({ id })               creght 站点渠道现在能不能读写：ok / no_mcp（没加或关掉了）/ needs_auth / not_in_account / failed；
+//                                         ok 时带 live_url（正式地址，没发布过是空），并写回渠道表
 //   channels.adminLink({ id, target? })   creght 站点渠道的后台（target：editor 默认 / cms / forms / domains / analytics / settings）的一次性登录链接，
 //                                         页面拿到马上打开（60 秒、一次有效），打开就是登录状态
 //   channels.remove({ id })               删掉一个渠道（网站在 channels 表，社媒账号在社媒插件的 social_accounts 表）
@@ -21,7 +22,7 @@
 // 页面用 lib/shuttle.ts 里的封装（listCreghtSites / addSiteChannel / removeChannel / channelStats / visitOverview）。
 
 import { L } from './_i18n'
-import { adminLink as creghtAdminLink, hostOf, mcpState, previewURL, sites as allSites, status as siteStatus, visits } from './_creght'
+import { adminLink as creghtAdminLink, hostOf, liveURL, mcpState, previewURL, sites as allSites, visits } from './_creght'
 // 社媒的数据由社媒插件算（github.com/annulo/plugins 的 social，装在 plugins/social/）：和社媒页显示的是同一份
 import { summary as socialSummary } from '../plugins/social/local/stats'
 import { normalizeURL, secretName, wp } from './_wp'
@@ -32,7 +33,7 @@ export const cloud = ['stats', 'overview']
 // 要电脑的（浏览器、本机授权、密钥、外部接口）：手机上点了转给电脑上开着的 Shuttle 跑（设置 → 远程访问）
 export const remote = ['access', 'add', 'adminLink', 'fromURL', 'match', 'remove', 'sites', 'wpPrepare', 'wpVerify']
 
-type Channel = { id: string; type: string; name: string; project_id?: string; site_id?: string; api_host?: string; preview_url?: string; wp_user?: string; wp_secret?: string; created_at?: string }
+type Channel = { id: string; type: string; name: string; project_id?: string; site_id?: string; api_host?: string; preview_url?: string; live_url?: string; wp_user?: string; wp_secret?: string; created_at?: string }
 
 const CHANNEL_TYPES = ['creght_site', 'wordpress']
 
@@ -93,7 +94,9 @@ export async function add(input: { type?: string; project_id: string; site_id: s
   const cur = ctx.db.query('channels', { where: { type, project_id: site.project_id, site_id: site.site_id }, limit: 1 }).list
   if (cur.length) throw new Error(L(ctx, `「${site.site_name}」已经添加过了`, `"${site.site_name}" is already added`))
   // api_host：站点在哪个 creght 区域，之后读写都走那个区域的 MCP（_creght.ts）
-  return ctx.db.insert('channels', { type, name: site.site_name, project_id: site.project_id, site_id: site.site_id, api_host: site.api_host, preview_url: previewURL(ctx, site.site_id, site.api_host) })
+  const ch = ctx.db.insert('channels', { type, name: site.site_name, project_id: site.project_id, site_id: site.site_id, api_host: site.api_host, preview_url: previewURL(ctx, site.site_id, site.api_host) })
+  // 发布过的记下正式地址；读不到不要紧，渠道页检查权限（access）时会再补
+  try { return { ...ch, live_url: await liveURL(ctx, ch) } } catch { return ch }
 }
 
 /** creght 渲染的页面里带 window.__DATA__ = { projectId, siteId, provider: { url } }：自定义域名也认得出，不用连 MCP */
@@ -116,7 +119,7 @@ const bareHost = (url: string) => { try { return new URL(url).host.replace(/^www
 export async function match(input: { url: string }, ctx: any) {
   const url = String(input?.url ?? ''), host = bareHost(url)
   const sites = (ctx.db.query('channels', { limit: 1000 }).list as Channel[]).filter((c) => CHANNEL_TYPES.includes(c.type))
-  const same = sites.find((c) => !!c.preview_url && bareHost(c.preview_url) === host)
+  const same = sites.find((c) => [c.live_url, c.preview_url].some((u) => !!u && bareHost(u) === host))
   if (same || !host || !sites.some((c) => c.type === 'creght_site')) return same ?? null
   let page: Awaited<ReturnType<typeof creghtPage>> = null
   try { page = await creghtPage(url) } catch { return null }
@@ -135,7 +138,9 @@ export async function fromURL(input: { url: string }, ctx: any) {
   }
   const name = page.title.split(/\s+[|–—-]\s+/)[0] || String(input.url).replace(/^https?:\/\//, '').replace(/\/$/, '')
   const preview_url = previewURL(ctx, page.site_id, apiHost)
-  return ctx.db.insert('channels', { type: 'creght_site', name, project_id: page.project_id, site_id: page.site_id, api_host: apiHost || undefined, preview_url })
+  // 用户给的网址不是预览地址，就是站点上线的地址：先记下，连上 MCP 后 access 会按发布状态更新
+  const live_url = /\.preview\./.test(bareHost(input.url)) ? undefined : String(input.url).replace(/^(https?:\/\/[^/]+).*$/, '$1')
+  return ctx.db.insert('channels', { type: 'creght_site', name, project_id: page.project_id, site_id: page.site_id, api_host: apiHost || undefined, preview_url, live_url })
 }
 
 export async function access(input: { id: string }, ctx: any) {
@@ -145,11 +150,11 @@ export async function access(input: { id: string }, ctx: any) {
   const st = mcpState(ctx, host)
   if (!st || st === 'disabled') return { state: 'no_mcp', api_host: host }
   if (st === 'needs_auth') return { state: 'needs_auth' }
-  // 直接读站点状态：list_sites 不一定列出账号能读的全部站点（比如别的 Annulo 项目里的站点），只拿它判断会误报
+  // 直接读站点状态：list_sites 不一定列出账号能读的全部站点（比如别的 Annulo 项目里的站点），只拿它判断会误报。
+  // 顺便把正式地址写回渠道表（liveURL），页面显示地址读表
   let err: Error
   try {
-    await siteStatus(ctx, ch.project_id!, ch.site_id!)
-    return { state: 'ok' }
+    return { state: 'ok', live_url: await liveURL(ctx, ch) }
   } catch (e) {
     err = e as Error
   }

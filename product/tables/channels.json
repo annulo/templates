@@ -48,6 +48,10 @@
         "type": "string",
         "description": "独立站：访问地址（creght 站点是预览地址，WordPress 是站点地址）"
       },
+      "live_url": {
+        "type": "string",
+        "description": "creght 站点：发布后的正式地址（自定义域名优先，没发布过是空）。读到发布状态时回写（_creght.ts 的 liveURL），页面显示地址用它，没有才用 preview_url"
+      },
       "gsc_property": {
         "type": "string",
         "description": "独立站：对应的 Google Search Console 属性（sc-domain:example.com 或 https://example.com/），gsc.link 配"

@@ -33,7 +33,7 @@ export const remote = ['expand', 'refresh', 'serp']
 // 分桶只看事实（GSC 里本站排第几、有多少曝光；Google 结果页前 10 都是谁），规则在 _keywords.ts 的 bucketOf；相不相关、什么意图、归哪个主题要理解，交给助手。
 // 在做的词每次 refresh、serp 记一条排名历史（rank_history）。
 
-type Channel = { id: string; name: string; type: string; preview_url?: string; gsc_property?: string; gsc_link_disabled?: boolean }
+type Channel = { id: string; name: string; type: string; preview_url?: string; live_url?: string; gsc_property?: string; gsc_link_disabled?: boolean }
 type Keyword = {
   id: string; channel_id: string; keyword: string; lang?: string; country?: string; sources?: string; seed?: string; suggest_engine?: string
   status?: string; intent?: string; cluster?: string; note?: string; target_page?: string
@@ -109,7 +109,7 @@ export async function expand(input: { channel_id?: string; seeds?: string[] | st
   const seeds = (given.length ? given : defaultSeeds(ctx)).slice(0, Math.min(Math.max(1, Number(input?.max_seeds) || MAX_SEEDS), 30))
   // 品牌词再加上项目名：站点在别人的域名下（xxx.talizen.com）时，按域名算出来的是平台名
   const p = profile(ctx)
-  const brands = brandTerms(ch.gsc_property || ch.preview_url || '', [p.brand_terms, p.name].filter(Boolean).join(','))
+  const brands = brandTerms(ch.gsc_property || ch.live_url || ch.preview_url || '', [p.brand_terms, p.name].filter(Boolean).join(','))
   if (!seeds.length && !gscReady(ch)) throw new Error(L(ctx, '没有种子词：先在项目资料里填关键词、录入产品，或者直接给几个词', 'No seed keywords: add keywords to the project profile, add products, or give a few words'))
 
   const existing = rowsOf(ctx, ch.id)
@@ -310,7 +310,7 @@ export async function serp(input: { channel_id?: string; ids?: string[]; limit?:
   try {
     pages = ctx.db.query('search_pages', { where: { channel_id: ch.id }, limit: 50 }).list
   } catch {}
-  const ours = ownDomains(ch.gsc_property, ch.preview_url, ...pages.map((p) => p.page))
+  const ours = ownDomains(ch.gsc_property, ch.live_url, ch.preview_url, ...pages.map((p) => p.page))
   let competitors: string[] = []
   try {
     competitors = ownDomains(...ctx.db.query('competitors', { limit: 500 }).list.filter((c: any) => c.status !== 'rejected' && c.status !== 'suggested').map((c: any) => c.host || c.url))
@@ -396,7 +396,7 @@ export function context(input: { channel_id?: string; limit?: number }, ctx: any
     competitors = ctx.db.query('competitors', { where: { status: 'active' }, limit: 50 }).list.map((c: any) => ({ id: c.id, name: c.name, host: c.host }))
   } catch {}
   return {
-    channel: { id: ch.id, name: ch.name, url: ch.preview_url, gsc: gscReady(ch) },
+    channel: { id: ch.id, name: ch.name, url: ch.live_url || ch.preview_url, gsc: gscReady(ch) },
     competitors,
     raw,
     raw_total: rows.filter((k) => k.status === 'raw').length,

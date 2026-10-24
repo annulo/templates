@@ -63,6 +63,8 @@ export type Channel = {
   site_id?: string;
   /** 独立站的访问地址；creght 站点是预览地址，WordPress 是站点地址 */
   preview_url?: string;
+  /** creght 站点发布后的正式地址（自定义域名优先，没发布过是空）；显示地址用 lib/format 的 siteURL */
+  live_url?: string;
   /** WordPress：登录用户名、应用密码存在哪个本机密钥（密码本身不进表） */
   wp_user?: string;
   wp_secret?: string;

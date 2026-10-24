@@ -1,3 +1,6 @@
+- version: 0.15.11
+  zh: "网站访问、渠道卡片等处显示网站的正式域名，没发布过才显示预览地址。"
+  en: "Site visits, channel cards and other places now show the site's live domain, falling back to the preview address only before it's published."
 - version: 0.15.10
   zh: "网站文章有了「AI 引用分」：按规则看 AI 好不好读懂、引用，标出最弱的段落，能交给 AI 改；网站检查会查 robots.txt 有没有拦 AI 爬虫。"
   en: "Website articles get an AI citation score: rule-based checks on how easily AI can read and quote them, with the weakest paragraphs flagged for AI to fix; site checks now flag robots.txt rules that block AI crawlers."

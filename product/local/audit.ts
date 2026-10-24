@@ -10,7 +10,7 @@
 // 修问题（改站代码）是另一回事：要判断、要改代码，交给助手（site-audit skill）。
 // 问题这次没再出现（标成 fixed）= 修复已经上线，记一条改动进改站复查（_review.ts），到期对比前后数据。
 
-import { sitePublish, status } from './_creght'
+import { liveURL, sitePublish } from './_creght'
 import { isEn, L } from './_i18n'
 import { trackChange } from './_review'
 import { keywordChecks } from './_audit_keywords'
@@ -18,7 +18,7 @@ import { keywordChecks } from './_audit_keywords'
 // 要电脑的（浏览器、本机授权、密钥、外部接口）：手机上点了转给电脑上开着的 Shuttle 跑（设置 → 远程访问）
 export const remote = ['run', 'publish']
 
-type Channel = { id: string; name: string; type: string; project_id?: string; site_id?: string; preview_url?: string }
+type Channel = { id: string; name: string; type: string; project_id?: string; site_id?: string; preview_url?: string; live_url?: string }
 type Issue = { id: string; channel_id: string; check: string; status: string; title?: string; pages?: string }
 
 type Page = {
@@ -80,8 +80,8 @@ async function target(ch: Channel, ctx: any): Promise<{ url: string; preview: bo
   }
   if (ch.project_id && ch.site_id) {
     try {
-      const st = await status(ctx, ch.project_id, ch.site_id)
-      if (st?.live_url) return { url: String(st.live_url).replace(/\/$/, ''), preview: false }
+      const live = await liveURL(ctx, ch)
+      if (live) return { url: live, preview: false }
     } catch (e: any) {
       ctx.log(L(ctx, '读不到发布状态，用预览地址：', "Couldn't read publish status, using the preview URL: ") + e.message)
     }

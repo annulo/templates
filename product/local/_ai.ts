@@ -1,7 +1,7 @@
 // 本机函数共用的工具（文件名以 _ 开头：不作为可调用的函数，只给别的文件 import）。
 
 import { L } from "./_i18n";
-import { status } from "./_creght";
+import { liveURL } from "./_creght";
 
 /** 调一次模型，要它按 JSON 回答，解析出来。模型偶尔会包一层 ```json 或者前后带话，这里都兼容 */
 export async function askJSON<T = any>(
@@ -40,13 +40,13 @@ export async function askJSON<T = any>(
 
 /** 渠道站点的访问地址：发布过就用正式域名（自定义域名优先），没发布过用预览地址 */
 export async function siteBase(
-  ch: { project_id?: string; site_id?: string; preview_url?: string },
+  ch: { id?: string; project_id?: string; site_id?: string; preview_url?: string; live_url?: string },
   ctx: any,
 ): Promise<string> {
   if (ch.project_id && ch.site_id) {
     try {
-      const st = await status(ctx, ch.project_id, ch.site_id);
-      if (st?.live_url) return String(st.live_url).replace(/\/$/, "");
+      const live = await liveURL(ctx, ch);
+      if (live) return live;
     } catch {
       // 读不到发布状态就用预览地址
     }

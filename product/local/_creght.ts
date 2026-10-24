@@ -69,6 +69,16 @@ export function status(ctx: any, projectID: string, siteID: string, host?: strin
   return call(ctx, projectID, 'site_status', { project_id: projectID, site_id: siteID }, host)
 }
 
+/** 渠道站点的正式地址（live_url，自定义域名优先，没发布过是空，不带结尾的 /）。和渠道表里记的不一样就写回 channels.live_url：
+ *  页面显示地址直接读表，不用每次打开都调 MCP。读不到发布状态时抛错，表不动 */
+export async function liveURL(ctx: any, ch: { id?: string; project_id?: string; site_id?: string; live_url?: string }): Promise<string> {
+  if (!ch.project_id || !ch.site_id) return ''
+  const st = await status(ctx, ch.project_id, ch.site_id)
+  const url = String(st?.live_url ?? '').replace(/\/$/, '')
+  if (ch.id && url !== (ch.live_url ?? '')) ctx.db.update('channels', ch.id, { live_url: url })
+  return url
+}
+
 /** 站点后台（editor / cms / forms / domains / analytics / settings）的一次性登录跳转链接：60 秒内打开一次有效，打开就是登录状态。
  *  链接等于临时登录凭证：只给用户本人当场打开，不存表、不写进页面 */
 export function adminLink(ctx: any, projectID: string, siteID: string, target = 'editor'): Promise<{ url: string; target_url: string; expires_at: string }> {

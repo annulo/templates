@@ -2,7 +2,7 @@ import { Globe } from 'lucide-react'
 import { CHANNEL_TYPES } from '../lib/channels'
 import Select from './Select'
 import type { Channel } from '../lib/shuttle'
-import { hostOf } from '../lib/format'
+import { hostOf, siteURL } from '../lib/format'
 import { tr } from '../lib/i18n'
 
 /**
@@ -23,7 +23,7 @@ export default function SitePicker({ sites, value, onChange }: { sites: Channel[
         options={sites.map((s) => {
           // 图标按渠道类型：Creght 网站是 Creght 的标，WordPress 是地球
           const Icon = CHANNEL_TYPES[s.type]?.icon ?? Globe
-          return { value: s.id, label: s.name, sub: s.preview_url ? hostOf(s.preview_url) : undefined, icon: <Icon size={14} className="size-3.5" /> }
+          return { value: s.id, label: s.name, sub: hostOf(siteURL(s)) || undefined, icon: <Icon size={14} className="size-3.5" /> }
         })}
       />
     </div>

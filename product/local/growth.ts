@@ -63,7 +63,7 @@ export function context(_input: {}, ctx: any) {
     sites: all(ctx, "channels").map((c) => ({
       id: c.id,
       name: c.name,
-      url: c.preview_url,
+      url: c.live_url || c.preview_url,
     })),
     accounts: all(ctx, "social_accounts").map((c) => ({
       id: c.id,
