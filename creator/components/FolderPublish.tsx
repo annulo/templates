@@ -4,6 +4,7 @@ import AssetPicker from './AssetPicker'
 import ImageCropper from './ImageCropper'
 import Lightbox from './Lightbox'
 import RichEditor from './RichEditor'
+import Sortable from './Sortable'
 import { ChannelAvatar, PlatformTag } from './ArticlePublish'
 import { Badge, Button, Dialog, Notice, Segmented, cx, fmtTime, inputCls, toast } from './ui'
 import { DateTimeChip } from './DateTimePicker'
@@ -398,14 +399,14 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
 
           {kind === 'post' && <div>
             {section(t('images', { n: images.length }), pickers('image'))}
-            {/* 选中的按顺序排（第一张是封面），点 × 拿掉；下面是文件夹里所有的图，点了加到最后 / 拿掉 */}
-            {images.length ? <div className="flex flex-wrap gap-2">
-              {images.map((m, i) => <div key={m.ref} className="group relative size-20 overflow-hidden rounded-md border border-border" title={m.name}>
+            {/* 选中的按顺序排（第一张是封面），拖动换顺序，点 × 拿掉；下面是文件夹里所有的图，点了加到最后 / 拿掉 */}
+            {images.length ? <Sortable items={images} keyOf={(m) => m.ref} onChange={(l) => { setTouched((x) => ({ ...x, images: true })); setImages(l) }} className="flex flex-wrap gap-2">
+              {(m, i) => <div className="group relative size-20 overflow-hidden rounded-md border border-border" title={`${m.name}\n${t('drag_to_sort')}`}>
                 {thumb(m, false)}
                 <span className="absolute top-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">{i === 0 ? t('cover') : i + 1}</span>
                 <button type="button" aria-label={t('remove')} onClick={() => { setTouched((x) => ({ ...x, images: true })); setImages((l) => l.filter((x) => x.ref !== m.ref)) }} className="absolute top-1 right-1 hidden cursor-pointer rounded bg-black/60 p-0.5 text-white group-hover:block"><X className="size-3" /></button>
-              </div>)}
-            </div> : <p className="text-xs text-muted-foreground">{t('no_images')}</p>}
+              </div>}
+            </Sortable> : <p className="text-xs text-muted-foreground">{t('no_images')}</p>}
             {folderImages.length > 0 && <>
               <p className="mt-3 mb-1.5 text-xs text-muted-foreground">{t('folder_images')}</p>
               <div className="flex flex-wrap gap-1.5">
