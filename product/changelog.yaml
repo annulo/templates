@@ -1,3 +1,6 @@
+- version: 0.15.12
+  zh: "网站检查不再把首页带不带 / 当成两个页面，误报「标题重复」「描述重复」。"
+  en: "Site checks no longer treat the home page with and without a trailing slash as two pages, which caused false duplicate title and description issues."
 - version: 0.15.11
   zh: "网站访问、渠道卡片等处显示网站的正式域名，没发布过才显示预览地址。"
   en: "Site visits, channel cards and other places now show the site's live domain, falling back to the preview address only before it's published."

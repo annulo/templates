@@ -63,7 +63,8 @@ const pathOf = (u: string) => {
 const normalize = (u: string) => {
   try {
     const x = new URL(u)
-    return `${x.protocol}//${x.host}${x.pathname}`
+    // 老版本的 Annulo 运行时 https://a.com 的 pathname 是空串：当成 /，首页带不带 / 是同一页
+    return `${x.protocol}//${x.host}${x.pathname || '/'}`
   } catch {
     return ''
   }
