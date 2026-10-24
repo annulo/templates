@@ -42,6 +42,10 @@ export default {
       "marked": "https://esm.talizen.com/marked@17.0.1?bundle",
       "turndown": "https://esm.talizen.com/turndown@7.2.0?bundle",
       "turndown-plugin-gfm": "https://esm.talizen.com/turndown-plugin-gfm@1.0.2?bundle",
+      // 拖拽排序（components/Sortable.tsx，发布时的配图顺序）：sortable 和 core 要共用同一份 core（拖拽的上下文在里面），标成 external 由这里统一给
+      "@dnd-kit/core": "https://esm.talizen.com/@dnd-kit/core@6.3.1?bundle&external=react,react-dom,@dnd-kit/utilities",
+      "@dnd-kit/sortable": "https://esm.talizen.com/@dnd-kit/sortable@10.0.0?bundle&external=react,react-dom,@dnd-kit/core,@dnd-kit/utilities",
+      "@dnd-kit/utilities": "https://esm.talizen.com/@dnd-kit/utilities@3.2.2?bundle&external=react",
     },
   },
   // 中英双语：默认中文，英文地址带 /en。Shuttle 外壳切语言时写 cookie CREGHT_LOCALE

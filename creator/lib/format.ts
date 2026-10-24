@@ -26,3 +26,6 @@ export const hostOf = (url?: string) => {
     return ''
   }
 }
+
+/** 网站渠道给用户看、点开的地址：发布过的 creght 站点用正式地址（live_url），没发布过用预览地址，WordPress 是站点地址 */
+export const siteURL = (ch?: { live_url?: string; preview_url?: string }) => ch?.live_url || ch?.preview_url || ''

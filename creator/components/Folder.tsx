@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, Clapperboard, CloudOff, CloudUpload, Laptop, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Clapperboard, CloudOff, CloudUpload, Laptop, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2, Upload } from 'lucide-react'
 import RichEditor from './RichEditor'
 import { Button, Notice, Segmented, cx, fmtTime, inputCls } from './ui'
 import { fileSrc, filesOf } from '../lib/files'
 import { isEn, useT } from '../lib/i18n'
-import { dbList, runLocal, type Article } from '../lib/shuttle'
+import { dbList, runLocal, uploadLocalFile, type Article } from '../lib/shuttle'
 import { TaskRunning, useTaskRuns } from './Task'
 
 // 内容文件夹（docs/content-model.md）：一条内容的稿子、脚本、文案、视频都是它文件夹里的文件，可以分目录。
@@ -256,6 +256,39 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
     try { await call(adding === 'file' ? 'write' : 'mkdir', adding === 'file' ? { path: p, text: '' } : { path: p }); await load(); setSel(p); setAdding(null) } catch (e) { setAddError((e as Error).message) }
   }
 
+  // 上传文件（按钮选、或者拖进文件夹这块）：先存到这台电脑（local:<名字>），再复制进文件夹，放在和新建一样的位置（here）。
+  // 同名的不覆盖，名字后面加「 (2)」；只传了一个就打开它
+  const pickRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState<{ name: string; i: number; n: number; p: number } | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const uploadFiles = async (list: File[]) => {
+    if (!list.length || uploading) return
+    setError('')
+    const taken = new Set(entries.map((e) => e.path))
+    const free = (name: string) => {
+      const dot = name.lastIndexOf('.')
+      const [stem, ext] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, '']
+      let p = here ? `${here}/${name}` : name
+      for (let k = 2; taken.has(p); k++) p = here ? `${here}/${stem} (${k})${ext}` : `${stem} (${k})${ext}`
+      taken.add(p)
+      return p
+    }
+    let last = ''
+    try {
+      for (const [i, f] of list.entries()) {
+        setUploading({ name: f.name, i, n: list.length, p: 0 })
+        const r = await uploadLocalFile(f, (p) => setUploading({ name: f.name, i, n: list.length, p }))
+        if (!r.ref.startsWith('local:')) throw new Error(t('upload_need_annulo'))
+        const to = free(f.name)
+        await call('importLocal', { url: r.ref, to })
+        last = to
+      }
+      await load()
+      if (list.length === 1 && last) setSel(last)
+    } catch (e) { setError((e as Error).message); void load() } finally { setUploading(null) }
+  }
+  const hasFiles = (ev: { dataTransfer: DataTransfer | null }) => !!ev.dataTransfer?.types.includes('Files')
+
   if (state?.missing) {
     // 本机版写出完整位置（主目录写成 ~），服务端部署只写相对工作目录的路径
     const where = state.can_open && state.root ? `${state.root}/${state.path}`.replace(/^(\/Users\/[^/]+|\/home\/[^/]+|[A-Z]:\\Users\\[^\\]+)/, '~') : state.path
@@ -321,7 +354,11 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
   }
 
   return (
-    <section className="relative mt-6 space-y-3">
+    <section className="relative mt-6 space-y-3"
+      onDragOver={(ev) => { if (!hasFiles(ev)) return; ev.preventDefault(); setDragging(true) }}
+      onDragLeave={(ev) => { if (!ev.currentTarget.contains(ev.relatedTarget as Node)) setDragging(false) }}
+      onDrop={(ev) => { if (!hasFiles(ev)) return; ev.preventDefault(); setDragging(false); void uploadFiles([...ev.dataTransfer.files]) }}>
+      {dragging && <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/5 text-sm font-medium text-primary-text">{t('drop_here', { where: here ? t('in_dir', { dir: here }) : t('in_root') })}</div>}
       <div ref={topProbe} aria-hidden className="pointer-events-none invisible absolute h-[var(--page-top,0px)] w-0" />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
@@ -330,10 +367,10 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
           {state.can_open && <p className="mt-0.5 truncate text-xs text-muted-foreground" title={state.dir}>{state.dir.replace(/^(\/Users\/[^/]+|\/home\/[^/]+|[A-Z]:\\Users\\[^\\]+)/, '~')}</p>}
         </div>
         {/* ml-auto：路径太长、按钮折到下一行时也靠右 */}
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+        <div className="ml-auto flex flex-wrap items-center gap-1">
           {(['file', 'dir'] as const).filter((k) => k === 'file' || view === 'tree').map((k) => (
             <AddPopover key={k} open={adding === k} onToggle={() => (adding === k ? setAdding(null) : startAdd(k))} onClose={() => setAdding(null)}
-              button={<>{k === 'file' ? <FilePlus /> : <FolderPlus />}{t(k === 'file' ? 'new_file' : 'new_dir')}</>}>
+              label={t(k === 'file' ? 'new_file' : 'new_dir')} button={k === 'file' ? <FilePlus /> : <FolderPlus />}>
               <form className="space-y-2.5" onSubmit={(ev) => { ev.preventDefault(); void add() }}>
                 <div className="text-xs font-medium">{t(k === 'file' ? 'new_file_in' : 'new_dir_in', { where: here ? t('in_dir', { dir: here }) : t('in_root') })}</div>
                 <input autoFocus value={newName} placeholder={k === 'file' ? (view === 'grid' ? t('new_file_ph_grid') : t('new_file_ph')) : t('new_dir_ph')} onChange={(ev) => { setNewName(ev.target.value); setAddError('') }} className={cx(inputCls, 'h-8 w-full')} />
@@ -345,8 +382,10 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
               </form>
             </AddPopover>
           ))}
-          {state.can_open && <Button size="sm" variant="ghost" onClick={() => void call('open', {}).catch((e) => setError((e as Error).message))}><FolderOpen />{t('open_folder')}</Button>}
-          <Button size="sm" variant="ghost" onClick={() => void load()} aria-label={t('refresh')} title={t('refresh')}><RefreshCw /></Button>
+          <Button size="icon-sm" variant="ghost" disabled={!!uploading} title={t('upload_files_tip', { where: here ? t('in_dir', { dir: here }) : t('in_root') })} aria-label={t('upload_files')} onClick={() => pickRef.current?.click()}>{uploading ? <Loader2 className="animate-spin" /> : <Upload />}</Button>
+          <input ref={pickRef} type="file" multiple hidden onChange={(ev) => { const fs = [...(ev.target.files ?? [])]; ev.target.value = ''; void uploadFiles(fs) }} />
+          {state.can_open && <Button size="icon-sm" variant="ghost" title={t('open_folder')} aria-label={t('open_folder')} onClick={() => void call('open', {}).catch((e) => setError((e as Error).message))}><FolderOpen /></Button>}
+          <Button size="icon-sm" variant="ghost" onClick={() => void load()} aria-label={t('refresh')} title={t('refresh')}><RefreshCw /></Button>
           <div className="flex rounded-md border border-border p-0.5">
             <button type="button" title={t('view_grid')} aria-pressed={view === 'grid'} onClick={() => switchView('grid')} className={cx('cursor-pointer rounded p-1', view === 'grid' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground')}><LayoutGrid className="size-4" /></button>
             <button type="button" title={t('view_tree')} aria-pressed={view === 'tree'} onClick={() => switchView('tree')} className={cx('cursor-pointer rounded p-1', view === 'tree' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground')}><ListTree className="size-4" /></button>
@@ -355,6 +394,7 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
       </div>
       {/* 下面一行写这次交代的要求（「做个封面图，抖音和小红书的」），看得出它在做哪件事；没写要求才用通用的说明 */}
       <TaskRunning runs={runs} title={() => t('running')} desc={(r) => (typeof r.input?.note === 'string' && r.input.note.trim()) || t('running_desc')} />
+      {uploading && <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 shrink-0 animate-spin" /><span className="min-w-0 truncate">{t('uploading_file', { name: uploading.name, i: uploading.i + 1, n: uploading.n, p: Math.round(uploading.p * 100) })}</span></div>}
       {error && <Notice tone="error">{error}</Notice>}
       <SyncNote sync={state.sync} local={!!state.can_open} hiddenDrafts={view === 'grid' ? hiddenDrafts : 0} onTree={() => switchView('tree')} />
       {view === 'grid' ? (
@@ -837,8 +877,8 @@ function MediaView({ src, video }: { src: string; video: boolean }) {
   return <div className="flex justify-center bg-black/40 p-3">{video ? <video src={src} controls className="max-h-[520px] max-w-full rounded" /> : <img src={src} alt="" className="max-h-[520px] max-w-full rounded object-contain" />}</div>
 }
 
-/** 「新建文件」「新建文件夹」按钮：点了在按钮下面弹一个小气泡填名字（照「排期」的气泡），点外面、按 Esc 收起；不在页面里插一行表单 */
-function AddPopover({ open, onToggle, onClose, button, children }: { open: boolean; onToggle: () => void; onClose: () => void; button: ReactNode; children: ReactNode }) {
+/** 「新建文件」「新建文件夹」图标按钮（名字在悬停提示里）：点了在按钮下面弹一个小气泡填名字（照「排期」的气泡），点外面、按 Esc 收起；不在页面里插一行表单 */
+function AddPopover({ open, onToggle, onClose, label, button, children }: { open: boolean; onToggle: () => void; onClose: () => void; label: string; button: ReactNode; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
@@ -850,7 +890,7 @@ function AddPopover({ open, onToggle, onClose, button, children }: { open: boole
   }, [open, onClose])
   return (
     <div ref={ref} className="relative">
-      <Button size="sm" variant="outline" onClick={onToggle} aria-expanded={open}>{button}</Button>
+      <Button size="icon-sm" variant="ghost" title={label} aria-label={label} onClick={onToggle} aria-expanded={open} className={cx(open && 'bg-muted')}>{button}</Button>
       {open && <div role="dialog" className="absolute top-full right-0 z-30 mt-2 w-80 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg">{children}</div>}
     </div>
   )
