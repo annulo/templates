@@ -51,7 +51,7 @@ import {
   useElsewhere,
   type Elsewhere,
 } from "../../lib/social";
-import { hostOf } from "../../lib/format";
+import { hostOf, siteURL } from "../../lib/format";
 import type { Ctx } from "./types";
 import { tr } from "../../lib/i18n";
 import { useCanRun } from "../../lib/useShuttle";
@@ -384,6 +384,7 @@ function SiteCard({
   confirm: ReactNode;
 }) {
   const Icon = CHANNEL_TYPES[ch.type]?.icon;
+  const url = siteURL(ch);
   return (
     <div className="space-y-3 rounded-xl border border-border bg-background p-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -394,16 +395,16 @@ function SiteCard({
           <div className="truncate text-sm font-semibold">{ch.name}</div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
             <span className="shrink-0">{CHANNEL_TYPES[ch.type]?.label}</span>
-            {ch.preview_url && (
+            {url && (
               <>
                 <span aria-hidden>·</span>
                 <a
-                  href={ch.preview_url}
+                  href={url}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex min-w-0 items-center gap-0.5 hover:text-primary-text"
                 >
-                  <span className="truncate">{hostOf(ch.preview_url)}</span>
+                  <span className="truncate">{hostOf(url)}</span>
                   <ArrowUpRight className="size-3 shrink-0" />
                 </a>
               </>
@@ -413,7 +414,9 @@ function SiteCard({
         <div className="flex flex-wrap items-center gap-1">{actions}</div>
       </div>
       {confirm}
-      {ch.type === "creght_site" && <CreghtAccess ch={ch} />}
+      {ch.type === "creght_site" && (
+        <CreghtAccess ch={ch} onLive={ctx.reloadChannels} />
+      )}
       <div className="border-t border-border pt-3">
         <PublishSetup ctx={ctx} channel={ch} bare />
       </div>
@@ -667,14 +670,19 @@ function PendingSite({
 type Access = {
   state: "ok" | "no_mcp" | "needs_auth" | "not_in_account" | "failed";
   error?: string;
+  live_url?: string;
 };
 
 /** creght 站点：输入网址加进来的不一定读得到（creght MCP 停用了、还没授权、站点不在当前连接的账号下），说清楚并给去处理的入口 */
-function CreghtAccess({ ch }: { ch: Channel }) {
+function CreghtAccess({ ch, onLive }: { ch: Channel; onLive: () => void }) {
   const [access, setAccess] = useState<Access | null>(null);
   const load = () => {
     runLocal<Access>("channels.access", { id: ch.id })
-      .then(setAccess)
+      .then((r) => {
+        setAccess(r);
+        // 读到的正式地址和表里的不一样（刚发布、换了域名）：access 已写回表，重拉渠道让卡片上的地址跟着变
+        if (r.state === "ok" && (r.live_url ?? "") !== (ch.live_url ?? "")) onLive();
+      })
       .catch((e: Error) => setAccess({ state: "failed", error: e.message }));
   };
   useEffect(load, [ch.id]);

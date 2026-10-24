@@ -56,7 +56,7 @@ type Summary = {
   fresh: string[]
 }
 
-type Channel = { id: string; name: string; type: string; project_id?: string; site_id?: string; preview_url?: string }
+type Channel = { id: string; name: string; type: string; project_id?: string; site_id?: string; preview_url?: string; live_url?: string }
 type Question = { id: string; question: string; channel_id: string; status?: string; intent?: string; auto_key?: string }
 /** 一次联网搜索：搜了什么（queries）、打开了哪个页面（url）、搜到的网址（sources） */
 type Search = { type: string; queries: string[]; url?: string; sources: string[] }
@@ -95,6 +95,7 @@ const splitTerms = (s?: string) => (s ?? '').split(/[,，、;；\n]/).map((x) =>
 async function siteDomains(ch: Channel, ctx: any): Promise<string[]> {
   const out = new Set<string>()
   if (ch.preview_url) out.add(hostOf(ch.preview_url))
+  if (ch.live_url) out.add(hostOf(ch.live_url))
   if (ch.project_id && ch.site_id) {
     try {
       const st = await status(ctx, ch.project_id, ch.site_id)

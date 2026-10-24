@@ -100,6 +100,7 @@ type Channel = {
   project_id?: string;
   site_id?: string;
   preview_url?: string;
+  live_url?: string;
   wp_user?: string;
   wp_secret?: string;
   article_collection?: string;
@@ -394,7 +395,7 @@ export async function context(
       : null,
     // 长文发网站时参照的网站和它已有文章的写法（图文笔记、视频不发网站，没有）
     channel: ch
-      ? { id: ch.id, name: ch.name, type: ch.type, url: ch.preview_url ?? "" }
+      ? { id: ch.id, name: ch.name, type: ch.type, url: ch.live_url || ch.preview_url || "" }
       : null,
     samples: ch ? (await samples(ch, ctx)) || "" : "",
     written_titles: published.map((a) => a.title),
