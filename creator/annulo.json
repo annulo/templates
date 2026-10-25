@@ -13,7 +13,7 @@
     "docs": "https://github.com/annulo/plugins#docs"
   },
   "plugins_min": {
-    "social": "0.8.23",
+    "social": "0.9.0",
     "docs": "0.1.0"
   },
   "assistant": {

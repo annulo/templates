@@ -14,7 +14,7 @@ import { tr } from '../lib/i18n'
 import { dbList, videoSrc, type Article, type Asset } from '../lib/shuttle'
 import { uploadAssets, type UploadItem } from '../lib/assets'
 import { usePasteFiles } from '../lib/usePasteFiles'
-import { FIELDS } from '../plugins/social/local/_fields'
+import { FIELDS, fieldsFor } from '../plugins/social/local/_fields'
 import { parseList, tagsOf, typeOf, type ArticleType } from '../local/_types'
 import { fileSrc } from '../lib/files'
 
@@ -40,17 +40,18 @@ export function patchOf(d: ArticleDraft, t: ArticleType): Partial<Article> {
 
 /** 这种类型在各平台的上限：「X 280 · 小红书 1000」 */
 function limitLine(t: ArticleType, pick: (f: (typeof FIELDS)[string]) => number) {
-  return typePlatforms(t).map((p) => `${CHANNEL_TYPES[p]?.label ?? p} ${pick(FIELDS[p])}`).join(' · ')
+  return typePlatforms(t).map((p) => `${CHANNEL_TYPES[p]?.label ?? p} ${pick(fieldsFor(p, t)!)}`).join(' · ')
 }
-const maxOf = (t: ArticleType, pick: (f: (typeof FIELDS)[string]) => number) => Math.max(0, ...typePlatforms(t).map((p) => pick(FIELDS[p])))
+// 平台按类型换字段的（B 站：视频投稿 / 专栏）取这种类型的那一套
+const maxOf = (t: ArticleType, pick: (f: (typeof FIELDS)[string]) => number) => Math.max(0, ...typePlatforms(t).map((p) => pick(fieldsFor(p, t)!)))
 const chars = (s: string) => [...s].length
 
 export function ArticleEditor({ type, draft, setDraft, editorKey, onUploadingChange }: { type: ArticleType; draft: ArticleDraft; setDraft: (f: (d: ArticleDraft) => ArticleDraft) => void; editorKey: number; onUploadingChange?: (busy: boolean) => void }) {
   const set = <K extends keyof ArticleDraft>(k: K, v: ArticleDraft[K]) => setDraft((d) => ({ ...d, [k]: v }))
   const imagesMax = maxOf('post', (f) => f.images)
   const tagsMax = maxOf(type, (f) => f.tags)
-  const hasCategory = type === 'video' && typePlatforms('video').some((p) => FIELDS[p].category)
-  const hasCover = type === 'post' && typePlatforms('post').some((p) => FIELDS[p].cover)
+  const hasCategory = type === 'video' && typePlatforms('video').some((p) => fieldsFor(p, 'video')!.category)
+  const hasCover = type === 'post' && typePlatforms('post').some((p) => fieldsFor(p, 'post')!.cover)
   return <div className="space-y-4">
     <input value={draft.title} onChange={(e) => set('title', e.target.value)} placeholder={tr('content.title_ph')} aria-label={tr('social.f_title')} className={cx(inputCls, 'h-11 text-lg font-semibold')} />
     {type === 'article' && <>

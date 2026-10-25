@@ -1,7 +1,7 @@
 import { L } from './_i18n'
 import { profile, projectBrief } from './_ai'
 import { htmlImages, htmlText, isType, parseList, platformsFor, tagsOf, typeOf, type ArticleType } from './_types'
-import { FIELDS } from '../plugins/social/local/_fields'
+import { fieldsFor } from '../plugins/social/local/_fields'
 
 const json = <T,>(value: unknown, fallback: T): T => { try { return typeof value === 'string' ? (value ? JSON.parse(value) : fallback) : ((value as T) ?? fallback) } catch { return fallback } }
 function requireRow(ctx: any, table: string, id: string) {
@@ -65,7 +65,7 @@ function limitsOf(ctx: any, t: ArticleType) {
   const all = platformsFor(t)
   const list = mine.filter((p) => all.includes(p)).length ? all.filter((p) => mine.includes(p)) : all
   return list.map((p) => {
-    const f = FIELDS[p]
+    const f = fieldsFor(p, t)!
     return { platform: p, title: f.title === 'publish' ? `发出去，最多 ${f.titleMax} 字` : '平台上没有标题（只在后台列表里显示）', body_max: f.bodyMax, tags_max: f.tags, ...(t === 'post' ? { images_max: f.images, text_cover: f.cover } : {}), ...(t === 'video' && f.category ? { category: true } : {}) }
   })
 }

@@ -50,7 +50,7 @@ export const quickstart: Article = {
 ## 4. 做第一条内容、发第一条
 
 1. 「内容中心 → 选题」点「出一批选题」，助手按你的定位出一批；
-2. 挑一个点「写成文章」，或者在「文章」页签点「新建文章」写几句想做什么，再选「让 AI 写」或「自己写」。每条内容是一个文件夹，稿子、文案、图、视频都是里面的文件；
+2. 挑一个点「做成内容」，或者在「内容」页签点「新建内容」写几句想做什么，再选「让 AI 做」或「自己写」。稿子、文案、图、视频都是这条内容里的文件；
 3. 打开这条看看 AI 做的文件，要它接着做（改文案、做封面、做视频）点「交给 AI」；
 4. 点「发布」，挑这次发成图文、视频还是长文，用哪份文案、哪些图或哪个视频，勾上账号，点「发布到 N 个账号」；要定时就先点左下角的日历图标选时间。
 
@@ -99,7 +99,7 @@ Progress comes from your data; nothing to tick by hand. Click a step to see what
 ## 4. Make your first piece, publish your first post
 
 1. In Content center → Topics, click "Suggest topics"; the assistant suggests a batch from your profile;
-2. Pick one and click "Write article", or click "New article" on the Articles tab, write a few lines about what you want, then choose "Let AI write it" or "Write it myself". Each piece is a folder: the brief, copy, images and videos are files in it;
+2. Pick one and click "Turn into a piece", or click "New content" on the Content tab, write a few lines about what you want, then choose "Let AI make it" or "Write it myself". The brief, copy, images and videos are files in the piece;
 3. Open the piece and look at what AI made; to have it do more (revise the copy, make a cover, make a video), click "Ask AI";
 4. Click "Publish", choose whether this goes out as an image post, a video or an article, which copy and which images or video to use, tick the accounts and click "Publish to N accounts". To schedule it, first pick a time with the calendar icon at the bottom left.
 
@@ -296,12 +296,12 @@ An account signed in on another computer shows "Logged in on another computer"; 
 
 export const content: Article = {
   id: 'content',
-  title: { zh: '内容中心：选题、内容文件夹、发布', en: 'Content center: topics, content folders, publishing' },
-  summary: { zh: '每条内容一个文件夹，稿子、文案、脚本、图、视频都在里面；交给 AI 在里面做，发布时挑这次发什么、发到哪些账号。', en: 'Each piece is a folder holding its brief, copy, scripts, images and videos; AI works inside it, and when you publish you pick what goes out and to which accounts.' },
+  title: { zh: '内容中心：选题、内容、发布', en: 'Content center: topics, content, publishing' },
+  summary: { zh: '一条内容的稿子、文案、脚本、图、视频都放在它里面；交给 AI 在里面做，发布时挑这次发什么、发到哪些账号。', en: 'Each piece holds its brief, copy, scripts, images and videos; AI works inside it, and when you publish you pick what goes out and to which accounts.' },
   body: {
-    zh: `左侧「内容与发布 → 内容中心」，两个页签：「文章」和「选题」。
+    zh: `左侧「内容与发布 → 内容中心」，两个页签：「内容」和「选题」。
 
-**每条内容是一个文件夹**：稿子、脚本、文案、视频、图都是里面的文件，可以再分子文件夹（比如 A 版、B 版各一个）。你在页面上改，AI 在对话里改，改的是同一份文件。内容本身不分类型，到发布时才挑这次发成图文、视频还是长文。
+**每条内容里放着它自己的文件**：稿子、脚本、文案、视频、图，可以再分子文件夹（比如 A 版、B 版各一个）。你在页面上改，AI 在对话里改，改的是同一份文件。内容本身不分类型，到发布时才挑这次发成图文、视频还是长文。
 
 ## 选题
 
@@ -309,29 +309,29 @@ export const content: Article = {
 - **出一批选题**：先弹窗，可以写这一批的额外要求（只出某类主题、一次出几个），不填就照默认的要求出。助手按你的定位、已有选题和最近帖子的反响出一批，不和已有的重复；
 - **手动添加**：自己写选题和切入点；
 - 点选题标题或「编辑选题」，能补内容角度、关键词、读者是谁、读者想知道什么、大纲、发到哪些平台、还缺的素材；
-- 「写成文章」：用这个选题新建一条内容（见下面），选题的标题和简报会写进稿子；
+- 「做成内容」：用这个选题新建一条内容（见下面），选题的标题和简报会写进稿子；
 - 不想写的点「×」（放弃这个选题），放弃的在下面「已写成 / 已放弃的选题」里能「恢复」。
 
 ![内容中心 · 选题](https://fsu.creght.com/site/2103669300995821568/1791356478101__creator_help_content_topics.png)
 
 ## 新建一条内容
 
-「文章」页签右上角「新建文章」，在「这篇想写什么」里写主题、几个要点或一段草稿（第一行当名字），会存成这条内容文件夹里的「稿子.md」。然后二选一：
-- 「自己写」：建好就打开，在文件夹里写；
-- 「让 AI 写」：建好后交给助手照稿子做，要发的文字写进「文案.md」，要做的图、视频也放进文件夹。什么都没写时，助手从选题里挑一个现在最值得做的。
+「内容」页签右上角「新建内容」，在「这条想做什么」里写主题、几个要点或一段草稿（第一行当名字），会存成这条内容的「稿子.md」。然后二选一：
+- 「自己写」：建好就打开，直接在里面写；
+- 「让 AI 做」：建好后交给助手照稿子做，要发的文字写进「文案.md」，要做的图、视频也放进这条内容。什么都没写时，助手从选题里挑一个现在最值得做的。
 
 怎么写（结构、语气、长度）照「写作要求」，在页面右上角「更多 → 写作要求」里改。助手只用「我的定位」里写了的个人经历，不编数据和案例。
-在 Notion 里写好的：在「这篇想写什么」里只粘那篇 Notion 页面的链接，点「从 Notion 导入」（要先在 Annulo 的 设置 → MCP 里连上 Notion）。
+在 Notion 里写好的：在「这条想做什么」里只粘那篇 Notion 页面的链接，点「从 Notion 导入」（要先在 Annulo 的 设置 → MCP 里连上 Notion）。
 
 ## 内容页
 
-点开一条，从上到下是：名字（双击改名，文件夹跟着改名）、文件夹、发布记录。顶上一排：返回、状态、「交给 AI」「发布」「更多」（复制引用、改写要求、删除这篇）。
+点开一条，从上到下是：名字（双击改名）、文件、发布记录。顶上一排：返回、状态、「交给 AI」「发布」「更多」（复制引用、改写要求、删除这条）。
 
 状态默认按发布记录自动判断（「自动（已发布）」），点它可以手动标成「草稿」或「已发布」，或者「恢复自动更新」。
 
-![内容页：文件夹默认是网格，下面是发布记录](https://fsu.creght.com/site/2103669300995821568/1792413750753__creator_help_content_folder.png)
+![内容页：文件默认是网格，下面是发布记录](https://fsu.creght.com/site/2103669300995821568/1792413750753__creator_help_content_folder.png)
 
-## 文件夹
+## 文件
 
 - **网格**（默认）：所有文件铺在一起，「稿子.md」排第一，其余最近改的在前；图片、视频显示缩略图，名字下面写着大小和在哪个子文件夹。只有一个文件时直接打开它；
 - **树**：右上角切换。左边是目录，右边看、改文件，宽屏下是固定高度的两栏，各自滚动。默认打开你上次在这条里看的文件，没有就打开最近改的，再没有就打开稿子。网格还是树记在这台电脑上；
@@ -386,13 +386,13 @@ export const content: Article = {
 
 ## 内容列表
 
-「文章」页签能搜标题和内容，按「草稿」「已发布」筛。AI 做好、还没打开看过的标着「新」，左侧「内容中心」后面是它们的数量。发出去的后面列着发到了哪些账号，点一个打开那条、定位到那条发布记录。
+「内容」页签能搜标题和内容，按「草稿」「已发布」筛。AI 做好、还没打开看过的标着「新」，左侧「内容中心」后面是它们的数量。发出去的后面列着发到了哪些账号，点一个打开那条、定位到那条发布记录。
 每行右边的「⋯」：复制引用、改写（打开「交给 AI」）、复制、删除这篇；状态也能在右边直接改。已经发出去或排了期的不能删，先在发布记录里处理。
 
 ![内容列表](https://fsu.creght.com/site/2103669300995821568/1792413757129__creator_help_content_list.png)`,
-    en: `Content & publishing → Content center in the sidebar, with two tabs: "Articles" and "Topics".
+    en: `Content & publishing → Content center in the sidebar, with two tabs: "Content" and "Topics".
 
-**Each piece is a folder**: the brief, scripts, copy, videos and images are files in it, and you can add subfolders (say, one for version A and one for version B). You edit them on the page and AI edits them in the chat; it's the same set of files. A piece has no type of its own: you choose whether it goes out as an image post, a video or an article when you publish.
+**Each piece holds its own files**: the brief, scripts, copy, videos and images, and you can add subfolders (say, one for version A and one for version B). You edit them on the page and AI edits them in the chat; it's the same set of files. A piece has no type of its own: you choose whether it goes out as an image post, a video or an article when you publish.
 
 ## Topics
 
@@ -400,29 +400,29 @@ The "Topics" tab:
 - **Suggest topics**: first opens a dialog where you can add requirements for this batch only (only certain kinds, how many at a time); leave it empty to follow the defaults. The assistant suggests a batch from your profile, your existing topics and how recent posts did, without repeating what you have;
 - **Add manually**: write a topic and an angle yourself;
 - Click a topic title or "Edit topic" to add the angle, keywords, who it's for, what readers want to know, outline, platforms and missing material;
-- "Write article": starts a new piece from this topic (see below); the topic's title and brief go into its brief;
+- "Turn into a piece": starts a new piece from this topic (see below); the topic's title and brief go into its brief;
 - Click "×" (Drop this topic) for ones you won't write; dropped ones are under "written / dropped topics" below, where you can "Restore" them.
 
 ![Content center · Topics](https://fsu.creght.com/site/2103669300995821568/1791356478101__creator_help_content_topics.png)
 
 ## Starting a piece
 
-Click "New article" at the top right of the Articles tab and put a subject, a few points or a rough draft in "What to write" (the first line becomes its name). It's saved as brief.md in the piece's folder. Then choose:
-- "Write it myself": creates the piece and opens it, ready for you to work in its folder;
-- "Let AI write it": creates the piece and hands it to the assistant, which works from the brief, writes the text to post into copy.md and puts any images or videos in the folder too. With nothing filled in, it picks the topic most worth doing now.
+Click "New content" at the top right of the Content tab and put a subject, a few points or a rough draft in "What to write" (the first line becomes its name). It's saved as the piece's brief.md. Then choose:
+- "Write it myself": creates the piece and opens it, ready for you to work in;
+- "Let AI make it": creates the piece and hands it to the assistant, which works from the brief, writes the text to post into copy.md and puts any images or videos in the piece too. With nothing filled in, it picks the topic most worth doing now.
 
 How it's written (structure, tone, length) follows your writing instructions; change them under "More → Writing instructions" at the top right. The assistant only uses personal stories you wrote in My profile and doesn't make up data or cases.
 Written in Notion? Paste just the Notion page link into "What to write" and click "Import from Notion" (connect Notion first in Annulo, Settings → MCP).
 
 ## The piece page
 
-Open a piece. From top to bottom: its name (double-click to rename; the folder is renamed too), the folder, and the publishing records. The bar at the top has back, the status, "Ask AI", "Publish" and "More" (Copy reference, Revision instructions, Delete).
+Open a piece. From top to bottom: its name (double-click to rename), its files, and the publishing records. The bar at the top has back, the status, "Ask AI", "Publish" and "More" (Copy reference, Revision instructions, Delete).
 
 The status follows the publishing records by default ("Auto (Published)"). Click it to mark the piece as Draft or Published yourself, or "Restore automatic status".
 
-![A piece: the folder in grid view, with publishing records below](https://fsu.creght.com/site/2103669300995821568/1792413750753__creator_help_content_folder.png)
+![A piece: files in grid view, with publishing records below](https://fsu.creght.com/site/2103669300995821568/1792413750753__creator_help_content_folder.png)
 
-## The folder
+## Files
 
 - **Grid** (the default): every file side by side, brief.md first and the rest newest first. Images and videos show thumbnails; under each name are its size and the subfolder it's in. With only one file, it opens straight away;
 - **Tree**: switch at the top right. Folders on the left, the open file on the right; on a wide screen it's two fixed-height panes that scroll on their own. It opens the file you last looked at in this piece, or else the newest one, or else the brief. Grid or tree is remembered on this computer;
@@ -477,7 +477,7 @@ At the bottom of the piece, one row per account it went to: the account and plat
 
 ## The list
 
-The "Articles" tab lets you search titles and text, and filter by "Draft" and "Published". Pieces AI finished that you haven't opened yet are marked "New", and the number next to Content center in the sidebar counts them. Published pieces list the accounts they went to; click one to open the piece at that publishing record.
+The "Content" tab lets you search titles and text, and filter by "Draft" and "Published". Pieces AI finished that you haven't opened yet are marked "New", and the number next to Content center in the sidebar counts them. Published pieces list the accounts they went to; click one to open the piece at that publishing record.
 The "⋯" on each row has Copy reference, Rewrite (opens Ask AI), Duplicate and Delete; you can change the status on the right too. Pieces that have been posted or scheduled can't be deleted; handle them under the publishing records first.
 
 ![The list](https://fsu.creght.com/site/2103669300995821568/1792413757129__creator_help_content_list.png)`,
@@ -645,7 +645,7 @@ export const assistant: Article = {
 ## 按钮和助手
 
 后台很多按钮是直接执行的（采集、发布），不经过助手。
-要 AI 读东西、想东西的按钮（出一批选题、新建文章里的「让 AI 写」、交给 AI、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；页面上出现「进行中」的提示，点「查看对话」打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」「改写要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
+要 AI 读东西、想东西的按钮（出一批选题、新建内容里的「让 AI 做」、交给 AI、立即写本周总结、交给助手修…）会新开一段对话在后台跑，在右侧能看到；页面上出现「进行中」的提示，点「查看对话」打开那段对话，跑完页面自动刷新。这类按钮旁边常有「AI 要求」（或「写作要求」「改写要求」），里面是它每次都照着做的写法，可以改，改坏了能「恢复默认」。
 AI 做出来的东西要改，回到做它的那段对话里接着说，不用新开。
 
 ## 不会替你做的
@@ -689,7 +689,7 @@ Annulo「设置 → 项目」里的「给助手的说明」：写你对这个项
 ## Buttons and the assistant
 
 Many buttons run directly (collecting, publishing) without the assistant.
-Buttons that need AI to read or think (Suggest topics, "Let AI write it" in New article, Ask AI, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. An "In progress" notice appears on the page; "View chat" opens that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions", "Revision instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
+Buttons that need AI to read or think (Suggest topics, "Let AI make it" in New content, Ask AI, Write this week's summary, Have the assistant fix it…) open a new chat that runs in the background, visible on the right. An "In progress" notice appears on the page; "View chat" opens that chat, and the page refreshes when it's done. These buttons often have "AI instructions" (or "Writing instructions", "Revision instructions") next to them: the rules it follows every time. You can edit them, and "Restore default" undoes your edits.
 To change something AI made, keep talking in the chat that made it instead of starting a new one.
 
 ## What it won't do for you
