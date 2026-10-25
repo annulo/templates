@@ -9,13 +9,13 @@ import { Placeholder } from '@tiptap/extensions'
 import ImageBase from '@tiptap/extension-image'
 // 只要表格扩展给编辑器加的命令类型（insertTable）；扩展本身在 mdExtensions.ts 里按需加载，这行编译后会被去掉
 import type {} from '@tiptap/extension-table'
-import { Bold, Code, Heading2, Heading3, ImageIcon, Images, Italic, Link2, List, ListOrdered, Minus, Pilcrow, Quote, SquareCode, Strikethrough, Table2, Unlink, Upload, type LucideIcon } from 'lucide-react'
+import { Bold, Check, Code, FolderOpen, Heading2, Heading3, ImageIcon, Images, Italic, Link2, List, ListOrdered, Minus, Pilcrow, Quote, SquareCode, Strikethrough, Table2, Unlink, Upload, type LucideIcon } from 'lucide-react'
 import { uploadFile } from '../../lib/shuttle'
 import { fileSrc } from '../../lib/files'
 import { tr } from '../../lib/i18n'
-import { cx } from '../ui'
+import { Button, Dialog, cx } from '../ui'
 import AssetPicker from '../AssetPicker'
-import type { RichEditorProps } from '../RichEditor'
+import type { FolderMedia, RichEditorProps } from '../RichEditor'
 
 
 /** 正文里存的地址可以是 AI 做的本机文件 local:<name>（发布时 b.upload 直接认），编辑器里显示时换成 Annulo 的地址 */
@@ -190,12 +190,13 @@ function findSlash(editor: Editor): Slash | null {
   return { from: $from.pos - m[1].length - 1, to: $from.pos, query: m[1].toLowerCase(), top: c.top, bottom: c.bottom, left: c.left }
 }
 
-export default function TiptapEditor({ value, onChange, placeholder, markdown, extensions, resolveSrc }: RichEditorProps) {
+export default function TiptapEditor({ value, onChange, placeholder, markdown, extensions, resolveSrc, folderMedia }: RichEditorProps) {
   const [slash, setSlash] = useState<Slash | null>(null)
   const [active, setActive] = useState(0)
   const [uploading, setUploading] = useState(0)
   const [error, setError] = useState('')
   const [picking, setPicking] = useState(false)
+  const [pickingFolder, setPickingFolder] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const edRef = useRef<Editor | null>(null)
@@ -320,7 +321,7 @@ export default function TiptapEditor({ value, onChange, placeholder, markdown, e
   return (
     // 手机上不要外框：外面一般已经套了卡片，一层层边框加内边距，正文左右挤得只剩一半
     <div className="relative bg-background sm:rounded-lg sm:border sm:border-border">
-      {editor && <Toolbar editor={editor} uploading={uploading > 0} onUpload={() => fileInput.current?.click()} onPick={() => setPicking(true)} />}
+      {editor && <Toolbar editor={editor} uploading={uploading > 0} onUpload={() => fileInput.current?.click()} onPick={() => setPicking(true)} onPickFolder={folderMedia?.length ? () => setPickingFolder(true) : undefined} />}
       {editor && <SelectionMenu editor={editor} />}
       <EditorContent editor={editor} />
       <AssetPicker
@@ -332,6 +333,17 @@ export default function TiptapEditor({ value, onChange, placeholder, markdown, e
           void Promise.all(urls.map(async (u) => (assets.find((a) => a.url === u)?.kind === 'video' ? { type: 'video', attrs: { src: u, ...(await videoSize(u)) } } : { type: 'image', attrs: { src: u } }))).then(insertNodes)
         }}
       />
+      {folderMedia && (
+        <FolderPicker
+          open={pickingFolder}
+          items={folderMedia}
+          onClose={() => setPickingFolder(false)}
+          onPick={(list) => {
+            setPickingFolder(false)
+            void Promise.all(list.map(async (m) => (m.video ? { type: 'video', attrs: { src: m.src, ...(await videoSize(m.preview)) } } : { type: 'image', attrs: { src: m.src, alt: m.name.replace(/^.*\//, '').replace(/\.[^.]+$/, '') } }))).then(insertNodes)
+          }}
+        />
+      )}
       {slash && shown.length > 0 && (
         <div
           ref={menuRef}
@@ -382,7 +394,7 @@ export default function TiptapEditor({ value, onChange, placeholder, markdown, e
  * 编辑器顶上一直在的工具栏：常用的块（小标题、列表、引用）和插图片（上传 / 从素材库选）。
  * 斜杠菜单、粘贴、拖图片进来照样能用，但不知道的人找不到，所以常用的摆出来
  */
-function Toolbar({ editor, uploading, onUpload, onPick }: { editor: Editor; uploading: boolean; onUpload: () => void; onPick: () => void }) {
+function Toolbar({ editor, uploading, onUpload, onPick, onPickFolder }: { editor: Editor; uploading: boolean; onUpload: () => void; onPick: () => void; onPickFolder?: () => void }) {
   const [, rerender] = useState(0)
   // 光标移动时刷新按钮的选中状态
   useEffect(() => {
@@ -448,10 +460,43 @@ function Toolbar({ editor, uploading, onUpload, onPick }: { editor: Editor; uplo
       {btn(editor.isActive('orderedList'), tr('editor.ol'), <ListOrdered />, () => editor.chain().focus().toggleOrderedList().run())}
       {btn(editor.isActive('blockquote'), tr('editor.quote'), <Quote />, () => editor.chain().focus().toggleBlockquote().run())}
       <span className="mx-1 h-4 w-px shrink-0 bg-border" />
+      {onPickFolder && text(tr('editor.pick_folder'), <FolderOpen />, onPickFolder)}
       {text(uploading ? tr('editor.uploading') : tr('editor.upload_media'), <Upload />, onUpload, uploading)}
       {text(tr('editor.pick_media'), <Images />, onPick)}
     </div>
     </div>
+  )
+}
+
+/** 「从文件夹选」：列出页面给的图片、视频，点选几个（按点的顺序插），插在光标处 */
+function FolderPicker({ open, items, onClose, onPick }: { open: boolean; items: FolderMedia[]; onClose: () => void; onPick: (list: FolderMedia[]) => void }) {
+  const [chosen, setChosen] = useState<string[]>([])
+  useEffect(() => { if (open) setChosen([]) }, [open])
+  const toggle = (src: string) => setChosen((l) => (l.includes(src) ? l.filter((x) => x !== src) : [...l, src]))
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={tr('editor.pick_folder')}
+      width={640}
+      footer={<>
+        <Button variant="outline" size="sm" onClick={onClose}>{tr('common.cancel')}</Button>
+        <Button size="sm" disabled={!chosen.length} onClick={() => onPick(chosen.map((s) => items.find((m) => m.src === s)!).filter(Boolean))}>{tr('editor.insert_n', { n: chosen.length })}</Button>
+      </>}
+    >
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        {items.map((m) => {
+          const i = chosen.indexOf(m.src)
+          return (
+            <button key={m.src} type="button" title={m.name} onClick={() => toggle(m.src)} className={cx('group relative cursor-pointer overflow-hidden rounded-lg border text-left', i >= 0 ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:border-primary/50')}>
+              {m.video ? <video src={m.preview} muted preload="metadata" className="aspect-square w-full bg-black object-cover" /> : <img src={m.preview} alt="" loading="lazy" className="aspect-square w-full object-cover" />}
+              <span className="block truncate px-1.5 py-1 text-[11px] text-muted-foreground">{m.name}</span>
+              {i >= 0 && <span className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">{chosen.length > 1 ? i + 1 : <Check className="size-3" />}</span>}
+            </button>
+          )
+        })}
+      </div>
+    </Dialog>
   )
 }
 

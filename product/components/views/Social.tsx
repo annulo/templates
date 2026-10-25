@@ -14,7 +14,7 @@ import RichEditor from '../RichEditor'
 import SchedulePopover, { ScheduledLine } from '../SchedulePopover'
 import { Badge, Button, Dialog, ErrorDetails, Field, Notice, PageHeader, RangeToggle, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
 import { dbList, dbPatch, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, uploadLocalFile, videoSrc } from '../../lib/shuttle'
-import { SOCIAL, isSocial, type MetricKey, fieldsOf, isRich, isVideoPost, loggedInElsewhere, postText, richImages, toRich, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
+import { SOCIAL, isSocial, type MetricKey, fieldsOf, isRich, isVideoPost, loggedInElsewhere, postPlatform, postText, richImages, toRich, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
 import Select from '../Select'
 import AssetPicker from '../AssetPicker'
 import { CHANNEL_TYPES } from '../../lib/channels'
@@ -345,7 +345,8 @@ function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channe
 
 function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus }: { p: SocialPost; owner?: Channel; showAccount: boolean; articles: Article[]; onChanged: () => void; focus?: boolean; onUnfocus?: () => void }) {
   const account = showAccount ? owner : undefined
-  const pf = platformOf(owner) ?? Object.values(SOCIAL)[0]!
+  // B 站的专栏（图文、长文）和视频投稿字段不一样：按这一条换（postPlatform）
+  const pf = postPlatform(platformOf(owner) ?? Object.values(SOCIAL)[0]!, owner?.type, p)
   // 正在发布：上一次留在表里的报错先不显示，跑完重新读表再说
   const [publishingNow, setPublishingNow] = useState(false)
   const recovery = facebookPublishRecovery(p, owner)
