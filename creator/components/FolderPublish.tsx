@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { AlertTriangle, Check, Crop, FileText, Film, Hand, HardDrive, Image as ImageIcon, Library, Loader2, Newspaper, Play, Send, Wand2, X } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, Crop, FileText, Film, Hand, HardDrive, Image as ImageIcon, Library, Loader2, Newspaper, Play, Send, Wand2, X } from 'lucide-react'
 import AssetPicker from './AssetPicker'
 import ImageCropper from './ImageCropper'
 import Lightbox from './Lightbox'
@@ -8,7 +8,7 @@ import Sortable from './Sortable'
 import { ChannelAvatar, PlatformTag } from './ArticlePublish'
 import { Badge, Button, Dialog, Notice, Segmented, cx, fmtTime, inputCls, toast } from './ui'
 import { DateTimeChip } from './DateTimePicker'
-import { IMAGE, MD, VIDEO, base, fmtSize, isDraft, joinPath, parent, workSrc, type Entry } from './Folder'
+import { IMAGE, MD, VIDEO, base, fmtSize, folderMediaFor, isDraft, joinPath, parent, workSrc, type Entry } from './Folder'
 import { enqueue } from '../lib/publishQueue'
 import { fileSrc } from '../lib/files'
 import { tr, useT } from '../lib/i18n'
@@ -27,7 +27,8 @@ import type { Ctx } from './views/types'
 //   视频封面（插件 FIELDS 的 videoCover）：平台要的比例不一样（FIELDS 的 coverRatio：小红书、抖音 3:4，B站 4:3），按勾的账号分成几组、每组挑一张，
 //   文件夹里的图点选或从资料库选；默认用名字带「封面 / cover」、比例对得上这组的图，没有就用内容上设过的或最新的那张「封面」，都没有用平台默认的那一帧。
 //   比例不对的提示会被裁，能当场裁（ImageCropper，裁好的存进文件夹），裁了不合适再交给 AI 重做。
-//   填好交给我（FIELDS 的 handOver）：勾了的账号插件在浏览器里填好不点发布，窗口交给用户自己调（封面、合集…）、自己发；排期的不行（到点没人接手）。
+//   填好交给我（FIELDS 的 handOver）：发布按钮的下拉里选（PublishButton）：勾的账号插件都只在浏览器里填好不点发布，窗口交给用户自己调（封面、合集…）、自己发；
+//   不能这么做的平台（X、LinkedIn…）这时不能勾，排期的也不行（到点没人接手）。
 // 选好账号、现在发或排期：folder.publish 每个账号新建一条帖子（存的就是这次挑的内容，排期到点照它发），放进后台发布队列。
 
 /** 文案：名字带「文案 / copy」的 md，或者开头写了 title 的 md（见组件里的 isCopy）；成片：名字带「成片 / final」的视频（挑选规则，弹窗里有说明） */
@@ -117,8 +118,8 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   const [dims, setDims] = useState<Record<string, { w: number; h: number }>>({})
   const noteDim = (ref: string, w: number, h: number) => { if (w && h) setDims((d) => (d[ref]?.w === w && d[ref]?.h === h ? d : { ...d, [ref]: { w, h } })) }
   const [cropping, setCropping] = useState<{ key: string; ratio: [number, number]; m: Media } | null>(null)
-  // 填好交给我的账号
-  const [manual, setManual] = useState<string[]>([])
+  // 填好交给我（发布按钮的下拉）：只填不发，窗口交给用户；排期时不算
+  const [handMode, setHandMode] = useState(false)
   const [picker, setPicker] = useState<'image' | 'video' | 'cover' | null>(null)
   // 上传本机：给哪一栏传（配图可以一次传几张），进度 0–1，null 是没在传
   const fileInput = useRef<HTMLInputElement>(null)
@@ -127,6 +128,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   const [picked, setPicked] = useState<string[]>([])
   // 定时发布的时间（本地时间 'YYYY-MM-DDTHH:mm'），空的是现在发
   const [at, setAt] = useState('')
+  const handing = handMode && !at
   const [result, setResult] = useState<Record<string, string>>({})
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
@@ -169,7 +171,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   // 打开时：读文件夹，猜发成什么，挑文案（名字带「文案 / copy」的优先，再是离视频近的），配好图、视频
   useEffect(() => {
     if (!open) return
-    setFiles(null); setError(''); setResult({}); setPicked([]); setManual([]); setCovers({}); setCoverKey(''); setAt(''); setMoreCopies(false); setTitled(new Set()); userPicked.current = false; setTouched({ images: false, video: false })
+    setFiles(null); setError(''); setResult({}); setPicked([]); setHandMode(false); setCovers({}); setCoverKey(''); setAt(''); setMoreCopies(false); setTitled(new Set()); userPicked.current = false; setTouched({ images: false, video: false })
     runLocal<{ path: string; entries: Entry[] }>('folder.list', { article_id: article.id }).then((r) => {
       const fs = r.entries.filter((e) => !e.dir)
       setRoot(r.path)
@@ -234,9 +236,11 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
 
   const machine = useElsewhere(ctx.channels)
   const accounts = ctx.channels.filter((ch) => !!SOCIAL[ch.type])
-  const coverUsed = kind === 'video' && accounts.some((ch) => FIELDS[ch.type]?.videoCover)
+  // 能设封面的账号：视频的封面（videoCover：小红书、抖音、B站），长文的文章封面（articleCover：知乎）
+  const takesCover = (type: string) => (kind === 'video' ? !!FIELDS[type]?.videoCover : kind === 'article' && !!FIELDS[type]?.articleCover)
+  const coverUsed = accounts.some((ch) => takesCover(ch.type))
   // 封面分组：勾了能设封面的账号就按它们分，没勾就按所有能设封面的账号先摆出来
-  const coverAccounts = accounts.filter((ch) => FIELDS[ch.type]?.videoCover)
+  const coverAccounts = accounts.filter((ch) => takesCover(ch.type))
   const coverPicked = coverAccounts.filter((ch) => picked.includes(ch.id))
   const coverGroups = (() => {
     const m = new Map<string, { key: string; ratio?: [number, number]; platforms: string[] }>()
@@ -270,10 +274,11 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     }
   }, [coverUsed, namedCovers, covers, baseCover, root])
   const blocked = (ch: { type: string; login_status?: string } & Parameters<typeof loggedInElsewhere>[0]) => !supports(FIELDS[ch.type], kind) ? t('unsupported', { kind: t(`kind_${kind}`) })
+    : handing && !FIELDS[ch.type]?.handOver ? t('manual_cant')
     : loggedInElsewhere(ch, machine) ? t('on_machine', { name: loggedInElsewhere(ch, machine) })
     : ch.login_status === 'expired' ? t('expired') : ''
   // 换了发成什么：不支持的账号取消勾选
-  useEffect(() => { setPicked((l) => l.filter((id) => { const ch = accounts.find((c) => c.id === id); return ch && !blocked(ch) })) }, [kind])
+  useEffect(() => { setPicked((l) => l.filter((id) => { const ch = accounts.find((c) => c.id === id); return ch && !blocked(ch) })) }, [kind, handing])
   const content = { type: kind, title, body, tags: JSON.stringify(tagList), images: JSON.stringify(images.map((i) => i.ref)), video: video?.ref ?? '' }
 
   /** 每个勾了的、能设封面的账号用它那一组的封面 */
@@ -286,15 +291,14 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     try {
       const r = await runLocal<{ ready: { channel_id: string; post_id: string }[]; problems: { channel_id: string; problems: string[] }[] }>('folder.publish', {
         article_id: article.id, kind, title, body, tags: tagList, images: images.map((i) => i.ref), video: video?.ref ?? '',
-        ...(kind === 'video' ? { video_cover: coverOf(coverGroups[0]?.key ?? '', coverGroups[0]?.ratio)?.ref ?? '', video_covers: coverCovers() } : {}),
+        ...(coverUsed ? { video_cover: coverOf(coverGroups[0]?.key ?? '', coverGroups[0]?.ratio)?.ref ?? '', video_covers: coverCovers() } : {}),
         channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}),
       })
       const name = (id: string) => accounts.find((c) => c.id === id)?.name ?? ''
       // 交给我的排在最后：它要等人在窗口里点发布（最多 30 分钟），别让自动发的跟着等
-      const handed = (id: string) => !ts && manual.includes(id)
-      const ready = [...r.ready].sort((a, b) => Number(handed(a.channel_id)) - Number(handed(b.channel_id)))
-      if (!ts && ready.length) enqueue(ready.map((p) => ({ article_id: article.id, article_title: title || article.title, channel_id: p.channel_id, channel_name: name(p.channel_id), post_id: p.post_id, ...(handed(p.channel_id) ? { manual: true as const } : {}) })))
-      if (r.ready.length) toast(ts ? t('scheduled_toast', { n: r.ready.length }) : t('started_toast', { n: r.ready.length }))
+      const handed = !ts && handMode
+      if (!ts && r.ready.length) enqueue(r.ready.map((p) => ({ article_id: article.id, article_title: title || article.title, channel_id: p.channel_id, channel_name: name(p.channel_id), post_id: p.post_id, ...(handed ? { manual: true as const } : {}) })))
+      if (r.ready.length) toast(ts ? t('scheduled_toast', { n: r.ready.length }) : handed ? t('manual_toast', { n: r.ready.length }) : t('started_toast', { n: r.ready.length }))
       if (!r.problems.length) { onClose(); return }
       setResult(Object.fromEntries(r.problems.map((p) => [p.channel_id, p.problems.join('；')])))
       setPicked(r.problems.map((p) => p.channel_id))
@@ -361,7 +365,8 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
       {/* 什么时候发放在发布按钮旁边（照 X、LinkedIn）：默认现在发，点日历图标定时间，定了显示成标签、点 × 改回现在发 */}
       <span className="mr-auto min-w-0"><DateTimeChip value={at} onChange={setAt} disabled={running} label={tr('datetime.schedule')} /></span>
       <Button variant="ghost" size="sm" onClick={onClose}>{Object.keys(result).length ? t('close') : t('cancel')}</Button>
-      <Button size="sm" disabled={running || !picked.length || !!missing} title={missing || undefined} onClick={() => void go()}>{running ? <Loader2 className="animate-spin" /> : <Send />}{at ? t('schedule_go', { n: picked.length }) : t('go', { n: picked.length })}</Button>
+      <PublishButton hand={handMode} onHand={setHandMode} scheduled={!!at} disabled={running || !picked.length || !!missing} running={running} title={missing || undefined} onClick={() => void go()}
+        label={at ? t('schedule_go', { n: picked.length }) : handing ? t('manual_go', { n: picked.length }) : t('go', { n: picked.length })} />
     </>}>
       {!files ? (error ? <Notice tone="error">{error}</Notice> : <Loader2 className="size-4 animate-spin text-muted-foreground" />) : (
         <div className="space-y-5">
@@ -389,7 +394,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
             <div className="mt-2 space-y-1">
               <span className="block text-xs text-muted-foreground">{t(kind === 'video' ? 'desc_ph' : 'body_ph')}</span>
               {kind === 'article'
-                ? (exts ? <RichEditor key={`${copy}:${mdVer}`} markdown extensions={exts} resolveSrc={resolveSrc} value={md} onChange={setMd} placeholder={t('body_ph')} /> : <Loader2 className="size-4 animate-spin text-muted-foreground" />)
+                ? (exts ? <RichEditor key={`${copy}:${mdVer}`} markdown extensions={exts} resolveSrc={resolveSrc} folderMedia={folderMediaFor(root, parent(copy), files ?? [])} value={md} onChange={setMd} placeholder={t('body_ph')} /> : <Loader2 className="size-4 animate-spin text-muted-foreground" />)
                 : <textarea value={plain} onChange={(e) => setPlain(e.target.value)} placeholder={t(kind === 'video' ? 'desc_ph' : 'body_ph')} className={cx(inputCls, 'min-h-40 resize-y py-2 leading-relaxed')} />}
             </div>
             {/* 话题单独一行，放在正文后面（和发出去的样子一样：正文在前、话题在后） */}
@@ -434,8 +439,8 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
           </div>}
 
           {coverUsed && <div>
-            {section(t('video_cover'), pickers('cover'))}
-            <p className="mb-2 text-xs text-muted-foreground">{t('video_cover_hint')}</p>
+            {section(t(kind === 'article' ? 'article_cover' : 'video_cover'), pickers('cover'))}
+            <p className="mb-2 text-xs text-muted-foreground">{t(kind === 'article' ? 'article_cover_hint' : 'video_cover_hint')}</p>
             {/* 每种比例一组（小红书、抖音 3:4，B站 4:3）：几组时点哪组，下面的图、上传、资料库就给哪组 */}
             <div className="space-y-2">{coverGroups.map((g) => {
               const m = coverOf(g.key, g.ratio)
@@ -446,7 +451,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
               const w = g.ratio ? Math.round((96 * g.ratio[0]) / g.ratio[1]) : 72
               return <div key={g.key} onClick={() => setCoverKey(g.key)} className={cx('flex flex-wrap items-start gap-3 rounded-lg border p-2', on ? 'border-primary/50 bg-primary/5' : 'border-border', many && 'cursor-pointer')}>
                 <div className="w-24 shrink-0 pt-0.5">
-                  <div className="text-sm font-medium">{g.ratio ? t('cover_group', { ratio: g.key }) : t('video_cover')}</div>
+                  <div className="text-sm font-medium">{g.ratio ? t('cover_group', { ratio: g.key }) : t(kind === 'article' ? 'article_cover' : 'video_cover')}</div>
                   <div className="text-xs leading-relaxed text-muted-foreground">{g.platforms.join('、')}</div>
                 </div>
                 <button type="button" onClick={(ev) => { ev.stopPropagation(); setCoverKey(g.key); setCover(null, g.key) }} style={{ width: w }} className={cx('flex h-24 shrink-0 cursor-pointer items-center justify-center rounded-md border px-1 text-center text-xs text-muted-foreground', !m ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:bg-muted')}>{t('cover_default')}</button>
@@ -482,22 +487,14 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
                 const why = blocked(ch)
                 const { length, max } = lengthOn(content, ch.type)
                 const was = sent[ch.id]
-                const canHand = !!FIELDS[ch.type]?.handOver && picked.includes(ch.id) && !why
-                const handed = canHand && !at && manual.includes(ch.id)
                 const note = result[ch.id] ? <span className="text-destructive">{result[ch.id]}</span>
                   : why || (max > 0 && length > max ? <span className="text-amber-700 dark:text-amber-400">{t('too_long', { n: length, max })}</span>
-                    : handed ? <span className="text-primary-text">{t('manual_on')}</span>
                     : was ? <span className="text-primary-text">{t(was.status === 'published' ? 'sent_before' : 'scheduled_before', { at: fmtTime(was.at) })}</span>
                     : '')
                 return <label key={ch.id} className={cx('flex items-center gap-3 rounded-lg border px-3 py-2', why ? 'cursor-default border-border opacity-60' : picked.includes(ch.id) ? 'cursor-pointer border-primary/50 bg-primary/5' : 'cursor-pointer border-border hover:bg-accent/50')}>
                   <input type="checkbox" disabled={!!why || running} checked={picked.includes(ch.id)} onChange={() => setPicked((l) => l.includes(ch.id) ? l.filter((x) => x !== ch.id) : [...l, ch.id])} className="size-4 accent-primary" />
                   <ChannelAvatar ch={ch} />
                   <span className="min-w-0 flex-1"><span className="flex min-w-0 items-center gap-2"><span className="truncate text-sm font-medium">{ch.name}</span><PlatformTag type={ch.type} /></span><span className="block text-xs leading-relaxed text-muted-foreground">{note}</span></span>
-                  {/* 填好交给我：插件填好不点发布，窗口交给用户调封面、选合集…自己发；排期的到点没人接手，不能选 */}
-                  {canHand && <button type="button" aria-pressed={handed} disabled={running || !!at} title={at ? t('manual_scheduled') : t('manual_hint')}
-                    onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); setManual((l) => (l.includes(ch.id) ? l.filter((x) => x !== ch.id) : [...l, ch.id])) }}
-                    className={cx('inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs disabled:cursor-default disabled:opacity-50', handed ? 'border-primary/50 bg-primary/10 text-primary-text' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground')}>
-                    <Hand className="size-3.5" />{t('manual')}</button>}
                   {result[ch.id] && <Badge tone="bad">{t('not_passed')}</Badge>}
                 </label>
               })}</div>}
@@ -517,5 +514,43 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
         setPicker(null)
       }} />
     </Dialog>
+  )
+}
+
+/**
+ * 发布按钮带一个下拉（照顶栏的项目切换：图标块、两行字、选中的打勾）：「发布」直接发出去，「填好交给我」只在浏览器里填好、窗口交给用户调了再发。
+ * 选的是这次怎么发，按钮上的字跟着变；排期时只能直接发（到点没人接手），下拉里那一项灰掉、写明原因
+ */
+function PublishButton({ hand, onHand, scheduled, disabled, running, title, label, onClick }: { hand: boolean; onHand: (v: boolean) => void; scheduled: boolean; disabled: boolean; running: boolean; title?: string; label: string; onClick: () => void }) {
+  const { t } = useT('fpub')
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const off = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) } }
+    document.addEventListener('mousedown', off)
+    document.addEventListener('keydown', esc, true)
+    return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc, true) }
+  }, [open])
+  const on = hand && !scheduled
+  const item = (value: boolean, icon: ReactNode, name: string, sub: string, off = false) => (
+    <button type="button" disabled={off} onClick={() => { onHand(value); setOpen(false) }} className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-background [&_svg]:size-4">{icon}</span>
+      <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{name}</span><span className="block text-xs leading-relaxed text-muted-foreground">{sub}</span></span>
+      {on === value && !off && <Check className="size-4 shrink-0 text-primary-text" />}
+    </button>
+  )
+  return (
+    <div ref={box} className="relative flex">
+      <Button size="sm" disabled={disabled} title={title} onClick={onClick} className="rounded-r-none">{running ? <Loader2 className="animate-spin" /> : on ? <Hand /> : <Send />}{label}</Button>
+      <Button size="sm" disabled={running} aria-label={t('publish_mode')} title={t('publish_mode')} aria-expanded={open} onClick={() => setOpen((v) => !v)} className="rounded-l-none border-l border-primary-foreground/20 px-1.5"><ChevronDown /></Button>
+      {open && (
+        <div className="absolute right-0 bottom-full z-50 mb-1.5 w-80 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+          {item(false, <Send />, t('mode_publish'), t('mode_publish_hint'))}
+          {item(true, <Hand />, t('manual'), scheduled ? t('manual_scheduled') : t('manual_hint'), scheduled)}
+        </div>
+      )}
+    </div>
   )
 }

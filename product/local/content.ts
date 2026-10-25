@@ -13,7 +13,7 @@ import {
   typeOf,
   type ArticleType,
 } from "./_types";
-import { FIELDS } from "../plugins/social/local/_fields";
+import { fieldsFor } from "../plugins/social/local/_fields";
 
 /** 选题中的简报仅保存用户填写的内容和自有产品。 */
 export function saveBrief(
@@ -249,7 +249,7 @@ function limitsOf(ctx: any, t: ArticleType) {
     ? all.filter((p) => mine.includes(p))
     : all;
   return list.map((p) => {
-    const f = FIELDS[p];
+    const f = fieldsFor(p, t)!;
     return {
       platform: p,
       title:

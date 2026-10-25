@@ -1,3 +1,6 @@
+- version: 0.16.0
+  zh: "B 站能发图文和长文（发成专栏），编辑帖子时按视频或专栏显示对应的字段。"
+  en: "Bilibili takes image and long-form posts as articles; editing a post shows the fields for a video or an article."
 - version: 0.15.12
   zh: "网站检查不再把首页带不带 / 当成两个页面，误报「标题重复」「描述重复」。"
   en: "Site checks no longer treat the home page with and without a trailing slash as two pages, which caused false duplicate title and description issues."

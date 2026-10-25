@@ -247,8 +247,8 @@ export function publish(input: { article_id: string; kind: 'post' | 'video' | 'a
     type: kind, title: String(input.title ?? '').trim() || a.title, body, tags: JSON.stringify(input.tags ?? []),
     images: JSON.stringify(kind === 'post' ? (input.images ?? []).map(ref) : []),
     video: kind === 'video' && input.video ? ref(input.video) : '',
-    // 视频封面（小红书、抖音用）：发布时挑的，没传用内容上设的
-    video_cover: kind !== 'video' ? '' : input.video_cover === undefined ? String(a.video_cover ?? '') : input.video_cover ? ref(String(input.video_cover)) : '',
+    // 自己的封面：视频封面（小红书、抖音、B站）、长文的文章封面（知乎）；发布时挑的，视频没传用内容上设的
+    video_cover: kind === 'post' ? '' : input.video_cover === undefined ? (kind === 'video' ? String(a.video_cover ?? '') : '') : input.video_cover ? ref(String(input.video_cover)) : '',
     cover_text: String(input.cover_text ?? ''), category: String(input.category ?? ''),
   }
   const ready: { channel_id: string; post_id: string }[] = []
@@ -259,7 +259,7 @@ export function publish(input: { article_id: string; kind: 'post' | 'video' | 'a
     if (!ch) { problems.push({ channel_id: id, problems: [L(ctx, '没有这个账号', 'No such account')] }); continue }
     if (!supports(FIELDS[ch.type], kind)) { problems.push({ channel_id: id, problems: [L(ctx, '这个平台不发这种内容', "This platform doesn't take this kind of post")] }); continue }
     // 每个账号可以有自己的封面（video_covers：账号 id → 封面）：平台要的比例不一样（小红书、抖音 3:4，B站 4:3），发布弹窗按比例分组挑
-    const own = kind === 'video' ? input.video_covers?.[id] : undefined
+    const own = kind !== 'post' ? input.video_covers?.[id] : undefined
     const mine = own === undefined ? content : { ...content, video_cover: own ? ref(String(own)) : '' }
     const postId = ctx.db.insert('social_posts', { ...fromContent(mine, ch.type), channel_id: id, article_id: a.id, source: 'shuttle', status: at ? 'scheduled' : 'approved', scheduled_at: at, created_at: now, updated_at: now }).id
     let found: string[] = []

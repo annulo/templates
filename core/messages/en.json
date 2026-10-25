@@ -388,6 +388,8 @@
   "editor": {
     "upload_media": "Upload media",
     "pick_media": "From library",
+    "pick_folder": "From folder",
+    "insert_n": "Insert {n}",
     "media": "Image or video",
     "media_desc": "Upload images or videos",
     "ph_media": "Write here. Add images or videos with \"Upload media\" or \"From library\" above, or paste or drop them in; type / for headings, lists…",

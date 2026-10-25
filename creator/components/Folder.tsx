@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import { ChevronDown, ChevronRight, Clapperboard, CloudOff, CloudUpload, Laptop, File, FileText, Film, Music, Folder as FolderIcon, FolderOpen, FolderPlus, ExternalLink, FilePlus, Eye, Image as ImageIcon, LayoutGrid, Pencil, ListTree, Loader2, RefreshCw, Trash2, Upload } from 'lucide-react'
-import RichEditor from './RichEditor'
+import RichEditor, { type FolderMedia } from './RichEditor'
 import { Button, Notice, Segmented, cx, fmtTime, inputCls } from './ui'
 import { fileSrc, filesOf } from '../lib/files'
 import { isEn, useT } from '../lib/i18n'
@@ -333,7 +333,7 @@ export default function Folder({ article: a, onChanged, sel: selProp, setSel: se
   const nameOf = (e: Entry, className?: string, lines?: 1 | 2) => renaming === e.path
     ? <RenameInput value={base(e.path)} onDone={(v) => renameTo(e, v)} onCancel={() => setRenaming('')} className={className} />
     : <span className="flex min-w-0 flex-1"><MidName text={base(e.path)} lines={lines} /></span>
-  const viewer = (e: Entry) => <Viewer key={e.path} root={state.path} canOpen={!!state.can_open} e={e} kids={children[e.path] ?? []} call={call} reload={load} onSelect={setSel} />
+  const viewer = (e: Entry) => <Viewer key={e.path} root={state.path} canOpen={!!state.can_open} e={e} kids={children[e.path] ?? []} entries={entries} call={call} reload={load} onSelect={setSel} />
 
   const row = (e: Entry, depth: number) => {
     const Icon = iconOf(e, isOpen(e.path))
@@ -475,7 +475,7 @@ function SyncNote({ sync, local, hiddenDrafts, onTree }: { sync?: SyncStatus | n
 }
 
 /** 一个文件或目录：上面一排是名字（双击改名）和操作，下面按类型看 / 改 */
-function Viewer({ root, canOpen, e, kids, call, reload, onSelect }: { root: string; canOpen: boolean; e: Entry; kids: Entry[]; call: Call; reload: () => Promise<void>; onSelect: (p: string) => void }) {
+function Viewer({ root, canOpen, e, kids, entries, call, reload, onSelect }: { root: string; canOpen: boolean; e: Entry; kids: Entry[]; entries: Entry[]; call: Call; reload: () => Promise<void>; onSelect: (p: string) => void }) {
   const { t } = useT('folder')
   const [error, setError] = useState('')
   const [renaming, setRenaming] = useState(false)
@@ -511,7 +511,7 @@ function Viewer({ root, canOpen, e, kids, call, reload, onSelect }: { root: stri
       {error && <div className="p-3"><Notice tone="error">{error}</Notice></div>}
       <div className="min-h-0 flex-1">
         {e.dir ? <DirView kids={kids} onSelect={onSelect} />
-          : TEXT.test(e.path) ? <TextEditor root={root} path={e.path} mtime={e.mtime} call={call} reload={reload} />
+          : TEXT.test(e.path) ? <TextEditor root={root} path={e.path} mtime={e.mtime} call={call} reload={reload} entries={entries} />
           : VIDEO.test(e.path) || IMAGE.test(e.path) ? <MediaView src={`${workSrc(`${root}/${e.path}`)}?v=${e.mtime}`} video={VIDEO.test(e.path)} />
           : AUDIO.test(e.path) ? <div className="flex justify-center p-6"><audio src={`${workSrc(`${root}/${e.path}`)}?v=${e.mtime}`} controls preload="metadata" className="w-full max-w-md" /></div>
           : PDF.test(e.path) ? <div className="flex justify-center p-6"><Button variant="outline" onClick={() => void window.open(`${workSrc(`${root}/${e.path}`)}?v=${e.mtime}`, '_blank')}><ExternalLink />{t('open_tab')}</Button></div>
@@ -689,7 +689,7 @@ function DirView({ kids, onSelect }: { kids: Entry[]; onSelect: (p: string) => v
  * 编辑器只按路径挂载（保存不重新加载）；文件在别处改了（mtime 变了）由编辑器自己重读，见 useExternal
  */
 type Bar = { dirty: boolean; saving: boolean; save: () => void }
-function TextEditor({ root, path, mtime, call, reload }: { root: string; path: string; mtime: string | number; call: Call; reload: () => Promise<void> }) {
+function TextEditor({ root, path, mtime, call, reload, entries }: { root: string; path: string; mtime: string | number; call: Call; reload: () => Promise<void>; entries: Entry[] }) {
   const { t } = useT('folder')
   const [raw, setRaw] = useState(!MD.test(path))
   const [bar, setBar] = useState<Bar>({ dirty: false, saving: false, save: () => {} })
@@ -715,7 +715,7 @@ function TextEditor({ root, path, mtime, call, reload }: { root: string; path: s
           <Button size="sm" disabled={!bar.dirty || bar.saving} onClick={bar.save}>{bar.saving ? <Loader2 className="animate-spin" /> : null}{t('save')}</Button>
         </div>
       </div>
-      {raw ? <RawText key="raw" path={path} mtime={mtime} call={call} reload={reload} onBar={setBar} /> : <RichMd key="rich" root={root} path={path} mtime={mtime} call={call} reload={reload} onBar={setBar} />}
+      {raw ? <RawText key="raw" path={path} mtime={mtime} call={call} reload={reload} onBar={setBar} /> : <RichMd key="rich" root={root} path={path} mtime={mtime} call={call} reload={reload} onBar={setBar} entries={entries} />}
     </div>
   )
 }
@@ -796,12 +796,27 @@ export const joinPath = (dir: string, p: string) => {
   return out.join('/')
 }
 
+/** 从 dir 目录看 to 的相对路径（md 里引用文件夹里的文件）：在「A」里看「图/1.png」是「../图/1.png」；空格、括号转义，不然 md 的图片地址断开 */
+export const relPath = (dir: string, to: string) => {
+  const a = dir ? dir.split('/') : []
+  const b = to.split('/')
+  let i = 0
+  while (i < a.length && i < b.length - 1 && a[i] === b[i]) i++
+  return [...a.slice(i).map(() => '..'), ...b.slice(i)].join('/').replace(/ /g, '%20').replace(/\(/g, '%28').replace(/\)/g, '%29')
+}
+
+/** 文件夹里的图片、视频（不含「草稿/」），给富文本编辑器的「从文件夹选」：插进 dir 目录下的 md 时写相对路径 */
+export const folderMediaFor = (root: string, dir: string, entries: Entry[]): FolderMedia[] =>
+  entries.filter((e) => !e.dir && !/^(草稿|drafts)\//.test(e.path) && (IMAGE.test(e.path) || VIDEO.test(e.path)))
+    .sort((x, y) => x.path.localeCompare(y.path, 'zh', { numeric: true }))
+    .map((e) => ({ src: relPath(dir, e.path), preview: workSrc(`${root}/${e.path}`), name: e.path, video: VIDEO.test(e.path) }))
+
 /**
  * md 用富文本编辑器直接改（官方的 @tiptap/markdown，components/rich/mdExtensions.ts）：读进来、存回去都是 md，不经过 HTML。
  * 相对路径的图片、视频存的还是相对路径，只在显示时换成工作目录的预览地址（resolveSrc）；
  * 编辑器里新插的本机文件（上传、从资料库选）存的时候复制进 md 旁边的「图」目录，md 里换成相对路径
  */
-function RichMd({ root, path, mtime, call, reload, onBar }: { root: string; path: string; mtime: string | number; call: Call; reload: () => Promise<void>; onBar: (b: Bar) => void }) {
+function RichMd({ root, path, mtime, call, reload, onBar, entries }: { root: string; path: string; mtime: string | number; call: Call; reload: () => Promise<void>; onBar: (b: Bar) => void; entries: Entry[] }) {
   const { t } = useT('folder')
   const [md, setMd] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
@@ -867,7 +882,7 @@ function RichMd({ root, path, mtime, call, reload, onBar }: { root: string; path
     <div className="sm:px-3 sm:pb-3" onKeyDown={(ev) => saveKey(ev, save)}>
       {ext.notice && <div className="px-4 sm:px-0">{ext.notice}</div>}
       {front && <pre title={t('front_hint')} className="mx-4 mb-2 overflow-x-auto rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground sm:mx-0">{front.trim()}</pre>}
-      <RichEditor key={ver} markdown extensions={exts} resolveSrc={resolveSrc} value={md} placeholder={isDraft(path) ? t('draft_placeholder') : undefined}
+      <RichEditor key={ver} markdown extensions={exts} resolveSrc={resolveSrc} folderMedia={folderMediaFor(root, dir, entries)} value={md} placeholder={isDraft(path) ? t('draft_placeholder') : undefined}
         onChange={(v) => { setMd(v); if (baseline.current === null) baseline.current = v.trimEnd(); else setDirty(v.trimEnd() !== baseline.current) }} />
     </div>
   )

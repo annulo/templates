@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { runLocal, type Channel, type ChannelType, type SocialPost } from './shuttle'
 import { isEn, tr } from './i18n'
-import { FIELDS, rateText, toRich, type PostFields } from '../plugins/social/local/_fields'
+import { FIELDS, fieldsOfPost, postKind, rateText, toRich, type PostFields } from '../plugins/social/local/_fields'
 
 /** 富文本平台的正文：旧的 Markdown 写法转成 HTML（插件的 toRich），编辑器、预览之前过一遍 */
 export { toRich }
@@ -52,8 +52,8 @@ export type { PostFields }
 export const fieldsOf = (pf: SocialPlatform): PostFields => pf.fields
 
 /** 平台的字段和限制从社媒插件的字段表取（规格只有一份，插件改了这里跟着变）；模板这边只管显示用的文字 */
-function fromPlugin(type: string) {
-  const f = FIELDS[type]
+const fromPlugin = (type: string) => fromFields(FIELDS[type])
+function fromFields(f: PostFields) {
   return { fields: f, title: f.title === 'publish', titleMax: f.titleMax, bodyMax: f.bodyMax, tagsMax: f.tags, imagesMax: f.images, len: f.len, cover: f.cover, video: f.video, body: f.body, category: f.category, rateHint: '' /* 下面按插件的 rateText 换成 getter */ }
 }
 
@@ -200,6 +200,23 @@ for (const [type, pf] of Object.entries(ALL_SOCIAL)) {
   Object.defineProperty(pf, 'rateHint', {
     get: () => [rateText(FIELDS[type], isEn()), REVIEW_NOTE.has(type) ? tr(`meta.platform.${type}.review_note`) : ''].filter(Boolean).join(' '),
   })
+}
+
+/**
+ * 一条帖子按哪套规格显示、编辑：平台按发成什么换字段的（B 站：视频是投稿，图文、长文发成专栏），换成这一条的那一套
+ * （插件的 fieldsOfPost，按帖子的 kind）；名字和正文提示读 meta.platform.<平台>.<kind>_noun / <kind>_hint。别的平台原样返回
+ */
+export function postPlatform(pf: SocialPlatform, type: string | undefined, p: { kind?: string; video?: string }): SocialPlatform {
+  const f = type ? fieldsOfPost(type, p) : undefined
+  if (!type || !f || f === FIELDS[type]) return pf
+  const kind = postKind(type, p)
+  return {
+    ...pf,
+    ...fromFields(f),
+    noun: tr(`meta.platform.${type}.${kind}_noun`),
+    bodyHint: tr(`meta.platform.${type}.${kind}_hint`),
+    rateHint: [rateText(f, isEn()), REVIEW_NOTE.has(type) ? tr(`meta.platform.${type}.review_note`) : ''].filter(Boolean).join(' '),
+  }
 }
 
 /** 这个行业模板启用的社媒平台（lib/edition.ts 的 CHANNELS） */

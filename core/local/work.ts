@@ -7,7 +7,7 @@
 import { L } from './_i18n'
 import { profile, projectBrief } from './_ai'
 import { htmlText, parseList, platformsFor, typeOf, type ArticleType } from './_types'
-import { FIELDS } from '../plugins/social/local/_fields'
+import { FIELDS, fieldsFor } from '../plugins/social/local/_fields'
 
 const TYPE_NOTE: Record<ArticleType, string> = {
   article: '长文：body 是 HTML（<h2> <h3> <p> <ul> <ol> <li> <blockquote> <strong> <a> <img>），图片插在正文里',
@@ -27,7 +27,7 @@ function platformsOf(ctx: any, t: ArticleType) {
   const all = platformsFor(t)
   const list = mine.filter((p) => all.includes(p)).length ? all.filter((p) => mine.includes(p)) : all
   return list.sort((x, y) => Number(FIELDS[y].video === 'only') - Number(FIELDS[x].video === 'only')).map((p) => {
-    const f = FIELDS[p]
+    const f = fieldsFor(p, t)!
     return { platform: p, title_max: f.title === 'publish' ? f.titleMax : 0, body_max: f.bodyMax, tags_max: f.tags, ...(t === 'post' ? { images_max: f.images } : {}), ...(t === 'video' ? { video: f.video, ...(f.category ? { category: true } : {}) } : {}) }
   })
 }
