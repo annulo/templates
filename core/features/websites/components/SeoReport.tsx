@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { ArrowRight, ArrowUpRight, MessageSquareText, Sparkles } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, MessageSquareText, RotateCw, Sparkles } from 'lucide-react'
+import RunButton from './RunButton'
 import Markdown from './Markdown'
 import { TaskButton, TaskRequirements, useTask } from './Task'
 import { Badge, Button, Notice, Skeleton, cx, fmtTime, type Tone } from './ui'
@@ -31,7 +32,8 @@ const scoreTone = (n: number) => (n >= 85 ? 'text-emerald-600 dark:text-emerald-
  * SEO 报告（网站检查的「报告」标签）：总分和四类得分、谷歌收录、搜索表现、按影响排好的全站建议、AI 写的优化方案。
  * 数据都来自 audit.report（最近一次网站检查 + Search Console），这里只展示；AI 审查和方案由助手按 tasks/seo-review.md 做
  */
-export default function SeoReport({ ctx, channel, onIssues }: { ctx: Ctx; channel: Channel; onIssues: () => void }) {
+/** onRan：报告里点「重新检查」跑完后，让整页（顶部得分卡、问题清单）一起重读 */
+export default function SeoReport({ ctx, channel, onIssues, onRan }: { ctx: Ctx; channel: Channel; onIssues: () => void; onRan?: () => void }) {
   const [data, setData] = useState<Report | null>(null)
   const [error, setError] = useState('')
   const load = useCallback(() => {
@@ -53,11 +55,26 @@ export default function SeoReport({ ctx, channel, onIssues }: { ctx: Ctx; channe
 
   return (
     <div className="space-y-6">
-      {/* 总分、四类得分、抓了多少页 */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Tile label={tr('audit.r_total')} value={<span className={scoreTone(run.score)}>{run.score}</span>} sub={tr('audit.r_pages', { n: run.pages_checked, total: run.sitemap_pages ?? '—' })} />
-        {categories && (['tech', 'page', 'content', 'ai'] as const).map((c) => <Tile key={c} label={tr(`audit.cat_${c}`)} value={<span className={scoreTone(categories[c])}>{categories[c]}</span>} sub={tr(`audit.cat_${c}_hint`)} />)}
-      </div>
+      {/* 总分在页面顶部的得分卡上（两个页签共用），这里只放四类得分和抓了多少页。
+          老版本的检查（全站 SEO 检测之前）没存分类得分和 sitemap 页数：说清楚是旧结果，给重新检查 */}
+      {categories ? (
+        <div className="space-y-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {(['tech', 'page', 'content', 'ai'] as const).map((c) => <Tile key={c} label={tr(`audit.cat_${c}`)} value={<span className={scoreTone(categories[c])}>{categories[c]}</span>} sub={tr(`audit.cat_${c}_hint`)} />)}
+          </div>
+          <p className="text-xs text-muted-foreground">{run.sitemap_pages ? tr('audit.r_pages', { n: run.pages_checked, total: run.sitemap_pages }) : tr('audit.r_pages_only', { n: run.pages_checked })}</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 text-sm">
+            <div className="font-semibold">{tr('audit.r_old_title')}</div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{tr('audit.r_old_desc', { n: run.pages_checked })}</p>
+          </div>
+          <RunButton inline fn="audit.run" input={{ channel_id: channel.id }} onDone={() => { load(); onRan?.() }} variant="outline" icon={RotateCw}>
+            {tr('audit.rerun')}
+          </RunButton>
+        </div>
+      )}
 
       {/* 谷歌收录 */}
       <section className="space-y-3 rounded-xl border border-border bg-background p-5">

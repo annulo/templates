@@ -653,7 +653,7 @@
   },
   "audit": {
     "sg_content_do": "Thin content, duplicate titles and descriptions, and pages competing for the same keyword leave Google unsure which page to rank. Add the specifics buyers need (specs, applications, FAQs) and merge or differentiate duplicates.",
-    "sg_onpage_do": "Titles and descriptions are what buyers see in search results. Give every page a title and description that describe it and include its main keyword, one H1 per page, and alt text on images.",
+    "sg_onpage_do": "Titles and descriptions are what buyers see in search results. Give every page a title and description that describe it and include its main keyword, one H1 per page, and alt text on images. Share cards need og:title and og:image, and canonical should point to the page itself.",
     "sg_speed_do": "Slow pages hurt rankings and inquiries: compress large images, drop unused scripts, and make sure pages work on phones.",
     "sg_international_do": "Add hreflang to every language version and lang on <html> so Google shows buyers in each market the right language.",
     "plan_desc": "Rules only check whether things exist. Have AI actually read a few pages of every type — home, categories, products, articles, case studies — log what's weak in the issue list and write a prioritized plan.",

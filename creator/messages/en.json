@@ -1491,7 +1491,7 @@
   },
   "audit": {
     "sg_content_do": "Thin content, repeated titles and descriptions, and several pages chasing one keyword leave Google unsure which page to rank. Give articles the specifics readers want (examples, steps, FAQs), and merge or differentiate duplicates.",
-    "sg_onpage_do": "Titles and descriptions decide what readers see in search results and whether they click. Give each page a title and description that say what it covers with its main keyword, one H1 per page, and alt text on images.",
+    "sg_onpage_do": "Titles and descriptions decide what readers see in search results and whether they click. Give each page a title and description that say what it covers with its main keyword, one H1 per page, and alt text on images. Share cards need og:title and og:image, and canonical should point to the page itself.",
     "sg_speed_do": "Slow pages hurt rankings and reading: compress large images, drop unused scripts, and check that pages work on phones.",
     "sg_international_do": "Add hreflang to each language version and lang on <html> so Google shows readers in each region the right language.",
     "plan_desc": "Rules can only check whether something exists. Have AI actually read a few pages of each kind (home, article list, articles, about) and log what's poorly written as issues, then write an optimization plan ordered by priority.",

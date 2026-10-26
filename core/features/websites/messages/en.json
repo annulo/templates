@@ -35,7 +35,7 @@
     "cat_tech": "Technical",
     "cat_tech_hint": "Loads, crawlable, indexable",
     "checked": "{n} pages checked · {when}",
-    "desc": "Checks titles, descriptions, H1, image alt, structured data, sitemap, llms.txt and page speed — things that affect search rankings and AI citations. The assistant can fix them; check the fixes on preview before going live.",
+    "desc": "Checks the whole site from its sitemap: page basics like titles, descriptions, H1s, images and structured data; technical issues like broken links, redirects, canonical and the sitemap; whether content is too thin or boilerplate; and whether AI crawlers can read it. With Search Console linked, it also checks Google indexing. The assistant can fix issues directly; review them in the preview before they go live.",
     "f_all": "All {n}",
     "f_todo": "To do",
     "fix_all": "Fix the issues from the audit of channel \"{name}\" (channel id {id}, site_ref {ref}), serious ones first. Push the fixes to preview, mark those issues as fixed-not-live, and tell me where to check (I'll publish with \"Go live\" on the Site check page).",
@@ -98,7 +98,6 @@
     "r_striking": "Close to page one",
     "r_striking_hint": "Pages ranking 8–20",
     "r_suggestions": "Site-wide recommendations (by impact)",
-    "r_total": "Score",
     "report_empty": "This site hasn't been checked yet: click \"Start check\" first.",
     "rerun": "Re-run check",
     "restore": "Restore",
@@ -123,7 +122,7 @@
     "sg_international": "Label language versions",
     "sg_links": "Link your pages together",
     "sg_links_do": "Google treats pages nothing links to as unimportant. Link them from the homepage, category pages and related articles, and add linked pages to the sitemap.",
-    "sg_onpage": "Complete titles, descriptions and H1s",
+    "sg_onpage": "Complete page titles, descriptions and share info",
     "sg_review": "Found by AI review",
     "sg_speed": "Speed up pages",
     "st_fixed": "Resolved",
@@ -135,7 +134,10 @@
     "tab_report": "SEO report",
     "title": "Site check",
     "todo_n": "{n} issues to fix",
-    "todo_none": "Nothing to fix"
+    "todo_none": "Nothing to fix",
+    "r_pages_only": "{n} pages checked",
+    "r_old_title": "These results come from the older check",
+    "r_old_desc": "The last check covered only {n} pages and has no category scores or sitemap count. Run it again to check the whole site from the sitemap and get the full report."
   },
   "channels": {
     "creght_failed": "Couldn't read this site's creght data",
