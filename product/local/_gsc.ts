@@ -86,6 +86,41 @@ export async function query(ctx: any, property: string, opts: { start: string; e
   return r?.rows ?? []
 }
 
+/** 网址检查（URL Inspection）的结果里收录相关的部分：verdict、coverageState、googleCanonical、userCanonical、lastCrawlTime、sitemap[]… */
+export type Inspection = { url: string; result?: any; error?: string; status?: number }
+
+/**
+ * 网址检查：Google 有没有收录这些页面、为什么（https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect）。
+ * 每个属性每天最多 2000 次、每分钟 600 次，调用方自己控制查多少。一个查失败不影响别的（error、status）
+ */
+export async function inspectURLs(ctx: any, property: string, urls: string[]): Promise<Inspection[]> {
+  if (!urls.length) return []
+  const account = await accountFor(ctx, property)
+  const token = await ctx.oauth('google', account ? { account } : undefined)
+  const rs = await ctx.fetchAll(urls.map((u) => ({
+    url: 'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect',
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ inspectionUrl: u, siteUrl: property }),
+  })))
+  return Promise.all(rs.map(async (r: any, i: number) => {
+    if (r.error) return { url: urls[i], error: String(r.error) }
+    const text = await r.text()
+    let j: any = null
+    try {
+      j = JSON.parse(text)
+    } catch {}
+    if (!r.ok) return { url: urls[i], status: r.status, error: j?.error?.message ?? text.slice(0, 200) }
+    return { url: urls[i], result: j?.inspectionResult?.indexStatusResult ?? {} }
+  }))
+}
+
+/** 在 Search Console 里提交过的 sitemap：path、lastDownloaded、errors、warnings、contents[{ submitted, indexed }] */
+export async function sitemaps(ctx: any, property: string): Promise<any[]> {
+  const r = await call(ctx, 'GET', `/sites/${encodeURIComponent(property)}/sitemaps`, undefined, await accountFor(ctx, property))
+  return r?.sitemap ?? []
+}
+
 /** YYYY-MM-DD（UTC）。GSC 的日期是太平洋时间，差一天以内不影响 28 天窗口的结论 */
 export const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10)
 export const DAY = 86400_000
