@@ -1,3 +1,6 @@
+- version: 0.16.1
+  zh: "网站检查查全站：查内容是不是套话、谷歌收录了没有，新增 SEO 报告；还能让 AI 逐页审查，写全站优化方案。"
+  en: "Site checks now cover the whole site, flagging boilerplate content and Google indexing, with a new SEO report and an AI page-by-page review that writes a site-wide plan."
 - version: 0.16.0
   zh: "B 站能发图文和长文（发成专栏），编辑帖子时按视频或专栏显示对应的字段。"
   en: "Bilibili takes image and long-form posts as articles; editing a post shows the fields for a video or an article."
