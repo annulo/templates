@@ -395,7 +395,9 @@
     "media_desc": "Upload images or videos",
     "ph_media": "Write here. Add images or videos with \"Upload media\" or \"From library\" above, or paste or drop them in; type / for headings, lists…",
     "video_tag": "Video",
-    "video_play": "Play"
+    "video_play": "Play",
+    "table": "Table",
+    "table_desc": "3 × 3 with a header row"
   },
   "content": {
     "restored": "Restored your unsaved changes from {ago}.",
@@ -586,5 +588,30 @@
     "fix_rule": "Change only these, leave other paragraphs as they are. Use only data, models and certifications from the product catalog and company files; if they aren't there, leave them out. Never invent anything or add unrelated links for the score. Run aeo.article again when done.",
     "publish_line": "AI citation score",
     "publish_low": "AI will find this article hard to read and quote. Close this to see what lost points and ask AI to fix it, or publish anyway."
+  },
+  "artifacts": {
+    "title": "Artifacts",
+    "making_desc": "AI is making it on this computer; it shows up in this piece's artifacts when done. Click \"View\" to watch what it is doing.",
+    "continue": "Continue chat",
+    "continue_hint": "To change it, say so in the chat that made it. Each change is saved as a new artifact; old ones stay.",
+    "ask_new": "Change it in a new chat",
+    "ask_new_hint": "The chat that made it is gone: start a new one and say what to change. Each change is saved as a new artifact.",
+    "ask_new_title": "Change video: {title}",
+    "ask_new_text": "I want to keep changing the artifacts of {ref} (\"{title}\"). Follow step 5 of the project task tasks/work-on-article.md: look at its artifacts and notes, then ask me what to change.",
+    "in_use": "In use",
+    "no_note": "No note",
+    "note_ph": "What this is and what changed from the previous one",
+    "edit_note": "Edit note",
+    "open_chat": "View chat",
+    "del": "Delete",
+    "del_confirm": "Confirm delete",
+    "del_in_use": "The one used for publishing can't be deleted: pick another one first",
+    "expand": "Show more",
+    "collapse": "Show less",
+    "working": "AI is working on this",
+    "use_video": "Use for publishing",
+    "use_images": "Use as images ({n})",
+    "n_files": "{n} files",
+    "copy_ref_all": "Copy reference to the set"
   }
 }

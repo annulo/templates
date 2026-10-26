@@ -82,8 +82,17 @@ export async function remove(input: { id: string }, ctx: any) {
     else throw new Error(L(ctx, `「${ch?.name ?? ''}」还不能从这里删除：到网站后台删掉这篇，再点「只删记录」`, `"${ch?.name ?? ''}" can't be deleted from here yet: delete the post in the site's admin, then choose "Remove record only"`))
   }
   ctx.db.delete('publications', p.id)
-  // 文章上记的网站地址就是这篇的：一起清掉（发社媒时带的链接不再指向删掉的页面）
+  // 文章上记的网站地址就是这篇的：一起清掉（发社媒时带的链接不再指向删掉的页面）；
+  // 哪儿都没发出去了（网站、社媒都没有已发布的），文章改回草稿、清掉发布时间（发布日历按它画「文章」那一格）。用户手动标的状态（manual_status）不动
   const a = ctx.db.get('articles', p.article_id)
-  if (a && p.url && a.url === p.url) ctx.db.update('articles', a.id, { url: '' })
+  if (a) {
+    const patch: Record<string, string> = {}
+    if (p.url && a.url === p.url) patch.url = ''
+    const still = (table: string) => {
+      try { return ctx.db.query(table, { where: { article_id: a.id, status: 'published' }, limit: 1 }).list.length > 0 } catch { return false }
+    }
+    if (a.status === 'published' && !still('publications') && !still('social_posts')) Object.assign(patch, { status: 'draft', published_at: '' })
+    if (Object.keys(patch).length) ctx.db.update('articles', a.id, patch)
+  }
   return { removed: true, channel: ch?.name ?? '' }
 }

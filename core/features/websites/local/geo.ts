@@ -1,4 +1,5 @@
-import { profile, projectBrief, siteBase as base, siteDigest } from './_ai'
+import { profile, projectBrief } from './_ai'
+import { siteBase as base, siteDigest } from './_site'
 import { status } from './_creght'
 import { L } from './_i18n'
 import { ask as aichatAsk, sites as aichatSites } from './aichat'

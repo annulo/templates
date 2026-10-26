@@ -1,0 +1,101 @@
+{
+  "name": "内容衰减",
+  "desc": "以前从 Google 带来点击、最近 28 天明显下滑的页面：decay.scan 每周对比最近 28 天和之前 5 个 28 天的高峰写入，回升了就删掉",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "page": {
+        "type": "string",
+        "description": "页面完整 URL"
+      },
+      "search_page_id": {
+        "type": "string",
+        "description": "search_pages 里同一个页面的记录 id（改标题描述、补内容、上线复查都挂在那条上）；最近 28 天没曝光时为空"
+      },
+      "peak_start": {
+        "type": "string",
+        "description": "高峰那个 28 天的开始日期 YYYY-MM-DD"
+      },
+      "peak_end": {
+        "type": "string",
+        "description": "高峰那个 28 天的结束日期"
+      },
+      "peak_clicks": {
+        "type": "number",
+        "description": "高峰 28 天的点击"
+      },
+      "peak_impressions": {
+        "type": "number",
+        "description": "高峰 28 天的曝光"
+      },
+      "peak_ctr": {
+        "type": "number",
+        "description": "高峰 28 天的点击率 0~1"
+      },
+      "peak_position": {
+        "type": "number",
+        "description": "高峰 28 天的平均排名"
+      },
+      "clicks": {
+        "type": "number",
+        "description": "最近 28 天的点击"
+      },
+      "impressions": {
+        "type": "number",
+        "description": "最近 28 天的曝光"
+      },
+      "ctr": {
+        "type": "number",
+        "description": "最近 28 天的点击率 0~1"
+      },
+      "position": {
+        "type": "number",
+        "description": "最近 28 天的平均排名"
+      },
+      "drop": {
+        "type": "number",
+        "description": "点击比高峰少了多少 0~1"
+      },
+      "lost_clicks": {
+        "type": "number",
+        "description": "比高峰少的点击数"
+      },
+      "cause": {
+        "type": "string",
+        "description": "rank 排名掉了 / ctr 排名没掉、点击率降了（多半是标题描述或搜索结果页变了，比如出了 AI 概览）/ demand 曝光少了（搜的人少了、季节性，或者丢了一些搜索词）"
+      },
+      "trend": {
+        "type": "string",
+        "description": "最近 6 个 28 天的点击，从早到晚，JSON 数组字符串"
+      },
+      "lost_queries": {
+        "type": "string",
+        "description": "掉得最多的搜索词，JSON 数组字符串：[{query, peak_clicks, clicks, peak_position, position}]，最多 10 个"
+      },
+      "status": {
+        "type": "string",
+        "description": "空 / dismissed（用户点了「不用管」）"
+      },
+      "seen": {
+        "type": "boolean",
+        "description": "用户在页面上看过了（去掉「新」标识）"
+      },
+      "first_seen": {
+        "type": "string",
+        "description": "第一次判定为下滑的时间 ISO8601"
+      },
+      "scanned_at": {
+        "type": "string",
+        "description": "最近一次扫描时间 ISO8601"
+      }
+    },
+    "required": [
+      "channel_id",
+      "page"
+    ]
+  }
+}

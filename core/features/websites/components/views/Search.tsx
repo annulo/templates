@@ -1,6 +1,5 @@
-// 从外贸模板的 components/views/Search.tsx 复制，去掉了「流量下滑」（外贸才有的 decay.scan）。
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, ExternalLink, FilePlus2, Link2, Loader2, RefreshCw, SearchCheck, Sparkles, Unlink } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, ExternalLink, EyeOff, FilePlus2, Link2, Loader2, RefreshCw, SearchCheck, Sparkles, Undo2, Unlink } from 'lucide-react'
 import AskButton from '../AskButton'
 import { TaskButton, TaskRequirements, useTask } from '../Task'
 import RunButton from '../RunButton'
@@ -38,6 +37,7 @@ const REFRESH_TASK = 'refresh-page' // 流量下滑的页面：写刷新内容�
 // 生成新标题和描述 → 交给助手改站推预览 → 用户发布后点「已上线」→ 17 天后 review.check 自动对比前后数据（site_changes）。
 // 差一点上首页的页面走「补内容」：助手按任务 search-expand 写要点 → 交给助手改页面、推预览、记复查（search_content）。
 // 页面级的数字用非品牌口径（nb_*：去掉品牌词和 site: 查询），顶部汇总是全站原始口径。
+// 「流量下滑」（内容衰减雷达，decay.scan 写进 content_decay）：以前带过点击、最近掉了的页面，刷新内容或改标题描述，后面的改页面、复查和上面一样。
 
 const pct = (x?: number) => `${((x ?? 0) * 100).toFixed(1)}%`
 const num = (x?: number) => (x ?? 0).toLocaleString(numLocale())
@@ -56,6 +56,14 @@ type RangePage = { page: string; clicks: number; impressions: number; ctr: numbe
 type RangeDaily = { date: string; clicks: number; impressions: number }
 type RangeTotals = { clicks: number; impressions: number; ctr: number; position: number }
 type RangeData = { start: string; end: string; prev_start: string; prev_end: string; totals: RangeTotals; prev: RangeTotals; pages: RangePage[]; daily: RangeDaily[] }
+type DecayCause = 'rank' | 'ctr' | 'demand'
+type LostQuery = { query: string; peak_clicks: number; clicks: number; peak_position: number; position: number }
+type DecayPage = {
+  id: string; channel_id: string; page: string; search_page_id?: string
+  peak_start: string; peak_end: string; peak_clicks: number; peak_impressions: number; peak_ctr: number; peak_position: number
+  clicks: number; impressions: number; ctr: number; position: number; drop: number; lost_clicks: number
+  cause: DecayCause; trend: number[]; lost_queries: LostQuery[]; status?: string; seen?: boolean; scanned_at?: string
+}
 
 function parse<T>(s: string | undefined, fallback: T): T {
   try {
@@ -73,10 +81,11 @@ const OPP: Record<string, { label: string; tone: Tone; hint: string }> = {
   striking_distance: { get label() { return tr('search.opp_striking') }, tone: 'primary', get hint() { return tr('search.opp_striking_hint') } },
 }
 
-export default function Search({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
+/** headerActions：模板放在页头上面的按钮，拿到当前选中的网站（产品运营的「增长机会」、SEO 研究任务） */
+export default function Search({ ctx, params, setParam, headerActions }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; headerActions?: (channel: Channel) => ReactNode }) {
   const sites = ctx.channels.filter((c) => c.type === 'creght_site' || c.type === 'wordpress')
   const channel = sites.find((c) => c.id === params.channel) ?? sites[0]
-  const tab = params.tab === 'review' ? 'review' : params.tab === 'ga4' ? 'ga4' : params.tab === 'keywords' ? 'keywords' : 'pages'
+  const tab = params.tab === 'review' ? 'review' : params.tab === 'ga4' ? 'ga4' : params.tab === 'decay' ? 'decay' : params.tab === 'keywords' ? 'keywords' : 'pages'
   // GA4：近 7/30/90 天或自定义（ga4_days 是老链接里的参数）
   const ga4Choice = RANGES.includes(params.ga4_range) ? params.ga4_range : ['7', '30', '90'].includes(params.ga4_days) ? params.ga4_days : '30'
   const ga4Days = ga4Choice === 'custom' ? 30 : Number(ga4Choice)
@@ -96,6 +105,7 @@ export default function Search({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const [pages, setPages] = useState<SearchPage[] | null>(null)
   const [changes, setChanges] = useState<SiteChange[] | null>(null)
   const [topics, setTopics] = useState<Topic[]>([])
+  const [decay, setDecay] = useState<DecayPage[] | null>(null)
   const [error, setError] = useState('')
 
   const load = useCallback(() => {
@@ -110,11 +120,15 @@ export default function Search({ ctx, params, setParam }: { ctx: Ctx; params: Re
     dbList('topics')
       .then((t) => setTopics(t.filter((x) => x.source === 'search' && x.status === 'idea')))
       .catch(() => setTopics([]))
+    runLocal<DecayPage[]>('decay.list', { channel_id: channel.id })
+      .then(setDecay)
+      .catch(() => setDecay([]))
   }, [channel?.id, tab])
   useEffect(() => {
     setPages(null)
     setChanges(null)
     setTopics([])
+    setDecay(null)
     setError('')
     load()
   }, [load])
@@ -160,8 +174,10 @@ export default function Search({ ctx, params, setParam }: { ctx: Ctx; params: Re
     )
 
   const waiting = (changes ?? []).filter((c) => c.status === 'waiting').length
+  const declining = (decay ?? []).filter((d) => d.status !== 'dismissed').length
   return (
     <div className="space-y-6">
+      {headerActions && <div className="flex flex-wrap justify-between gap-3">{headerActions(channel)}</div>}
       <PageHeader
         title={tr('search.title')}
         desc={tr(tab === 'ga4' ? 'search.ga4_desc' : 'search.desc')}
@@ -172,6 +188,7 @@ export default function Search({ ctx, params, setParam }: { ctx: Ctx; params: Re
             options={[
               { value: 'pages', label: tr('search.tab_pages') },
               { value: 'keywords', label: tr('search.tab_keywords') },
+              { value: 'decay', label: declining ? tr('search.tab_decay_n', { n: declining }) : tr('search.tab_decay') },
               { value: 'ga4', label: tr('search.tab_ga4') },
               { value: 'review', label: waiting ? tr('search.tab_review_waiting', { n: waiting }) : tr('search.tab_review') },
             ]}
@@ -196,6 +213,8 @@ export default function Search({ ctx, params, setParam }: { ctx: Ctx; params: Re
         <Keywords key={channel.id} channel={channel} rev={ctx.rev} onGo={(v, p) => ctx.go(v as View, p)} />
       ) : !channel.gsc_property || channel.gsc_link_disabled ? (
         <LinkProperty channel={channel} onLinked={() => ctx.reloadChannels()} />
+      ) : tab === 'decay' ? (
+        <Decay ctx={ctx} channel={channel} list={decay} pages={pages} onChanged={load} />
       ) : pages === null ? (
         <Skeleton className="h-40 rounded-xl" />
       ) : rangeError ? (
@@ -765,6 +784,194 @@ function OppRow({ p, ctx, channel, onChanged }: { p: SearchPage; ctx: Ctx; chann
 }
 
 /** 补内容要点写成给助手的文字 */
+const CAUSE: Record<DecayCause, { tone: Tone }> = { rank: { tone: 'bad' }, ctr: { tone: 'warn' }, demand: { tone: 'default' } }
+
+/** 流量下滑（内容衰减雷达）：decay.scan 每周对比最近 28 天和之前 5 个 28 天的高峰，找出掉了的页面 */
+function Decay({ ctx, channel, list, pages, onChanged }: { ctx: Ctx; channel: Channel; list: DecayPage[] | null; pages: SearchPage[] | null; onChanged: () => void }) {
+  const [showDismissed, setShowDismissed] = useState(false)
+  // 「新」：这次打开时还没看过的；打开就记成看过，这一页上仍然标着，下次不再标
+  const [fresh, setFresh] = useState<Set<string> | null>(null)
+  useEffect(() => {
+    if (!list || fresh) return
+    const ids = list.filter((d) => !d.seen).map((d) => d.id)
+    setFresh(new Set(ids))
+    if (ids.length) runLocal('decay.markSeen', { ids }).catch(() => {})
+  }, [list])
+  if (list === null || pages === null) return <Skeleton className="h-40 rounded-xl" />
+  const active = list.filter((d) => d.status !== 'dismissed')
+  const dismissed = list.filter((d) => d.status === 'dismissed')
+  const scanned = list.map((d) => d.scanned_at ?? '').sort().pop()
+  const lost = active.reduce((n, d) => n + d.lost_clicks, 0)
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-xs text-muted-foreground">
+          {tr('search.decay_desc')}
+          {scanned && tr('search.decay_scanned', { when: fmtTime(scanned) })}
+        </p>
+        <RunButton inline fn="decay.scan" input={{ channel_id: channel.id, manual: true }} onDone={onChanged} variant="outline" icon={RefreshCw}>
+          {tr('search.decay_scan')}
+        </RunButton>
+      </div>
+      {active.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat label={tr('search.decay_pages')} value={num(active.length)}>
+            <span className="text-xs text-muted-foreground">{tr('search.decay_pages_hint')}</span>
+          </Stat>
+          <Stat label={tr('search.decay_lost')} value={num(lost)}>
+            <span className="text-xs text-muted-foreground">{tr('search.decay_lost_hint')}</span>
+          </Stat>
+        </div>
+      )}
+      {active.length === 0 ? (
+        <Notice>{scanned || dismissed.length ? tr('search.decay_none') : tr('search.decay_never')}</Notice>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-border bg-background">
+          {active.map((d) => (
+            <DecayRow key={d.id} d={d} sp={pages.find((p) => p.id === d.search_page_id)} isNew={!!fresh?.has(d.id)} ctx={ctx} channel={channel} onChanged={onChanged} />
+          ))}
+        </div>
+      )}
+      {dismissed.length > 0 && (
+        <div className="space-y-2">
+          <button type="button" onClick={() => setShowDismissed((v) => !v)} aria-expanded={showDismissed} className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            {tr('search.decay_dismissed', { n: dismissed.length })}
+            <ChevronDown className={cx('size-3.5 transition-transform', showDismissed && 'rotate-180')} />
+          </button>
+          {showDismissed && (
+            <div className="overflow-hidden rounded-xl border border-border bg-background opacity-70">
+              {dismissed.map((d) => (
+                <DecayRow key={d.id} d={d} sp={pages.find((p) => p.id === d.search_page_id)} isNew={false} ctx={ctx} channel={channel} onChanged={onChanged} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 6 个 28 天的点击，一根柱子一个 */
+function Bars({ values }: { values: number[] }) {
+  const max = Math.max(1, ...values)
+  return (
+    <span className="inline-flex h-5 items-end gap-0.5" aria-hidden>
+      {values.map((v, i) => (
+        <span key={i} className={cx('w-1.5 rounded-sm', i === values.length - 1 ? 'bg-destructive/70' : 'bg-primary/40')} style={{ height: `${Math.max(8, (v / max) * 100)}%` }} />
+      ))}
+    </span>
+  )
+}
+
+function DecayRow({ d, sp, isNew, ctx, channel, onChanged }: { d: DecayPage; sp?: SearchPage; isNew: boolean; ctx: Ctx; channel: Channel; onChanged: () => void }) {
+  const sug = parse<SearchSuggestion | null>(sp?.suggestion, null)
+  const brief = parse<SearchExpandBrief | null>(sp?.expand_brief, null)
+  // 点击率降了：改标题描述；排名掉了、曝光少了：刷新内容
+  const meta = d.cause === 'ctr'
+  const [open, setOpen] = useState(!!(meta ? sug : brief) && !sp?.status)
+  const site = `site_ref ${channel.project_id}/${channel.site_id}`
+  const handPrompt = !sp
+    ? ''
+    : meta
+      ? sug ? tr('search.meta_prompt', { name: channel.name, site, page: d.page, id: sp.id, title: sug.title, desc: sug.description, reason: sug.reason }) : ''
+      : brief ? tr('search.refresh_prompt', { name: channel.name, site, page: d.page, id: sp.id, peak: d.peak_clicks, now: d.clicks, brief: briefText(brief), site_id: channel.site_id ?? '' }) : ''
+  const dismissed = d.status === 'dismissed'
+  return (
+    <div className={cx('border-b border-border last:border-b-0', isNew && 'bg-primary/5 shadow-[inset_3px_0_0_var(--color-primary)]')}>
+      <div className="flex flex-wrap items-start gap-3 px-4 py-3">
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="min-w-0 flex-1 cursor-pointer text-left">
+          <div className="flex flex-wrap items-center gap-2">
+            {isNew && <span className="inline-flex h-4 items-center rounded bg-primary px-1 text-[10px] font-bold text-primary-foreground">{tr('article.new_badge')}</span>}
+            <span className="truncate font-mono text-[13px] font-medium" title={d.page}>{pathOf(d.page)}</span>
+            <span title={tr(`search.cause_${d.cause}_hint`)}><Badge tone={CAUSE[d.cause]?.tone ?? 'default'}>{tr(`search.cause_${d.cause}`)}</Badge></span>
+            {sp?.status === 'fixing' && <Badge tone="primary">{tr('search.fixing')}</Badge>}
+            {sp?.status === 'live' && <Badge tone="ok">{tr('search.live')}</Badge>}
+            <ChevronDown className={cx('size-3.5 text-muted-foreground transition-transform', open && 'rotate-180')} />
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
+            <span className="inline-flex items-center gap-1.5"><Bars values={d.trend} />{tr('search.decay_clicks', { peak: num(d.peak_clicks), now: num(d.clicks), pct: Math.round(d.drop * 100) })}</span>
+            <span>{tr('search.decay_rank', { peak: d.peak_position ? d.peak_position.toFixed(1) : '-', now: d.position ? d.position.toFixed(1) : '-' })}</span>
+            <span>{tr('search.decay_ctr', { peak: pct(d.peak_ctr), now: pct(d.ctr) })}</span>
+            <span>{tr('search.decay_imp', { peak: num(d.peak_impressions), now: num(d.impressions) })}</span>
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground/80">{tr('search.decay_period', { start: d.peak_start, end: d.peak_end })}</div>
+        </button>
+        <div className="flex shrink-0 flex-wrap items-center gap-1">
+          {dismissed ? (
+            <RunButton inline fn="decay.dismiss" input={{ id: d.id, undo: true }} onDone={onChanged} variant="ghost" icon={Undo2}>{tr('search.decay_undismiss')}</RunButton>
+          ) : !sp ? (
+            <span className="text-xs text-muted-foreground">{tr('search.decay_no_record')}</span>
+          ) : sp.status === 'live' ? (
+            <Button variant="ghost" size="sm" onClick={() => ctx.go('search', { tab: 'review', channel: channel.id })}>{tr('search.decay_go_review')} <ArrowUpRight /></Button>
+          ) : sp.status === 'fixing' ? (
+            <TaskButton task={VERIFY_TASK} input={{ id: sp.id, kind: meta ? 'search_meta' : 'search_content' }} match={(r) => r.input?.id === sp.id} onFinished={onChanged} variant="default" icon={SearchCheck}>{tr('search.mark_live')}</TaskButton>
+          ) : (
+            <>
+              {meta ? (
+                <TaskButton task={META_TASK} input={{ id: sp.id }} match={(r) => r.input?.id === sp.id} onFinished={() => (setOpen(true), onChanged())} variant={sug ? 'ghost' : 'outline'} icon={Sparkles}>
+                  {sug ? tr('search.regen') : tr('search.gen_meta')}
+                </TaskButton>
+              ) : (
+                <TaskButton task={REFRESH_TASK} input={{ id: d.id }} match={(r) => r.input?.id === d.id} onFinished={() => (setOpen(true), onChanged())} variant={brief ? 'ghost' : 'outline'} icon={FilePlus2}>
+                  {brief ? tr('search.regen') : tr('search.decay_refresh')}
+                </TaskButton>
+              )}
+              {handPrompt && <AskButton variant="default" prompt={handPrompt}>{meta ? tr('search.hand_site') : tr('search.hand_page')}</AskButton>}
+            </>
+          )}
+          {!dismissed && !sp?.status && (
+            <RunButton inline fn="decay.dismiss" input={{ id: d.id }} onDone={onChanged} variant="ghost" icon={EyeOff}>{tr('search.decay_dismiss')}</RunButton>
+          )}
+        </div>
+      </div>
+      {open && (
+        <div className="space-y-3 px-4 pb-4">
+          <p className="text-xs text-muted-foreground">{tr(`search.cause_${d.cause}_hint`)}</p>
+          {meta && sug && (
+            <div className="grid gap-3 rounded-lg border border-border bg-muted/40 p-3 text-xs md:grid-cols-2">
+              <div className="space-y-1">
+                <div className="font-semibold text-muted-foreground">{tr('search.now')}</div>
+                <div className="text-[13px] font-medium">{sug.current_title || tr('search.no_title')}</div>
+                <div className="text-muted-foreground">{sug.current_description || tr('search.no_desc')}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="font-semibold text-primary-text">{tr('search.suggest')}</div>
+                <div className="text-[13px] font-medium">{sug.title}</div>
+                <div className="text-muted-foreground">{sug.description}</div>
+              </div>
+              {sug.reason && <div className="text-muted-foreground md:col-span-2">{tr('search.why', { r: sug.reason })}</div>}
+            </div>
+          )}
+          {!meta && brief && <ExpandBrief brief={brief} />}
+          {d.lost_queries.length > 0 && (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-muted-foreground">
+                  <th className="py-1 pr-3 font-medium">{tr('search.decay_lost_queries')}</th>
+                  <th className="py-1 pr-3 text-right font-medium">{tr('search.decay_q_clicks')}</th>
+                  <th className="py-1 text-right font-medium">{tr('search.decay_q_rank')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.lost_queries.map((q) => (
+                  <tr key={q.query} className="border-t border-border">
+                    <td className="py-1 pr-3">{q.query}</td>
+                    <td className="py-1 pr-3 text-right tabular-nums">{num(q.peak_clicks)} → {num(q.clicks)}</td>
+                    <td className="py-1 text-right tabular-nums">{q.peak_position || '-'} → {q.position || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <a href={d.page} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold hover:text-primary-text">
+            {tr('search.open_page')} <ExternalLink className="size-3" />
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function briefText(b: SearchExpandBrief) {
   const parts: string[] = []
   if (b.summary) parts.push(tr('search.b_summary', { s: b.summary }))

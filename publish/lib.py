@@ -1,6 +1,6 @@
 """模板组装和试用的公共部分：本仓库的 publish.py 用，私有的外贸模板仓库（shuttle-template）的发布脚本也 import 这里。
 
-组装：模板目录 + core/（路径和产物里一样）+ 模板启用的 core/features/<模块>/；core/messages/*.json 和模板的按键合并。
+组装：模板目录 + core/（路径和产物里一样）+ 模板启用的 core/features/<模块>/；core/messages/*.json、模块的 messages/*.json 和模板的按键合并。
 模板里的文件和 core 同路径就报错：core 的文件不许被模板悄悄盖掉，要不一样就改 core，或者在模板里换个名字另写。
 """
 

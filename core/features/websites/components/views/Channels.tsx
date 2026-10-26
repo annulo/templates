@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowUpRight, BarChart3, Plus, RefreshCw, Settings, Trash2, UserRound } from 'lucide-react'
+import { ArrowUpRight, BarChart3, Globe, Plus, RefreshCw, Settings, Trash2, UserRound, X } from 'lucide-react'
 import { PublishSetup } from '../PublishTargets'
 import AddChannelDialog from '../AddChannelDialog'
 import WpCredential from '../WpCredential'
@@ -35,10 +35,12 @@ function connection(c: Channel, health: PlatformHealth[], posts: SocialPost[], m
 
 const DOT: Record<Tone, string> = { ok: 'bg-emerald-500', warn: 'bg-amber-500', bad: 'bg-destructive', primary: 'bg-primary', default: 'bg-muted-foreground/50' }
 
-/** 账号和网站：只管连接（添加、移除、登录、网站的发布设置），不放数据 */
-export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; current: string; setCurrent: (id: string) => void }) {
+/** 网站和账号：只管连接（添加、移除、登录、网站的发布设置），不放数据 */
+/** siteExtra：模板在网站卡片下面加自己的东西，哪种网站要加由模板判断（外贸给 WordPress 网站加「接收表单询盘」） */
+export default function Channels({ ctx, current, setCurrent, siteExtra }: { ctx: Ctx; current: string; setCurrent: (id: string) => void; siteExtra?: (ch: Channel) => ReactNode }) {
   const [adding, setAdding] = useState(false)
-  // 添加前已有的账号：列表重新读回来后选中多出来的那个（对话框只告诉我们加了哪种，社媒还可能一次勾好几个，选第一个）
+  const [addURL, setAddURL] = useState('') // 从顶部「向导里的网址」点进来：添加对话框预填这个网址
+  // 添加前已有的渠道：列表重新读回来后选中多出来的那个（对话框只告诉我们加了哪种，社媒还可能一次勾好几个，选第一个）
   const before = useRef<Set<string> | null>(null)
   useEffect(() => {
     if (!before.current) return
@@ -89,6 +91,7 @@ export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; curre
         }
       />
       {error && <Notice tone="error">{error}</Notice>}
+      <PendingSite channels={ctx.channels} disabled={ctx.offline} onAdded={(id) => { ctx.reloadChannels(); setCurrent(id) }} onManual={(url) => { setAddURL(url); setAdding(true) }} />
 
       {ctx.channels.length === 0 ? (
         <Notice>{tr('channels.empty')}</Notice>
@@ -126,12 +129,15 @@ export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; curre
                 <SiteCard ctx={ctx} ch={selected} confirm={confirmBox} actions={<>{selected.type === 'creght_site' && <EditSiteButton channelId={selected.id} />}{selected.type === 'creght_site' && <Button variant="outline" size="sm" onClick={() => ctx.go('site', { channel: selected.id })}><BarChart3 />{tr('channels.view_visits')}</Button>}{removeBtn}</>} />
               ) : confirmBox}
               {selected.type === 'wordpress' ? (
-                <WpCredential channel={selected} disabled={!canWp} />
+                <div className="space-y-3">
+                  <WpCredential channel={selected} disabled={!canWp} />
+                  {siteExtra?.(selected)}
+                </div>
               ) : isSocial(selected) ? (
                 <AccountConnection key={selected.id} actions={<><Button variant="outline" size="sm" onClick={() => ctx.go('social', { section: 'data', account: selected.id })}><BarChart3 />{tr('channels.view_data')}</Button>{removeBtn}</>} ch={selected} other={loggedInElsewhere(selected, machine)} health={health.rows} posts={posts} onOpenPost={(p) => p.article_id ? ctx.go('content', { article: p.article_id, version: p.id }) : ctx.go('social', { post: p.id })} onDone={() => { health.reload(); loadPosts(); ctx.reloadChannels() }} />
               ) : !isSite(selected) ? (
                 <NotEnabled ch={selected} actions={removeBtn} onDone={ctx.reloadChannels} />
-              ) : null}
+              ) : siteExtra?.(selected)}
             </div>
           )}
         </>
@@ -139,10 +145,12 @@ export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; curre
 
       {adding && (
         <AddChannelDialog
-          onClose={() => setAdding(false)}
+          initialUrl={addURL}
+          onClose={() => { setAdding(false); setAddURL('') }}
           onAdded={() => {
             before.current = new Set(ctx.channels.map((c) => c.id))
             setAdding(false)
+            setAddURL('')
             ctx.reloadChannels()
           }}
         />
@@ -236,6 +244,51 @@ function NotEnabled({ ch, actions, onDone }: { ch: Channel; actions: ReactNode; 
         </AskButton>
         {actions}
       </div>
+    </div>
+  )
+}
+
+const DISMISS_KEY = 'trade.pending_site_dismissed'
+
+/** 向导里输入了网址、还没加进网站和账号（WordPress 或没认出来的网站）：顶部提示接入。
+ *  creght 站点在向导里就自动加了；以前输入、还没加的，点「接入」先认一次 creght，认不出再打开添加对话框（预填网址） */
+function PendingSite({ channels, disabled, onAdded, onManual }: { channels: Channel[]; disabled?: boolean; onAdded: (id: string) => void; onManual: (url: string) => void }) {
+  const [url, setUrl] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [dismissed, setDismissed] = useState(() => { try { return localStorage.getItem(DISMISS_KEY) ?? '' } catch { return '' } })
+  // 判断在本机函数里做：自定义域名的 creght 站点和渠道存的预览地址对不上，要抓页面认站点
+  useEffect(() => {
+    runLocal<{ url: string }>('onboarding.pending', {}).then((r) => setUrl(r.url)).catch(() => setUrl(''))
+  }, [channels])
+  if (!url || dismissed === url) return null
+  const connect = async () => {
+    setBusy(true); setError('')
+    try {
+      const ch = await runLocal<Channel | null>('channels.fromURL', { url })
+      if (ch?.id) onAdded(ch.id)
+      else onManual(url)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  const dismiss = () => { try { localStorage.setItem(DISMISS_KEY, url) } catch { /* 存不了就只这次不显示 */ } setDismissed(url) }
+  return (
+    <div className="space-y-2 rounded-xl border border-border bg-background p-4">
+      <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><Globe size={14} /></span>
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-semibold">{tr('channels.pending_title', { host: hostOf(url) })}</div>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{tr('channels.pending_desc')}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1">
+          <Button size="sm" onClick={connect} disabled={busy || disabled} title={disabled ? tr('channels.add_offline') : undefined}>{tr('channels.pending_connect')}</Button>
+          <Button size="sm" variant="ghost" onClick={dismiss} className="text-muted-foreground"><X />{tr('channels.pending_dismiss')}</Button>
+        </div>
+      </div>
+      {error && <ErrorDetails message={error} />}
     </div>
   )
 }

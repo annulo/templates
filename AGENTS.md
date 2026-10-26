@@ -8,6 +8,8 @@
   `core/lib/`、表、文案（`core/messages/*.json` 和模板的按键合并，同一个键只能在一处）；
   模板自己业务的 skill 放模板里（产品运营的增长方法在 `product/skills/`），不要往通用 skill 里写某个模板的业务；
 - `core/features/<模块>/` 是部分模板才用的共用模块（现在有网站运营 `websites/`），`targets.json` 里 `features: ["websites"]` 的模板才组装进去，放到产物根目录；模块不能覆盖模板或 core 同路径的文件；
+  模块里的东西三个模板（外贸、产品运营、自媒体）一起用：页面、本机函数、表、任务，还有 `lib/sites.ts`（网站的类型和封装，模板的 `lib/shuttle.ts` 整个导出它）、`local/_site.ts`（网站地址、读网站内容）、`messages/*.json`（网站的文案，和 core、模板的按键合并，同一个键只能在一处）。
+  模板之间不一样的地方不复制一份改，在模块里留插入的位置，模板传进来：「谷歌排名」页的 `headerActions`（产品运营的增长机会按钮）、「账号和网站」页的 `siteExtra`（外贸的表单询盘卡片）、AI 搜索的品牌问题句式 `local/_geo_brand.ts`（有就用）；文案写法不同的键留在各模板；
 - **core 还有一个不在本仓库的用户**：私有的外贸模板（Annulo 团队的 `shuttle-template` 仓库）也用这里的 `core/`，发布时从本仓库已推送的提交里取。改 core 要照「core 里的代码要在每个带 core 的模板里都能跑」写，外贸那边由 Annulo 团队验证；
 - 社媒平台不在这个仓库：是 Annulo 插件 **social**（github.com/annulo/plugins），模板在 `annulo.json` 的 `"plugins"` 里声明，项目新建、升级时 Annulo 装进 `plugins/social/`。
   改社媒平台的脚本、写作任务、写法、定时任务、skill 都在插件仓库里改，不要在模板里另写一份；

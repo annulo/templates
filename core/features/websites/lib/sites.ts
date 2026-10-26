@@ -1,5 +1,5 @@
 // 网站运营（core/features/websites）用到的类型和本机函数封装：渠道里的网站、访问统计、网站检查、AI 搜索、Google 搜索表现。
-// 照产品运营模板 lib/shuttle.ts 里的同名定义复制（外贸、产品的写在各自的 lib/shuttle.ts 里），lib/shuttle.ts 整个导出这个文件。
+// 每个启用这个模块的模板的 lib/shuttle.ts 整个导出这个文件（export * from './sites'），页面照旧从 lib/shuttle 引。
 import { tr } from "./i18n";
 import { runLocal, type Channel, type KeyRow } from "./shuttle";
 

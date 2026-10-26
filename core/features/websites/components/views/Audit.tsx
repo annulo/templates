@@ -5,6 +5,7 @@ import RunButton from '../RunButton'
 import { Badge, Button, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, type Tone } from '../ui'
 import { dbList, dbPatch, newestFirst, type AuditRun, type IssueStatus, type Severity, type SiteChange, type SiteIssue, isSite } from '../../lib/shuttle'
 import SitePicker from '../SitePicker'
+import WorkspaceTabs from '../WorkspaceTabs'
 import SeoReport from '../SeoReport'
 import Select from '../Select'
 import { useOnboarding, type OnboardingData } from '../../lib/onboarding'
@@ -113,6 +114,19 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
           </Button>
         }
       />
+      {/* 「问题 / SEO 报告」是整页的两个视图，放在页头下面（和社交媒体页一样的页签），得分卡片两边都显示 */}
+      {last && (
+        <WorkspaceTabs
+          id="audit"
+          label={tr('audit.title')}
+          value={tab}
+          onChange={(v) => setParam('audit_tab', v === 'issues' ? '' : v)}
+          options={[
+            { value: 'issues', label: tr('audit.tab_issues') },
+            { value: 'report', label: tr('audit.tab_report') },
+          ]}
+        />
+      )}
       {picker}
       {error && <Notice tone="error">{error}</Notice>}
 
@@ -174,17 +188,6 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
             </div>
           </div>
         </div>
-      )}
-
-      {last && (
-        <Segmented
-          value={tab}
-          onChange={(v) => setParam('audit_tab', v === 'issues' ? '' : v)}
-          options={[
-            { value: 'issues', label: tr('audit.tab_issues') },
-            { value: 'report', label: tr('audit.tab_report') },
-          ]}
-        />
       )}
 
       {tab === 'report' && last && <SeoReport ctx={ctx} channel={channel} onIssues={() => setParam('audit_tab', '')} />}

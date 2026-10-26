@@ -1,5 +1,6 @@
 import { L } from './_i18n'
-import { profile, projectBrief, siteBase } from './_ai'
+import { profile, projectBrief } from './_ai'
+import { siteBase } from './_site'
 import { brandTerms, DAY, expectedCtr, isNoise, matchProperty, nonBrand, notConnected, opportunity, pickQueryTopics, query, sites, ymd, type Row } from './_gsc'
 import { originsJson } from '../lib/origins'
 
