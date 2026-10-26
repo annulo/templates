@@ -114,7 +114,8 @@ export default function Reports({ ctx, params, setParam, embedded = false }: { c
   )
 }
 
-const VIEWS: View[] = ['overview', 'reports', 'company', 'products', 'content', 'calendar', 'assets', 'geo', 'search', 'audit', 'leads', 'social', 'channels', 'site']
+// 各模板的页面不全一样（自媒体没有产品、询盘）：没有的页面 tr('nav.<页面>') 认不出来，链接到那里的建议不给按钮
+const VIEWS = ['overview', 'reports', 'company', 'products', 'content', 'calendar', 'assets', 'geo', 'search', 'audit', 'leads', 'social', 'channels', 'site'] as string[]
 
 /** 建议点了去哪：先用 link；老周报只有 action 文字，按起步配置的标题、侧栏的页面名猜，猜不到就不做成链接 */
 function suggestionTarget(ctx: Ctx, s: ReportSuggestion): (() => void) | null {
@@ -136,7 +137,7 @@ function suggestionTarget(ctx: Ctx, s: ReportSuggestion): (() => void) | null {
   if (it) return openSetup(it)
   const first = (s.action ?? '').split(/[→>]/)[0].trim()
   const view = first && VIEWS.find((v) => tr('nav.' + v) === first)
-  return view ? () => ctx.go(view) : null
+  return view ? () => ctx.go(view as View) : null
 }
 
 function SuggestionAction({ text, onClick }: { text: string; onClick: (() => void) | null }) {

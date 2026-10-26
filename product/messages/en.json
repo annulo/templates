@@ -838,7 +838,9 @@
     "sg_domain": "Use one domain everywhere",
     "sg_domain_do": "Links and structured data still use other domains of this site (old system domain, preview, the www/non-www twin), splitting ranking signals across addresses. Use the main domain everywhere and redirect the others to it.",
     "sg_review": "Found by AI review",
-    "sg_review_do": "AI read sample pages of every type and found what rules can't: whether titles say who it's for, generic category intros, product copy that doesn't match the product, thin case studies. Each item lists the pages, the current text and what to change it to."
+    "sg_review_do": "AI read sample pages of every type and found what rules can't: whether titles say who it's for, generic category intros, product copy that doesn't match the product, thin case studies. Each item lists the pages, the current text and what to change it to.",
+    "passed_title": "Passed ({n})",
+    "passed_hint": "No problems found in these checks; they cost no points"
   },
   "leads": {
     "reply_title": "Reply draft",

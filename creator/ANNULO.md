@@ -1,6 +1,6 @@
 # 自媒体工作台
 
-这是一个从「自媒体工作台」模板建的项目：用户是自媒体人，在这里定好自己的定位，按定位出选题、做内容（文案、图、视频都放在这条内容的文件夹里），发到各社媒账号或排期，看各账号的数据和每周总结。
+这是一个从「自媒体工作台」模板建的项目：用户是自媒体人，在这里定好自己的定位，按定位出选题、做内容（文案、图、视频都放在这条内容的文件夹里），发到各社媒账号、自己的网站或排期，看各账号的数据和每周总结。有个人网站的（creght 站点、WordPress）在「账号和网站」里加上，就能看网站访问、谷歌排名、AI 搜索推荐和网站检查。
 项目里只有一个业务；定位在 `profile` 表（只有一行），各业务表里没有「所属项目」字段。
 
 ## 用户是谁、怎么跟他说话
@@ -11,7 +11,7 @@
 |---|---|
 | 写作计划、写作主题、简报、topics | 选题（简报是选题的详情，在「编辑选题」里） |
 | 初稿、内容稿、稿件、articles | 文章 |
-| 渠道、social_accounts | 账号 |
+| 渠道、social_accounts | 账号（网站就说网站） |
 | 项目资料、profile | 我的定位 |
 | 运营周报 | 每周总结 |
 | 素材库、素材 | 资料库、资料 |
@@ -32,7 +32,8 @@
 | 发布日历 `calendar`（按天看排期和发布，拖动改排期） | 读 `social_posts`、`articles` | |
 | 我的定位 `company` | `profile` | `profile.get` / `save` |
 | 资料库 `assets` | `assets` | |
-| 账号 `channels`（添加、登录、移除） | 插件的 `social_accounts` | `channels.remove`、`social/social.login` |
+| 账号和网站 `channels`（添加、登录、移除；网站的发布设置） | 插件的 `social_accounts`、`channels`（网站） | `channels.remove`、`social/social.login`、`channels.add` / `wpPrepare`（网站）；任务 `setup-publish`（配置发到网站） |
+| 网站访问 `site`、谷歌排名 `search`、AI 搜索推荐 `geo`、网站检查 `audit`（加了网站才出现在左侧） | `channels`、`search_pages`、`search_daily`、`site_changes`、`geo_*`、`audit_runs`、`site_issues`、`publications`（发到网站的记录） | 网站运营的共用代码（`channels.*`、`gsc.*`、`geo.*`、`audit.*`、`publishing.*`），先读 skill **websites**、**search-console**、**geo-visibility**、**site-audit** |
 
 页面链接（回复里提到就写，写法见 annulo skill 的 pages.md）：
 
@@ -58,6 +59,7 @@
 
 - 拿文件夹：`annulo run folder.create --input '{"article_id":"<id>"}'`，没有就建，返回 `dir`（绝对路径）；**每段对话开始动文件前跑一次**，它会把这段对话记到这条内容上（`articles.chat_id`）。之后直接在 `dir` 里读写文件。
 - **稿子**是最外层的 `稿子.md`（英文界面 `brief.md`）：这条内容要做什么、要求、大纲、参考，用户写的，动手前先读。`articles.draft` 是老数据，内容页打开时会搬进 `稿子.md`。
+- **发到网站**：只发长文。网站先要配好发布方式（任务 `setup-publish` 写网站自己的发布脚本 `local/pub_<网站 id>.ts`），发布弹窗里没配好的网站旁边有「让 AI 配置」；`folder.publish` 把挑好的标题、正文记在这篇在这个网站的发布记录（`publications`）上，再跑那个脚本，再发是更新。
 - **文案**（要发出去的文字）是名字带「文案」的 `.md`（英文 `copy.md`）：开头 `---` 包住 `title:`、`tags:`，下面是正文或视频简介。**发布是挑选**：内容本身没有类型，用户点「发布」时挑这次发成图文、视频还是长文，用哪份文案、哪些图、哪个视频（文件夹里的或资料库的），选账号；`folder.publish` 每个账号新建一条帖子，存的就是挑好的内容。同一条内容可以挑不同的文件发好几次。所以做几个版本不用问用户拆不拆，每个版本一个目录就行。
 - 做出来的文件**都放进文件夹**：不要 `annulo upload`、`assets.add`，也不用 `content.update` 写正文（用户明确要求的除外）。资料库（`assets`）只放几条内容都会用到的素材。
 - **交给 AI**两种做法，常用的要求存成预设（`rewrite_presets`，`mode` 是 `here` 或 `new`；自媒体不看预设的 `type`、`types`，做成什么写在要求里）：

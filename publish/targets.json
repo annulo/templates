@@ -4,7 +4,10 @@
     "core": false
   },
   "creator": {
-    "name": "自媒体工作台"
+    "name": "自媒体工作台",
+    "features": [
+      "websites"
+    ]
   },
   "product": {
     "name": "产品运营助手",

@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowUpRight, BarChart3, Plus, RefreshCw, Trash2, UserRound } from 'lucide-react'
+import { ArrowUpRight, BarChart3, Plus, RefreshCw, Settings, Trash2, UserRound } from 'lucide-react'
+import { PublishSetup } from '../PublishTargets'
 import AddChannelDialog from '../AddChannelDialog'
+import WpCredential from '../WpCredential'
 import RunButton from '../RunButton'
+import EditSiteButton from '../EditSiteButton'
 import AskButton from '../AskButton'
 import { brokenOf, ActivityLine, PublishProblems, usePlatformHealth } from '../PlatformHealth'
 import { Button, ErrorDetails, Notice, PageHeader, cx, fmtTime, type Tone } from '../ui'
-import { dbList, removeChannel, shuttleImage, type Channel, type PlatformHealth, type SocialPost } from '../../lib/shuttle'
+import { dbList, isSite, openShuttleSettings, removeChannel, runLocal, shuttleImage, type Channel, type PlatformHealth, type SocialPost } from '../../lib/shuttle'
 import { CHANNEL_TYPES } from '../../lib/channels'
 import { FacebookConnectionButton } from '../FacebookAccountFlow'
 import { isSocial, loggedInElsewhere, platformOf, useElsewhere, type Elsewhere } from '../../lib/social'
+import { hostOf, siteURL } from '../../lib/format'
 import type { Ctx } from './types'
 import { tr } from '../../lib/i18n'
+import { useCanRun } from '../../lib/useShuttle'
 
-/** 卡片上的连接状态：这一页只回答「哪个账号要处理」，数据在社交媒体页看 */
+/** 卡片上的连接状态：这一页只回答「哪个网站、账号要处理」，数据在社交媒体页、网站访问页看 */
 function connection(c: Channel, health: PlatformHealth[], posts: SocialPost[], machine: Elsewhere): { label: string; tone: Tone } {
   if (isSocial(c)) {
     const other = loggedInElsewhere(c, machine)
@@ -21,15 +26,19 @@ function connection(c: Channel, health: PlatformHealth[], posts: SocialPost[], m
     if (brokenOf(health, c.id).length || posts.some((p) => p.channel_id === c.id && p.status === 'failed')) return { label: tr('meta.social_status.failed'), tone: 'bad' }
     return c.login_status === 'ok' ? { label: tr('social.connected'), tone: 'ok' } : { label: tr('social.not_connected'), tone: 'default' }
   }
+  if (isSite(c)) {
+    if (c.publish_status === 'broken') return { label: tr('channels.publish_broken'), tone: 'bad' }
+    return c.publish_status === 'ready' && c.publisher ? { label: tr('channels.publish_ready'), tone: 'ok' } : { label: tr('channels.publish_unset'), tone: 'default' }
+  }
   return { label: tr('channels.not_enabled'), tone: 'warn' }
 }
 
 const DOT: Record<Tone, string> = { ok: 'bg-emerald-500', warn: 'bg-amber-500', bad: 'bg-destructive', primary: 'bg-primary', default: 'bg-muted-foreground/50' }
 
-/** 账号：只管连接（添加、移除、登录），不放数据 */
+/** 账号和网站：只管连接（添加、移除、登录、网站的发布设置），不放数据 */
 export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; current: string; setCurrent: (id: string) => void }) {
   const [adding, setAdding] = useState(false)
-  // 添加前已有的账号：列表重新读回来后选中多出来的那个（对话框只告诉我们加了哪种，一次勾好几个时选第一个）
+  // 添加前已有的账号：列表重新读回来后选中多出来的那个（对话框只告诉我们加了哪种，社媒还可能一次勾好几个，选第一个）
   const before = useRef<Set<string> | null>(null)
   useEffect(() => {
     if (!before.current) return
@@ -39,6 +48,7 @@ export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; curre
     setCurrent(added.id)
   }, [ctx.channels])
   const [confirm, setConfirm] = useState(false)
+  const canWp = useCanRun('channels.wpVerify') // WordPress 的应用密码存在本机密钥里
   const removeBtn = <Button fn="channels.remove" variant="ghost" size="sm" onClick={() => setConfirm(true)} disabled={confirm} className="text-muted-foreground"><Trash2 />{tr('channels.remove')}</Button>
   const [error, setError] = useState('')
   const health = usePlatformHealth(ctx.rev)
@@ -111,13 +121,17 @@ export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; curre
 
           {selected && (
             <div className="space-y-4">
-              {/* 每个账号一张卡片：头部是头像、名字、状态和操作（看数据、移除），下面是上次发布、采集成没成 */}
-              {confirmBox}
-              {isSocial(selected) ? (
+              {/* 每个渠道一张卡片：头部是头像/图标、名字、状态和操作（看数据、移除），下面分隔线隔开的是这个渠道的设置——网站是文章发布，社媒是上次发布、采集成没成 */}
+              {isSite(selected) ? (
+                <SiteCard ctx={ctx} ch={selected} confirm={confirmBox} actions={<>{selected.type === 'creght_site' && <EditSiteButton channelId={selected.id} />}{selected.type === 'creght_site' && <Button variant="outline" size="sm" onClick={() => ctx.go('site', { channel: selected.id })}><BarChart3 />{tr('channels.view_visits')}</Button>}{removeBtn}</>} />
+              ) : confirmBox}
+              {selected.type === 'wordpress' ? (
+                <WpCredential channel={selected} disabled={!canWp} />
+              ) : isSocial(selected) ? (
                 <AccountConnection key={selected.id} actions={<><Button variant="outline" size="sm" onClick={() => ctx.go('social', { section: 'data', account: selected.id })}><BarChart3 />{tr('channels.view_data')}</Button>{removeBtn}</>} ch={selected} other={loggedInElsewhere(selected, machine)} health={health.rows} posts={posts} onOpenPost={(p) => p.article_id ? ctx.go('content', { article: p.article_id, version: p.id }) : ctx.go('social', { post: p.id })} onDone={() => { health.reload(); loadPosts(); ctx.reloadChannels() }} />
-              ) : (
+              ) : !isSite(selected) ? (
                 <NotEnabled ch={selected} actions={removeBtn} onDone={ctx.reloadChannels} />
-              )}
+              ) : null}
             </div>
           )}
         </>
@@ -133,6 +147,30 @@ export default function Channels({ ctx, current, setCurrent }: { ctx: Ctx; curre
           }}
         />
       )}
+    </div>
+  )
+}
+
+/** 网站的卡片：和社媒账号卡片（AccountConnection）同一个样子，分隔线下面是文章发布设置 */
+function SiteCard({ ctx, ch, actions, confirm }: { ctx: Ctx; ch: Channel; actions: ReactNode; confirm: ReactNode }) {
+  const Icon = CHANNEL_TYPES[ch.type]?.icon
+  const url = siteURL(ch)
+  return (
+    <div className="space-y-3 rounded-xl border border-border bg-background p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">{Icon && <Icon size={18} />}</div>
+        <div className="min-w-40 flex-1">
+          <div className="truncate text-sm font-semibold">{ch.name}</div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+            <span className="shrink-0">{CHANNEL_TYPES[ch.type]?.label}</span>
+            {url && <><span aria-hidden>·</span><a href={url} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-0.5 hover:text-primary-text"><span className="truncate">{hostOf(url)}</span><ArrowUpRight className="size-3 shrink-0" /></a></>}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1">{actions}</div>
+      </div>
+      {confirm}
+      {ch.type === 'creght_site' && <CreghtAccess ch={ch} onLive={ctx.reloadChannels} />}
+      <div className="border-t border-border pt-3"><PublishSetup ctx={ctx} channel={ch} bare /></div>
     </div>
   )
 }
@@ -197,6 +235,31 @@ function NotEnabled({ ch, actions, onDone }: { ch: Channel; actions: ReactNode; 
           {tr('channels.enable', { platform })}
         </AskButton>
         {actions}
+      </div>
+    </div>
+  )
+}
+
+type Access = { state: 'ok' | 'no_mcp' | 'needs_auth' | 'not_in_account' | 'failed'; error?: string; live_url?: string }
+
+/** creght 站点：输入网址加进来的不一定读得到（creght MCP 停用了、还没授权、站点不在当前连接的账号下），说清楚并给去处理的入口 */
+function CreghtAccess({ ch, onLive }: { ch: Channel; onLive: () => void }) {
+  const [access, setAccess] = useState<Access | null>(null)
+  // 读到的正式地址和表里的不一样（刚发布、换了域名）：access 已写回表，重拉渠道让卡片上的地址跟着变
+  const load = () => { runLocal<Access>('channels.access', { id: ch.id }).then((r) => { setAccess(r); if (r.state === 'ok' && (r.live_url ?? '') !== (ch.live_url ?? '')) onLive() }).catch((e: Error) => setAccess({ state: 'failed', error: e.message })) }
+  useEffect(load, [ch.id])
+  if (!access || access.state === 'ok') return null
+  const go = access.state === 'not_in_account' ? 'connections' : 'mcp'
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm sm:flex-row sm:items-center">
+      <div className="min-w-0 flex-1">
+        <div className="font-medium">{tr(`channels.creght_${access.state}`)}</div>
+        {access.state === 'failed' && access.error && <div className="mt-0.5 text-xs text-muted-foreground [overflow-wrap:anywhere]">{access.error}</div>}
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        {access.state === 'failed'
+          ? <Button size="sm" variant="outline" onClick={load}><RefreshCw />{tr('channels.creght_retry')}</Button>
+          : <Button size="sm" variant="outline" onClick={() => openShuttleSettings(go)}><Settings />{tr('ui.go_settings')}</Button>}
       </div>
     </div>
   )

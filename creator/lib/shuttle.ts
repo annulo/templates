@@ -19,6 +19,8 @@ export type Channel = {
   site_id?: string
   /** 独立站的访问地址；creght 站点是预览地址，WordPress 是站点地址 */
   preview_url?: string
+  /** creght 站点发布后的正式地址（自定义域名优先，没发布过是空）；显示地址用 lib/format 的 siteURL */
+  live_url?: string
   /** WordPress：登录用户名、应用密码存在哪个本机密钥（密码本身不进表） */
   wp_user?: string
   wp_secret?: string
@@ -99,12 +101,14 @@ export const SOCIAL_TYPES: ChannelType[] = ['xiaohongshu', 'douyin', 'x', 'linke
  * 已添加的账号：社媒插件的 social_accounts 表（自媒体工作台没有网站，外贸模板这里还合并了 channels 表里的网站）。
  * plugin：社媒插件装了没有（没装时读不到 social_accounts 表）。
  */
+/** 账号和网站：网站在 channels 表（网站运营共用模块），社媒账号在社媒插件的 social_accounts 表；网站排在前面 */
 export async function listChannels(): Promise<{ list: Channel[]; legacy: Channel[]; plugin: boolean }> {
-  try {
-    return { list: await dbList('social_accounts'), legacy: [], plugin: true }
-  } catch {
-    return { list: [], legacy: [], plugin: false }
-  }
+  let plugin = true
+  const [sites, accounts] = await Promise.all([
+    dbList('channels').then((l) => l.filter(isSite)).catch(() => [] as Channel[]), // 老项目还没有这张表：当作没有网站
+    dbList('social_accounts').catch(() => { plugin = false; return [] as Channel[] }),
+  ])
+  return { list: [...sites, ...accounts], legacy: [], plugin }
 }
 
 // 渠道增删、访问数据都是本机函数（local/channels.ts），用用户自己的 creght 登录读平台，需要 Shuttle
@@ -255,6 +259,11 @@ export type Profile = {
   keywords?: string
   /** 不写什么 */
   avoid?: string
+  /** 品牌词：名字、账号名、网站名的各种写法（AI 搜索、谷歌排名用它区分搜你的和搜别的） */
+  brand_terms?: string
+  /** 外贸、产品的字段，网站运营的共用代码会读到（自媒体不填） */
+  company_role?: string
+  audience?: string
   created_at?: string
 }
 
@@ -642,6 +651,17 @@ type Tables = {
   publications: Publication
   social_accounts: Channel
   social_health: PlatformHealth
+  // 网站运营（core/features/websites）的表；products 自媒体没有，读的地方读不到当空
+  products: Product
+  channels: Channel
+  site_issues: SiteIssue
+  audit_runs: AuditRun
+  geo_questions: GeoQuestion
+  geo_runs: GeoRun
+  geo_results: GeoResult
+  search_pages: SearchPage
+  search_daily: SearchDaily
+  site_changes: SiteChange
 }
 
 /** 社媒账号的浏览器自动化最近一次成没成（社媒插件写，表 social_health）：一个账号一类操作一行 */
@@ -747,7 +767,7 @@ export function openShuttle(view: 'settings' | 'usage', section?: string) {
 }
 
 /** 打开 Shuttle 外壳的设置页（比如 openShuttleSettings('secrets') 去填密钥） */
-export function openShuttleSettings(section: 'secrets' | 'llm' | 'mcp' | 'skills' | 'backend' | 'connections' | 'schedules') {
+export function openShuttleSettings(section: 'secrets' | 'llm' | 'mcp' | 'skills' | 'backend' | 'connections' | 'browser' | 'schedules') {
   return openShuttle('settings', section)
 }
 
@@ -763,3 +783,5 @@ export const runningChats = (): Promise<Record<string, string>> =>
   shuttleMissing()
     ? remoteChats().then((l) => Object.fromEntries(l.filter((c) => c.status).map((c) => [c.id, c.status as string])))
     : api<{ chats: Record<string, string> }>('agent/running').then((r) => r.chats ?? {})
+import type { AuditRun, GeoQuestion, GeoResult, GeoRun, SearchDaily, SearchPage, SiteChange, SiteIssue } from './sites'
+export * from './sites'

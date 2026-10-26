@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.22.0
+  zh: "能管理自己的网站：在「账号和网站」里加 creght 站点或 WordPress，看访问、谷歌排名、AI 搜索推荐和网站检查，内容能发到网站。"
+  en: "Manage your own website: add a creght site or WordPress under Accounts & sites to see traffic, Google rankings, AI search and site checks, and publish content to it."
 - version: 0.21.0
   zh: "B 站能发图文、长文；长文编辑器能「从文件夹选」图片；发布按钮下拉可选「填好交给我」；知乎文章能带封面。"
   en: "Bilibili takes image and long-form posts; the long-form editor can pick images from the folder; the Publish button has a “Fill in for me” option; Zhihu articles can have a cover."

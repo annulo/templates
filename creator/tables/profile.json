@@ -52,6 +52,10 @@
         "type": "string",
         "description": "不写什么：不碰的话题、不能说的话"
       },
+      "brand_terms": {
+        "type": "string",
+        "description": "品牌词：名字、账号名、网站名的各种写法，逗号分隔。网站的谷歌排名、AI 搜索检测用它区分搜你的和搜别的"
+      },
       "created_at": {
         "type": "string",
         "description": "创建时间 ISO8601"

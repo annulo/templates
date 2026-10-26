@@ -118,6 +118,18 @@ export function updateContent(ctx: any, projectID: string, collection: string, i
   return call(ctx, projectID, 'cms_content_update', { project_id: projectID, collection, id, slug, body })
 }
 
+/** 删掉一条内容，线上立即不可见。平台还没有这个工具时报一句说清楚的错 */
+export async function deleteContent(ctx: any, projectID: string, collection: string, id: string) {
+  try {
+    return await call(ctx, projectID, 'cms_content_delete', { project_id: projectID, collection, id })
+  } catch (e: any) {
+    const msg = String(e?.message ?? e)
+    if (/没有工具|unknown tool|no such tool|tool .*not found/i.test(msg)) throw new Error(L(ctx, 'creght 还没开放删除内容的接口，等平台更新后再删；现在可以到网站后台的 CMS 里删掉，再点「只删记录」', "creght can't delete content from here yet — try again after the platform update. For now, delete it in the site's CMS, then choose \"Remove record only\""))
+    if (/不存在|not found|no such content/i.test(msg)) return { deleted: false } // 网站上已经没有了，当成删掉了
+    throw e
+  }
+}
+
 /** ctx.file(…) 给的本机文件 */
 export type LocalFile = { name: string; size: number; type: string; sha256: string }
 

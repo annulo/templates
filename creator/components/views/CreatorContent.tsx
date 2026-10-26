@@ -997,7 +997,7 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite, inspiration 
       )}
 
       {referenceTopic && <Dialog open onClose={() => setReferenceTopic(null)} title={`${tr('inspiration.references')} · ${referenceTopic.title}`} width={700}><InspirationReferences ctx={ctx} targetType="topic" targetId={referenceTopic.id} /></Dialog>}
-      {briefTopic && <WritingBriefDialog ctx={ctx} topic={briefTopic} onClose={() => { setBriefTopic(null); onTopicClose?.() }} onChanged={onChanged} onWrite={() => onWrite({ topic_id: briefTopic.id, channel_id: site?.id })} />}
+      {briefTopic && <WritingBriefDialog ctx={ctx} topic={briefTopic} defaults={{ language: '', channels: '' }} onClose={() => { setBriefTopic(null); onTopicClose?.() }} onChanged={onChanged} onWrite={() => onWrite({ topic_id: briefTopic.id, channel_id: site?.id })} />}
       <Dialog
         open={adding}
         onClose={() => setAdding(false)}

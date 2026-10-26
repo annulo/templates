@@ -682,6 +682,8 @@ export type AuditRun = {
   pages_checked?: number;
   score?: number;
   issues?: number;
+  /** 这次检查了、没发现问题的项，JSON：[{ check, name }] */
+  passed?: string;
   started_at?: string;
   finished_at?: string;
   created_at?: string;

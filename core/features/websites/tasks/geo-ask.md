@@ -12,7 +12,7 @@ annulo run geo.askContext --input '{"result_id":"<id>"}'
 ```
 
 输出里：
-- `engine` 是哪个 AI，`question` 是买家问的问题，`kind` 是 `facts`（品牌问题：AI 怎么介绍这家公司）或 `recommend`（推荐类：买家还不知道这家公司时 AI 推荐了谁）；
+- `engine` 是哪个 AI，`question` 是问 AI 的问题，`kind` 是 `facts`（品牌问题：AI 怎么介绍你）或 `recommend`（推荐类：别人还不知道你时 AI 推荐了谁）；
 - `answer` 是这家 AI 的完整回答，`urls` 是回答引用的网址，`searches` 是它这次搜了什么、搜到哪些网页（有的 AI 拿不到搜索词）；`cited` 是引用了本站，`mentioned` 是提到了但没给链接；
 - `others` 是同一个问题**别的 AI** 最近怎么答的、引用了谁（对比用）；
 - `report` 是用户之前标过的说错的地方（有的话）；

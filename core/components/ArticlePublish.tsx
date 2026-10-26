@@ -48,7 +48,7 @@ const metricsLine = (p: SocialPost) => tr('versions.metrics', { v: metricText(p,
 
 /** 已发布记录的删除：点开一个小菜单二选一。「从平台删除」去平台上删帖子；「只删记录」平台上的不动（平台上已经手动删过、
  *  或者同一条重复记了两次时用，从平台删除会报找不到） */
-function DeleteMenu({ label, busy, disabled, onRemote, onRecord }: { label: string; busy: boolean; disabled: boolean; onRemote: () => void; onRecord: () => void }) {
+function DeleteMenu({ label, busy, disabled, onRemote, onRecord, remoteHint }: { label: string; busy: boolean; disabled: boolean; onRemote: () => void; onRecord: () => void; remoteHint?: string }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -69,7 +69,7 @@ function DeleteMenu({ label, busy, disabled, onRemote, onRecord }: { label: stri
         <div role="menu" className="absolute top-full right-0 z-30 mt-1 w-64 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg">
           <button type="button" role="menuitem" className={cx(item, 'text-destructive')} onClick={() => { setOpen(false); onRemote() }}>
             {tr('article.delete_from_platform', { p: label })}
-            <span className="text-xs text-muted-foreground">{tr('article.delete_from_platform_hint', { p: label })}</span>
+            <span className="text-xs text-muted-foreground">{remoteHint ?? tr('article.delete_from_platform_hint', { p: label })}</span>
           </button>
           <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); onRecord() }}>
             {tr('article.delete_record_only')}
@@ -260,10 +260,11 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
       {!!(list.length || pubs.length || linkedRecords) && <Button size="sm" variant="outline" feedback={false} onClick={onPublish}><Send />{tr('article.publish')}</Button>}
     </div>
     {error && <Notice tone="error">{error}</Notice>}
-    {!!pubs.length && <div className="overflow-hidden rounded-lg border border-border">{pubs.map((p) => {
+    {/* 不裁切：删除菜单要能伸出框外；圆角由每行自己带（选中行的底色不漏出去） */}
+    {!!pubs.length && <div className="rounded-lg border border-border">{pubs.map((p) => {
       const ch = ctx.channels.find((c) => c.id === p.channel_id)
       const ready = !!ch && ch.publish_status === 'ready' && !!ch.publisher
-      return <div key={p.id} id={`pub-${p.channel_id}`} className={cx('space-y-2 border-b border-border px-3 py-3 last:border-b-0', (focus === p.id || focus === p.channel_id) && 'bg-primary/5')}>
+      return <div key={p.id} id={`pub-${p.channel_id}`} className={cx('space-y-2 border-b border-border px-3 py-3 first:rounded-t-lg last:rounded-b-lg last:border-b-0', (focus === p.id || focus === p.channel_id) && 'bg-primary/5')}>
         <div className="flex min-w-0 items-center gap-3">
           {ch ? <ChannelAvatar ch={ch} /> : <span className="size-7 shrink-0 rounded-full bg-muted" />}
           <span className="min-w-0 flex-1">
@@ -272,6 +273,12 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
           </span>
           {p.url && p.status === 'published' && <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text">{tr('content.view_live')}<ArrowUpRight className="size-3" /></a>}
           <Badge tone={statusTone(p.status)}>{p.status === 'published' ? tr('versions.published') : p.status === 'failed' ? tr('versions.failed') : p.status === 'publishing' ? tr('meta.social_status.publishing') : p.status === 'scheduled' ? tr('meta.social_status.scheduled') : tr('versions.draft')}</Badge>
+          {/* 发出去的能删：从网站删除（publishing.remove，网站上的那篇和这条记录一起删），或者只删记录（网站后台已经手动删了） */}
+          {p.status === 'published' && ch && !jobOf(`${p.article_id}:${p.channel_id}`) && (
+            <DeleteMenu label={CHANNEL_TYPES[ch.type]?.label ?? ''} busy={busy === 'remove' + p.id} disabled={!!busy} remoteHint={tr('article.delete_from_site_hint')}
+              onRemote={() => act('remove' + p.id, () => runLocal('publishing.remove', { id: p.id }))}
+              onRecord={() => act('remove' + p.id, () => dbDelete('publications', p.id))} />
+          )}
         </div>
         {p.scheduled_at && p.status !== 'publishing' && <ScheduledLine at={p.scheduled_at} fromArticle />}
         <JobLine job={jobOf(`${p.article_id}:${p.channel_id}`)} />
@@ -286,11 +293,11 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
       </div>
     })}</div>}
     {!list.length && !pubs.length && !linkedRecords ? <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">{tr('article.records_empty')}<div className="mt-3"><Button size="sm" feedback={false} onClick={onPublish}><Send />{tr('article.publish')}</Button></div></div>
-      : !!list.length && <div className="overflow-hidden rounded-lg border border-border">{list.map((p) => {
+      : !!list.length && <div className="rounded-lg border border-border">{list.map((p) => {
         const ch = ctx.channels.find((c) => c.id === p.channel_id)
         const recovery = facebookPublishRecovery(p, ch)
         const legacy = ['draft', 'pending_review', 'rejected'].includes(p.status)
-        return <div key={p.id} id={`pub-${p.id}`} className={cx('space-y-2 border-b border-border px-3 py-3 last:border-b-0', focus === p.id && 'bg-primary/5')}>
+        return <div key={p.id} id={`pub-${p.id}`} className={cx('space-y-2 border-b border-border px-3 py-3 first:rounded-t-lg last:rounded-b-lg last:border-b-0', focus === p.id && 'bg-primary/5')}>
           <div className="flex min-w-0 items-center gap-3">
             {/* 账号头像和名字点了去「社交媒体 → 数据表现」看这个账号：打开主页、重新采集都在那里 */}
             {ch ? <button type="button" onClick={() => ctx.go('social', { section: 'data', account: ch.id })} title={tr('article.open_account_data')} className="shrink-0 cursor-pointer rounded-full"><ChannelAvatar ch={ch} /></button> : <span className="size-7 shrink-0 rounded-full bg-muted" />}

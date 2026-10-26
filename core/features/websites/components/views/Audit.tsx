@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ExternalLink, RotateCw, Rocket } from 'lucide-react'
+import { Check, ChevronDown, ExternalLink, RotateCw, Rocket } from 'lucide-react'
 import AskButton from '../AskButton'
 import RunButton from '../RunButton'
 import { Badge, Button, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, type Tone } from '../ui'
@@ -23,6 +23,15 @@ const STATUS: Record<IssueStatus, { label: string; tone: Tone }> = {
   fixing: lbl('audit.st_fixing', 'primary'),
   fixed: lbl('audit.st_fixed', 'ok'),
   ignored: lbl('audit.st_ignored', 'default'),
+}
+
+function parse<T>(s: string | undefined, fallback: T): T {
+  try {
+    const v = s ? JSON.parse(s) : fallback
+    return Array.isArray(fallback) && !Array.isArray(v) ? fallback : v
+  } catch {
+    return fallback
+  }
 }
 
 function pagesOf(i: SiteIssue): string[] {
@@ -88,6 +97,8 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
   const last = runs?.[0]
   // 「问题」是逐条处理的清单，「SEO 报告」是全站的概况和建议（SeoReport）；记在网址参数 audit_tab 里
   const tab = params.audit_tab === 'report' ? 'report' : 'issues'
+  // 这次检查了、没扣分的项（老记录没有 passed，就不显示）
+  const passed = parse<{ check: string; name: string }[]>(last?.passed, [])
   const todo = (issues ?? []).filter((i) => i.status === 'open')
   const fixing = (issues ?? []).filter((i) => i.status === 'fixing')
 
@@ -96,6 +107,11 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
       <PageHeader
         title={tr('audit.title')}
         desc={tr('audit.desc')}
+        actions={
+          <Button variant="ghost" size="sm" onClick={load} className="text-muted-foreground">
+            <RotateCw /> {tr('common.refresh')}
+          </Button>
+        }
       />
       {picker}
       {error && <Notice tone="error">{error}</Notice>}
@@ -140,9 +156,6 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
               </div>
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
-              <Button variant="ghost" size="sm" onClick={load} className="text-muted-foreground">
-                <RotateCw /> {tr('common.refresh')}
-              </Button>
               <RunButton inline fn="audit.run" input={{ channel_id: channel.id }} onDone={load} variant="outline">
                 {tr('audit.rerun')}
               </RunButton>
@@ -220,6 +233,22 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'issues' && passed.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <h2 className="text-sm font-semibold">{tr('audit.passed_title', { n: passed.length })}</h2>
+            <span className="text-xs text-muted-foreground">{tr('audit.passed_hint')}</span>
+          </div>
+          <div className="flex flex-wrap gap-2 rounded-xl border border-border bg-background p-4">
+            {passed.map((p) => (
+              <span key={p.check} className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs">
+                <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />{p.name}
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>

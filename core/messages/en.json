@@ -188,7 +188,8 @@
     "metric_shares": "Shares",
     "metrics_at": "Updated {when}",
     "metrics_none": "No data collected yet",
-    "metrics_refresh": "Refresh data"
+    "metrics_refresh": "Refresh data",
+    "delete_from_site_hint": "Deletes the post from the site, along with this record"
   },
   "ui": {
     "watch_show": "Watch",

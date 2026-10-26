@@ -116,8 +116,8 @@ const ENGINES: Engine[] = [
     name: 'ChatGPT（接口）',
     nameEn: 'ChatGPT (API)',
     kind: 'api',
-    desc: '用你在 Annulo 里配的模型（OpenAI 兼容的服务商、creght 平台或本机 Codex）联网搜索后回答。不用开浏览器，但和买家在 chatgpt.com 上看到的不完全一样',
-    descEn: 'Uses a model you set up in Annulo (an OpenAI-compatible provider, the creght platform or the local Codex) with web search. No browser needed, but not exactly what buyers see on chatgpt.com',
+    desc: '用你在 Annulo 里配的模型（OpenAI 兼容的服务商、creght 平台或本机 Codex）联网搜索后回答。不用开浏览器，但和用户在 chatgpt.com 上看到的不完全一样',
+    descEn: 'Uses a model you set up in Annulo (an OpenAI-compatible provider, the creght platform or the local Codex) with web search. No browser needed, but not exactly what people see on chatgpt.com',
     model: () => 'gpt-5.5',
     hint: '选一个支持 OpenAI Responses 接口的服务商（OpenAI 官方，或兼容的代理），或者本机的 Codex；在 Annulo 的 设置 → 模型 里添加',
     hintEn: "pick a provider that supports the OpenAI Responses API (OpenAI itself or a compatible proxy), or the local Codex; add it in Annulo's Settings → Models",
@@ -133,8 +133,8 @@ const ENGINES: Engine[] = [
       return { answer: r.text ?? '', urls: (r.sources ?? []).map((x: any) => x.url), tokens: r.tokens ?? 0, searches: r.searches ?? [] }
     },
   },
-  web('chatgpt', 'ChatGPT 网页版', 'ChatGPT (web)', '海外买家用得最多。在你的 Chrome 里打开 chatgpt.com 问（临时对话，不进你的历史记录），要先在 Chrome 里登录 ChatGPT', 'What most overseas buyers use. Asks on chatgpt.com in your Chrome (temporary chat, kept out of your history); sign in to ChatGPT in Chrome first'),
-  web('deepseek', 'DeepSeek', 'DeepSeek', '国内买家常用。在你的 Chrome 里问 chat.deepseek.com，要先登录，并打开网页上的「智能搜索」', 'Popular with buyers in China. Asks chat.deepseek.com in your Chrome; sign in and turn on its web search first'),
+  web('chatgpt', 'ChatGPT 网页版', 'ChatGPT (web)', '海外用户用得最多。在你的 Chrome 里打开 chatgpt.com 问（临时对话，不进你的历史记录），要先在 Chrome 里登录 ChatGPT', 'What most people outside China use. Asks on chatgpt.com in your Chrome (temporary chat, kept out of your history); sign in to ChatGPT in Chrome first'),
+  web('deepseek', 'DeepSeek', 'DeepSeek', '国内用户常用。在你的 Chrome 里问 chat.deepseek.com，要先登录，并打开网页上的「智能搜索」', 'Popular in China. Asks chat.deepseek.com in your Chrome; sign in and turn on its web search first'),
   web('doubao', '豆包', 'Doubao', '国内用户最多的 AI。在你的 Chrome 里问 doubao.com，要用个人账号登录（「豆包工作」企业空间不行）', 'The most used AI in China. Asks doubao.com in your Chrome; sign in with a personal account (not the Doubao Work space)'),
   web('kimi', 'Kimi', 'Kimi', '在你的 Chrome 里问 kimi.com，要先登录。默认带深度思考，一个问题一分钟左右', 'Asks kimi.com in your Chrome; sign in first. It thinks deeply by default, about a minute per question'),
   web('yuanbao', '腾讯元宝', 'Yuanbao', '微信生态里的 AI。在你的 Chrome 里问 yuanbao.tencent.com，要先登录', 'Tencent’s AI, inside the WeChat world. Asks yuanbao.tencent.com in your Chrome; sign in first'),
@@ -185,7 +185,7 @@ function brandTerms(p: any, ch: Channel): string[] {
 /** 品牌问题：标了 intent=brand，或者问题里带着品牌词 / 公司名（带品牌的问题必然提到你，看的是 AI 怎么介绍你，不算可见度） */
 const isBrandQ = (q: Question, brands: string[]) => q.intent === 'brand' || brands.some((b) => q.question.toLowerCase().includes(b))
 
-/** 买家会怎么称呼你：品牌词的第一个，没有用项目名称、网站名称 */
+/** 别人会怎么称呼你：品牌词的第一个，没有用项目名称、网站名称 */
 function brandOf(p: any, ch: Channel) {
   return splitTerms(p?.brand_terms)[0] || String(p?.name || '').trim() || ch.name
 }
@@ -205,9 +205,22 @@ const activeProducts = (ctx: any): any[] => {
   }
 }
 
+declare const require: (path: string) => any
+
+/** 模板自己的品牌问题句式：local/_geo_brand.ts 导出 brandTemplates(brand, profile)（自媒体问「这个人是谁、写什么」）；没有这个文件用下面外贸、产品的 */
+function templateBrand(): ((brand: string, p: any) => { key: string; question: string; keywords: string }[]) | null {
+  try {
+    return require('./_geo_' + 'brand.ts').brandTemplates ?? null // 拼出来的路径：没有这个文件的模板打包时不报错
+  } catch {
+    return null
+  }
+}
+
 /** 品牌问题的句式：key 用来去重（用户删了不会自动补回来，点「按资料补齐」才补） */
 function brandTemplates(p: any, ch: Channel, products: any[]) {
   const b = brandOf(p, ch)
+  const custom = templateBrand()
+  if (custom) return custom(b, p)
   const category = products.find((x) => x.category)?.category || splitTerms(p?.business)[0] || ''
   const zh = questionLang(p) === 'zh'
   const out: { key: string; question: string; keywords: string }[] = zh
@@ -246,7 +259,7 @@ export function brandQuestions(input: { channel_id: string; preview?: boolean; k
   const ch: Channel | null = ctx.db.get('channels', input?.channel_id)
   if (!ch) throw new Error(L(ctx, '没有这个渠道：', 'No such channel: ') + input?.channel_id)
   const p = profile(ctx)
-  if (!p?.name && !p?.brand_terms) throw new Error(L(ctx, '还没填公司资料：先到「公司与产品」填公司名称和品牌词', 'No company profile yet: fill in the company name and brand terms under "Company & products" first'))
+  if (!p?.name && !p?.brand_terms) throw new Error(L(ctx, '还没填名称：先在项目资料里填名称（有品牌词也填上）', 'No name yet: fill in the name (and brand terms, if any) in your profile first'))
   const existing = ctx.db.query('geo_questions', { where: { channel_id: ch.id }, limit: 300 }).list as Question[]
   const keys = new Set(existing.map((q) => q.auto_key).filter(Boolean))
   const texts = new Set(existing.map((q) => q.question.trim()))

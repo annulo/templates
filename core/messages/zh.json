@@ -188,7 +188,8 @@
     "metric_shares": "分享",
     "metrics_at": "数据更新于 {when}",
     "metrics_none": "还没采集到数据",
-    "metrics_refresh": "更新数据"
+    "metrics_refresh": "更新数据",
+    "delete_from_site_hint": "把网站上的这篇删掉，这条发布记录也一起删"
   },
   "ui": {
     "watch_show": "打开看",
