@@ -5,6 +5,7 @@ import RunButton from '../RunButton'
 import { Badge, Button, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, type Tone } from '../ui'
 import { dbList, dbPatch, newestFirst, type AuditRun, type IssueStatus, type Severity, type SiteChange, type SiteIssue, isSite } from '../../lib/shuttle'
 import SitePicker from '../SitePicker'
+import SeoReport from '../SeoReport'
 import Select from '../Select'
 import { useOnboarding, type OnboardingData } from '../../lib/onboarding'
 import type { Ctx } from './types'
@@ -85,6 +86,8 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
     )
 
   const last = runs?.[0]
+  // 「问题」是逐条处理的清单，「SEO 报告」是全站的概况和建议（SeoReport）；记在网址参数 audit_tab 里
+  const tab = params.audit_tab === 'report' ? 'report' : 'issues'
   const todo = (issues ?? []).filter((i) => i.status === 'open')
   const fixing = (issues ?? []).filter((i) => i.status === 'fixing')
 
@@ -160,7 +163,20 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
         </div>
       )}
 
-      {fixing.length > 0 && channel.type === 'creght_site' && (
+      {last && (
+        <Segmented
+          value={tab}
+          onChange={(v) => setParam('audit_tab', v === 'issues' ? '' : v)}
+          options={[
+            { value: 'issues', label: tr('audit.tab_issues') },
+            { value: 'report', label: tr('audit.tab_report') },
+          ]}
+        />
+      )}
+
+      {tab === 'report' && last && <SeoReport ctx={ctx} channel={channel} onIssues={() => setParam('audit_tab', '')} />}
+
+      {tab === 'issues' && fixing.length > 0 && channel.type === 'creght_site' && (
         <div className="flex flex-col gap-3 rounded-xl border border-primary/30 bg-primary/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 text-sm">
             <div className="font-semibold">{tr('audit.fixing_n', { n: fixing.length })}</div>
@@ -181,7 +197,7 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
         </div>
       )}
 
-      {issues && issues.length > 0 && (
+      {tab === 'issues' && issues && issues.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">{tr('audit.issues')}</h2>

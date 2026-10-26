@@ -1,0 +1,45 @@
+{
+  "name": "收录状态",
+  "desc": "独立站每个页面在 Google 的收录状态：站点体检时用 Search Console 的网址检查查的（local/_audit_index.ts），每个渠道每个页面一条",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "page": {
+        "type": "string",
+        "description": "页面地址（体检抓到的地址，不带查询参数）"
+      },
+      "state": {
+        "type": "string",
+        "description": "indexed 已收录 / crawled 抓了没收录 / discovered 发现了还没抓 / unknown Google 不知道 / duplicate Google 认了别的页面当正式版 / alternate 按 canonical 正常排除 / excluded 别的原因没收录（robots、soft 404、服务器错误…）"
+      },
+      "coverage": {
+        "type": "string",
+        "description": "Search Console 给的原话（coverageState），比如 Crawled - currently not indexed"
+      },
+      "google_canonical": {
+        "type": "string",
+        "description": "Google 认的正式地址"
+      },
+      "user_canonical": {
+        "type": "string",
+        "description": "页面自己声明的 canonical"
+      },
+      "last_crawl": {
+        "type": "string",
+        "description": "Google 最后一次抓这个页面的时间 ISO8601"
+      },
+      "inspected_at": {
+        "type": "string",
+        "description": "这条结果是什么时候查的 ISO8601；7 天内的不重查"
+      }
+    },
+    "required": [
+      "channel_id",
+      "page"
+    ]
+  }
+}

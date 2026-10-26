@@ -16,6 +16,30 @@
         "type": "integer",
         "description": "检查的页面数"
       },
+      "sitemap_pages": {
+        "type": "number",
+        "description": "sitemap 里一共多少个页面（全站有多少页）"
+      },
+      "categories": {
+        "type": "string",
+        "description": "四类得分 JSON：{tech 技术, page 页面, content 内容, ai AI 可读}，各 0-100"
+      },
+      "index": {
+        "type": "string",
+        "description": "谷歌收录概况 JSON（local/_audit_index.ts 的 IndexSummary）：能收录的页面数、查到状态的页数、各状态页数、Search Console 里的 sitemap；没关联 Search Console 是空"
+      },
+      "plan": {
+        "type": "string",
+        "description": "AI 全站审查写的结论和优化方案（Markdown，任务 tasks/seo-review.md）"
+      },
+      "plan_at": {
+        "type": "string",
+        "description": "方案写好的时间 ISO8601"
+      },
+      "plan_chat_id": {
+        "type": "string",
+        "description": "写方案的那段对话：页面「继续对话」打开它"
+      },
       "score": {
         "type": "integer",
         "description": "得分 0-100"

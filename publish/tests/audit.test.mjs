@@ -28,7 +28,9 @@ const llms = response(200, '# Example\n\nSite description')
 const fileIssues = result => result.found.filter(f => ['robots', 'llms_txt'].includes(f.check))
 test('nested URL checks files at the origin; valid text works even with incorrect HTML MIME', async () => {
   const { result, calls } = await audit([response(200, 'User-agent: *\nAllow: /', 'text/html'), llms])
-  assert.deepEqual(calls.slice(0, 2), ['https://example.com/robots.txt', 'https://example.com/llms.txt'])
+  // 第一次请求先看目标地址会不会跳转（跳到 www 时按 www 抓），然后才是根目录下的两个文件
+  assert.equal(calls[0], 'https://example.com/en/products?src=test')
+  assert.deepEqual(calls.slice(1, 3), ['https://example.com/robots.txt', 'https://example.com/llms.txt'])
   assert.deepEqual(fileIssues(result), [])
   assert.equal(calls.at(-1), 'https://example.com/en/products')
 })
@@ -72,4 +74,17 @@ test('preview hosts are not checked for AI crawlers', async () => {
   global.fetch = async () => response(200, '<urlset></urlset>', 'application/xml')
   try { assert.equal(crawlers(await inspect({ url: 'https://abc.preview.creght.cn/', max: 1 }, ctx)), undefined) }
   finally { global.fetch = old }
+})
+
+test('a target that redirects to www is crawled at www', async () => {
+  const calls = []
+  const ctx = { progress() {}, fetchAll: async urls => {
+    calls.push(...urls)
+    return urls.map(u => /\/(robots|llms)\.txt$/.test(u) ? (u.endsWith('robots.txt') ? robots : llms) : { ...response(200, 'not html'), url: u.replace('://example.com', '://www.example.com') })
+  } }
+  const old = global.fetch
+  global.fetch = async () => response(200, '<urlset></urlset>', 'application/xml')
+  try { await inspect({ url: 'https://example.com', max: 1 }, ctx) }
+  finally { global.fetch = old }
+  assert.deepEqual(calls.slice(1, 3), ['https://www.example.com/robots.txt', 'https://www.example.com/llms.txt'])
 })
