@@ -137,7 +137,8 @@
     "todo_none": "没有待修复的问题",
     "r_pages_only": "检查了 {n} 页",
     "r_old_title": "这是旧版检查的结果",
-    "r_old_desc": "上次检查只查了 {n} 个页面，还没有分类得分和 sitemap 页数。重新检查一次，按 sitemap 查全站，报告就完整了。"
+    "r_old_desc": "上次检查只查了 {n} 个页面，还没有分类得分和 sitemap 页数。重新检查一次，按 sitemap 查全站，报告就完整了。",
+    "score_series": "得分"
   },
   "channels": {
     "creght_failed": "读这个站点的 creght 数据失败",

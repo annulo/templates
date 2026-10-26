@@ -137,7 +137,8 @@
     "todo_none": "Nothing to fix",
     "r_pages_only": "{n} pages checked",
     "r_old_title": "These results come from the older check",
-    "r_old_desc": "The last check covered only {n} pages and has no category scores or sitemap count. Run it again to check the whole site from the sitemap and get the full report."
+    "r_old_desc": "The last check covered only {n} pages and has no category scores or sitemap count. Run it again to check the whole site from the sitemap and get the full report.",
+    "score_series": "Score"
   },
   "channels": {
     "creght_failed": "Couldn't read this site's creght data",

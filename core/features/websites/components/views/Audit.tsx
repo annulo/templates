@@ -6,6 +6,7 @@ import { Badge, Button, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, ty
 import { dbList, dbPatch, newestFirst, type AuditRun, type IssueStatus, type Severity, type SiteChange, type SiteIssue, isSite } from '../../lib/shuttle'
 import SitePicker from '../SitePicker'
 import WorkspaceTabs from '../WorkspaceTabs'
+import TrendChart from '../charts/TrendChart'
 import SeoReport from '../SeoReport'
 import Select from '../Select'
 import { useOnboarding, type OnboardingData } from '../../lib/onboarding'
@@ -24,6 +25,13 @@ const STATUS: Record<IssueStatus, { label: string; tone: Tone }> = {
   fixing: lbl('audit.st_fixing', 'primary'),
   fixed: lbl('audit.st_fixed', 'ok'),
   ignored: lbl('audit.st_ignored', 'default'),
+}
+
+/** 一次检查的时间，图上的横轴和悬停提示用：「10/26 17:32」（同一天检查几次也分得清） */
+function when(at?: string) {
+  if (!at) return ''
+  const d = new Date(at)
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 function parse<T>(s: string | undefined, fallback: T): T {
@@ -96,6 +104,8 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
     )
 
   const last = runs?.[0]
+  // 历次得分：最近 12 次，早的在左边
+  const history = [...(runs ?? [])].slice(0, 12).reverse()
   // 「问题」是逐条处理的清单，「SEO 报告」是全站的概况和建议（SeoReport）；记在网址参数 audit_tab 里
   const tab = params.audit_tab === 'report' ? 'report' : 'issues'
   // 这次检查了、没扣分的项（老记录没有 passed，就不显示）
@@ -163,10 +173,9 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
           <div className="grid min-w-0 gap-4 rounded-xl border border-border bg-background px-5 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] sm:items-center">
             <div className="min-w-0">
               <div className="text-xs text-muted-foreground">{tr('audit.history')}</div>
-              <div className="mt-2 flex min-h-11 items-end gap-1.5 overflow-hidden">
-                {[...(runs ?? [])].slice(0, 12).reverse().map((r) => (
-                  <div key={r.id} title={tr('audit.score_at', { score: r.score ?? 0, when: fmtTime(r.finished_at || r.created_at) })} className="w-3 shrink-0 rounded-t-[3px] bg-primary/70" style={{ height: `${Math.max(6, ((r.score ?? 0) / 100) * 44)}px` }} />
-                ))}
+              {/* 最近 12 次的得分（柱状，满分 100）：悬停哪一列都显示那次的时间和分数 */}
+              <div className="mt-1">
+                <TrendChart days={history.map((r) => when(r.finished_at || r.created_at))} series={[{ name: tr('audit.score_series'), color: 'var(--series-1)', values: history.map((r) => r.score ?? 0) }]} height={80} max={100} bars xLabels={false} label={tr('audit.history')} />
               </div>
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
