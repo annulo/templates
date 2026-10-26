@@ -47,16 +47,33 @@ function base64(s: string): string {
 /** 调一次 WordPress REST。path 从 /wp-json 后面写起（/wp/v2/posts）。auth=false 时不带凭据（读公开数据） */
 export async function wp(ctx: any, ch: WPChannel, path: string, init: { method?: string; body?: unknown; auth?: boolean } = {}) {
   const base = normalizeURL(ch.preview_url ?? '', ctx)
-  const headers: Record<string, string> = { accept: 'application/json' }
-  if (init.auth !== false) {
-    const name = ch.wp_secret || secretName(base)
-    const pass = ctx.secrets.get(name)
-    if (!pass) throw new Error(L(ctx, `还没配置 WordPress 应用密码：到「渠道」页选这个站点点「填应用密码」（在 WordPress 后台 → 用户 → 个人资料 → 应用密码 创建；密钥名 ${name}）`, `No WordPress application password yet: on the Channels page, pick this site and click "Enter app password" (create one in WordPress admin → Users → Profile → Application Passwords; key name ${name})`))
-    if (!ch.wp_user) throw new Error(L(ctx, `渠道「${ch.name ?? base}」没有记 WordPress 用户名：移除后重新添加`, `Channel "${ch.name ?? base}" has no WordPress username saved: remove it and add it again`))
-    headers.authorization = 'Basic ' + base64(`${ch.wp_user}:${String(pass).replace(/\s+/g, '')}`)
-  }
+  const headers: Record<string, string> = { accept: 'application/json', ...(init.auth === false ? {} : authHeader(ctx, ch, base)) }
   if (init.body !== undefined) headers['content-type'] = 'application/json'
   const res = await fetch(base + '/wp-json' + path, { method: init.method ?? 'GET', headers, body: init.body === undefined ? undefined : JSON.stringify(init.body) })
+  return result(ctx, res, base, path)
+}
+
+/** 把本机文件（ctx.file(…) 给的）传到媒体库，返回它在网站上的地址 */
+export async function wpUpload(ctx: any, ch: WPChannel, f: { name: string; type: string }): Promise<string> {
+  const base = normalizeURL(ch.preview_url ?? '', ctx)
+  const name = f.name.replace(/["\\\r\n]/g, '_')
+  const headers = { accept: 'application/json', 'content-type': f.type, 'content-disposition': `attachment; filename="${name}"`, ...authHeader(ctx, ch, base) }
+  const data = await result(ctx, await fetch(base + '/wp-json/wp/v2/media', { method: 'POST', headers, body: f as any }), base, '/wp/v2/media')
+  if (!data?.source_url) throw new Error(L(ctx, 'WordPress 没返回图片地址', 'WordPress returned no media URL'))
+  return data.source_url
+}
+
+/** 应用密码的 Basic 认证头 */
+function authHeader(ctx: any, ch: WPChannel, base: string): Record<string, string> {
+  const name = ch.wp_secret || secretName(base)
+  const pass = ctx.secrets.get(name)
+  if (!pass) throw new Error(L(ctx, `还没配置 WordPress 应用密码：到「渠道」页选这个站点点「填应用密码」（在 WordPress 后台 → 用户 → 个人资料 → 应用密码 创建；密钥名 ${name}）`, `No WordPress application password yet: on the Channels page, pick this site and click "Enter app password" (create one in WordPress admin → Users → Profile → Application Passwords; key name ${name})`))
+  if (!ch.wp_user) throw new Error(L(ctx, `渠道「${ch.name ?? base}」没有记 WordPress 用户名：移除后重新添加`, `Channel "${ch.name ?? base}" has no WordPress username saved: remove it and add it again`))
+  return { authorization: 'Basic ' + base64(`${ch.wp_user}:${String(pass).replace(/\s+/g, '')}`) }
+}
+
+/** 读 WordPress 的返回：不是 JSON、出错时换成一句能看懂的话 */
+async function result(ctx: any, res: any, base: string, path: string) {
   const text = await res.text()
   let data: any = null
   try {
