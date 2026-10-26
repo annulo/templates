@@ -163,18 +163,10 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
           <div className="grid min-w-0 gap-4 rounded-xl border border-border bg-background px-5 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] sm:items-center">
             <div className="min-w-0">
               <div className="text-xs text-muted-foreground">{tr('audit.history')}</div>
-              {/* 每次一根柱子：上面是分数，下面是日期（悬停看完整时间），最近的在右边 */}
-              <div className="mt-2 flex items-end gap-2 overflow-x-auto pb-0.5">
-                {[...(runs ?? [])].slice(0, 12).reverse().map((r) => {
-                  const at = r.finished_at || r.created_at
-                  return (
-                    <div key={r.id} title={tr('audit.score_at', { score: r.score ?? 0, when: fmtTime(at) })} className="flex w-8 shrink-0 flex-col items-center gap-1">
-                      <span className="text-[11px] font-medium tabular-nums">{r.score ?? 0}</span>
-                      <div className="w-3 rounded-t-[3px] bg-primary/70" style={{ height: `${Math.max(6, ((r.score ?? 0) / 100) * 44)}px` }} />
-                      <span className="text-[10px] whitespace-nowrap text-muted-foreground tabular-nums">{at ? `${new Date(at).getMonth() + 1}/${new Date(at).getDate()}` : ''}</span>
-                    </div>
-                  )
-                })}
+              <div className="mt-2 flex min-h-11 items-end gap-1.5 overflow-hidden">
+                {[...(runs ?? [])].slice(0, 12).reverse().map((r) => (
+                  <div key={r.id} title={tr('audit.score_at', { score: r.score ?? 0, when: fmtTime(r.finished_at || r.created_at) })} className="w-3 shrink-0 rounded-t-[3px] bg-primary/70" style={{ height: `${Math.max(6, ((r.score ?? 0) / 100) * 44)}px` }} />
+                ))}
               </div>
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
