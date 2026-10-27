@@ -14,6 +14,7 @@ function target(o: Origin): [string, Record<string, string>] | null {
   if (o.type === 'search_query') return ['search', {}]
   if (o.type === 'competitor_page' || o.type === 'competitor') return ['competitors', {}]
   if (o.type === 'inspiration_source') return ['content', { tab: 'inspiration', source: o.id }]
+  if (o.type === 'playbook') return ['content', { tab: 'inspiration', playbook: o.id }]
   if (o.type === 'opportunity') return ['opportunities', {}]
   if (o.type === 'campaign') return ['campaigns', {}]
   return null

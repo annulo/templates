@@ -1,0 +1,28 @@
+{
+  "name": "风格卡",
+  "desc": "拆解一个参考对象（博主、竞品）得出的写法：标题公式、开场、结构、语气、配图、节奏；写作和出选题时交给 AI 参考。一个对象一张卡，重新拆解就更新这张",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string", "description": "卡名，比如「XX 的干货清单体」" },
+      "subject_type": { "type": "string", "description": "creator 参考博主 / competitor 竞品" },
+      "subject_id": { "type": "string", "description": "reference_creators 或 competitors 的 id" },
+      "platform": { "type": "string", "description": "适用平台：xiaohongshu / douyin / x / website / other" },
+      "content_type": { "type": "string", "description": "适用类型：post 图文笔记 / video 视频 / article 长文" },
+      "summary": { "type": "string", "description": "一句话：这个对象的内容怎么做（给用户看）" },
+      "title_patterns": { "type": "string", "description": "标题公式 JSON 数组：[{ pattern, example, source_id }]" },
+      "hooks": { "type": "string", "description": "开场写法 JSON 数组：[{ pattern, example, source_id }]" },
+      "guide": { "type": "string", "description": "Markdown 写法说明，原样交给写作的 AI：结构、语气、长度、配图、话题、禁忌" },
+      "fit": { "type": "string", "description": "适合写我们哪类选题" },
+      "avoid": { "type": "string", "description": "不要学的地方" },
+      "example_source_ids": { "type": "string", "description": "拆解时读了哪几条来源（research_sources 的 id，JSON 数组）" },
+      "version": { "type": "number", "description": "每次重新拆解或在对话里改一次 +1" },
+      "chat_id": { "type": "string", "description": "拆解它的对话：页面上「继续对话」打开它" },
+      "status": { "type": "string", "description": "active / archived" },
+      "generated_at": { "type": "string", "description": "最近一次拆解的时间 ISO8601" },
+      "created_at": { "type": "string", "description": "ISO8601" },
+      "updated_at": { "type": "string", "description": "ISO8601" }
+    },
+    "required": ["name", "subject_type", "subject_id", "guide"]
+  }
+}

@@ -3,6 +3,7 @@ import { profile, projectBrief } from "./_ai";
 import { contents } from "./_creght";
 import { wp } from "./_wp";
 import { evidenceFor, json, requireRow } from "./_research";
+import { forWriting } from "./playbooks";
 import {
   htmlImages,
   htmlText,
@@ -70,9 +71,9 @@ export function saveBrief(
 // 文章（本机函数，Annulo 在用户电脑上执行，不经过模型）。一篇文章一种类型（local/_types.ts）：
 // article 长文（HTML 正文，图在正文里，网站和知乎发它）、post 图文笔记（纯文字正文 + 一组配图）、video 视频（标题 + 简介 + 视频）。
 //
-//   content.context({ topic_id?, subject?, type?, channel_id? })  写文章要的上下文：项目资料、选题（没给选题也没给主题就列出选题池让助手挑）、网站、站点已有文章、写过的标题、能配的图、这种类型在各平台的限制
+//   content.context({ topic_id?, subject?, type?, channel_id?, playbook_id? })  写文章要的上下文：项目资料、选题（没给选题也没给主题就列出选题池让助手挑）、网站、站点已有文章、写过的标题、能配的图、这种类型在各平台的限制
 //   content.images({})                           能配进文章的图（资料库的图片、产品图），改文章时配图用
-//   content.save({ type, topic_id?, source_id?, channel_id?, title, body, … })
+//   content.save({ type, topic_id?, source_id?, channel_id?, playbook_id?, title, body, … })
 //   content.rewriteContext({ article_id, type })  改写成另一种类型要的上下文（任务 tasks/rewrite-article.md）
 //                                                 存一篇写好的文章（待审），选题标成已写。写文章本身由助手按任务 tasks/write-article.md 做
 //   content.update({ article_id, title?, summary?, slug?, keywords?, body?, tags?, images?, … })
@@ -279,6 +280,7 @@ export async function context(
     subject?: string;
     type?: string;
     channel_id?: string;
+    playbook_id?: string;
   },
   ctx: any,
 ) {
@@ -324,13 +326,20 @@ export async function context(
         null)
       : null;
   const published: any[] = ctx.db.query("articles", { limit: 200 }).list;
+  // 照哪张风格卡写：参数给的优先，没给用选题上的；卡删了就照常写
+  const playbook = forWriting(ctx, input?.playbook_id || topic?.playbook_id);
+  if (input?.playbook_id && !playbook)
+    throw new Error(L(ctx, "没有这张风格卡", "No such playbook"));
   // 写作上下文留存一份不可变依据。保存时传 evidence_id，来源随后更新也不改变本次依据。
-  const research = topic ? evidenceFor(ctx, topic) : null;
+  const research = topic
+    ? { ...evidenceFor(ctx, topic), ...(playbook ? { playbook } : {}) }
+    : null;
   const evidence =
     research &&
     (research.findings.length ||
       research.sources.length ||
       research.products.length ||
+      playbook ||
       topic.brief)
       ? ctx.db.insert("content_references", {
           kind: "generation",
@@ -403,6 +412,8 @@ export async function context(
     products: productsOf(ctx),
     research,
     evidence_id: evidence?.id || "",
+    // 风格卡：照它的结构、标题和开场写法、语气写；事实只用我方资料
+    playbook,
     // 能配的图（资料库、产品图）：长文插进正文、图文笔记放进 images；没有合适的就不配
     images: imagesOf(ctx),
     ...(t === "video" ? { videos: videosOf(ctx) } : {}),
@@ -427,6 +438,7 @@ type SaveInput = Fields & {
   topic_id?: string;
   source_id?: string;
   channel_id?: string;
+  playbook_id?: string;
   title: string;
   body: string;
   evidence_id?: string;
@@ -589,6 +601,7 @@ export function save(input: SaveInput, ctx: any) {
         "Writing evidence does not belong to this topic. Reload the context.",
       ),
     );
+  const playbook = forWriting(ctx, input.playbook_id || topic?.playbook_id);
   const existing = input.evidence_id
     ? ctx.db.query("articles", {
         where: { evidence_id: input.evidence_id },
@@ -617,6 +630,9 @@ export function save(input: SaveInput, ctx: any) {
           }
         : {}),
       ...(source ? { source_id: source.id } : {}),
+      ...(playbook
+        ? { playbook_id: playbook.id, playbook_version: playbook.version }
+        : {}),
       status: "draft",
       unread: true,
       evidence_id: input.evidence_id || "",

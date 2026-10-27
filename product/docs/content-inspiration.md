@@ -11,3 +11,5 @@ content.context 为写作记录 generation 快照；保存和改写传回 eviden
 旧库 JSON 格式为 origin、creators、inspirations。数组支持原记录或带 body 的 Creght 记录。导入先校验完整文件，再按旧记录标识和规范链接去重，导入不会覆盖已有人工修改。原始记录保存在 legacy_snapshot；creatorId 既支持数据库 ID，也支持业务 ID。旧任务 ID 无法直接代表新内容，保留供后续显式关联。blob 头像不可迁移，显示需要重新上传的提示。JSON 链接仅接受 http/https。
 
 来源与参考博主可手工收录、搜索、按平台和状态筛选、归档与恢复。博主详情显示归组账号和关联灵感；来源详情可整理、生成选题或加入已有选题；选题与文章可查看和添加参考。新增博客动态采集不在本期范围。
+
+博主详情里有风格卡：把这个博主的写法拆成一张卡（标题公式、开场、结构、语气、配图），照它出选题、写一篇，写选题时自动照卡写。见 core/features/playbooks/docs/playbooks.md。

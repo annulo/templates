@@ -553,6 +553,7 @@
     "t_competitor_page": "Competitor page",
     "t_competitor": "Competitor",
     "t_inspiration_source": "Inspiration",
+    "t_playbook": "Playbook",
     "t_opportunity": "Growth opportunity",
     "t_campaign": "Campaign",
     "t_marketing_plan": "Marketing plan",
@@ -613,5 +614,27 @@
     "use_images": "Use as images ({n})",
     "n_files": "{n} files",
     "copy_ref_all": "Copy reference to the set"
+  },
+  "playbook": {
+    "title": "Playbook",
+    "empty": "Turn this creator's style into a playbook: title formulas, hooks, structure, tone and visuals. Then suggest topics or write posts that follow it. Collect a few of their posts below (with text or screenshots) first.",
+    "analyze": "Analyze style",
+    "reanalyze": "Re-analyze",
+    "analyze_desc": "The assistant reads this creator's posts in your library and extracts title formulas, hooks, structure, tone and visuals into a playbook (updating the existing one). It learns the style only, never their facts.",
+    "req_hint": "Default instructions for style analysis: which aspects and how detailed.",
+    "topics": "Suggest topics with this",
+    "topics_desc": "Suggest topics that fit this playbook, using its title formulas and your product facts. Writing these topics later follows the playbook automatically.",
+    "write": "Write one with this",
+    "write_desc": "Write a post following this playbook's structure, titles, hooks and tone. Describe what to write below (topic, points or a draft); leave it empty to pick from the topic pool.",
+    "continue": "Continue chat",
+    "uses": "Used {n} times",
+    "example": "e.g. ",
+    "open_example": "Open",
+    "title_patterns": "Title formulas",
+    "hooks": "Hooks",
+    "guide": "Writing guide (given to the writing AI)",
+    "fit": "Good for",
+    "avoid": "Don't copy",
+    "has_card": "Playbook"
   }
 }

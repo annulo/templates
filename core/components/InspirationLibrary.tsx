@@ -27,6 +27,7 @@ import {
 } from "./ui";
 import Select from "./Select";
 import { TaskLaunchButton } from "./Task";
+import CreatorPlaybook from "./Playbook";
 import type { Ctx } from "./views/types";
 
 type Row = { id: string; [key: string]: any };
@@ -35,6 +36,8 @@ type Library = {
   creators: Row[];
   topics: Row[];
   articles: Row[];
+  /** 风格卡（没有这张表的模板是空的）：id、subject_id、name */
+  playbooks?: Row[];
 };
 const r = (key: string, vars?: Record<string, unknown>) =>
   tr("inspiration." + key, vars);
@@ -164,7 +167,11 @@ export default function InspirationLibrary({
         : { tab: "topics", topic: use.id },
     );
   const source = data?.sources.find((s) => s.id === params.source);
-  const creator = data?.creators.find((c) => c.id === params.creator);
+  // 选题出处里的风格卡（?playbook=）落到它的博主
+  const creatorId =
+    params.creator ||
+    data?.playbooks?.find((p) => p.id === params.playbook)?.subject_id;
+  const creator = data?.creators.find((c) => c.id === creatorId);
   const archive = async (kind: string, row: Row) => {
     await runLocal("inspiration.archive", {
       kind,
@@ -510,6 +517,14 @@ export default function InspirationLibrary({
                         label={r("observations")}
                         value={creator.notes}
                       />
+                      {data.playbooks && (
+                        <CreatorPlaybook
+                          creatorId={creator.id}
+                          workspace={workspace}
+                          onSource={(id) => go({ source: id })}
+                          onChanged={changed}
+                        />
+                      )}
                       <div className="space-y-3">
                         <h3 className="text-sm font-semibold">
                           {r("creator_sources")} {sources.length}
@@ -672,6 +687,9 @@ export default function InspirationLibrary({
                               <span className="text-xs text-muted-foreground">
                                 {r("related_count", { n })}
                               </span>
+                              {data.playbooks?.some((p) =>
+                                group.some((a) => a.id === p.subject_id),
+                              ) && <Badge tone="ok">{tr("playbook.has_card")}</Badge>}
                             </div>
                           </div>
                           <Badge>{r("state_" + c.status)}</Badge>
