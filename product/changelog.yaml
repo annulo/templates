@@ -1,3 +1,6 @@
+- version: 0.17.0
+  zh: "灵感库新增风格卡：把参考博主的写法拆成标题公式、开场和结构，照卡出选题、写内容；发布到网站时自动上传正文里的图片。"
+  en: "The inspiration library adds playbooks: break a creator's style into title formulas, hooks and structure, then suggest topics and write posts that follow it. Publishing to a website now uploads images in the body automatically."
 - version: 0.16.1
   zh: "网站检查查全站：查内容是不是套话、谷歌收录了没有，新增 SEO 报告；还能让 AI 逐页审查，写全站优化方案。"
   en: "Site checks now cover the whole site, flagging boilerplate content and Google indexing, with a new SEO report and an AI page-by-page review that writes a site-wide plan."
