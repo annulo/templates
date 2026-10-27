@@ -70,15 +70,20 @@ function Patterns({
 
 export default function CreatorPlaybook({
   creatorId,
+  subjectType = "creator",
   workspace,
   onSource,
   onChanged,
 }: {
+  /** 参考对象的 id：参考博主，或者 subjectType 是 competitor 时的竞品 */
   creatorId: string;
+  subjectType?: "creator" | "competitor";
   workspace?: "website" | "social";
+  /** 点标题公式、开场例子的「看原文」：博主是来源 id，竞品是页面网址 */
   onSource: (id: string) => void;
   onChanged: () => void;
 }) {
+  const site = subjectType === "competitor";
   const [card, setCard] = useState<Card | null | undefined>(undefined);
   const [error, setError] = useState("");
   const load = useCallback(() => {
@@ -105,10 +110,10 @@ export default function CreatorPlaybook({
     <TaskLaunchButton
       {...taskProps}
       task="analyze-reference"
-      input={{ subject_type: "creator", subject_id: creatorId }}
+      input={{ subject_type: subjectType, subject_id: creatorId }}
       match={(run) => run.input?.subject_id === creatorId}
       title={p(card ? "reanalyze" : "analyze")}
-      desc={p("analyze_desc")}
+      desc={p(site ? "analyze_desc_competitor" : "analyze_desc")}
       icon={WandSparkles}
       variant={card ? "outline" : "default"}
     >
@@ -118,12 +123,12 @@ export default function CreatorPlaybook({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold">{p("title")}</h3>
+      <h3 className="text-sm font-semibold">{p(site ? "title_competitor" : "title")}</h3>
       {error && <Notice tone="error">{error}</Notice>}
       {card === undefined && !error && <Skeleton className="h-24 rounded-xl" />}
       {card === null && (
         <div className="space-y-3 rounded-xl border border-dashed border-border p-5">
-          <p className="text-sm text-muted-foreground">{p("empty")}</p>
+          <p className="text-sm text-muted-foreground">{p(site ? "empty_competitor" : "empty")}</p>
           {analyze}
         </div>
       )}
@@ -157,7 +162,7 @@ export default function CreatorPlaybook({
               {...taskProps}
               task="suggest-topics"
               reqKey="topic_requirements"
-              input={{ playbook_id: card.id, ...(workspace ? { workspace } : {}) }}
+              input={{ playbook_id: card.id, ...(workspace || site ? { workspace: workspace ?? "website" } : {}) }}
               match={(run) => run.input?.playbook_id === card.id}
               title={p("topics")}
               desc={p("topics_desc")}
@@ -172,7 +177,7 @@ export default function CreatorPlaybook({
               reqKey="notes"
               input={{
                 playbook_id: card.id,
-                type: card.content_type === "video" || card.content_type === "article" ? card.content_type : "post",
+                type: card.content_type === "video" || card.content_type === "article" ? card.content_type : site ? "article" : "post",
               }}
               match={(run) => run.input?.playbook_id === card.id}
               title={p("write")}

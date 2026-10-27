@@ -1,6 +1,7 @@
 import { L } from './_i18n'
 
-// 风格卡（表 playbooks，设计见 docs/playbooks.md）：拆解一个参考对象（博主、竞品）得出的写法，写作和出选题时交给 AI 参考。
+// 风格卡（表 playbooks，设计见 docs/playbooks.md）：拆解一个参考对象（参考博主 creator、竞品网站 competitor）得出的写法，写作和出选题时交给 AI 参考。
+// 竞品的页面在模板的 competitors 表和 competitors.analysisContext 里（外贸），这里只认对象、存卡。
 // 一个对象一张卡，重新拆解更新这张、version +1。拆解是任务 tasks/analyze-reference.md，这里只取数和存表：
 //   playbooks.context({ subject_type?, subject_id })   拆解要读的：对象资料、最近的来源（有正文的在前）、已有的卡
 //   playbooks.save({ subject_type?, subject_id, name, guide, … })   存卡（同一个对象已有就更新，没传的字段留着原来的）
@@ -51,7 +52,19 @@ function creatorGroup(ctx: any, c: Row): Row[] {
 
 export function context(input: { subject_type?: string; subject_id: string }, ctx: any) {
   const { type, row } = subjectOf(ctx, input)
-  if (type !== 'creator') throw new Error(L(ctx, '竞品的拆解还没接上', 'Competitor analysis is not available yet'))
+  if (type === 'competitor') {
+    // 竞品网站：页面清单和标题在模板的 competitors.analysisContext 里（任务里接着跑它），这里给对象和已有的卡
+    const card = cardOf(ctx, type, row.id)
+    return {
+      subject: { type, id: row.id, name: row.name, url: row.url, host: row.host, reason: row.reason ?? '' },
+      sources: [],
+      sources_total: 0,
+      enough: !!row.scanned_at && !row.error,
+      min_sources: 0,
+      next: `annulo run competitors.analysisContext --input '{"id":"${row.id}"}'`,
+      playbook: card ? { ...card, title_patterns: parse(card.title_patterns, []), hooks: parse(card.hooks, []) } : null,
+    }
+  }
   const group = creatorGroup(ctx, row)
   const ids = new Set(group.map((c) => c.id))
   const sources = query(ctx, 'research_sources')
@@ -138,8 +151,8 @@ export function save(
     guide,
     subject_type: type,
     subject_id: row.id,
-    platform: keep('platform', () => text(input.platform) || row.platform || ''),
-    content_type: keep('content_type', () => text(input.content_type)),
+    platform: keep('platform', () => text(input.platform) || row.platform || (type === 'competitor' ? 'website' : '')),
+    content_type: keep('content_type', () => text(input.content_type) || (type === 'competitor' ? 'article' : '')),
     summary: keep('summary', () => text(input.summary)),
     title_patterns: keep('title_patterns', () => JSON.stringify(patterns(input.title_patterns))),
     hooks: keep('hooks', () => JSON.stringify(patterns(input.hooks))),
@@ -164,7 +177,11 @@ export function list(input: { subject_id?: string }, ctx: any) {
   for (const t of [...query(ctx, 'topics'), ...query(ctx, 'articles')]) if (t.playbook_id) uses[t.playbook_id] = (uses[t.playbook_id] ?? 0) + 1
   // 拆完以后又收进来的（自动同步、手动收录）：页面上提示可以重新拆解
   const sources = query(ctx, 'research_sources').filter((s) => s.library_status !== 'archived')
-  const fresh = (p: Row) => sources.filter((s) => s.creator_id === p.subject_id && text(s.created_at || s.collected_at) > text(p.generated_at)).length
+  const pages = query(ctx, 'competitor_pages')
+  const fresh = (p: Row) =>
+    p.subject_type === 'competitor'
+      ? pages.filter((x) => x.competitor_id === p.subject_id && text(x.first_seen) > text(p.generated_at)).length
+      : sources.filter((s) => s.creator_id === p.subject_id && text(s.created_at || s.collected_at) > text(p.generated_at)).length
   return {
     playbooks: query(ctx, 'playbooks', input?.subject_id ? { subject_id: input.subject_id } : undefined)
       .sort((a, b) => text(b.updated_at).localeCompare(text(a.updated_at)))

@@ -640,6 +640,9 @@
     "fit": "Good for",
     "avoid": "Don't copy",
     "has_card": "Playbook",
-    "new_sources": "{n} new posts came in after this analysis. Re-analyze to keep the playbook current."
+    "new_sources": "{n} new items came in after this analysis. Re-analyze to keep the playbook current.",
+    "empty_competitor": "Turn this competitor's content strategy into a playbook: what they push, how they write titles and openings, page structure and cadence. Then suggest topics or write articles that answer it.",
+    "analyze_desc_competitor": "The assistant reads this competitor's recently updated and new pages and extracts their content strategy (titles, openings, page structure, focus) into a playbook (updating the existing one). It learns the approach only, never their specs or cases.",
+    "title_competitor": "Playbook"
   }
 }
