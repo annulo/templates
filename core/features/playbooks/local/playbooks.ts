@@ -149,8 +149,9 @@ export function save(
     updated_at: t,
     ...(ctx.chat_id ? { chat_id: String(ctx.chat_id) } : {}),
   }
-  const saved = old ? ctx.db.update('playbooks', old.id, data) : ctx.db.insert('playbooks', { ...data, created_at: t })
-  return { id: saved.id, version: data.version, updated: !!old }
+  if (old) ctx.db.update('playbooks', old.id, data)
+  const id = old ? old.id : ctx.db.insert('playbooks', { ...data, created_at: t }).id
+  return { id, version: data.version, updated: !!old }
 }
 
 export function list(input: { subject_id?: string }, ctx: any) {
