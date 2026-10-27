@@ -1,0 +1,5 @@
+{
+  "fn": "inspiration.sync",
+  "every": "1d",
+  "name": "同步参考博主的小红书笔记"
+}

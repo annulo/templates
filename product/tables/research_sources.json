@@ -119,6 +119,47 @@
       "legacy_snapshot": {
         "type": "string",
         "description": "旧库原始记录，包括旧任务引用的 JSON"
+      },
+      "note_id": {
+        "type": "string",
+        "description": "平台上的内容 id（自动同步的小红书笔记），去重用"
+      },
+      "published_at": {
+        "type": "string",
+        "description": "原内容的发布时间 ISO8601"
+      },
+      "likes_count": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "description": "点赞数（metrics_at 时的快照）"
+      },
+      "collects_count": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "description": "收藏数"
+      },
+      "comments_count": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "description": "评论数"
+      },
+      "metrics_at": {
+        "type": "string",
+        "description": "互动数的快照时间"
+      },
+      "synced": {
+        "type": "boolean",
+        "description": "自动同步进来的（不是手动收录的）"
+      },
+      "unread": {
+        "type": "boolean",
+        "description": "自动同步进来、用户还没打开看过（页面上标「新」）"
       }
     },
     "required": [

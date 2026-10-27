@@ -13,3 +13,5 @@ content.context 为写作记录 generation 快照；保存和改写传回 eviden
 来源与参考博主可手工收录、搜索、按平台和状态筛选、归档与恢复。博主详情显示归组账号和关联灵感；来源详情可整理、生成选题或加入已有选题；选题与文章可查看和添加参考。新增博客动态采集不在本期范围。
 
 博主详情里有风格卡：把这个博主的写法拆成一张卡（标题公式、开场、结构、语气、配图），照它出选题、写一篇，写选题时自动照卡写。见 core/features/playbooks/docs/playbooks.md。
+
+小红书博主自动同步笔记（`inspiration.sync`，社媒插件 `xhs.creatorNotes`）：读用户自己 Chrome 里登录的小红书网页版（`@user`，不用发布账号），新笔记带正文、话题、点赞收藏评论进 research_sources（`synced`、`unread` 标「新」，打开看过 `markRead` 去掉，侧栏「灵感库」后面是 `inspiration.unread` 的条数），已有的只更新互动数，没读到正文的下次再读；博主上记 `user_id`、粉丝、获赞、`synced_at`、`sync_error`。定时任务每天一次、一次轮 5 个最久没同步的，Chrome 没开或没允许过就记在 `sync_error` 上。博主详情「同步笔记」只读这一个。

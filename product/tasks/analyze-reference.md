@@ -11,9 +11,10 @@ description: 读一个参考博主最近的内容，拆出他的标题公式、�
 annulo run playbooks.context --input '{"subject_type":"creator","subject_id":"<subject_id>"}'
 ```
 
-输出里：`subject` 是博主资料（同一人物的其他平台账号在 `accounts`）；`sources` 是收进灵感库的他的内容（有正文的在前，最多 20 条，`summary`、`hook`、`why_save` 是之前单条整理过的）；`playbook` 是已有的卡（重新拆解时在它上面改，不是推倒重来，除非用户要）。
+输出里：`subject` 是博主资料（同一人物的其他平台账号在 `accounts`）；`sources` 是收进灵感库的他的内容（有正文的在前，最多 20 条，`summary`、`hook`、`why_save` 是之前单条整理过的；自动同步的小红书笔记有 `likes`、`collects`、`comments` 和 `tags`）；`playbook` 是已有的卡（重新拆解时在它上面改，不是推倒重来，除非用户要）。
 
 `enough` 是 false（有正文或整理过的不到 `min_sources` 条）：告诉用户先在这个博主下面多收几条（贴链接、粘正文或截图），不硬拆，不往下做。
+有互动数时，拿他互动高的几条和低的比：高的那些在标题、开场、形式上有什么共同点，写进卡里（「这类标题点赞明显高」），数字照抄、不编。
 只有链接没有正文的，可以用你能用的工具读公开原文；读不到的就跳过，不猜内容。
 
 我方的定位和目标用户：`annulo run topics.context --input '{}'`，只看 `brief`（用来写 `fit`：这种写法适合我们写哪类选题）。

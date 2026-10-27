@@ -385,7 +385,11 @@
     "type_competitor": "竞品账号",
     "type_media": "媒体 / 资讯类",
     "type_other": "其他",
-    "import_too_large": "JSON 文件不能超过 20 MB"
+    "import_too_large": "JSON 文件不能超过 20 MB",
+    "sync": "同步笔记",
+    "synced_at": "上次同步 {time}",
+    "sync_hint": "从你 Chrome 里登录的小红书网页版读他最近的笔记；之后每天自动同步一次（Chrome 要开着）。",
+    "metrics": "赞 {likes} · 藏 {collects} · 评 {comments}"
   },
   "presets": {
     "name": "名字",
@@ -1033,7 +1037,8 @@
     "guide": "写法说明（交给写作的 AI）",
     "fit": "适合我们写",
     "avoid": "不要学",
-    "has_card": "有风格卡"
+    "has_card": "有风格卡",
+    "new_sources": "拆完以后又收进来 {n} 条新内容，可以重新拆解，让卡跟上他最近的写法。"
   },
   "add_channel": {
     "added": "已添加",

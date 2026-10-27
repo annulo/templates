@@ -124,6 +124,13 @@ export default function Index() {
     return () => clearInterval(timer);
   }, [plugin, reloadChannels]);
   const checklist = useChecklist(rev);
+  // 灵感库里自动同步进来、还没看过的笔记数：侧栏入口后面标出来，看过就去掉
+  const [newInspiration, setNewInspiration] = useState(0);
+  useEffect(() => {
+    runLocal<{ count: number }>("inspiration.unread", {})
+      .then((r) => setNewInspiration(r.count))
+      .catch(() => {});
+  }, [rev, params.source]);
   // 侧栏收起的分组只记在这台电脑的浏览器里；读不到就全部展开
   const [collapsed, setCollapsed] = useState<string[]>([]);
   useEffect(() => {
@@ -399,6 +406,11 @@ export default function Index() {
                           >
                             <n.icon className="size-4 shrink-0" />
                             <span className="truncate">{t(n.view)}</span>
+                            {n.view === "inspiration" && newInspiration > 0 && (
+                              <span className="ml-auto shrink-0 rounded bg-primary/10 px-1.5 text-[11px] font-semibold text-primary-text">
+                                {newInspiration}
+                              </span>
+                            )}
                           </button>
                         ))}
                       </div>

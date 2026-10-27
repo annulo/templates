@@ -385,7 +385,11 @@
     "type_competitor": "Competitor",
     "type_media": "Media",
     "type_other": "Other",
-    "import_too_large": "JSON files must be smaller than 20 MB"
+    "import_too_large": "JSON files must be smaller than 20 MB",
+    "sync": "Sync posts",
+    "synced_at": "Last synced {time}",
+    "sync_hint": "Reads their latest posts from Xiaohongshu on the web, signed in in your Chrome; then syncs daily (Chrome needs to be open).",
+    "metrics": "{likes} likes · {collects} saves · {comments} comments"
   },
   "presets": {
     "name": "Name",
@@ -1033,7 +1037,8 @@
     "guide": "Writing guide (given to the writing AI)",
     "fit": "Good for",
     "avoid": "Don't copy",
-    "has_card": "Playbook"
+    "has_card": "Playbook",
+    "new_sources": "{n} new posts came in after this analysis. Re-analyze to keep the playbook current."
   },
   "add_channel": {
     "added": "Added",

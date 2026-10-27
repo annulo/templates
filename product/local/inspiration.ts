@@ -2,6 +2,7 @@ import { L } from "./_i18n";
 import { json, requireRow, evidenceFor } from "./_research";
 import { context as growthContext } from "./growth";
 import { all } from "./_growth";
+import { creatorNotes, userIdOf } from "../plugins/social/local/_xhs_web";
 
 const text = (v: unknown) => String(v ?? "").trim();
 const now = () => new Date().toISOString();
@@ -647,4 +648,113 @@ export function importLegacy(input: any, ctx: any) {
       );
   }
   return result;
+}
+
+// ---- 自动同步参考博主的笔记（社媒插件 xhs.creatorNotes，用户自己 Chrome 里的小红书网页版登录态）----
+// 定时任务 schedules/inspiration.sync.json 每天跑一次，一次轮着读几个最久没同步的；博主详情上「同步笔记」只读这一个。
+// 新笔记（打开过详情、有正文的）进 research_sources（synced、unread 标「新」），已有的只更新互动数；没读到正文的下次再读。
+const SYNC_PER_RUN = 5;
+const syncable = (c: any) =>
+  c.platform === "xiaohongshu" && !!userIdOf(c.profile_url) && !["paused", "archived"].includes(c.status);
+
+export async function sync(input: { creator_id?: string; limit?: number }, ctx: any) {
+  const creators = rows(ctx, "reference_creators");
+  let targets: any[];
+  if (input?.creator_id) {
+    const c = requireRow(ctx, "reference_creators", input.creator_id);
+    if (c.platform !== "xiaohongshu" || !userIdOf(c.profile_url))
+      fail(ctx, "现在只能同步小红书博主：主页链接要像 https://www.xiaohongshu.com/user/profile/…", "Only Xiaohongshu creators can be synced: the profile URL should look like https://www.xiaohongshu.com/user/profile/…");
+    targets = [c];
+  } else
+    targets = creators
+      .filter(syncable)
+      .sort((a, b) => text(a.synced_at).localeCompare(text(b.synced_at)))
+      .slice(0, SYNC_PER_RUN);
+  const out: any[] = [];
+  for (const [i, c] of targets.entries()) {
+    const mine = rows(ctx, "research_sources").filter((s) => s.creator_id === c.id);
+    const byNote = new Map<string, any>();
+    for (const s of mine) {
+      const id = text(s.note_id) || (text(s.canonical_url).match(/\/explore\/([\w]+)/)?.[1] ?? "");
+      if (id) byNote.set(id, s);
+    }
+    try {
+      ctx.progress?.({ done: i, total: targets.length, message: L(ctx, `读 ${c.nickname} 的主页`, `Reading ${c.nickname}'s profile`) });
+      const r = await creatorNotes({ profile_url: c.profile_url, limit: input?.limit ?? 10, known: [...byNote.keys()] }, ctx);
+      const t = now();
+      let added = 0,
+        updated = 0;
+      for (const n of r.notes) {
+        const metrics = {
+          likes_count: n.detail?.likes ?? n.likes,
+          ...(n.detail ? { collects_count: n.detail.collects, comments_count: n.detail.comments } : {}),
+          metrics_at: t,
+        };
+        const old = byNote.get(n.note_id);
+        if (old) {
+          ctx.db.update("research_sources", old.id, { ...metrics, note_id: n.note_id });
+          updated++;
+          continue;
+        }
+        if (!n.detail) continue; // 没打开详情（超过一次的上限、打不开）：下次再读
+        const saved = saveSource(
+          {
+            kind: "social",
+            title: n.title || n.detail.desc.slice(0, 30),
+            source_title: n.title,
+            url: n.url,
+            platform: "xiaohongshu",
+            format: n.type === "video" ? "video" : "post",
+            creator_id: c.id,
+            author_name: r.profile.nickname,
+            content: n.detail.desc,
+            tags: n.detail.tags,
+            images: n.detail.images,
+            collected_at: t,
+          },
+          ctx,
+        );
+        ctx.db.update("research_sources", saved.id, {
+          ...metrics,
+          note_id: n.note_id,
+          published_at: n.published_at,
+          synced: true,
+          unread: true,
+        });
+        added++;
+      }
+      ctx.db.update("reference_creators", c.id, {
+        user_id: r.profile.user_id,
+        ...(text(c.avatar_url) ? {} : { avatar_url: r.profile.avatar }),
+        ...(text(c.bio) ? {} : { bio: r.profile.bio }),
+        followers_count: r.profile.followers,
+        likes_count: r.profile.likes_collects,
+        snapshot_at: t,
+        synced_at: t,
+        sync_error: "",
+        updated_at: t,
+      });
+      out.push({ creator: c.nickname, added, updated });
+    } catch (e) {
+      const message = (e as Error).message;
+      ctx.db.update("reference_creators", c.id, { sync_error: message, updated_at: now() });
+      out.push({ creator: c.nickname, error: message });
+      if (input?.creator_id) throw e;
+    }
+  }
+  return { creators: out };
+}
+
+/** 自动同步进来、还没打开看过的笔记数（侧栏「灵感库」后面的数字） */
+export function unread(_input: {}, ctx: any) {
+  return { count: rows(ctx, "research_sources").filter((s) => s.unread && s.library_status !== "archived").length };
+}
+
+/** 打开看过自动同步进来的笔记：去掉「新」 */
+export function markRead(input: { ids: string[] }, ctx: any) {
+  for (const id of input?.ids || []) {
+    const s = ctx.db.get("research_sources", id);
+    if (s?.unread) ctx.db.update("research_sources", id, { unread: false });
+  }
+  return { ok: true };
 }

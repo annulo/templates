@@ -7,6 +7,7 @@ import {
   Link2,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   Sparkles,
   Upload,
@@ -28,6 +29,7 @@ import {
 import Select from "./Select";
 import { TaskLaunchButton } from "./Task";
 import CreatorPlaybook from "./Playbook";
+import RunButton from "./RunButton";
 import type { Ctx } from "./views/types";
 
 type Row = { id: string; [key: string]: any };
@@ -153,6 +155,12 @@ export default function InspirationLibrary({
   useEffect(() => {
     if (ctx.rev) load();
   }, [ctx.rev, load]);
+  // 自动同步进来的笔记打开看过就去掉「新」
+  const openedUnread = data?.sources.find((s) => s.id === params.source && s.unread)?.id;
+  useEffect(() => {
+    if (openedUnread)
+      runLocal("inspiration.markRead", { ids: [openedUnread] }).then(load).catch(() => {});
+  }, [openedUnread, load]);
   const changed = () => {
     load();
     onChanged();
@@ -476,6 +484,31 @@ export default function InspirationLibrary({
                           </p>
                         </div>
                       </div>
+                      {creator.platform === "xiaohongshu" && (
+                        <div className="flex flex-wrap items-center gap-3">
+                          <RunButton
+                            fn="inspiration.sync"
+                            input={{ creator_id: creator.id }}
+                            variant="outline"
+                            icon={RefreshCw}
+                            onDone={changed}
+                          >
+                            {r("sync")}
+                          </RunButton>
+                          <span className="text-xs text-muted-foreground">
+                            {creator.synced_at
+                              ? r("synced_at", {
+                                  time: new Date(creator.synced_at).toLocaleString(numLocale()),
+                                })
+                              : r("sync_hint")}
+                          </span>
+                          {creator.sync_error && (
+                            <div className="w-full">
+                              <Notice tone="error">{creator.sync_error}</Notice>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <div className="space-y-3">
                         <h3 className="text-sm font-semibold">
                           {r("group_accounts")}
@@ -793,11 +826,19 @@ function SourceRows({
         <button
           key={s.id}
           onClick={() => onOpen(s)}
-          className="flex w-full min-w-0 cursor-pointer flex-col items-start gap-2 px-4 py-4 text-left hover:bg-accent sm:flex-row sm:gap-4"
+          className={cx(
+            "flex w-full min-w-0 cursor-pointer flex-col items-start gap-2 px-4 py-4 text-left hover:bg-accent sm:flex-row sm:gap-4",
+            s.unread && "bg-primary/5 shadow-[inset_3px_0_0_var(--color-primary)]",
+          )}
         >
           <Lightbulb className="mt-0.5 hidden size-5 shrink-0 text-muted-foreground sm:block" />
           <div className="w-full min-w-0 flex-1">
             <p className="line-clamp-2 break-words text-sm font-medium">
+              {s.unread && (
+                <span className="mr-1.5 inline-flex h-5 items-center rounded bg-primary px-1.5 align-[1px] text-[11px] font-semibold text-primary-foreground">
+                  {tr("article.new_badge")}
+                </span>
+              )}
               {s.title}
             </p>
             {(s.summary || s.why_save) && (
@@ -812,6 +853,15 @@ function SourceRows({
                   s.author_name ||
                   r("no_creator")}
               </span>
+              {s.likes_count != null && (
+                <span className="text-xs text-muted-foreground">
+                  {r("metrics", {
+                    likes: Number(s.likes_count).toLocaleString(numLocale()),
+                    collects: s.collects_count ?? "—",
+                    comments: s.comments_count ?? "—",
+                  })}
+                </span>
+              )}
               {s.uses?.length > 0 && (
                 <span className="text-xs text-primary-text">
                   {r("used_count", { n: s.uses.length })}
