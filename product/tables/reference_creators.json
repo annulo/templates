@@ -93,6 +93,18 @@
           "null"
         ],
         "description": "带快照时间的指标，未知为 null"
+      },
+      "user_id": {
+        "type": "string",
+        "description": "平台的用户 id（小红书主页地址里的那段），同步用"
+      },
+      "synced_at": {
+        "type": "string",
+        "description": "上次自动同步笔记的时间 ISO8601"
+      },
+      "sync_error": {
+        "type": "string",
+        "description": "上次同步失败的原因，成功清空"
       }
     },
     "required": [

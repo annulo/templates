@@ -62,6 +62,8 @@
 
 ## 小红书博主自动收集（社媒插件 + 产品模板）
 
+**已做（2026-10-27）**：按讨论改成读用户自己 Chrome 里的网页版（`@user`），不用发布账号（发布账号只登录了创作者中心，也不该拿它刷别人主页）；实现和验证见 `product/docs/content-inspiration.md` 和插件的 `social/docs/xiaohongshu.md`。下面是原方案。
+
 读别人主页属于对平台的知识，写插件；存到哪张表是模板的事。
 
 - 插件 `xhs.creatorNotes({ profile_url, limit, detail })`：用已登录的小红书账号的浏览器（`social_accounts` 里 xiaohongshu 的 `browser_profile`），打开主页、听笔记列表接口，返回最近的笔记（id、标题、封面、类型、点赞）和主页信息（昵称、简介、粉丝、获赞）；`detail` 时逐条打开前几条读正文、话题、收藏、评论数。**只读第一页**、条与条之间随机等，和 `collect` 一样避免被判成三方工具。没有登录的小红书账号就报错，说先在「账号」里登录一个。接口要对着真实账号验证。

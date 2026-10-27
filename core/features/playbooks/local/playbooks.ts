@@ -4,7 +4,7 @@ import { L } from './_i18n'
 // 一个对象一张卡，重新拆解更新这张、version +1。拆解是任务 tasks/analyze-reference.md，这里只取数和存表：
 //   playbooks.context({ subject_type?, subject_id })   拆解要读的：对象资料、最近的来源（有正文的在前）、已有的卡
 //   playbooks.save({ subject_type?, subject_id, name, guide, … })   存卡（同一个对象已有就更新，没传的字段留着原来的）
-//   playbooks.list({ subject_id? })    卡和用了几次（选题、文章上的 playbook_id）
+//   playbooks.list({ subject_id? })    卡、用了几次（选题、文章上的 playbook_id）、拆完以后新收进来几条（new_sources）
 //   playbooks.get({ id })    写作要的那几样（name、guide、标题公式、开场、fit、avoid）
 //   playbooks.archive({ id, restore? })
 
@@ -87,6 +87,11 @@ export function context(input: { subject_type?: string; subject_id: string }, ct
       why_save: s.why_save,
       notes: s.notes,
       image_count: parse<unknown[]>(s.images, []).length,
+      tags: parse<string[]>(s.tags, []),
+      likes: s.likes_count ?? null,
+      collects: s.collects_count ?? null,
+      comments: s.comments_count ?? null,
+      published_at: s.published_at || '',
       collected_at: s.collected_at,
     })),
     sources_total: sources.length,
@@ -157,10 +162,13 @@ export function save(
 export function list(input: { subject_id?: string }, ctx: any) {
   const uses: Record<string, number> = {}
   for (const t of [...query(ctx, 'topics'), ...query(ctx, 'articles')]) if (t.playbook_id) uses[t.playbook_id] = (uses[t.playbook_id] ?? 0) + 1
+  // 拆完以后又收进来的（自动同步、手动收录）：页面上提示可以重新拆解
+  const sources = query(ctx, 'research_sources').filter((s) => s.library_status !== 'archived')
+  const fresh = (p: Row) => sources.filter((s) => s.creator_id === p.subject_id && text(s.created_at || s.collected_at) > text(p.generated_at)).length
   return {
     playbooks: query(ctx, 'playbooks', input?.subject_id ? { subject_id: input.subject_id } : undefined)
       .sort((a, b) => text(b.updated_at).localeCompare(text(a.updated_at)))
-      .map((p) => ({ ...p, title_patterns: parse<Pattern[]>(p.title_patterns, []), hooks: parse<Pattern[]>(p.hooks, []), example_source_ids: parse<string[]>(p.example_source_ids, []), uses: uses[p.id] ?? 0 })),
+      .map((p) => ({ ...p, title_patterns: parse<Pattern[]>(p.title_patterns, []), hooks: parse<Pattern[]>(p.hooks, []), example_source_ids: parse<string[]>(p.example_source_ids, []), uses: uses[p.id] ?? 0, new_sources: fresh(p) })),
   }
 }
 

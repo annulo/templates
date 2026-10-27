@@ -25,6 +25,7 @@ type Card = {
   chat_id?: string;
   generated_at?: string;
   uses: number;
+  new_sources?: number;
 };
 const p = (key: string, vars?: Record<string, unknown>) =>
   tr("playbook." + key, vars);
@@ -148,6 +149,9 @@ export default function CreatorPlaybook({
               </p>
             )}
           </div>
+          {(card.new_sources ?? 0) > 0 && (
+            <Notice tone="info">{p("new_sources", { n: card.new_sources })}</Notice>
+          )}
           <div className="flex flex-wrap gap-2">
             <TaskLaunchButton
               {...taskProps}

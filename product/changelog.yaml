@@ -1,3 +1,6 @@
+- version: 0.18.0
+  zh: "参考博主能自动同步小红书笔记：读你 Chrome 里登录的网页版，新笔记带正文和互动数进灵感库并标「新」，拆风格卡时参考哪些写法互动高。需要社媒插件 0.10.0。"
+  en: "Reference creators sync their Xiaohongshu posts automatically via the web version signed in in your Chrome: new posts arrive with text and engagement, marked new, and playbooks note which styles perform best. Needs the social plugin 0.10.0."
 - version: 0.17.0
   zh: "灵感库新增风格卡：把参考博主的写法拆成标题公式、开场和结构，照卡出选题、写内容；发布到网站时自动上传正文里的图片。"
   en: "The inspiration library adds playbooks: break a creator's style into title formulas, hooks and structure, then suggest topics and write posts that follow it. Publishing to a website now uploads images in the body automatically."
