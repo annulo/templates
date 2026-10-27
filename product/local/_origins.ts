@@ -10,6 +10,7 @@ const TABLE: Record<string, string> = {
   competitor_page: 'competitor_pages',
   competitor: 'competitors',
   inspiration_source: 'research_sources',
+  playbook: 'playbooks',
   opportunity: 'growth_opportunities',
   campaign: 'campaigns',
   marketing_plan: 'marketing_plans',

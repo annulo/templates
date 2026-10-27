@@ -13,7 +13,8 @@ const device = (k: string) => (['desktop', 'mobile', 'tablet', 'bot'].includes(k
  * 独立站渠道的访问数据：指标（和上一周期比）、每日趋势、来源 / 页面 / 地区 / 设备。
  * 另外取一份 2 倍时长的趋势，前一半就是上一周期，用来算 PV 的涨跌。
  */
-export default function SiteOverview({ site, days }: { site: string; days: number }) {
+/** base：网站的地址（正式域名优先，lib/format 的 siteURL），受访页面按它拼成能打开的链接 */
+export default function SiteOverview({ site, days, base }: { site: string; days: number; base?: string }) {
   const [data, setData] = useState<VisitOverview | null>(null)
   const [prevPV, setPrevPV] = useState<number | null>(null)
   const [error, setError] = useState<{ msg: string; offline: boolean } | null>(null)
@@ -90,7 +91,7 @@ export default function SiteOverview({ site, days }: { site: string; days: numbe
 
       <div className="grid gap-4 xl:grid-cols-2">
         <BreakdownTable title={tr('site.referrer')} keyLabel={tr('site.referrer_key')} rows={data.breakdowns.referrer_host} empty={tr('site.referrer_empty')} />
-        <BreakdownTable title={tr('site.pages')} keyLabel={tr('site.page')} rows={data.breakdowns.url} format={(u) => u.replace(/^https?:\/\/[^/]+/, '') || '/'} />
+        <BreakdownTable title={tr('site.pages')} keyLabel={tr('site.page')} rows={data.breakdowns.url} format={(u) => u.replace(/^https?:\/\/[^/]+/, '') || '/'} href={(u) => (base ? base.replace(/\/$/, '') + (u.replace(/^https?:\/\/[^/]+/, '') || '/') : /^https?:\/\//.test(u) ? u : '')} />
         <BreakdownTable title={tr('site.country')} keyLabel={tr('site.region')} rows={data.breakdowns.country} />
         <BreakdownTable title={tr('site.device_t')} keyLabel={tr('site.device_t')} rows={data.breakdowns.device_type} format={device} />
       </div>

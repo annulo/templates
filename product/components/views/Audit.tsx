@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ExternalLink, RotateCw, Rocket } from 'lucide-react'
+import { Check, ChevronDown, ExternalLink, RotateCw, Rocket } from 'lucide-react'
 import AskButton from '../AskButton'
 import RunButton from '../RunButton'
 import { Badge, Button, Notice, PageHeader, Segmented, Skeleton, cx, fmtTime, type Tone } from '../ui'
 import { dbList, dbPatch, newestFirst, type AuditRun, type IssueStatus, type Severity, type SiteChange, type SiteIssue, isSite } from '../../lib/shuttle'
 import SitePicker from '../SitePicker'
+import WorkspaceTabs from '../WorkspaceTabs'
+import TrendChart from '../charts/TrendChart'
 import SeoReport from '../SeoReport'
 import Select from '../Select'
 import { useOnboarding, type OnboardingData } from '../../lib/onboarding'
@@ -23,6 +25,22 @@ const STATUS: Record<IssueStatus, { label: string; tone: Tone }> = {
   fixing: lbl('audit.st_fixing', 'primary'),
   fixed: lbl('audit.st_fixed', 'ok'),
   ignored: lbl('audit.st_ignored', 'default'),
+}
+
+/** 一次检查的时间，图上的横轴和悬停提示用：「10/26 17:32」（同一天检查几次也分得清） */
+function when(at?: string) {
+  if (!at) return ''
+  const d = new Date(at)
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function parse<T>(s: string | undefined, fallback: T): T {
+  try {
+    const v = s ? JSON.parse(s) : fallback
+    return Array.isArray(fallback) && !Array.isArray(v) ? fallback : v
+  } catch {
+    return fallback
+  }
 }
 
 function pagesOf(i: SiteIssue): string[] {
@@ -86,8 +104,12 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
     )
 
   const last = runs?.[0]
+  // 历次得分：最近 12 次，早的在左边
+  const history = [...(runs ?? [])].slice(0, 12).reverse()
   // 「问题」是逐条处理的清单，「SEO 报告」是全站的概况和建议（SeoReport）；记在网址参数 audit_tab 里
   const tab = params.audit_tab === 'report' ? 'report' : 'issues'
+  // 这次检查了、没扣分的项（老记录没有 passed，就不显示）
+  const passed = parse<{ check: string; name: string }[]>(last?.passed, [])
   const todo = (issues ?? []).filter((i) => i.status === 'open')
   const fixing = (issues ?? []).filter((i) => i.status === 'fixing')
 
@@ -96,7 +118,25 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
       <PageHeader
         title={tr('audit.title')}
         desc={tr('audit.desc')}
+        actions={
+          <Button variant="ghost" size="sm" onClick={load} className="text-muted-foreground">
+            <RotateCw /> {tr('common.refresh')}
+          </Button>
+        }
       />
+      {/* 「问题 / SEO 报告」是整页的两个视图，放在页头下面（和社交媒体页一样的页签），得分卡片两边都显示 */}
+      {last && (
+        <WorkspaceTabs
+          id="audit"
+          label={tr('audit.title')}
+          value={tab}
+          onChange={(v) => setParam('audit_tab', v === 'issues' ? '' : v)}
+          options={[
+            { value: 'issues', label: tr('audit.tab_issues') },
+            { value: 'report', label: tr('audit.tab_report') },
+          ]}
+        />
+      )}
       {picker}
       {error && <Notice tone="error">{error}</Notice>}
 
@@ -133,16 +173,12 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
           <div className="grid min-w-0 gap-4 rounded-xl border border-border bg-background px-5 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] sm:items-center">
             <div className="min-w-0">
               <div className="text-xs text-muted-foreground">{tr('audit.history')}</div>
-              <div className="mt-2 flex min-h-11 items-end gap-1.5 overflow-hidden">
-                {[...(runs ?? [])].slice(0, 12).reverse().map((r) => (
-                  <div key={r.id} title={tr('audit.score_at', { score: r.score ?? 0, when: fmtTime(r.finished_at || r.created_at) })} className="w-3 shrink-0 rounded-t-[3px] bg-primary/70" style={{ height: `${Math.max(6, ((r.score ?? 0) / 100) * 44)}px` }} />
-                ))}
+              {/* 最近 12 次的得分（柱状，满分 100）：悬停哪一列都显示那次的时间和分数 */}
+              <div className="mt-1">
+                <TrendChart days={history.map((r) => when(r.finished_at || r.created_at))} series={[{ name: tr('audit.score_series'), color: 'var(--series-1)', values: history.map((r) => r.score ?? 0) }]} height={80} max={100} bars xLabels={false} label={tr('audit.history')} />
               </div>
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
-              <Button variant="ghost" size="sm" onClick={load} className="text-muted-foreground">
-                <RotateCw /> {tr('common.refresh')}
-              </Button>
               <RunButton inline fn="audit.run" input={{ channel_id: channel.id }} onDone={load} variant="outline">
                 {tr('audit.rerun')}
               </RunButton>
@@ -163,18 +199,7 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
         </div>
       )}
 
-      {last && (
-        <Segmented
-          value={tab}
-          onChange={(v) => setParam('audit_tab', v === 'issues' ? '' : v)}
-          options={[
-            { value: 'issues', label: tr('audit.tab_issues') },
-            { value: 'report', label: tr('audit.tab_report') },
-          ]}
-        />
-      )}
-
-      {tab === 'report' && last && <SeoReport ctx={ctx} channel={channel} onIssues={() => setParam('audit_tab', '')} />}
+      {tab === 'report' && last && <SeoReport ctx={ctx} channel={channel} onIssues={() => setParam('audit_tab', '')} onRan={load} />}
 
       {tab === 'issues' && fixing.length > 0 && channel.type === 'creght_site' && (
         <div className="flex flex-col gap-3 rounded-xl border border-primary/30 bg-primary/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -220,6 +245,22 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'issues' && passed.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <h2 className="text-sm font-semibold">{tr('audit.passed_title', { n: passed.length })}</h2>
+            <span className="text-xs text-muted-foreground">{tr('audit.passed_hint')}</span>
+          </div>
+          <div className="flex flex-wrap gap-2 rounded-xl border border-border bg-background p-4">
+            {passed.map((p) => (
+              <span key={p.check} className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs">
+                <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />{p.name}
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>

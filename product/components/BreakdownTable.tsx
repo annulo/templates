@@ -1,5 +1,6 @@
 import type { KeyRow } from '../lib/shuttle'
 import { fmtNum } from '../lib/format'
+import { ArrowUpRight } from 'lucide-react'
 import { Panel } from './ui'
 import { tr } from '../lib/i18n'
 
@@ -11,8 +12,8 @@ const PV_UV: BreakdownColumn<KeyRow>[] = [
   { label: 'UV', value: (r) => r.uv_count },
 ]
 
-/** 维度 Top N：平台分析页的表格样式，每行带一条占比细条。默认列是平台统计的 PV / UV，GA4 这类别的口径传 columns */
-export default function BreakdownTable<R extends { key: string } = KeyRow>({ title, keyLabel, rows, empty, format, columns }: { title: string; keyLabel: string; rows?: R[]; empty?: string; format?: (k: string) => string; columns?: BreakdownColumn<R>[] }) {
+/** 维度 Top N：平台分析页的表格样式，每行带一条占比细条。默认列是平台统计的 PV / UV，GA4 这类别的口径传 columns；href 给了地址的行点了在新标签打开（受访页面） */
+export default function BreakdownTable<R extends { key: string } = KeyRow>({ title, keyLabel, rows, empty, format, columns, href }: { title: string; keyLabel: string; rows?: R[]; empty?: string; format?: (k: string) => string; columns?: BreakdownColumn<R>[]; href?: (k: string) => string }) {
   const cols = columns ?? (PV_UV as unknown as BreakdownColumn<R>[])
   const list = (rows ?? []).slice(0, 8)
   const main = cols[0]
@@ -35,12 +36,20 @@ export default function BreakdownTable<R extends { key: string } = KeyRow>({ tit
             <tbody>
               {list.map((r) => {
                 const label = format ? format(r.key) : r.key
+                const link = href?.(r.key)
                 return (
                   <tr key={r.key} className="border-b border-border last:border-b-0">
                     <td className="px-3 py-2">
-                      <div className="truncate text-foreground" title={r.key}>
-                        {label}
-                      </div>
+                      {link ? (
+                        <a href={link} target="_blank" rel="noreferrer" title={link} className="group flex min-w-0 items-center gap-1 text-foreground hover:text-primary-text">
+                          <span className="truncate">{label}</span>
+                          <ArrowUpRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                        </a>
+                      ) : (
+                        <div className="truncate text-foreground" title={r.key}>
+                          {label}
+                        </div>
+                      )}
                       <div className="mt-1 h-1 rounded-full bg-muted">
                         <div className="h-full rounded-full bg-primary/70" style={{ width: `${(main.value(r) / max) * 100}%` }} />
                       </div>

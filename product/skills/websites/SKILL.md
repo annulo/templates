@@ -1,6 +1,6 @@
 ---
 name: websites
-description: 外贸模板的网站渠道：creght 独立站和 WordPress 站怎么操作、给网站发文章（发布脚本、publications）、改站代码、看访问数据的口径。用户提到网站、独立站、「我的站」、发到网站、改网站、访问量时用它（后台通用做法见 ops-backend，写内容见 content-studio）。
+description: 网站渠道（外贸、产品、自媒体模板都有）：creght 独立站和 WordPress 站怎么操作、给网站发文章（发布脚本、publications）、改站代码、看访问数据的口径。用户提到网站、独立站、「我的站」、发到网站、改网站、访问量时用它（后台通用做法见 ops-backend，写内容见 content-studio）。
 ---
 
 # 网站渠道

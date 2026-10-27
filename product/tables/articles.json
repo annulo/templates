@@ -163,6 +163,14 @@
       "video_cover": {
         "type": "string",
         "description": "视频封面图片地址：从资料库选择或上传；独立于图文配图和封面大字。小红书、抖音发布使用，留空沿用平台默认封面。"
+      },
+      "playbook_id": {
+        "type": "string",
+        "description": "写这篇时参考的风格卡（playbooks 的 id）"
+      },
+      "playbook_version": {
+        "type": "number",
+        "description": "写作时那张风格卡的版本"
       }
     },
     "required": [

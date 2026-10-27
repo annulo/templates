@@ -118,6 +118,35 @@ export function updateContent(ctx: any, projectID: string, collection: string, i
   return call(ctx, projectID, 'cms_content_update', { project_id: projectID, collection, id, slug, body })
 }
 
+/** 删掉一条内容，线上立即不可见。平台还没有这个工具时报一句说清楚的错 */
+export async function deleteContent(ctx: any, projectID: string, collection: string, id: string) {
+  try {
+    return await call(ctx, projectID, 'cms_content_delete', { project_id: projectID, collection, id })
+  } catch (e: any) {
+    const msg = String(e?.message ?? e)
+    if (/没有工具|unknown tool|no such tool|tool .*not found/i.test(msg)) throw new Error(L(ctx, 'creght 还没开放删除内容的接口，等平台更新后再删；现在可以到网站后台的 CMS 里删掉，再点「只删记录」', "creght can't delete content from here yet — try again after the platform update. For now, delete it in the site's CMS, then choose \"Remove record only\""))
+    if (/不存在|not found|no such content/i.test(msg)) return { deleted: false } // 网站上已经没有了，当成删掉了
+    throw e
+  }
+}
+
+/** ctx.file(…) 给的本机文件 */
+export type LocalFile = { name: string; size: number; type: string; sha256: string }
+
+/** 把本机文件传到站点的素材库（和 creght upload 同一套：预上传拿地址 → 本机直接 PUT → 确认），返回网站上的地址。
+ *  按内容的 sha256 去重：同样内容传过的（existed）不再传。PUT 照 put_headers 带头（签名里签了 Content-Type），地址 2 小时内有效 */
+export async function uploadAsset(ctx: any, projectID: string, siteID: string, f: LocalFile): Promise<string> {
+  const pre = await call(ctx, projectID, 'asset_pre_upload', { project_id: projectID, site_id: siteID, filename: f.name, size: f.size, content_type: f.type, hash: f.sha256 })
+  if (!pre?.existed) {
+    if (!pre?.presigned_url) throw new Error(L(ctx, 'creght 没给上传地址', 'creght returned no upload URL'))
+    const res = await fetch(pre.presigned_url, { method: 'PUT', headers: pre.put_headers ?? { 'content-type': f.type }, body: f as any }) // body 是 ctx.file：发这个文件
+    if (!res.ok) throw new Error(L(ctx, `上传失败（${res.status}）`, `Upload failed (${res.status})`))
+    await call(ctx, projectID, 'asset_upload_ack', { project_id: projectID, site_id: siteID, id: pre.id })
+  }
+  if (!pre?.url) throw new Error(L(ctx, 'creght 没返回文件地址', 'creght returned no file URL'))
+  return pre.url
+}
+
 // ---- 表单（询盘线索用，local/leads.ts）----
 
 /** creght MCP 还没有这个工具时的报错换成一句能看懂的话 */

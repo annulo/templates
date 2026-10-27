@@ -103,6 +103,10 @@
       "chat_id": {
         "type": "string",
         "description": "出这个选题的对话（助手出的、在对话里转的才有）"
+      },
+      "playbook_id": {
+        "type": "string",
+        "description": "按哪张风格卡写（playbooks 的 id）：写这个选题时把卡交给 AI"
       }
     },
     "required": [

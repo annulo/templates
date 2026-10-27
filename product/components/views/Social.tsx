@@ -391,7 +391,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
     <div ref={rowRef} className={cx('flex gap-4 border-b border-border p-4 last:border-b-0', focus && 'bg-primary/5')}>
       <button type="button" onClick={() => setPreviewing(true)} title={tr('social.preview')} className="w-20 shrink-0 self-start cursor-pointer rounded-lg transition-opacity hover:opacity-80">
         {isVideoPost(pf, p) && p.video ? (
-          <video poster={p.video_cover || undefined} src={videoSrc(p.video)} muted preload="metadata" className="aspect-[3/4] w-20 rounded-lg bg-black object-cover" />
+          <video poster={videoSrc(p.video_cover) || undefined} src={videoSrc(p.video)} muted preload="metadata" className="aspect-[3/4] w-20 rounded-lg bg-black object-cover" />
         ) : images[0] ? (
           <img src={shuttleImage(images[0])} alt="" className="aspect-[3/4] w-20 rounded-lg object-cover" />
         ) : isRich(pf) ? (
@@ -666,6 +666,7 @@ function DirectPostDialog({ open, onClose, accounts, current, onDone }: { open: 
   </Dialog>
 }
 
+/** 发布时没配图用的文字封面，和社媒插件 plugins/social/local/xhs.ts 的 textCard 同一个样式（1080×1440 等比缩小） */
 export function TextCover({ text, className }: { text: string; className?: string }) {
   return (
     <div className={cx('flex aspect-[3/4] items-center justify-center bg-[#f6efe6] p-[11%] text-center font-bold text-[#2f2620]', className)} style={{ lineHeight: 1.35, containerType: 'inline-size' }}>
@@ -821,7 +822,7 @@ function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReje
 function VideoCard({ p, owner, tags }: { p: SocialPost; owner?: Channel; tags: string[] }) {
   return (
     <div className="mx-auto w-[380px] shrink-0 self-start overflow-hidden rounded-2xl border border-neutral-200 bg-white text-neutral-900 shadow-lg">
-      {p.video ? <video poster={p.video_cover || undefined} src={videoSrc(p.video)} controls className="aspect-video w-full bg-black" /> : <div className="flex aspect-video w-full items-center justify-center bg-neutral-900 text-sm text-neutral-400">{tr('social.no_video')}</div>}
+      {p.video ? <video poster={videoSrc(p.video_cover) || undefined} src={videoSrc(p.video)} controls className="aspect-video w-full bg-black" /> : <div className="flex aspect-video w-full items-center justify-center bg-neutral-900 text-sm text-neutral-400">{tr('social.no_video')}</div>}
       <div className="space-y-2 p-3">
         <div className="text-[15px] leading-snug font-semibold">{p.title}</div>
         <div className="flex items-center gap-2 text-[13px] text-neutral-600">

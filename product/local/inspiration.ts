@@ -397,7 +397,8 @@ export function list(_input: {}, ctx: any) {
     sources = rows(ctx, "research_sources"),
     refs = rows(ctx, "content_references");
   const topics = rows(ctx, "topics"),
-    articles = rows(ctx, "articles");
+    articles = rows(ctx, "articles"),
+    playbooks = rows(ctx, "playbooks");
   const uses: Record<string, any[]> = {};
   const add = (id: string, type: string, target: any) => {
     if (!id || !target) return;
@@ -431,6 +432,9 @@ export function list(_input: {}, ctx: any) {
       title: a.title,
       status: a.status,
     })),
+    playbooks: playbooks
+      .filter((p) => p.status !== "archived")
+      .map((p) => ({ id: p.id, subject_id: p.subject_id, name: p.name })),
   };
 }
 export function context(input: { source_ids: string[] }, ctx: any) {

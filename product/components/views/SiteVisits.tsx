@@ -47,7 +47,7 @@ export default function SiteVisits({ ctx, params, setParam }: { ctx: Ctx; params
         {channel.type === 'creght_site' && <RangeToggle value={days} onChange={setDays} options={[7, 30, 90].map((n) => ({ value: n, label: tr('common.last_days', { n }) }))} />}
       </div>
       {channel.type === 'creght_site' && channel.project_id && channel.site_id ? (
-        <SiteOverview key={channel.id} site={`${channel.project_id}/${channel.site_id}`} days={days} />
+        <SiteOverview key={channel.id} site={`${channel.project_id}/${channel.site_id}`} days={days} base={url} />
       ) : (
         <Notice>
           <p>{tr('channels.wp_no_stats')}</p>

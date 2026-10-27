@@ -56,6 +56,10 @@
         "type": "string",
         "description": "在这个网站上的访问地址"
       },
+      "media": {
+        "type": "string",
+        "description": "正文里的本机图片传到这个网站后的地址，JSON：文件内容的 sha256 → 网站上的地址。再发同一篇时传过的图不重传。由 publishTo 写"
+      },
       "error": {
         "type": "string",
         "description": "最近一次失败的报错原文"

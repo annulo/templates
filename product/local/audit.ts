@@ -478,16 +478,43 @@ function templated(pages: Page[], text: (p: Page) => string): Page[] {
   return out
 }
 
-function checks(site: Awaited<ReturnType<typeof crawl>>, preview: boolean, ctx: any): Found[] {
+/** 每项检查的名字（不带好坏，列「已通过」时用） */
+const CHECK_NAMES: Record<string, [string, string]> = {
+  http_error: ['页面都能打开', 'Pages load'], noindex: ['允许搜索收录', 'Indexable'], title_missing: ['页面标题', 'Page titles'],
+  slow_page: ['加载速度', 'Load speed'], title_duplicate: ['标题不重复', 'Unique titles'], desc_missing: ['页面描述', 'Meta descriptions'],
+  h1_missing: ['H1 标题', 'H1 headings'], img_alt: ['图片 alt', 'Image alt text'], viewport: ['移动端 viewport', 'Mobile viewport'],
+  sitemap: ['sitemap', 'Sitemap'], title_length: ['标题长度', 'Title length'], desc_length: ['描述长度', 'Description length'],
+  desc_duplicate: ['描述不重复', 'Unique descriptions'], h1_multiple: ['一页一个 H1', 'One H1 per page'], thin_content: ['正文长度', 'Content length'],
+  lang: ['页面语言', 'Page language'], canonical: ['canonical', 'Canonical'], og: ['分享卡片', 'Share cards'],
+  structured_data: ['结构化数据', 'Structured data'], robots: ['robots.txt', 'robots.txt'], llms_txt: ['llms.txt', 'llms.txt'], ai_crawlers: ['AI 爬虫准入', 'AI crawler access'],
+  // 全站检测加的
+  broken_links: ['站内链接', 'Internal links'], redirect_links: ['链接不用跳转', 'Direct links'], sitemap_bad: ['sitemap 里的页面', 'Sitemap pages'],
+  missing_from_sitemap: ['页面都在 sitemap 里', 'Pages in sitemap'], orphan: ['页面都有链接指向', 'Linked pages'], canonical_home: ['canonical 不指首页', 'Canonical not home'],
+  canonical_other: ['canonical 指向本页', 'Self canonical'], hreflang: ['hreflang', 'hreflang'], content_template: ['正文不套模板', 'Unique body text'],
+  desc_template: ['描述不套模板', 'Unique descriptions'], other_domain_links: ['不链到本站别的域名', 'Single domain links'], schema_domain: ['结构化数据的域名', 'Structured data domain'],
+  image_size: ['图片大小', 'Image size'], image_many: ['图片数量', 'Image count'], img_alt_empty: ['alt 不为空', 'Non-empty alt'],
+  product_schema: ['产品结构化数据', 'Product structured data'], article_schema: ['文章结构化数据', 'Article structured data'], mixed_content: ['没有 http 混合内容', 'No mixed content'],
+}
+
+/** 没扣分的检查项（这次检查了、没发现问题）：存进体检记录，页面列成「已通过」，免得用户以为没查 */
+function passedOf(ran: string[], found: Found[], ctx: any) {
+  const en = isEn(ctx)
+  return [...new Set(ran)].filter((c) => !found.some((f) => f.check === c)).map((check) => ({ check, name: CHECK_NAMES[check]?.[en ? 1 : 0] ?? check }))
+}
+
+/** 检查清单：每项的严重程度固定。ran 记下这次检查了哪些项（有的项在预览地址、没有 robots.txt 时不查） */
+function checks(site: Awaited<ReturnType<typeof crawl>>, preview: boolean, ctx: any, ran: string[] = []): Found[] {
   const en = isEn(ctx)
   const sep = en ? ', ' : '、'
   const list = (ps: Page[], n = 3) => ps.slice(0, n).map((p) => pathOf(p.url)).join(sep) + (ps.length > n ? (en ? ` and ${ps.length - n} more` : ` 等 ${ps.length} 个页面`) : '')
   const html = site.pages.filter((p) => p.html)
   const out: Found[] = []
   const add = (check: string, severity: Found['severity'], title: string, ps: Page[], detail: string) => {
+    ran.push(check)
     if (ps.length) out.push({ check, severity, title, detail, pages: ps.map((p) => p.url) })
   }
   const site1 = (check: string, severity: Found['severity'], title: string, bad: boolean, detail: string) => {
+    ran.push(check)
     if (bad) out.push({ check, severity, title, detail, pages: [site.root + '/'] })
   }
   const dup = (key: (p: Page) => string) => {
@@ -665,6 +692,7 @@ function checks(site: Awaited<ReturnType<typeof crawl>>, preview: boolean, ctx: 
   const home = html.find((p) => pathOf(p.url) === '/')
   site1('structured_data', 'low', en ? 'No structured data on the homepage' : '首页缺少结构化数据', !!home && !home.jsonld_types.length, en ? 'The homepage has no JSON-LD. Add Organization / WebSite structured data so search engines and AI understand the site.' : '首页没有 JSON-LD，建议加 Organization / WebSite 的结构化数据，便于搜索和 AI 理解站点。')
   for (const [check, name, file] of [['robots', 'robots.txt', site.robots], ['llms_txt', 'llms.txt', site.llms]] as const) {
+    ran.push(check)
     if (file.state === 'missing') {
       site1(check, 'low', en ? `No ${name}` : `没有 ${name}`, true,
         en ? `${name} is missing or empty.` : `${name} 返回 404/410 或内容为空。`)
@@ -676,6 +704,7 @@ function checks(site: Awaited<ReturnType<typeof crawl>>, preview: boolean, ctx: 
   }
   // AI 爬虫准入：robots.txt 读到了才判断（没有 robots.txt 等于全放行）。预览地址本来就禁止所有爬虫（creght 的预览是 Disallow: /），不算
   if (site.robots.state === 'present' && !preview && !/\.preview\./.test(hostOf(site.root))) {
+    ran.push('ai_crawlers')
     const access = AI_BOTS.map((b) => ({ ...b, state: robotsAccess(site.robots.text, b.ua) })).filter((b) => b.state !== 'allowed')
     if (access.length) {
       const search = access.filter((b) => b.search)
@@ -806,7 +835,9 @@ async function runOne(input: { channel_id?: string; max?: number; dry?: boolean 
   const t = await target(ch, ctx)
   ctx.progress({ done: 0, message: L(ctx, `开始体检 ${t.url}${t.preview ? '（还没发布，用预览地址）' : ''}`, `Auditing ${t.url}${t.preview ? " (not published yet, using the preview URL)" : ''}`) })
   const site = await crawl(t.url, Math.min(Math.max(input.max ?? FULL_MAX, 1), 500), ctx, await ownHosts(ch, ctx))
-  const found = checks(site, t.preview, ctx)
+  const ran: string[] = []
+  const found = checks(site, t.preview, ctx, ran)
+  const passed = passedOf(ran, found, ctx) // 关键词、收录检查不算在里面
   // 关键词的目标页面有没有用上这个词、几个页面抢一个词（_audit_keywords.ts）；出错不影响体检
   try {
     const host = hostOf(site.root)
@@ -842,7 +873,7 @@ async function runOne(input: { channel_id?: string; max?: number; dry?: boolean 
   const run = ctx.db.insert('audit_runs', {
     channel_id: ch.id, target_url: t.url, pages_checked: site.pages.length, sitemap_pages: site.sitemap_urls.length,
     score: score(found, total), categories: JSON.stringify(categoryScores(found, total)), index: index ? JSON.stringify(index) : '',
-    issues: found.length, started_at: startedAt, finished_at: new Date().toISOString(),
+    issues: found.length, passed: JSON.stringify(passed), started_at: startedAt, finished_at: new Date().toISOString(),
   })
 
   // 按 check 合并，每个渠道每个 check 一条：这次有的更新（fixed 改回 open；ignored、fixing 不动），新的建，没了的标 fixed

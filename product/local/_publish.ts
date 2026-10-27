@@ -19,13 +19,13 @@
 //   }
 
 import { L } from './_i18n'
-import { contents, createContent, updateContent } from './_creght'
-import { wp } from './_wp'
+import { contents, createContent, updateContent, uploadAsset, type LocalFile } from './_creght'
+import { wp, wpUpload } from './_wp'
 import { trackChange } from './_review'
 
 export type Article = { id: string; title: string; summary?: string; body?: string; video?: string; keywords?: string; slug?: string; status: string; url?: string; published_at?: string; topic_id?: string }
 export type Channel = { id: string; name: string; type: string; project_id?: string; site_id?: string; preview_url?: string; wp_user?: string; wp_secret?: string; publisher?: string; publish_status?: string }
-export type Publication = { id: string; article_id: string; channel_id: string; status: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed'; scheduled_at?: string; title?: string; summary?: string; body?: string; video?: string; keywords?: string; cms_id?: string; cms_collection?: string; slug?: string; url?: string; error?: string; published_at?: string; updated_at?: string }
+export type Publication = { id: string; article_id: string; channel_id: string; status: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed'; scheduled_at?: string; title?: string; summary?: string; body?: string; video?: string; keywords?: string; cms_id?: string; cms_collection?: string; slug?: string; url?: string; media?: string; error?: string; published_at?: string; updated_at?: string }
 
 /** 发布脚本返回的结果：真发时要有 cms_id 和 url；试发（dry）时返回要发出去的内容，原样交给调用方看 */
 export type SendResult = { cms_id?: string; collection?: string; slug?: string; url?: string; [k: string]: unknown }
@@ -61,6 +61,55 @@ export const plainText = (ctx: any, html?: string) => ctx.html(html ?? '').text(
 /** 正文里的图片地址（挑封面用） */
 export const imagesIn = (ctx: any, html?: string): string[] =>
   html ? ctx.html(html).find('img[src]').map((i: any) => String(i.attrs.src)).filter((u: string) => /^https?:\/\//.test(u)) : []
+/** 只在这台电脑上能打开的地址：页面上传的 /_annulo/uploaded/…（老数据带 127.0.0.1 和端口）、AI 做的 local:…、内容文件夹里的 folder:… / work:… */
+export const isLocalSrc = (u: string) => /^(?:(?:https?:\/\/(?:127\.0\.0\.1|localhost):\d+)?\/_(?:annulo|shuttle)\/uploaded\/|local:|folder:|work:)/.test(u)
+/** 正文里只在这台电脑上能打开的图片 */
+export const localImagesIn = (ctx: any, html?: string): string[] =>
+  html ? [...new Set<string>(ctx.html(html).find('img[src]').map((i: any) => String(i.attrs.src)).filter(isLocalSrc))] : []
+
+/** 这个网站怎么传图：creght 站点传到站点素材库，WordPress 传到媒体库；别的没有 */
+function uploaderOf(ctx: any, ch: Channel): ((f: LocalFile) => Promise<string>) | null {
+  if (ch.type === 'creght_site' && ch.project_id && ch.site_id) return (f) => uploadAsset(ctx, ch.project_id!, ch.site_id!, f)
+  if (ch.type === 'wordpress') return (f) => wpUpload(ctx, ch, f)
+  return null
+}
+
+/**
+ * 发布前把正文里的本机图片传到网站，地址换成网站上的。media 是这篇在这个网站上传过的（文件内容的 sha256 → 网站上的地址），
+ * 同一张图再发不重传；传了几张后失败，已经传的也记下来。
+ */
+async function hostImages(ctx: any, a: Article, ch: Channel, media: Record<string, string>) {
+  const srcs = localImagesIn(ctx, a.body)
+  if (!srcs.length) return
+  if (typeof ctx.file !== 'function') throw new Error(L(ctx, '正文里有这台电脑上的图片，要先更新 Annulo 才能传到网站', 'The body has images stored on this computer: update Annulo to upload them to the site'))
+  const upload = uploaderOf(ctx, ch)
+  if (!upload) throw new Error(L(ctx, `正文里有这台电脑上的图片，「${ch.name}」还不支持自动传图：换成网上的图片地址再发`, `The body has images stored on this computer and "${ch.name}" can't take uploads yet: use online image URLs instead`))
+  let body = a.body ?? ''
+  for (const src of srcs) {
+    const f: LocalFile = ctx.file(src)
+    let url = media[f.sha256]
+    if (!url) {
+      try {
+        url = await upload(f)
+      } catch (e: any) {
+        throw new Error(L(ctx, `图片「${f.name}」传到网站失败：`, `Failed to upload image "${f.name}" to the site: `) + (e?.message ?? String(e)))
+      }
+      media[f.sha256] = url
+    }
+    const esc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    body = body.replace(new RegExp(`(src=["'])${esc}(["'])`, 'g'), (_m, l, r) => l + url + r)
+  }
+  a.body = body
+}
+
+const mediaOf = (p: Publication | null): Record<string, string> => {
+  try {
+    return p?.media ? JSON.parse(p.media) : {}
+  } catch {
+    return {}
+  }
+}
+
 /** 今天的日期 YYYY-MM-DD */
 export const today = () => now().slice(0, 10)
 
@@ -96,22 +145,29 @@ export async function publishTo(ctx: any, input: { article_id: string; dry?: boo
   for (const field of ['title', 'summary', 'body', 'video', 'keywords'] as const)
     if (prev?.[field]) a[field] = prev[field]
   if (prev?.slug && !prev.cms_id) a.slug = prev.slug
-  if (input?.dry) return await send({ a, ch, prev, dry: true })
+  if (input?.dry) {
+    // 试发不传图：列出发布时要传到网站的本机图片
+    const local = localImagesIn(ctx, a.body)
+    const r = await send({ a, ch, prev, dry: true })
+    return local.length ? { ...r, local_images: local } : r
+  }
 
   // 开始发就清掉排期：失败了不会每隔几分钟重试，留在发布记录里等用户处理
   const row = upsert(ctx, prev, a, ch, { status: 'publishing', error: '', scheduled_at: '' })
+  const media = mediaOf(prev)
   try {
+    await hostImages(ctx, a, ch, media)
     const r = await send({ a, ch, prev, dry: false })
     if (!r?.cms_id || !r.url) throw new Error(L(ctx, '发布脚本没有返回内容 id 和文章地址，不确定有没有发成功：到网站后台看一眼，再让助手检查发布脚本', "The publish script returned no content id or URL, so it's unclear whether it worked: check the site, then have the assistant check the script"))
     const t = now()
-    upsert(ctx, row, a, ch, { status: 'published', cms_id: String(r.cms_id), cms_collection: r.collection ?? '', slug: r.slug ?? '', url: r.url, error: '', published_at: prev?.published_at || t })
+    upsert(ctx, row, a, ch, { status: 'published', media: JSON.stringify(media), cms_id: String(r.cms_id), cms_collection: r.collection ?? '', slug: r.slug ?? '', url: r.url, error: '', published_at: prev?.published_at || t })
     // 文章本身：第一次发出去就算已发布；url 记第一个网站的（发社媒时带这个链接）
     ctx.db.update('articles', a.id, { status: 'published', ...(a.url ? {} : { url: r.url }), ...(a.published_at ? {} : { published_at: t }) })
     if (!prev?.cms_id) trackChange(ctx, { kind: 'article', ref_id: a.id, channel_id: ch.id, title: L(ctx, `发布文章：${a.title}（${ch.name}）`, `Published article: ${a.title} (${ch.name})`), pages: [r.url] })
     return { ...r, channel: ch.name, updated: !!prev?.cms_id }
   } catch (e: any) {
     const msg = e?.message ?? String(e)
-    upsert(ctx, row, a, ch, { status: 'failed', error: msg })
+    upsert(ctx, row, a, ch, { status: 'failed', error: msg, media: JSON.stringify(media) })
     throw new Error(msg)
   }
 }

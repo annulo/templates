@@ -1,14 +1,16 @@
 import { L } from "./_i18n";
 import { context as growthContext } from "./growth";
 import { sourceSnapshot, link } from './inspiration';
+import { forWriting } from './playbooks';
 import { platformWorkspace } from '../lib/contentWorkspace';
 import { ranking } from './content-workspace';
 import { checkOrigins, mergeOrigins, questionOrigins, uncitedQuestions } from './_origins';
 import { originsJson, type Origin } from '../lib/origins';
 export const cloud = ["context", "save"];
 // 出选题（任务 tasks/suggest-topics.md）的取数和存表。每个选题记下出处（origins）和出它的对话（chat_id），设计见仓库根目录 docs/content-origins.md：
-//   topics.context({ workspace?, channel_id?, question_ids?, source_ids? })   带 channel_id 时给 AI 搜索里没被引用的问题（geo_questions）
-//   topics.save({ ideas: [{ title, angle?, keywords?, question_ids?, source_ids?, origins? }], source?, question_ids?, source_ids?, origins?, workspace? })
+//   topics.context({ workspace?, channel_id?, question_ids?, source_ids?, playbook_id? })   带 channel_id 时给 AI 搜索里没被引用的问题（geo_questions），带 playbook_id 时给那张风格卡
+//   topics.save({ ideas: [{ title, angle?, keywords?, question_ids?, source_ids?, origins? }], source?, question_ids?, source_ids?, origins?, workspace?, playbook_id? })
+//     带 playbook_id 的选题记下这张卡，写的时候照它写
 //     从 AI 搜索出的（source=geo）每个都要带 question_ids；标题重复的不另建，把出处并进已有的那个（linked）
 export function context(input: any, ctx: any) {
   const workspace = input?.workspace || (input?.channel_id ? 'website' : '');
@@ -16,7 +18,9 @@ export function context(input: any, ctx: any) {
   let performance;
   if (workspace !== 'website') try { performance = ranking({}, ctx) } catch {}
   const geo_questions = input?.channel_id ? uncitedQuestions(ctx, input.channel_id, input.question_ids) : undefined;
-  return { ...growthContext({}, ctx), workspace, channel_id: input?.channel_id || "", sources: [...new Set<string>(input?.source_ids || [])].map((id) => sourceSnapshot(ctx, id)), ...(geo_questions ? { geo_questions } : {}), ...(performance?.published ? { performance } : {}) };
+  const playbook = input?.playbook_id ? forWriting(ctx, input.playbook_id) : null;
+  if (input?.playbook_id && !playbook) throw new Error(L(ctx, '没有这张风格卡', 'No such playbook'));
+  return { ...growthContext({}, ctx), workspace, channel_id: input?.channel_id || "", sources: [...new Set<string>(input?.source_ids || [])].map((id) => sourceSnapshot(ctx, id)), ...(geo_questions ? { geo_questions } : {}), ...(performance?.published ? { performance } : {}), ...(playbook ? { playbook } : {}) };
 }
 export function save(
   input: {
@@ -26,9 +30,12 @@ export function save(
     question_ids?: string[];
     origins?: Origin[];
     workspace?: 'website' | 'social';
+    playbook_id?: string;
   },
   ctx: any,
 ) {
+  const playbook = input?.playbook_id ? forWriting(ctx, input.playbook_id) : null;
+  if (input?.playbook_id && !playbook) throw new Error(L(ctx, '没有这张风格卡', 'No such playbook'));
   const old = ctx.db.query("topics", { limit: 1000 }).list;
   const seen = new Map<string, any>(
     old.filter((t: any) => {
@@ -36,7 +43,7 @@ export function save(
       return !input.workspace || !workspace || workspace === input.workspace;
     }).map((t: any) => [String(t.title).trim().toLowerCase(), t]),
   );
-  const shared: Origin[] = [...questionOrigins(ctx, input.question_ids), ...checkOrigins(ctx, input.origins)];
+  const shared: Origin[] = [...questionOrigins(ctx, input.question_ids), ...checkOrigins(ctx, input.origins), ...(playbook ? [{ type: 'playbook', id: playbook.id, label: playbook.name }] : [])];
   const chat_id = String(ctx.chat_id ?? "");
   const linked: string[] = [];
   const sourceIds = new Set<string>([...(input.source_ids || []), ...(input.ideas || []).flatMap((x) => x.source_ids || [])]);
@@ -64,6 +71,7 @@ export function save(
       status: "idea",
       ...(origins.length ? { origins: originsJson(origins) } : {}),
       ...(chat_id ? { chat_id } : {}),
+      ...(playbook ? { playbook_id: playbook.id } : {}),
       ...(input.workspace ? { workspace: input.workspace, ...(input.workspace === 'website' ? { target_platform: 'website', content_type: 'article' } : {}) } : {}),
       created_at: new Date().toISOString(),
     });

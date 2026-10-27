@@ -22,7 +22,7 @@ import Help from "../components/views/Help";
 import Assistant from "../components/views/Assistant";
 import PublishProgress from "../components/PublishProgress";
 import { Button, Notice, Skeleton, cx } from "../components/ui";
-import { g } from "../components/ProductFields";
+import { g, TaskTools } from "../components/ProductFields";
 import {
   loadProfile,
   listChannels,
@@ -242,7 +242,22 @@ export default function Index() {
         />
       );
     if (view === "search")
-      return <Search ctx={ctx} params={params} setParam={setParam} />;
+      return (
+        <Search
+          ctx={ctx}
+          params={params}
+          setParam={setParam}
+          // 页头上面：去「增长机会」，交给助手做 SEO 研究（产品运营才有，共用的谷歌排名页留了这个位置）
+          headerActions={(channel) => (
+            <>
+              <Button variant="outline" onClick={() => ctx.go("opportunities")}>
+                {g("opportunities_title")}
+              </Button>
+              <TaskTools task="seo-research" label="research" input={{ channel_id: channel.id }} />
+            </>
+          )}
+        />
+      );
     if (view === "audit")
       return <Audit ctx={ctx} params={params} setParam={setParam} />;
     if (view === "geo")

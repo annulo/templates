@@ -48,6 +48,10 @@
         "type": "integer",
         "description": "问题数"
       },
+      "passed": {
+        "type": "string",
+        "description": "这次检查了、没发现问题的项，JSON：[{ check, name }]。页面列成「已通过」；老记录没有"
+      },
       "started_at": {
         "type": "string",
         "description": "开始时间 ISO8601"
