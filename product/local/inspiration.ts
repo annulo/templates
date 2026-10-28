@@ -678,9 +678,11 @@ export async function sync(input: { creator_id?: string; limit?: number }, ctx: 
       const id = text(s.note_id) || (text(s.canonical_url).match(/\/explore\/([\w]+)/)?.[1] ?? "");
       if (id) byNote.set(id, s);
     }
+    // 读过详情的不再打开；以前手动收、导入的只有链接没有正文的，这次打开补上
+    const known = [...byNote].filter(([, s]) => text(s.content) || s.synced).map(([id]) => id);
     try {
       ctx.progress?.({ done: i, total: targets.length, message: L(ctx, `读 ${c.nickname} 的主页`, `Reading ${c.nickname}'s profile`) });
-      const r = await creatorNotes({ profile_url: c.profile_url, limit: input?.limit ?? 10, known: [...byNote.keys()] }, ctx);
+      const r = await creatorNotes({ profile_url: c.profile_url, limit: input?.limit ?? 10, known }, ctx);
       const t = now();
       let added = 0,
         updated = 0;
@@ -692,7 +694,11 @@ export async function sync(input: { creator_id?: string; limit?: number }, ctx: 
         };
         const old = byNote.get(n.note_id);
         if (old) {
-          ctx.db.update("research_sources", old.id, { ...metrics, note_id: n.note_id });
+          // 以前只有链接的：读到了正文就补上（不覆盖用户自己填的）
+          const fill = n.detail && !text(old.content)
+            ? { content: n.detail.desc, ...(text(old.tags) && old.tags !== "[]" ? {} : { tags: JSON.stringify(n.detail.tags) }), ...(text(old.images) && old.images !== "[]" ? {} : { images: JSON.stringify(n.detail.images.map((url) => ({ url }))) }), ...(old.published_at ? {} : { published_at: n.published_at }) }
+            : {};
+          ctx.db.update("research_sources", old.id, { ...metrics, ...fill, note_id: n.note_id });
           updated++;
           continue;
         }

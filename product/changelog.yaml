@@ -1,3 +1,6 @@
+- version: 0.18.1
+  zh: "拆解风格不用先补正文：视频笔记有标题和互动数就能拆，内容不够时助手自己先同步博主的笔记；以前只有链接的笔记同步时补上正文。"
+  en: "Style analysis no longer needs post text first: video posts with titles and engagement count, the assistant syncs the creator's posts itself when there isn't enough, and link-only posts get their text on sync."
 - version: 0.18.0
   zh: "参考博主能自动同步小红书笔记：读你 Chrome 里登录的网页版，新笔记带正文和互动数进灵感库并标「新」，拆风格卡时参考哪些写法互动高。需要社媒插件 0.10.0。"
   en: "Reference creators sync their Xiaohongshu posts automatically via the web version signed in in your Chrome: new posts arrive with text and engagement, marked new, and playbooks note which styles perform best. Needs the social plugin 0.10.0."

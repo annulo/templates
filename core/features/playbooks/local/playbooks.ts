@@ -70,7 +70,8 @@ export function context(input: { subject_type?: string; subject_id: string }, ct
   const sources = query(ctx, 'research_sources')
     .filter((s) => ids.has(s.creator_id) && s.library_status !== 'archived')
     .sort((a, b) => Number(!!text(b.content)) - Number(!!text(a.content)) || text(b.collected_at).localeCompare(text(a.collected_at)))
-  const usable = sources.filter((s) => text(s.content) || text(s.summary))
+  // 能拆的：有正文、整理过的；自动同步的笔记（视频的正文常常是空的）有标题也算：标题、话题、互动数照样能看出写法
+  const usable = sources.filter((s) => text(s.content) || text(s.summary) || (s.synced && text(s.title)))
   const card = cardOf(ctx, type, row.id)
   return {
     subject: {
@@ -110,6 +111,8 @@ export function context(input: { subject_type?: string; subject_id: string }, ct
     sources_total: sources.length,
     enough: usable.length >= MIN_SOURCES,
     min_sources: MIN_SOURCES,
+    // 小红书博主：素材不够、或者想拿最新的，先跑它同步笔记（模板有灵感库同步时）
+    ...(row.platform === 'xiaohongshu' ? { sync: `annulo run inspiration.sync --input '{"creator_id":"${row.id}"}'` } : {}),
     playbook: card ? { ...card, title_patterns: parse(card.title_patterns, []), hooks: parse(card.hooks, []) } : null,
   }
 }
