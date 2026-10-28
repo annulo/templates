@@ -1,23 +1,36 @@
 ---
 name: 拆解风格
-description: 读一个参考博主最近的内容，拆出他的标题公式、开场、结构、语气和配图方式，存成一张风格卡；之后出选题、写文章时可以照这张卡写
+description: 读一个参考博主最近的内容（或一家竞品网站的页面），拆出标题公式、开场、结构、语气和配图方式（竞品是内容打法），存成一张风格卡；之后出选题、写文章时可以照这张卡写
 ---
 
-参数：`subject_type`（现在只有 `creator` 参考博主）、`subject_id` 是要拆的对象；`requirements` 是用户这次额外的要求，只用于这一次。
+参数：`subject_type`（`creator` 参考博主，`competitor` 竞品网站）、`subject_id` 是要拆的对象；`requirements` 是用户这次额外的要求，只用于这一次。
 
 ## 1. 拿上下文
 
 ```bash
-annulo run playbooks.context --input '{"subject_type":"creator","subject_id":"<subject_id>"}'
+annulo run playbooks.context --input '{"subject_type":"<subject_type>","subject_id":"<subject_id>"}'
 ```
+
+**竞品网站**（`subject_type` 是 `competitor`）看下面「拆竞品网站」一节，不照博主的步骤。
 
 输出里：`subject` 是博主资料（同一人物的其他平台账号在 `accounts`）；`sources` 是收进灵感库的他的内容（有正文的在前，最多 20 条，`summary`、`hook`、`why_save` 是之前单条整理过的；自动同步的小红书笔记有 `likes`、`collects`、`comments` 和 `tags`）；`playbook` 是已有的卡（重新拆解时在它上面改，不是推倒重来，除非用户要）。
 
-`enough` 是 false（有正文或整理过的不到 `min_sources` 条）：告诉用户先在这个博主下面多收几条（贴链接、粘正文或截图），不硬拆，不往下做。
+`enough` 是 false（能拆的不到 `min_sources` 条）时，有 `sync` 就**先自己跑它**（从用户 Chrome 里的小红书网页版读他最近的笔记，几十秒），再重新跑上面的 `playbooks.context`；还是不够、或者没有 `sync`、同步报错（比如 Chrome 没开、没登录小红书网页版），才告诉用户原因和怎么补（贴链接、粘正文或截图），不硬拆。
+视频笔记的 `content` 常常是空的：照它的标题、话题（`tags`）、互动数拆标题公式和选题方向，开场、正文结构从有正文的几条里拆；只有标题的不要编它的正文。
 有互动数时，拿他互动高的几条和低的比：高的那些在标题、开场、形式上有什么共同点，写进卡里（「这类标题点赞明显高」），数字照抄、不编。
 只有链接没有正文的，可以用你能用的工具读公开原文；读不到的就跳过，不猜内容。
 
 我方的定位和目标用户：`annulo run topics.context --input '{}'`，只看 `brief`（用来写 `fit`：这种写法适合我们写哪类选题）。
+
+## 拆竞品网站
+
+`playbooks.context` 给的是竞品和已有的卡；`enough` 是 false（还没读过它的网站、或者读失败了）就告诉用户先在「竞品监控」里点「立即检查」，不往下做。接着跑输出里的 `next`（`competitors.analysisContext`）：
+`competitor` 是这家（各类页面数 `counts`）、`recent` 是最近更新的页面（带标题和描述）、`discoveries` 是最近新上的页面。挑 5～8 页有代表性的（产品页、文章、落地页都要有，最近的优先）`curl -sL <网址>` 读正文。
+
+拆的是**它的网站内容怎么做**：在发力什么（产品线、应用场景、市场）、文章和落地页的标题怎么起、页面开头怎么写、结构（规格表、FAQ、案例、对比、CTA 放哪）、语气、多久更新一次。
+`title_patterns`、`hooks` 的例子照抄它的原标题、原开头，`source_id` 写那一页的网址（竞品没有来源记录）；`example_source_ids` 不传。`platform` 写 `website`，`content_type` 写 `article`。
+`fit` 写我们可以照这种打法写哪类页面；`avoid` 写不该学的（夸大、堆关键词、和我们定位不合的）。**它的参数、认证、价格、客户案例不能写成我们的**。
+存完回复里给 `[打开竞品监控](/?view=competitors)`，其余照下面的规则和「存」。
 
 ## 2. 怎么拆
 
@@ -38,7 +51,7 @@ annulo run playbooks.context --input '{"subject_type":"creator","subject_id":"<s
 ```bash
 cat > /tmp/playbook.json <<'JSON'
 {
-  "subject_type": "creator",
+  "subject_type": "creator 或 competitor",
   "subject_id": "<subject_id>",
   "name": "一个好记的卡名（比如「XX 的避坑清单体」）",
   "platform": "xiaohongshu",
@@ -55,7 +68,7 @@ JSON
 annulo run playbooks.save --input @/tmp/playbook.json
 ```
 
-存完回复用户：卡名、一句话总结、最值得学的两三点，给出 `[打开风格卡](/?view=content&tab=inspiration&library=creators&creator=<subject_id>)`，提醒可以在卡上「照这张卡出选题」或「照这张卡写一篇」。
+存完回复用户：卡名、一句话总结、最值得学的两三点，给出 `[打开风格卡](/?view=content&tab=inspiration&library=creators&creator=<subject_id>)`（竞品给 `[打开竞品监控](/?view=competitors)`），提醒可以在卡上「照这张卡出选题」或「照这张卡写一篇」。
 
 ## 用户在这段对话里接着提意见时
 
