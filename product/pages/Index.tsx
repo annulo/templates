@@ -18,6 +18,7 @@ import Search from "../components/views/Search";
 import Audit from "../components/views/Audit";
 import Geo from "../components/views/Geo";
 import SiteVisits from "../components/views/SiteVisits";
+import Landing from "../components/views/Landing";
 import Help from "../components/views/Help";
 import Assistant from "../components/views/Assistant";
 import PublishProgress from "../components/PublishProgress";
@@ -157,6 +158,7 @@ export default function Index() {
     "metrics",
     "content",
     "website-content",
+    "landing",
     "social-content",
     "inspiration",
     "social-metrics",
@@ -179,7 +181,7 @@ export default function Index() {
     if (v === "content") {
       if (extra.tab === "inspiration") v = "inspiration";
       else {
-        const website = extra.workspace === "website" || ["website-content", "opportunities", "search", "geo", "audit", "site", "metrics"].includes(view);
+        const website = extra.workspace === "website" || ["website-content", "landing", "opportunities", "search", "geo", "audit", "site", "metrics"].includes(view);
         if (website) v = "website-content";
         else if (extra.workspace === "social" || ["social", "social-content", "inspiration", "social-metrics", "calendar"].includes(view)) v = "social-content";
       }
@@ -230,6 +232,8 @@ export default function Index() {
     if (["content", "website-content", "social-content"].includes(view))
       return <ProductContent key={view} ctx={ctx} params={params} setParam={setParam}
         workspace={view === "website-content" ? "website" : view === "social-content" ? "social" : undefined} />;
+    if (view === "landing")
+      return <Landing ctx={ctx} params={params} setParam={setParam} />;
     if (view === "calendar")
       return <Calendar ctx={ctx} params={params} setParam={setParam} scope="social" />;
     if (view === "assets")

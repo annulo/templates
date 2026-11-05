@@ -397,13 +397,15 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
                 </Button>
               </Empty>
             ) : (
-              <Matrix cols={cols} head={tr('geo.m_brand_head', { n: brandQs.length })}>
-                {brandQs.map((q) => (
-                  <BrandRow key={q.id} q={q} cols={cols} get={get} askingOf={askingOf} onChanged={load} onEdit={() => setEditing(q)} />
-                ))}
-              </Matrix>
+              <>
+                {cols.length > 0 && <Legend items={BRAND_LEGEND()} />}
+                <Matrix cols={cols} head={tr('geo.m_brand_head', { n: brandQs.length })}>
+                  {brandQs.map((q) => (
+                    <BrandRow key={q.id} q={q} cols={cols} get={get} askingOf={askingOf} onChanged={load} onEdit={() => setEditing(q)} />
+                  ))}
+                </Matrix>
+              </>
             )}
-            {brandQs.length > 0 && cols.length > 0 && <p className="text-xs leading-relaxed text-muted-foreground">{tr('geo.m_brand_legend')}</p>}
           </section>
 
           {/* 2. AI 推荐了谁：问题 × AI 的矩阵，格子里是引用了本站没有，点格子看那家的回答 */}
@@ -425,19 +427,20 @@ export default function Geo({ ctx, params, setParam }: { ctx: Ctx; params: Recor
             ) : (
               <>
                 {citedSites.length > 0 && <CitedSites sites={citedSites} total={recQs.filter((q) => cols.some((c) => get(q.id, c.key))).length} />}
-                {uncited.length > 0 && (
-                  <div className="flex justify-end">
+                {/* 图例在表格上方，左边；「没引用你的写成选题」和它同一行，靠右 */}
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  {cols.length > 0 ? <Legend items={REC_LEGEND()} /> : <span />}
+                  {uncited.length > 0 && (
                     <TaskLaunchButton task={TOPICS_TASK} reqKey="topic_requirements" input={{ channel_id: channel.id }} match={(r) => r.input?.channel_id === channel.id && !r.input?.question_ids} title={tr('geo.to_topics', { n: uncited.length })} desc={tr('geo.topics_desc', { n: uncited.length })} reqTitle={tr('geo.topics_req_title')} reqHint={tr('geo.topics_req_hint')} startLabel={tr('geo.topics_start')} variant="outline" icon={Lightbulb}>
                       {tr('geo.to_topics', { n: uncited.length })}
                     </TaskLaunchButton>
-                  </div>
-                )}
+                  )}
+                </div>
                 <Matrix cols={cols} head={tr('geo.m_rec_head', { n: recQs.length })} sub={(c) => <RecColHead runs={runs} eng={c.key} />}>
                   {recQs.map((q) => (
                     <RecRow key={q.id} q={q} cols={cols} get={get} askingOf={askingOf} changeOf={changeOf} channel={channel} onChanged={load} onEdit={() => setEditing(q)} hint={<Hints q={q} pages={pages} articles={articles} linked={<Linked ctx={ctx} q={q} topics={topics} articles={allArticles} results={results} />} />} />
                   ))}
                 </Matrix>
-                <p className="text-xs leading-relaxed text-muted-foreground">{tr('geo.m_rec_legend')}</p>
               </>
             )}
           </section>
@@ -652,14 +655,8 @@ function BrandCell({ r, asking }: { r?: GeoResult; asking: string }) {
   if (!r) return <span className="text-muted-foreground/60" title={tr('geo.q_not_run')}>·</span>
   return (
     <span className="inline-flex items-center gap-1">
-      {r.user_report ? (
-        <span className="inline-flex h-5 items-center rounded bg-destructive/10 px-1.5 text-[11px] font-semibold text-destructive">{tr('geo.m_reported')}</span>
-      ) : !r.seen_at ? (
-        <NewTag />
-      ) : (
-        <span className="text-xs text-muted-foreground">{tr('geo.m_seen')}</span>
-      )}
-      {r.cited && <span className="size-1.5 rounded-full bg-emerald-500" title={tr('geo.r_cited')} />}
+      {r.user_report ? <ReportedTag /> : !r.seen_at ? <NewTag /> : <span className="text-xs text-muted-foreground">{tr('geo.m_seen')}</span>}
+      {r.cited && <CitedDot />}
     </span>
   )
 }
@@ -807,25 +804,70 @@ function AskBox({ r, engine, onChanged }: { r: GeoResult; engine: string; onChan
   )
 }
 
-/** 推荐类问题的格子：这个 AI 的回答引用了本站（✓）、只提到了（◐）、都没有（·）、还没问（–）；比上次多了 / 少了加个箭头 */
+/** 推荐问题的格子：这个 AI 的回答引用了你（✓）、只提到你（◐）、没提到（·）、还没问（–）；比上次多了 / 少了加个箭头 */
 function RecCell({ r, asking, change }: { r?: GeoResult; asking: string; change?: Change }) {
   if (asking) return <Loader2 className="size-4 animate-spin text-primary-text" aria-label={asking} />
-  if (!r) return <span className="text-muted-foreground/60" title={tr('geo.q_not_run')}>–</span>
-  const mark = r.cited ? (
-    <span className="inline-flex size-5 items-center justify-center rounded-full bg-emerald-500/15 text-xs font-bold text-emerald-600 dark:text-emerald-400" title={tr('geo.r_cited')}>✓</span>
-  ) : r.mentioned ? (
-    <span className="inline-flex size-5 items-center justify-center rounded-full bg-amber-500/15 text-xs font-bold text-amber-600 dark:text-amber-400" title={tr('geo.r_mentioned')}>◐</span>
-  ) : (
-    <span className="inline-flex size-5 items-center justify-center text-muted-foreground" title={tr('geo.r_none')}>·</span>
-  )
+  if (!r) return <CiteMark kind="idle" title={tr('geo.q_not_run')} />
   return (
     <span className="inline-flex items-center gap-0.5">
-      {mark}
-      {change === 'gained' && <ArrowUp className="size-3 text-emerald-600 dark:text-emerald-400" aria-label={tr('geo.ch_gained')} />}
-      {change === 'lost' && <ArrowDown className="size-3 text-amber-600 dark:text-amber-400" aria-label={tr('geo.ch_lost')} />}
+      <CiteMark kind={r.cited ? 'cited' : r.mentioned ? 'mentioned' : 'none'} />
+      {change && change !== 'fresh' && <ChangeArrow change={change} />}
     </span>
   )
 }
+
+/**
+ * 格子里的标记：格子和图例用同一个组件，长得永远一样；文字是格子的悬停提示，也是图例的说明。
+ * 加一种状态：这里加一个 kind，再在 REC_LEGEND 里加一条
+ */
+type CiteKind = 'cited' | 'mentioned' | 'none' | 'idle'
+const CITE: Record<CiteKind, { mark: string; cls: string; label: string }> = {
+  cited: { mark: '✓', cls: 'rounded-full bg-emerald-500/15 text-xs font-bold text-emerald-600 dark:text-emerald-400', label: 'geo.r_cited' },
+  mentioned: { mark: '◐', cls: 'rounded-full bg-amber-500/15 text-xs font-bold text-amber-600 dark:text-amber-400', label: 'geo.r_mentioned' },
+  none: { mark: '·', cls: 'text-muted-foreground', label: 'geo.r_none' },
+  idle: { mark: '–', cls: 'text-muted-foreground/60', label: 'geo.r_idle' },
+}
+function CiteMark({ kind, title }: { kind: CiteKind; title?: string }) {
+  const c = CITE[kind]
+  return (
+    <span className={cx('inline-flex size-5 items-center justify-center', c.cls)} title={title ?? tr(c.label)}>
+      {c.mark}
+    </span>
+  )
+}
+function ChangeArrow({ change }: { change: 'gained' | 'lost' }) {
+  return change === 'gained' ? <ArrowUp className="size-3 text-emerald-600 dark:text-emerald-400" aria-label={tr('geo.ch_gained')} /> : <ArrowDown className="size-3 text-amber-600 dark:text-amber-400" aria-label={tr('geo.ch_lost')} />
+}
+function ReportedTag() {
+  return <span className="inline-flex h-5 items-center rounded bg-destructive/10 px-1.5 text-[11px] font-semibold text-destructive">{tr('geo.m_reported')}</span>
+}
+function CitedDot() {
+  return <span className="inline-block size-1.5 rounded-full bg-emerald-500" title={tr('geo.r_cited')} />
+}
+
+/** 图例：一条一个标记加一句说明，标记就是格子里的那个组件 */
+function Legend({ items }: { items: { mark: ReactNode; label: string }[] }) {
+  return (
+    <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+      {items.map((x) => (
+        <li key={x.label} className="inline-flex items-center gap-1.5">
+          {x.mark}
+          {x.label}
+        </li>
+      ))}
+    </ul>
+  )
+}
+const BRAND_LEGEND = () => [
+  { mark: <NewTag />, label: tr('geo.lg_new') },
+  { mark: <ReportedTag />, label: tr('geo.lg_reported') },
+  { mark: <CitedDot />, label: tr('geo.r_cited') },
+]
+const REC_LEGEND = () => [
+  ...(['cited', 'mentioned', 'none', 'idle'] as const).map((k) => ({ mark: <CiteMark kind={k} />, label: tr(CITE[k].label) })),
+  { mark: <ChangeArrow change="gained" />, label: tr('geo.ch_gained') },
+  { mark: <ChangeArrow change="lost" />, label: tr('geo.ch_lost') },
+]
 
 /** 推荐类问题的一行：每个 AI 一个格子，点格子在下面看那家的回答、搜了什么、引用了谁；GSC 排名和本站文章的对照在问题下面 */
 function RecRow({ q, cols, get, askingOf, changeOf, channel, onChanged, onEdit, hint }: { q: GeoQuestion; cols: Col[]; get: GetResult; askingOf: AskingOf; changeOf: Map<string, Change>; channel: Channel; onChanged: () => void; onEdit: () => void; hint?: ReactNode }) {

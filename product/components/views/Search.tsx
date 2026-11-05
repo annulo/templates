@@ -1040,7 +1040,7 @@ function ExpandBrief({ brief }: { brief: SearchExpandBrief }) {
   )
 }
 
-const kindLabel = (k: string) => (['issue_fix', 'search_meta', 'search_content', 'article'].includes(k) ? tr(`search.k_${k}`) : k)
+const kindLabel = (k: string) => (['issue_fix', 'search_meta', 'search_content', 'article', 'landing'].includes(k) ? tr(`search.k_${k}`) : k)
 const VERDICT: Record<string, { label: string; tone: Tone }> = {
   better: { get label() { return tr('overview.v_better') }, tone: 'ok' },
   flat: { get label() { return tr('overview.v_flat') }, tone: 'default' },

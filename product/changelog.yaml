@@ -1,3 +1,6 @@
+- version: 0.19.0
+  zh: "长文能设封面，发网站时用作封面；新增落地页：写清目标，AI 在网站上做出页面，产品、关键词、选题上都能发起。"
+  en: "Long-form articles get a cover used on your website, plus landing pages: say the goal and AI builds the page on your site, started from a product, keyword or topic."
 - version: 0.18.1
   zh: "拆解风格不用先补正文：视频笔记有标题和互动数就能拆，内容不够时助手自己先同步博主的笔记；以前只有链接的笔记同步时补上正文。"
   en: "Style analysis no longer needs post text first: video posts with titles and engagement count, the assistant syncs the creator's posts itself when there isn't enough, and link-only posts get their text on sync."

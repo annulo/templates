@@ -11,12 +11,15 @@ import {
   useProductData,
 } from "../ProductFields";
 import {
+  isSite,
   runLocal,
   type Product,
   type Profile,
   type UseCase,
 } from "../../lib/shuttle";
 import type { Ctx } from "./types";
+import { LandingButton } from "./Landing";
+import { tr } from "../../lib/i18n";
 
 export default function ProductFacts({
   ctx,
@@ -151,17 +154,28 @@ export default function ProductFacts({
                 key={p.id}
                 title={p.title || p.name}
                 aside={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={g("edit")}
-                    onClick={() => {
-                      setSaveError("");
-                      setEdit(p);
-                    }}
-                  >
-                    <Pencil />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {/* 产品、用户场景都能单独做一个落地页（网站 → 落地页） */}
+                    <LandingButton
+                      sites={ctx.channels.filter(isSite)}
+                      preset={() =>
+                        tab === "usecases"
+                          ? { goal: tr("landing.goal_from_usecase", { title: p.title }), note: [p.audience, p.problem].filter(Boolean).join("\n") }
+                          : { product_ids: [p.id], goal: tr("landing.goal_from_product", { name: p.name }) }
+                      }
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={g("edit")}
+                      onClick={() => {
+                        setSaveError("");
+                        setEdit(p);
+                      }}
+                    >
+                      <Pencil />
+                    </Button>
+                  </div>
                 }
               >
                 <p className="text-sm whitespace-pre-line text-muted-foreground">

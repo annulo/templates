@@ -8,7 +8,7 @@
 //   export async function publish(input: { article_id: string; dry?: boolean }, ctx: any) {
 //     return publishTo(ctx, input, '<网站 id>', async ({ a, ch, prev, dry }) => {
 //       const slug = prev?.slug || slugOf(a)
-//       const body = { title: a.title, content: markdown(ctx, a.body) }         // 按这个网站的字段写
+//       const body = { title: a.title, content: markdown(ctx, a.body), cover: a.cover }   // 按这个网站的字段写
 //       const url = `https://…/blog/${slug}`
 //       if (dry) return { collection: 'posts', slug, body, url }                 // 试发：只返回要发的内容
 //       const cms_id = prev?.cms_id
@@ -23,9 +23,9 @@ import { contents, createContent, updateContent, uploadAsset, type LocalFile } f
 import { wp, wpUpload } from './_wp'
 import { trackChange } from './_review'
 
-export type Article = { id: string; title: string; summary?: string; body?: string; video?: string; keywords?: string; slug?: string; status: string; url?: string; published_at?: string; topic_id?: string }
+export type Article = { id: string; title: string; summary?: string; body?: string; video?: string; cover?: string; keywords?: string; slug?: string; status: string; url?: string; published_at?: string; topic_id?: string }
 export type Channel = { id: string; name: string; type: string; project_id?: string; site_id?: string; preview_url?: string; wp_user?: string; wp_secret?: string; publisher?: string; publish_status?: string }
-export type Publication = { id: string; article_id: string; channel_id: string; status: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed'; scheduled_at?: string; title?: string; summary?: string; body?: string; video?: string; keywords?: string; cms_id?: string; cms_collection?: string; slug?: string; url?: string; media?: string; error?: string; published_at?: string; updated_at?: string }
+export type Publication = { id: string; article_id: string; channel_id: string; status: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed'; scheduled_at?: string; title?: string; summary?: string; body?: string; video?: string; keywords?: string; cms_id?: string; cms_collection?: string; slug?: string; url?: string; media?: string; error?: string; warning?: string; published_at?: string; updated_at?: string }
 
 /** 发布脚本返回的结果：真发时要有 cms_id 和 url；试发（dry）时返回要发出去的内容，原样交给调用方看 */
 export type SendResult = { cms_id?: string; collection?: string; slug?: string; url?: string; [k: string]: unknown }
@@ -58,7 +58,7 @@ export const articleMarkdown = (ctx: any, a: Article) => `${publicVideo(a) ? `[�
 export const markdown = (ctx: any, html?: string) => ctx.html(html ?? '').markdown()
 /** 正文的纯文本（摘要字段为空、要截一段时用） */
 export const plainText = (ctx: any, html?: string) => ctx.html(html ?? '').text()
-/** 正文里的图片地址（挑封面用） */
+/** 正文里的图片地址 */
 export const imagesIn = (ctx: any, html?: string): string[] =>
   html ? ctx.html(html).find('img[src]').map((i: any) => String(i.attrs.src)).filter((u: string) => /^https?:\/\//.test(u)) : []
 /** 只在这台电脑上能打开的地址：页面上传的 /_annulo/uploaded/…（老数据带 127.0.0.1 和端口）、AI 做的 local:…、内容文件夹里的 folder:… / work:… */
@@ -79,7 +79,8 @@ function uploaderOf(ctx: any, ch: Channel): ((f: LocalFile) => Promise<string>) 
  * 同一张图再发不重传；传了几张后失败，已经传的也记下来。
  */
 async function hostImages(ctx: any, a: Article, ch: Channel, media: Record<string, string>) {
-  const srcs = localImagesIn(ctx, a.body)
+  const cover = a.cover && isLocalSrc(a.cover) ? a.cover : ''
+  const srcs = [...new Set([...localImagesIn(ctx, a.body), ...(cover ? [cover] : [])])]
   if (!srcs.length) return
   if (typeof ctx.file !== 'function') throw new Error(L(ctx, '正文里有这台电脑上的图片，要先更新 Annulo 才能传到网站', 'The body has images stored on this computer: update Annulo to upload them to the site'))
   const upload = uploaderOf(ctx, ch)
@@ -98,9 +99,24 @@ async function hostImages(ctx: any, a: Article, ch: Channel, media: Record<strin
     }
     const esc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     body = body.replace(new RegExp(`(src=["'])${esc}(["'])`, 'g'), (_m, l, r) => l + url + r)
+    if (src === cover) a.cover = url
   }
   a.body = body
 }
+
+/**
+ * 发布脚本拿到的 a.cover：文章设了封面用它，没设用正文第一张图（都已经是网站上的地址）。
+ * 记下脚本有没有读 a.cover：文章设了封面、脚本却没读，是配置发布时还没有封面字段的老脚本，发完提醒用户让助手更新
+ */
+function coverFor(ctx: any, a: Article) {
+  const own = a.cover || ''
+  const value = own || imagesIn(ctx, a.body)[0] || ''
+  let read = false
+  Object.defineProperty(a, 'cover', { get: () => ((read = true), value), enumerable: true, configurable: true })
+  return { unused: () => !!own && !read }
+}
+const coverWarning = (ctx: any) => L(ctx, '这篇设了封面，但这个网站的发布脚本是旧的，没用上（网站上还是正文第一张图或没有封面）：点「让 AI 更新发布脚本」，更新后再发一次',
+  "This article has a cover, but this site's publish script is older and didn't use it (the site still shows the first body image or no cover). Click \"Have AI update the publish script\", then publish again")
 
 const mediaOf = (p: Publication | null): Record<string, string> => {
   try {
@@ -147,9 +163,11 @@ export async function publishTo(ctx: any, input: { article_id: string; dry?: boo
   if (prev?.slug && !prev.cms_id) a.slug = prev.slug
   if (input?.dry) {
     // 试发不传图：列出发布时要传到网站的本机图片
-    const local = localImagesIn(ctx, a.body)
+    const local = [...new Set([...localImagesIn(ctx, a.body), ...(a.cover && isLocalSrc(a.cover) ? [a.cover] : [])])]
+    const cover = coverFor(ctx, a)
     const r = await send({ a, ch, prev, dry: true })
-    return local.length ? { ...r, local_images: local } : r
+    const out = cover.unused() ? { ...r, warning: coverWarning(ctx) } : r
+    return local.length ? { ...out, local_images: local } : out
   }
 
   // 开始发就清掉排期：失败了不会每隔几分钟重试，留在发布记录里等用户处理
@@ -157,14 +175,16 @@ export async function publishTo(ctx: any, input: { article_id: string; dry?: boo
   const media = mediaOf(prev)
   try {
     await hostImages(ctx, a, ch, media)
+    const cover = coverFor(ctx, a)
     const r = await send({ a, ch, prev, dry: false })
     if (!r?.cms_id || !r.url) throw new Error(L(ctx, '发布脚本没有返回内容 id 和文章地址，不确定有没有发成功：到网站后台看一眼，再让助手检查发布脚本', "The publish script returned no content id or URL, so it's unclear whether it worked: check the site, then have the assistant check the script"))
     const t = now()
-    upsert(ctx, row, a, ch, { status: 'published', media: JSON.stringify(media), cms_id: String(r.cms_id), cms_collection: r.collection ?? '', slug: r.slug ?? '', url: r.url, error: '', published_at: prev?.published_at || t })
+    const warning = cover.unused() ? coverWarning(ctx) : ''
+    upsert(ctx, row, a, ch, { status: 'published', warning, media: JSON.stringify(media), cms_id: String(r.cms_id), cms_collection: r.collection ?? '', slug: r.slug ?? '', url: r.url, error: '', published_at: prev?.published_at || t })
     // 文章本身：第一次发出去就算已发布；url 记第一个网站的（发社媒时带这个链接）
     ctx.db.update('articles', a.id, { status: 'published', ...(a.url ? {} : { url: r.url }), ...(a.published_at ? {} : { published_at: t }) })
     if (!prev?.cms_id) trackChange(ctx, { kind: 'article', ref_id: a.id, channel_id: ch.id, title: L(ctx, `发布文章：${a.title}（${ch.name}）`, `Published article: ${a.title} (${ch.name})`), pages: [r.url] })
-    return { ...r, channel: ch.name, updated: !!prev?.cms_id }
+    return { ...r, channel: ch.name, updated: !!prev?.cms_id, ...(warning ? { warning } : {}) }
   } catch (e: any) {
     const msg = e?.message ?? String(e)
     upsert(ctx, row, a, ch, { status: 'failed', error: msg, media: JSON.stringify(media) })

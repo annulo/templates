@@ -283,12 +283,15 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
         {p.scheduled_at && p.status !== 'publishing' && <ScheduledLine at={p.scheduled_at} fromArticle />}
         <JobLine job={jobOf(`${p.article_id}:${p.channel_id}`)} />
         {!jobOf(`${p.article_id}:${p.channel_id}`) && p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
+        {/* 发出去了但有地方没照文章来（老发布脚本没用上封面，local/_publish.ts） */}
+        {!jobOf(`${p.article_id}:${p.channel_id}`) && p.warning && p.status === 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-700 dark:text-amber-400"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.warning}</p>}
         {ch && !jobOf(`${p.article_id}:${p.channel_id}`) && <div className="flex flex-wrap items-center gap-2">
           {ready ? <Button size="sm" variant="outline" fn={`${ch.publisher}.publish`} disabled={!!busy} onClick={() => resend(ch)}>{busy === 'site' + ch.id ? <Loader2 className="animate-spin" /> : <Send />}{p.status === 'published' ? tr('publish.update') : p.status === 'scheduled' ? tr('social.publish_now') : tr('article.retry')}</Button>
             : <Button size="sm" variant="outline" needsShuttle onClick={() => void setupPublish(ch.id)}>{tr('publish.setup')}</Button>}
           {/* 排了期的改时间、取消：没发过的取消就删掉这条记录，发过的只清掉排期 */}
           {p.scheduled_at && ready && <SchedulePopover size="sm" current={p.scheduled_at} onSchedule={(iso) => dbPatch('publications', p.id, { scheduled_at: iso }).then(onChanged)} onUnschedule={() => (p.status === 'scheduled' ? dbDelete('publications', p.id) : dbPatch('publications', p.id, { scheduled_at: '' })).then(onChanged)} />}
           {p.status === 'failed' && ready && <Button size="sm" variant="ghost" needsShuttle onClick={() => void setupPublish(ch.id, p.error)}>{tr('publish.fix')}</Button>}
+          {p.status === 'published' && p.warning && ready && <Button size="sm" variant="ghost" needsShuttle onClick={() => void setupPublish(ch.id, p.warning)}>{tr('publish.fix_script')}</Button>}
         </div>}
       </div>
     })}</div>}

@@ -9,9 +9,9 @@ import { usePasteFiles } from '../lib/usePasteFiles'
 import { fileSrc } from '../lib/files'
 import { tr } from '../lib/i18n'
 
-/** A single cover stored in the Library. Failed replacements keep the previous cover. */
-export default function VideoCoverField({ value, onChange, onUploadingChange }: {
-  value: string; onChange: (url: string) => void; onUploadingChange?: (busy: boolean) => void
+/** A single cover stored in the Library. Failed replacements keep the previous cover. Video covers by default; long-form articles pass their own label and hint. */
+export default function VideoCoverField({ value, onChange, onUploadingChange, label = tr('article.video_cover'), hint = tr('article.video_cover_hint') }: {
+  value: string; onChange: (url: string) => void; onUploadingChange?: (busy: boolean) => void; label?: string; hint?: string
 }) {
   const [picking, setPicking] = useState(false), [uploading, setUploading] = useState(false)
   const [uploads, setUploads] = useState<UploadItem[]>([]), [error, setError] = useState('')
@@ -31,10 +31,10 @@ export default function VideoCoverField({ value, onChange, onUploadingChange }: 
     finally { uploadingRef.current = false; setUploading(false); onUploadingChange?.(false) }
   }
   usePasteFiles(!picking && !uploading, upload)
-  return <Field group label={tr('article.video_cover')} hint={tr('article.video_cover_hint')}>
+  return <Field group label={label} hint={hint}>
     <div className="space-y-3">
       {value && <div className="relative w-fit">
-        <img src={fileSrc(value)} alt={tr('article.video_cover')} className="max-h-56 max-w-full rounded-lg border border-border object-contain" />
+        <img src={fileSrc(value)} alt={label} className="max-h-56 max-w-full rounded-lg border border-border object-contain" />
         <Button size="icon-sm" variant="outline" disabled={uploading} aria-label={tr('article.remove_cover')} title={tr('article.remove_cover')}
           className="absolute top-2 right-2" onClick={() => onChange('')}><X /></Button>
       </div>}

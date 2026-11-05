@@ -5,7 +5,7 @@
 //
 // 以后平台提供「站点所有者读取平台数据」的 Func 能力后，只改这个文件，页面不用动。
 
-import type { SiteIssue, AuditRun, GeoQuestion, GeoRun, GeoResult, SearchPage, SearchDaily, SiteChange } from "./sites";
+import type { SiteIssue, AuditRun, GeoQuestion, GeoRun, GeoResult, SearchPage, SearchDaily, SiteChange, LandingPage } from "./sites";
 import { tr } from "./i18n";
 import {
   ShuttleUnavailable,
@@ -575,6 +575,8 @@ export type Article = {
   tags?: string;
   /** 图文笔记的配图，JSON 数组字符串 */
   images?: string;
+  /** 长文的封面（资料库里的图片地址），空的发网站时用正文第一张图 */
+  cover?: string;
   cover_text?: string;
   category?: string;
   /** 改写自哪篇文章 */
@@ -1155,6 +1157,7 @@ type Tables = {
   search_pages: SearchPage;
   search_daily: SearchDaily;
   site_changes: SiteChange;
+  landing_pages: LandingPage;
   publications: Publication;
   social_accounts: Channel;
   social_health: PlatformHealth;
@@ -1195,6 +1198,8 @@ export type Publication = {
   cms_id?: string;
   url?: string;
   error?: string;
+  /** 发出去了但有地方没照文章来（比如老发布脚本没用上封面） */
+  warning?: string;
   published_at?: string;
   updated_at?: string;
 };

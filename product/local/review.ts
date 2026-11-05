@@ -10,7 +10,7 @@ export const remote = ['check', 'track']
 // 改站复查（本机函数）：改动上线一段时间后，对比改动前后的数据，写结论。PRD 里「看数据 → 改站 → 复查」的最后一环。
 //
 //   review.track({ kind, ref_id, channel_id, title?, pages?, live_at? })   记一次上线的改动（体检修复、文章发布会自动记，这个给「已上线，开始复查」按钮和助手补完内容用）
-//                                                                        kind：issue_fix / search_meta（改标题描述）/ search_content（补内容）/ article
+//                                                                        kind：issue_fix / search_meta（改标题描述）/ search_content（补内容）/ article / landing（落地页）
 //   review.check({ id? })                                                到期的改动逐条复查（定时任务每天 09:00 跑一次）
 //
 // 口径（写死在代码里，不调模型）：
@@ -26,7 +26,7 @@ type Change = { id: string; channel_id: string; kind: ChangeKind; ref_id: string
 type Channel = { id: string; name: string; project_id?: string; site_id?: string; gsc_property?: string }
 type Metrics = { source: 'gsc' | 'visits'; start: string; end: string; clicks?: number; impressions?: number; ctr?: number; position?: number; pv?: number }
 
-const KINDS: ChangeKind[] = ['issue_fix', 'search_meta', 'search_content', 'article']
+const KINDS: ChangeKind[] = ['issue_fix', 'search_meta', 'search_content', 'article', 'landing']
 const THRESHOLD = 0.15
 const MIN_SAMPLE = 10
 
