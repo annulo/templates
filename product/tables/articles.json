@@ -48,6 +48,10 @@
         "type": "string",
         "description": "图文笔记的配图，JSON 数组字符串（顺序就是轮播顺序，第一张是封面）；长文的图在正文里，不用这个"
       },
+      "cover": {
+        "type": "string",
+        "description": "长文的封面图（资料库里的图片地址）：发到网站时当文章封面（列表缩略图、分享卡片）；空的用正文第一张图。图文笔记的封面是 images 第一张，视频的是 video_cover"
+      },
       "cover_text": {
         "type": "string",
         "description": "图文笔记没有配图时，封面图上的大字（小红书、Instagram 用它生成文字封面）"

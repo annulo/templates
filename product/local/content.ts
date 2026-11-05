@@ -267,7 +267,7 @@ function limitsOf(ctx: any, t: ArticleType) {
 
 const TYPE_NOTE: Record<ArticleType, string> = {
   article:
-    "长文：body 是 HTML（<h2> <h3> <p> <ul> <ol> <li> <blockquote> <strong> <a> <img>），图片插在正文里；网站和知乎发它",
+    "长文：body 是 HTML（<h2> <h3> <p> <ul> <ol> <li> <blockquote> <strong> <a> <img>），图片插在正文里；网站和知乎发它；cover 是封面（可选，资料库里的图片地址：发到网站当文章封面，不填用正文第一张图）",
   post: "图文笔记：body 是纯文字（不要 HTML、不要 Markdown 标记，可以用换行和 emoji），配图单独放在 images 数组（顺序就是轮播顺序，第一张是封面）",
   video:
     "视频：body 是视频简介（纯文字），视频放在 video（资料库视频的地址）；视频本身由用户提供，没有就留空、提醒用户补",
@@ -428,6 +428,7 @@ type Fields = {
   body?: string;
   tags?: string[];
   images?: string[];
+  cover?: string;
   cover_text?: string;
   video_cover?: string;
   video?: string;
@@ -463,6 +464,7 @@ const cleanTags = (v: unknown) => [
 /** 文章字段的校验（按类型）：标题不能空；长文正文是 HTML、像写完的文章；图文笔记、视频正文是纯文字。只校验传了的字段 */
 function checkFields(f: Fields, t: ArticleType, ctx: any) {
   if (f.video_cover && !isAsset(f.video_cover)) throw new Error(L(ctx, "视频封面只能用资料库里的图片地址", "Video covers must use image URLs from the Library"));
+  if (f.cover && !isAsset(f.cover)) throw new Error(L(ctx, "封面（cover）只能用资料库里的图片地址", "cover must be an image URL from the Library"));
   if (f.title !== undefined && !String(f.title).trim())
     throw new Error(L(ctx, "缺标题（title）", "Missing title"));
   if (f.body !== undefined) {
@@ -522,6 +524,7 @@ function pick(input: any, t: ArticleType): Record<string, any> {
     if (input.keywords !== undefined)
       f.keywords = String(input.keywords ?? "").trim();
     if (input.slug !== undefined) f.slug = cleanSlug(input.slug);
+    if (input.cover !== undefined) f.cover = String(input.cover ?? "").trim();
   }
   if (t === "post") {
     if (input.images !== undefined)

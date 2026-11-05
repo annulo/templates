@@ -10,11 +10,11 @@
       },
       "kind": {
         "type": "string",
-        "description": "issue_fix（体检问题修复）/ search_meta（改标题描述）/ search_content（补内容）/ article（新文章）"
+        "description": "issue_fix（体检问题修复）/ search_meta（改标题描述）/ search_content（补内容）/ article（新文章）/ landing（新落地页）"
       },
       "ref_table": {
         "type": "string",
-        "description": "来源表：site_issues / search_pages / articles"
+        "description": "来源表：site_issues / search_pages / articles / landing_pages"
       },
       "ref_id": {
         "type": "string",

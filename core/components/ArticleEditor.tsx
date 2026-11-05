@@ -22,18 +22,18 @@ import { fileSrc } from '../lib/files'
 const imgSrc = (u: string) => fileSrc(u)
 
 // 一篇文章的编辑框和阅读视图，按文章类型显示字段（local/_types.ts）：
-//   长文：标题、摘要、富文本正文（图在正文里）；图文笔记：标题、纯文字正文、一组配图、封面大字；视频：标题、视频、简介、分区。都有话题。
+//   长文：标题、摘要、封面（发网站用，空的用正文第一张图）、富文本正文（图在正文里）；图文笔记：标题、纯文字正文、一组配图、封面大字；视频：标题、视频、简介、分区。都有话题。
 
-export type ArticleDraft = { title: string; summary: string; body: string; tags: string; images: string[]; cover_text: string; video: string; video_cover: string; category: string }
+export type ArticleDraft = { title: string; summary: string; body: string; tags: string; images: string[]; cover: string; cover_text: string; video: string; video_cover: string; category: string }
 
-export const draftOf = (a: Partial<Article>): ArticleDraft => ({ title: a.title ?? '', summary: a.summary ?? '', body: a.body ?? '', tags: tagsOf(a).join(' '), images: parseList(a.images), cover_text: a.cover_text ?? '', video: a.video ?? '', video_cover: a.video_cover ?? '', category: a.category ?? '' })
+export const draftOf = (a: Partial<Article>): ArticleDraft => ({ title: a.title ?? '', summary: a.summary ?? '', body: a.body ?? '', tags: tagsOf(a).join(' '), images: parseList(a.images), cover: a.cover ?? '', cover_text: a.cover_text ?? '', video: a.video ?? '', video_cover: a.video_cover ?? '', category: a.category ?? '' })
 const splitTags = (s: string) => [...new Set(s.split(/[\s,，#]+/).map((x) => x.trim()).filter(Boolean))]
 export const sameDraft = (x: ArticleDraft, y: ArticleDraft) => JSON.stringify({ ...x, tags: splitTags(x.tags) }) === JSON.stringify({ ...y, tags: splitTags(y.tags) })
 
 /** 存进表的字段：只写这种类型用得上的 */
 export function patchOf(d: ArticleDraft, t: ArticleType): Partial<Article> {
   const base: Partial<Article> = { title: d.title.trim(), body: t === 'article' ? d.body : d.body.trim(), tags: JSON.stringify(splitTags(d.tags)) }
-  if (t === 'article') return { ...base, summary: d.summary.trim() }
+  if (t === 'article') return { ...base, summary: d.summary.trim(), cover: d.cover }
   if (t === 'post') return { ...base, images: JSON.stringify(d.images), cover_text: d.cover_text.trim() }
   return { ...base, video: d.video, video_cover: d.video_cover, category: d.category.trim() }
 }
@@ -56,6 +56,7 @@ export function ArticleEditor({ type, draft, setDraft, editorKey, onUploadingCha
     <input value={draft.title} onChange={(e) => set('title', e.target.value)} placeholder={tr('content.title_ph')} aria-label={tr('social.f_title')} className={cx(inputCls, 'h-11 text-lg font-semibold')} />
     {type === 'article' && <>
       <textarea value={draft.summary} onChange={(e) => set('summary', e.target.value)} rows={2} aria-label={tr('content.new_summary')} placeholder={tr('content.summary_ph')} className={cx(inputCls, 'py-2')} />
+      <VideoCoverField value={draft.cover} onChange={(v) => set('cover', v)} onUploadingChange={onUploadingChange} label={tr('article.cover')} hint={tr('article.article_cover_hint')} />
       <RichEditor key={editorKey} value={draft.body} onChange={(body) => set('body', body)} />
     </>}
     {type === 'video' && <>
@@ -130,6 +131,8 @@ export function ArticleView({ a }: { a: Article }) {
   const tagLine = !!tags.length && <div className="mt-4 flex flex-wrap gap-1.5">{tags.map((x) => <span key={x} className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">#{x}</span>)}</div>
   if (t === 'article') return <>
     {a.summary && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a.summary}</p>}
+    {a.cover && <button type="button" onClick={() => setZoom(a.cover!)} aria-label={tr('article.cover')} className="mt-4 block cursor-zoom-in"><img src={imgSrc(a.cover)} alt={tr('article.cover')} loading="lazy" className="max-h-48 rounded-lg border border-border object-contain" /></button>}
+    {zoom && <Lightbox src={imgSrc(zoom)} onClose={() => setZoom('')} />}
     <div className="mt-5 border-t border-border pt-4">{a.video && <video src={videoSrc(a.video)} poster={a.video_cover || undefined} controls className="mb-4 w-full rounded-lg bg-black" />}{a.body ? <BodyPreview key={a.updated_at} html={a.body} /> : <p className="text-sm text-muted-foreground">{tr('content.no_body')}</p>}</div>
     {tagLine}
   </>

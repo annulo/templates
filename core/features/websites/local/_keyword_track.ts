@@ -32,17 +32,21 @@ function pagesOf(c: Change): string[] {
   }
 }
 
-/** 改动上线：把相关的词挂上。只管文章、搜索页面的改动和关键词的体检问题。返回挂了几个 */
+/** 改动上线：把相关的词挂上。只管文章、落地页、搜索页面的改动和关键词的体检问题。返回挂了几个 */
 export function linkKeywords(ctx: any, c: Change): number {
   // 体检修复只管关键词那两项（_audit_keywords.ts）：改的就是这几个词的页面；别的体检问题多是全站的事，不按词算
   const kwFix = c.kind === 'issue_fix' && /^keyword_/.test(ctx.db.get('site_issues', c.ref_id)?.check ?? '')
-  if (!kwFix && !['article', 'search_meta', 'search_content'].includes(c.kind)) return 0
+  if (!kwFix && !['article', 'landing', 'search_meta', 'search_content'].includes(c.kind)) return 0
   const pages = pagesOf(c)
   const all = keywordsOf(ctx, c.channel_id).filter((k) => k.status !== 'dismissed' && k.status !== 'raw')
   let hit: Kw[] = []
   if (c.kind === 'article') {
     const topic = ctx.db.get('articles', c.ref_id)?.topic_id
     hit = topic ? all.filter((k) => k.topic_id === topic) : []
+  } else if (c.kind === 'landing') {
+    // 落地页：从哪个词做的就挂哪个，再加上目标页、搜索落地页就是它的词
+    const from = ctx.db.get('landing_pages', c.ref_id)?.keyword_id
+    hit = all.filter((k) => k.id === from || pages.some((p) => samePage(p, k.target_page) || samePage(p, k.gsc_page)))
   } else {
     hit = all.filter((k) => (!kwFix && k.search_page_id === c.ref_id) || pages.some((p) => samePage(p, k.target_page) || samePage(p, k.gsc_page)))
   }

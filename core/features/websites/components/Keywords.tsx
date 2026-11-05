@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, EyeOf
 import { Badge, Button, Dialog, Notice, Panel, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from './ui'
 import RunButton from './RunButton'
 import { TaskButton, TaskLaunchButton } from './Task'
+import { LandingButton } from './views/Landing'
 import { openChat, runLocal, type Channel } from '../lib/shuttle'
 import { numLocale, tr } from '../lib/i18n'
 
@@ -253,14 +254,14 @@ function Group({ name, tab, list, fresh, channel, onChanged, onGo }: { name: str
         )}
       </div>
       {list.map((k) => (
-        <Row key={k.id} k={k} tab={tab} isNew={!!fresh?.has(k.id)} onChanged={onChanged} />
+        <Row key={k.id} k={k} channel={channel} tab={tab} isNew={!!fresh?.has(k.id)} onChanged={onChanged} />
       ))}
     </div>
   )
 }
 
 /** 一个词一行：词 + 一句理由；点开看细节和改状态 */
-function Row({ k, tab, isNew, onChanged }: { k: Keyword; tab: Tab; isNew: boolean; onChanged: () => void }) {
+function Row({ k, channel, tab, isNew, onChanged }: { k: Keyword; channel: Channel; tab: Tab; isNew: boolean; onChanged: () => void }) {
   const [open, setOpen] = useState(false)
   const reason = reasonOf(k, tab)
   return (
@@ -274,13 +275,13 @@ function Row({ k, tab, isNew, onChanged }: { k: Keyword; tab: Tab; isNew: boolea
         </span>
         <ChevronDown className={cx('size-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
       </button>
-      {open && <Details k={k} onChanged={onChanged} />}
+      {open && <Details k={k} channel={channel} onChanged={onChanged} />}
     </div>
   )
 }
 
 /** 点开一个词：Google 排名、目标页面用没用上、几个页面在抢、排名历史、复查结论、Google 前 10、助手的说明，和改状态 */
-function Details({ k, onChanged }: { k: Keyword; onChanged: () => void }) {
+function Details({ k, channel, onChanged }: { k: Keyword; channel: Channel; onChanged: () => void }) {
   const [help, setHelp] = useState(false)
   const top = parse<SerpRow[]>(k.serp_results, [])
   const hist = parse<Rank[]>(k.rank_history, [])
@@ -367,6 +368,7 @@ function Details({ k, onChanged }: { k: Keyword; onChanged: () => void }) {
         {k.status === 'idea' && status('targeting', tr('keywords.target'), Target)}
         {k.status === 'targeting' && status('idea', tr('keywords.untarget'), Undo2)}
         {k.status === 'dismissed' ? status('idea', tr('keywords.restore'), Undo2) : status('dismissed', tr('keywords.dismiss'), EyeOff)}
+        {k.status !== 'dismissed' && <LandingButton sites={[channel]} preset={() => ({ channel_id: channel.id, keyword: k.keyword, keyword_id: k.id, goal: tr('landing.goal_from_keyword', { kw: k.keyword }) })} />}
       </div>
     </div>
   )

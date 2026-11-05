@@ -312,6 +312,8 @@ export type Article = {
   tags?: string
   /** 图文笔记的配图，JSON 数组字符串 */
   images?: string
+  /** 长文的封面（资料库里的图片地址），空的发网站时用正文第一张图 */
+  cover?: string
   cover_text?: string
   category?: string
   /** 改写自哪篇文章 */
@@ -333,7 +335,7 @@ export type Article = {
 }
 
 /** 网站的发布记录（publications 表，有网站的模板才有）。共用的内容中心（core/）按它显示网站，这个模板没有网站时表不存在、读出来是空的 */
-export type Publication = { id: string; article_id: string; channel_id: string; status: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed'; scheduled_at?: string; title?: string; summary?: string; body?: string; video?: string; keywords?: string; slug?: string; cms_id?: string; url?: string; error?: string; published_at?: string; updated_at?: string }
+export type Publication = { id: string; article_id: string; channel_id: string; status: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed'; scheduled_at?: string; title?: string; summary?: string; body?: string; video?: string; keywords?: string; slug?: string; cms_id?: string; url?: string; error?: string; warning?: string; published_at?: string; updated_at?: string }
 /** 网站渠道（creght 站点、WordPress）；这个模板没有网站，永远是 false */
 export const isSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress')
 
@@ -662,6 +664,7 @@ type Tables = {
   search_pages: SearchPage
   search_daily: SearchDaily
   site_changes: SiteChange
+  landing_pages: LandingPage
 }
 
 /** 社媒账号的浏览器自动化最近一次成没成（社媒插件写，表 social_health）：一个账号一类操作一行 */
@@ -783,5 +786,5 @@ export const runningChats = (): Promise<Record<string, string>> =>
   shuttleMissing()
     ? remoteChats().then((l) => Object.fromEntries(l.filter((c) => c.status).map((c) => [c.id, c.status as string])))
     : api<{ chats: Record<string, string> }>('agent/running').then((r) => r.chats ?? {})
-import type { AuditRun, GeoQuestion, GeoResult, GeoRun, SearchDaily, SearchPage, SiteChange, SiteIssue } from './sites'
+import type { AuditRun, GeoQuestion, GeoResult, GeoRun, SearchDaily, SearchPage, SiteChange, LandingPage, SiteIssue } from './sites'
 export * from './sites'

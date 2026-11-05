@@ -10,7 +10,7 @@ import { htmlText, parseList, platformsFor, typeOf, type ArticleType } from './_
 import { FIELDS, fieldsFor } from '../plugins/social/local/_fields'
 
 const TYPE_NOTE: Record<ArticleType, string> = {
-  article: '长文：body 是 HTML（<h2> <h3> <p> <ul> <ol> <li> <blockquote> <strong> <a> <img>），图片插在正文里',
+  article: '长文：body 是 HTML（<h2> <h3> <p> <ul> <ol> <li> <blockquote> <strong> <a> <img>），图片插在正文里；cover 是封面（可选，资料库里的图片地址：发到网站当文章封面，不填用正文第一张图）',
   post: '图文笔记：body 是纯文字（不要 HTML、不要 Markdown 标记），配图是 images（顺序就是轮播顺序，第一张是封面）',
   video: '视频：body 是视频简介（纯文字），video 是发布用的视频（资料库里的一条产物，assets.add 传 use: true 设它）',
 }

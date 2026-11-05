@@ -27,10 +27,11 @@ const WORK_TASK = 'work-on-article'
 /** 交给内容中心（core/components/views/Content.tsx） */
 export const aiWork: AIWork = { task: WORK_TASK, Panel: Artifacts }
 
-/** 这组用在这篇上了没有：视频文章的视频在组里；图文的配图就是组里的图（按顺序） */
+/** 这组用在这篇上了没有：视频文章的视频在组里；图文的配图就是组里的图（按顺序）；长文的封面在组里 */
 function inUse(a: Article, x: Asset) {
   const files = filesOf(x)
   const t = typeOf(a)
+  if (t === 'article') return !!a.cover && files.some((f) => f.url === a.cover)
   if (t === 'video') return !!a.video && files.some((f) => f.url === a.video)
   if (t === 'post') {
     const imgs = files.filter((f) => f.mime.startsWith('image/')).map((f) => f.url)
@@ -104,9 +105,10 @@ function ArtifactCard({ x, article, articles, current, onChanged }: { x: Asset; 
   const t = typeOf(article)
   const video = files.find((f) => f.mime.startsWith('video/'))
   const images = files.filter((f) => f.mime.startsWith('image/')).map((f) => f.url)
-  // 用这个：视频文章取组里的视频；图文把组里的图按顺序换成配图
+  // 用这个：视频文章取组里的视频；图文把组里的图按顺序换成配图；长文把组里第一张图设为封面
   const use = t === 'video' && video ? { label: tr('artifacts.use_video'), patch: { video: video.url } }
     : t === 'post' && images.length ? { label: tr('artifacts.use_images', { n: images.length }), patch: { images: JSON.stringify(images) } }
+    : t === 'article' && images.length ? { label: tr('artifacts.use_cover'), patch: { cover: images[0] } }
     : null
   const saveNote = () => act(() => dbPatch('assets', x.id, { note: note.trim() } as Partial<LibAsset>)).then((ok) => ok && setEditing(false))
   // 删一个产物：从资料库删掉；文件没有别处在用（别的文章、发布记录）就连本机文件一起删

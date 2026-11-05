@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Lightbulb,
   ChartNoAxesCombined,
+  LayoutTemplate,
   UserRound,
   Activity,
 } from "lucide-react";
@@ -35,6 +36,7 @@ export const NAV: NavGroup[] = [
         section: "s_content",
         items: [
           { view: "website-content", icon: FileText },
+          { view: "landing", icon: LayoutTemplate },
           { view: "opportunities", icon: Lightbulb },
         ],
       },

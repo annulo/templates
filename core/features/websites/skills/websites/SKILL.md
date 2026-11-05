@@ -66,6 +66,12 @@ description: 网站渠道（外贸、产品、自媒体模板都有）：creght 
 - 在那个目录里改，`creght push` 只更新预览，把渠道的 `preview_url` 给用户看效果（渠道网站的预览地址是能打开的）。
 - 发布上线（`creght publish`）：不主动做，改完把预览地址给用户，问一句要不要发布。**用户说了「发布」「上线」就直接发布**，不再追问、不要求先看预览；有风险（比如某个页面还是空的）在发布后的回复里提一句。
 
+### 落地页（landing_pages）
+
+为一个目标单独做的页面（拿询盘、推一款产品、接住一个关键词），在「落地页」页面新建，照任务 `tasks/landing-page.md` 做：写简报 → 改网站代码做出页面 → 推预览 → 用户说上线才上线。
+记录在 `landing_pages` 表，进度用 `annulo run landing.save` 存（`landing.context` 拿上下文）。用户在对话里直接要做落地页时，先 `annulo run landing.create --input '{"channel_id":"…","goal":"…"}'` 建一条，再照任务做。
+落地页不是文章：不走发布脚本、不进内容中心。
+
 ## 发布到网站（publications）
 
 一篇文章可以发到多个网站。每个网站有一个**发布脚本** `local/pub_<网站 id>.ts`，字段怎么映射全写在里面；发布记录在 `publications` 表（一篇文章在一个网站上一行：状态、CMS 内容 id、地址）。

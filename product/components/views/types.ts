@@ -11,6 +11,7 @@ export type View =
   | "products"
   | "content"
   | "website-content"
+  | "landing"
   | "social-content"
   | "inspiration"
   | "social-metrics"

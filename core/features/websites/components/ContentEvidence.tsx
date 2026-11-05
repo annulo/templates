@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Save, Sparkles } from 'lucide-react'
-import { dbList, runLocal, type Product, type Topic, type WritingBrief } from '../lib/shuttle'
+import { dbList, isSite, runLocal, type Product, type Topic, type WritingBrief } from '../lib/shuttle'
 import { tr } from '../lib/i18n'
 import { Button, Dialog, Field, Notice, inputCls } from './ui'
 import type { Ctx } from './views/types'
 import { TopicOrigins } from './Origins'
+import { LandingButton } from './views/Landing'
 
 const r = (key: string) => tr('brief.' + key)
 const parse = <T,>(value: string | undefined, fallback: T): T => { try { return JSON.parse(value || '') } catch { return fallback } }
@@ -22,7 +23,7 @@ export function WritingBriefDialog({ ctx, topic, onClose, onChanged, onWrite, he
     setBusy(true); setError('')
     try { await runLocal('content.saveBrief', { topic_id: topic.id, ...draft, brief }); onChanged(); onClose(); if (write) onWrite(); return true } catch (e) { setError((e as Error).message); return false } finally { setBusy(false) }
   }
-  return <Dialog open onClose={() => !busy && onClose()} title={r('brief')} width={760} footer={<><Button variant="outline" disabled={busy} onClick={onClose}>{tr('common.cancel')}</Button><Button fn="content.saveBrief" variant="outline" disabled={busy || !draft.title.trim()} onClick={() => save()}><Save />{tr('common.save')}</Button><Button fn="content.saveBrief" needsShuttle disabled={busy || !draft.title.trim()} onClick={() => save(true)}><Sparkles />{r('save_and_write')}</Button></>}>
+  return <Dialog open onClose={() => !busy && onClose()} title={r('brief')} width={760} footer={<><span className="mr-auto"><LandingButton sites={ctx.channels.filter(isSite)} onStarted={onClose} preset={() => ({ topic_id: topic.id, product_ids: brief.product_ids ?? [], keyword: draft.keywords.split(/[,，]/)[0]?.trim() ?? '', goal: tr('landing.goal_from_topic', { title: draft.title.trim() || topic.title }) })} /></span><Button variant="outline" disabled={busy} onClick={onClose}>{tr('common.cancel')}</Button><Button fn="content.saveBrief" variant="outline" disabled={busy || !draft.title.trim()} onClick={() => save()}><Save />{tr('common.save')}</Button><Button fn="content.saveBrief" needsShuttle disabled={busy || !draft.title.trim()} onClick={() => save(true)}><Sparkles />{r('save_and_write')}</Button></>}>
     <div className="space-y-4">{header}<TopicOrigins ctx={ctx} topic={topic} />{error && <Notice tone="error">{error}</Notice>}<div className="space-y-4">
       {(['title', 'angle', 'keywords'] as const).map((key) => <Field key={key} label={r('brief_' + key)}><input aria-label={r('brief_' + key)} value={draft[key]} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} className={inputCls} /></Field>)}
       <div className="grid gap-4 sm:grid-cols-2">{(['audience', 'buyer_question'] as const).map((key) => <Field key={key} label={r('brief_' + key)}><textarea aria-label={r('brief_' + key)} rows={2} value={brief[key] || ''} onChange={(e) => change(key, e.target.value)} className={`${inputCls} py-2`} /></Field>)}</div>

@@ -31,7 +31,7 @@ creght content list --site_id=<site_ref> --collection=<集合> --limit 3   # 已
 
 没有文章类的集合时，直接给它搭一个，不用问：
 
-1. 建集合：标题、slug、摘要、正文（HTML）、封面图、发布日期，按需要加标签；`creght cms collection create --help` 看怎么写。
+1. 建集合：标题、slug、摘要、正文（HTML）、封面图、发布日期，按需要加标签；文章列表页显示封面缩略图，详情页的 `og:image` 用封面；`creght cms collection create --help` 看怎么写。
 2. 把站点代码拉到 `$HOME/.shuttle/sites/<site_id>`（拉过就 `creght pull` 更新），照站点现有页面的风格加文章列表页和文章详情页，读这个集合；在导航里加入口。
 3. `creght push` 推到预览，确认列表页能打开。集合里还没有文章时详情页打不开是正常的，不用为此卡住。
 4. 不主动 `creght publish`：在最后的回复里告诉用户站点发布之后，正式域名上才看得到，问要不要发布；用户说发布就直接发布，不再确认。
@@ -41,9 +41,12 @@ creght content list --site_id=<site_ref> --collection=<集合> --limit 3   # 已
 照 `local/_publish.ts` 开头的例子写，外面用 `publishTo` 包一层（发布状态、发布记录、效果追踪它都管了）。能用的：
 `slugOf(a)`、`markdown(ctx, html)`、`plainText(ctx, html)`、`imagesIn(ctx, html)`、`today()`、`creght.create / update / contents`、`wp(ctx, ch, path, { method, body })`。
 
+- **封面用 `a.cover`**：文章设了封面就是它，没设是正文第一张图，都已经是网站上的地址（没有图时是空的）。CMS 有封面字段就填 `a.cover`，不要自己从正文里挑；WordPress 的特色图片要媒体 id，按地址到 `/wp/v2/media` 查到 id 再填 `featured_media`。
+  脚本不读 `a.cover` 的话，文章设了封面却没用上，发布记录上会提醒用户让你更新脚本（`note` 里就是这句提醒时，照这条改）；
+
 - CMS 里每个**必填**字段都要有值；文章里没有对应内容的（比如必填的封面而文章里没有图），**抛出一句说清楚的错**（缺什么、怎么补），不要编一个值填进去；
 - 正文格式照字段说明：要 Markdown 就 `markdown(ctx, a.body)`；
-- **正文里的图片不用管**：这台电脑上的图（`/_annulo/uploaded/…`、`local:…`）`publishTo` 在调脚本之前已经传到网站（creght 站点的素材库、WordPress 的媒体库），`a.body` 里都换成了网站上的地址，封面照常从 `imagesIn` 取；不要在脚本里再传图、改图片地址；
+- **正文里的图片、封面不用管**：这台电脑上的图（`/_annulo/uploaded/…`、`local:…`）`publishTo` 在调脚本之前已经传到网站（creght 站点的素材库、WordPress 的媒体库），`a.body` 和 `a.cover` 里都换成了网站上的地址；不要在脚本里再传图、改图片地址；
 - 引用别的集合的字段（分类、标签、作者）：先查那个集合拿 id，查不到按网站已有的做法处理，脚本里写清楚；
 - 再次发布同一篇（`prev?.cms_id` 有值）是更新，不是新建；slug 沿用 `prev?.slug`；
 - `dry` 时只返回要发出去的内容（集合、slug、每个字段、地址），不要真的调接口；
@@ -57,7 +60,7 @@ creght content list --site_id=<site_ref> --collection=<集合> --limit 3   # 已
 annulo run pub_<channel_id>.publish --input '{"article_id":"<id>","dry":true}'
 ```
 
-试发不传图：输出里的 `local_images` 是真发时要传到网站的图，正文里还是本机地址、封面可能是空的，这是正常的。逐个字段对照第 1 步看到的 CMS 结构：必填的都有、格式对；集合里有已有文章的话，slug 风格、地址也要和它们一样。不对就改脚本再试。只看 dry 的输出，不用去访问地址验证。
+试发不传图：输出里的 `local_images` 是真发时要传到网站的图，正文和封面里还是本机地址，这是正常的。输出里有 `warning` 说封面没用上，就是脚本没读 `a.cover`，改掉再试。逐个字段对照第 1 步看到的 CMS 结构：必填的都有、格式对；集合里有已有文章的话，slug 风格、地址也要和它们一样。不对就改脚本再试。只看 dry 的输出，不用去访问地址验证。
 
 ## 5. 标成能发
 
@@ -66,7 +69,7 @@ annulo run publishing.ready --input '{"channel_id":"<id>","publisher":"pub_<chan
 annulo push -m '配置「<网站名>」的文章发布'
 ```
 
-`note` 会显示在网站页面上，用用户看得懂的话写，比如「发到 posts 集合；标题、摘要、正文（Markdown）、封面取正文第一张图；地址 /blog/<slug>」。
+`note` 会显示在网站页面上，用用户看得懂的话写，比如「发到 posts 集合；标题、摘要、正文（Markdown）、封面（文章设的封面，没设用正文第一张图）；地址 /blog/<slug>」。
 
 ## 6. 回复用户
 

@@ -71,6 +71,10 @@
       "updated_at": {
         "type": "string",
         "description": "更新时间 ISO8601"
+      },
+      "warning": {
+        "type": "string",
+        "description": "发出去了但有地方没照文章来（比如发布脚本是旧的、没用上文章设的封面）：给用户看的一句话，再发一次没问题了就清掉"
       }
     },
     "required": [

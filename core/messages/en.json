@@ -178,6 +178,7 @@
     "preset_save_here": "Save as preset",
     "video_cover": "Video cover",
     "video_cover_hint": "Upload an image or choose one from the Library for Xiaohongshu and Douyin. Leave empty to use the platform default.",
+    "article_cover_hint": "Used as the article cover on your website (list thumbnail, share card). Leave empty to use the first image in the body.",
     "replace_cover": "Replace cover",
     "remove_cover": "Remove cover",
     "image_required": "Choose an image file.",
@@ -616,6 +617,7 @@
     "working": "AI is working on this",
     "use_video": "Use for publishing",
     "use_images": "Use as images ({n})",
+    "use_cover": "Set as cover",
     "n_files": "{n} files",
     "copy_ref_all": "Copy reference to the set"
   },

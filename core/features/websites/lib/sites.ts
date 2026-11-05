@@ -330,7 +330,7 @@ export type SearchDaily = {
 };
 
 export type ChangeKind =
-  "issue_fix" | "search_meta" | "search_content" | "article";
+  "issue_fix" | "search_meta" | "search_content" | "article" | "landing";
 export type ChangeMetrics = {
   source: "gsc" | "visits";
   start: string;
@@ -340,6 +340,32 @@ export type ChangeMetrics = {
   ctr?: number;
   position?: number;
   pv?: number;
+};
+/** 落地页（landing_pages 表）：助手照任务 tasks/landing-page.md 改网站代码做出来，推预览，用户说上线才上线 */
+export type LandingPage = {
+  id: string;
+  channel_id: string;
+  title?: string;
+  goal: string;
+  note?: string;
+  /** JSON 数组字符串：products 的 id */
+  product_ids?: string;
+  keyword?: string;
+  keyword_id?: string;
+  topic_id?: string;
+  opportunity_id?: string;
+  language?: string;
+  /** 简报（Markdown） */
+  brief?: string;
+  path?: string;
+  preview_url?: string;
+  url?: string;
+  status: "planning" | "preview" | "live" | "archived";
+  chat_id?: string;
+  summary?: string;
+  live_at?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 /** 上线过的一次改动，到期由 review.check 对比改动前后 14 天 */
 export type SiteChange = {
