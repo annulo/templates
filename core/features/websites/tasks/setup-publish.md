@@ -49,7 +49,9 @@ creght content list --site_id=<site_ref> --collection=<集合> --limit 3   # 已
 - **正文里的图片、封面不用管**：这台电脑上的图（`/_annulo/uploaded/…`、`local:…`）`publishTo` 在调脚本之前已经传到网站（creght 站点的素材库、WordPress 的媒体库），`a.body` 和 `a.cover` 里都换成了网站上的地址；不要在脚本里再传图、改图片地址；
 - 引用别的集合的字段（分类、标签、作者）：先查那个集合拿 id，查不到按网站已有的做法处理，脚本里写清楚；
 - 再次发布同一篇（`prev?.cms_id` 有值）是更新，不是新建；slug 沿用 `prev?.slug`；
-- `dry` 时只返回要发出去的内容（集合、slug、每个字段、地址），不要真的调接口；
+- `dry` 时只返回要发出去的内容 `{ collection, slug, body, url }`（`body` 就是要写进 CMS 的那个对象），不要真的调接口。
+  **多语言网站靠它**：系统把每种语言的译文代进 `a`（标题、摘要、正文、关键词）再试发一次，和原文试发出来的 `body` 比，不一样的字段写进 CMS 的 `body._i18n.<语言>`（`docs/multilingual.md`）。
+  所以脚本不用管语言，也不要自己写 `_i18n`；跟着语言变的字段（标题、摘要、正文、SEO 标题和描述、标签）都要从 `a` 映射，不跟语言变的（分类、作者、日期、封面）不要从标题、正文里算；
 - 返回 `{ cms_id, collection, slug, url }`，`url` 是这篇在这个网站上的真实访问地址。
 
 ## 4. 试发（有文章才做）
@@ -66,8 +68,11 @@ annulo run pub_<channel_id>.publish --input '{"article_id":"<id>","dry":true}'
 
 ```bash
 annulo run publishing.ready --input '{"channel_id":"<id>","publisher":"pub_<channel_id>","collection":"<creght 的文章集合，WordPress 不填>","note":"一句话：发到哪个集合、字段怎么对应、文章地址是什么样"}'
+annulo run languages.read --input '{"channel_id":"<id>"}'
 annulo push -m '配置「<网站名>」的文章发布'
 ```
+
+`languages.read` 读这个网站开了哪些语言（WordPress 网站不用跑）：开了多种语言的，文章页上会出现各语言的译文，发布时一起发。
 
 `note` 会显示在网站页面上，用用户看得懂的话写，比如「发到 posts 集合；标题、摘要、正文（Markdown）、封面（文章设的封面，没设用正文第一张图）；地址 /blog/<slug>」。
 

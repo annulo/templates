@@ -143,6 +143,22 @@
       "page_id": {
         "type": "string",
         "description": "Facebook 公司主页的 id（fb_kind=page）"
+      },
+      "locales": {
+        "type": "string",
+        "description": "creght_site：网站开了哪些语言，JSON 数组字符串（[\"en\",\"zh\"]），从站点页面里的语言设置读（languages.read）；只有一种或为空是单语言网站。见 docs/multilingual.md"
+      },
+      "default_locale": {
+        "type": "string",
+        "description": "creght_site：网站的默认语言（网址不带语言前缀的那种）"
+      },
+      "locales_read_at": {
+        "type": "string",
+        "description": "上次读网站语言设置的时间；空是还没读过，文章页打开时自动读一次"
+      },
+      "translations_review": {
+        "type": "boolean",
+        "description": "多语言网站：true 时只发用户确认过的译文（article_translations.status=ready）；默认 AI 翻好就能发"
       }
     },
     "required": [

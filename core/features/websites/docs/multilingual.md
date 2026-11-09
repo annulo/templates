@@ -1,6 +1,6 @@
 # 网站多语言：文章和落地页
 
-2026-11-09 起草，待定的几项已经和用户定了，**等 zhangliang 看过再做**。外贸、产品运营两个模板一起用（网站运营模块）。只改模板，不改 Annulo：要用的 creght 能力（CMS 的 `_i18n`、站点代码推送）现在都有。
+2026-11-09 起草，zhangliang 确认后开始做：文章（网站语言、翻译、多语言发布）已做，落地页还没做。外贸、产品运营两个模板一起用（网站运营模块）。只改模板，不改 Annulo：要用的 creght 能力（CMS 的 `_i18n`、站点代码推送）现在都有。
 
 ## 照着 creght 的做法
 
@@ -57,29 +57,20 @@ creght 站点自己就支持多语言（例子：www.pofungfurniture.com，源�
 
 ### 发布
 
-发布脚本 `local/pub_<网站>.ts` 现在写死了「文章哪项填进 CMS 哪个字段」。多语言要用同一套字段映射给每种语言算一遍，所以把这部分拆出来：
-
-```ts
-// 字段映射：只写一遍，原文和每种译文都用它
-export function fields(a: Article, ctx: any) { return { title: a.title, excerpt: a.summary, content: a.body, cover: a.cover, … } }
-export async function publish(input, ctx) {
-  return publishTo(ctx, input, '<网站 id>', async ({ a, ch, prev, dry, i18n }) => {
-    const body = { ...fields(a, ctx), ...(i18n ? { _i18n: i18n } : {}) }
-    …   // 和现在一样新建或更新
-  }, fields)
-}
-```
-
-`publishTo`（`local/_publish.ts`）在多语言网站上多做几件事：
+**发布脚本不用改**（2026-11-09 实现时改的，原来打算拆一个 `fields()`）：现有的脚本试发（`dry`）时本来就返回要发出去的 `{ collection, slug, body, url }`，
+`publishTo`（`local/_publish.ts`）拿它当字段映射用。在多语言网站上它多做这几件事：
 
 1. **默认语言的内容放主字段**：文章 `lang` 等于网站默认语言，就用原文；不等，就用默认语言的译文。都没有的话不发，提示「先翻成 <默认语言>」。
-2. **其余语言算 `_i18n`**：对每种能发的译文（默认 `draft`、`ready` 都算，设了「确认过才发」就只算 `ready`），把译文代进文章、用 `fields()` 算一遍，和主字段比，**不一样的字段**就是这种语言的 `_i18n`。哪些字段要翻不用猜：映射出来跟着文字变的就是要翻的，封面、日期、分类这些自然一样，不会进去。
-3. **不覆盖别人的译文**：更新前先读出线上这条内容，保留线上 `_i18n` 里后台不管的语言（比如用户在 creght 编辑器里手动翻的），只替换后台有译文的那几种（和 pofung 的 `upload.py` 一样）。`_creght.ts` 补一个按 id 读单条内容的函数。
+2. **其余语言算 `_i18n`**：对每种能发的译文（默认 `draft`、`ready` 都算，设了「确认过才发」就只算 `ready`），把译文代进文章（标题、摘要、正文、关键词，译文空着的字段照用原文），
+   让脚本试发一次，和原文试发出来的 `body` 比，**不一样的字段**就是这种语言的 `_i18n`。哪些字段要翻不用猜：脚本里跟着文字变的（标题、正文、SEO 标题、标签）自然不一样，封面、日期、分类一样，不会进去。
+3. **默认语言照常发，`_i18n` 另写一次**：脚本照旧新建或更新这条内容（只有默认语言）；发完再单独更新一次 `body._i18n`。creght 对 JSON Schema 集合的 body 是**顶层浅合并**（weave `internal/repo/cms.go` 的 `mergeJSONSchemaContentBody`），
+   所以脚本更新主字段时线上的 `_i18n` 原样留着，写 `_i18n` 时要整份发：先读出线上的（`_creght.ts` 的 `getContent`），保留后台没有译文的语言（比如用户在 creght 编辑器里手动翻的），只换这次有的。
 4. **图片**：译文正文里的本机图片和原文一起传，按 sha256 去重，不重复传。
-5. **记录**：`publications` 加 `locale_urls`（`{ "zh": "https://…/zh/blog/x" }`），按网址前缀的规则拼。发布记录、效果追踪（`trackChange` 的 `pages`）都带上这些网址。
-6. **原文已改、译文没更新的**：照样按旧译文发出去，发布结果里写 `warning`，列出哪几种语言的译文落后于原文。
+5. **记录**：`publications` 加 `locales`（这次发上去的语言）、`locale_urls`（`{ "zh": "https://…/zh/blog/x" }`），按网址前缀的规则拼。效果追踪（`trackChange` 的 `pages`）带上各语言的网址。
+6. **出错不算发布失败**：默认语言发好了、某种语言映射出错或者 `_i18n` 没写上，发布记录还是已发布，`warning` 里写清楚（发布记录上会出现「让 AI 修发布脚本」）。
+   原文改了、译文没更新的照样按旧译文发，只在文章页标「原文已改」，不写进 `warning`（那不是脚本的问题）。
 
-**老的发布脚本**没有导出 `fields`：单语言网站照常发；多语言网站发的时候只发默认语言，并提示「让 AI 更新发布脚本」（和现在缺封面字段时的做法一样，照 setup-publish 改）。setup-publish 以后写的新脚本都带 `fields`。
+**老的发布脚本**试发时没有返回 `body`：只发默认语言，`warning` 提示「让 AI 更新发布脚本」（setup-publish 现在写明 `dry` 要返回 `body`）。单语言网站、WordPress 和现在完全一样。
 
 WordPress 没有原生多语言（要装 WPML、Polylang 这类插件，各家接口不一样），这次不做：WordPress 网站只有一种语言。
 
@@ -105,15 +96,19 @@ WordPress 没有原生多语言（要装 WPML、Polylang 这类插件，各家�
 - WordPress 多语言；
 - 后台里给网站开多语言（改站点代码）：先让用户去 creght 编辑器开。
 
-## 要先验证的
+## 验证过的
 
-- 本机函数走的是 creght MCP（`local/_creght.ts`），不是命令行。要先确认 MCP 的更新内容接口会**原样保留** `body._i18n`。pofung 是用命令行写的；weave 的 `usecase/cms.go` 只是在校验前把它剔掉，按理会存下来，要拿一条真内容试一下。不保留的话，就是平台要补的缺口，派给 weave。
+- creght MCP 的 `cms_content_update` 会存下 `body._i18n`（只是不参与 schema 校验），body 是顶层浅合并，见上面「发布」第 3 条。
+- MCP 原来没有按 id 读一条内容的工具，只能翻 `cms_content_list`：已请 weave 加 `cms_content_get`（2026-11-09 派的任务），`getContent` 先用它，没有就翻页找。
+- 用 pofung 项目真实的发布脚本、文章和线上内容跑过（MCP 用只读快照代替）：中文的 title、content、excerpt、tags 算出来和线上手翻的一样，线上的阿语、葡语原样保留；
+  seoTitle、seoDescription 跟着 pofung 脚本的映射（= 标题、= 摘要）走，和线上当初单独翻的 SEO 标题不一样，这是脚本的映射，英文主字段也是这样。
+- 站点的语言设置不用读代码：creght 站点的每个页面都内嵌 `window.TalizenConfig = { i18n: {"locales":[…],"defaultLocale":"en"} }`，`languages.read` 抓首页读它。
 
 ## 分几步做
 
-1. 网站语言：`channels.locales`，setup-publish 读配置，网站设置里显示语言；
-2. 文章翻译：`article_translations`、`glossary`、翻译任务、文章页语言标签；
-3. 多语言发布：`fields` 拆分、`publishTo` 写 `_i18n`、`locale_urls`、更新 setup-publish；
+1. ✅ 网站语言：`channels.locales`（`languages.read` 抓首页读），setup-publish 配好后读一次，文章页打开时没读过的自动读；网站设置的发布卡片下面显示语言（`components/SiteLanguages.tsx`）；
+2. ✅ 文章翻译：`article_translations`、`glossary`、任务 `tasks/translate-article.md`（写法 `prompts/translate-article.md`）、文章页的语言一栏（`components/ArticleLanguages.tsx`，挂在 core 的 `ArticleDetail`）；
+3. ✅ 多语言发布：`publishTo` 用脚本试发算 `_i18n`、发完单独写、`locales` / `locale_urls`；setup-publish 写明 `dry` 返回 `body`。测试 `publish/tests/multilingual.test.mjs`；
 4. 落地页多语言。
 
 1～3 做完，pofung 这样已经开了多语言的网站就能用；4 接着做。
