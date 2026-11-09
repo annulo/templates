@@ -1,3 +1,6 @@
+- version: 0.20.0
+  zh: "网站文章和落地页支持多语言：照 creght 站点开的语言，AI 翻出各语言版本，发布时一起发上去；术语表统一各语言的说法。"
+  en: "Website articles and landing pages go multilingual: AI translates them into each language your creght site has, published together, with a glossary keeping terms consistent."
 - version: 0.19.0
   zh: "长文能设封面，发网站时用作封面；新增落地页：写清目标，AI 在网站上做出页面，产品、关键词、选题上都能发起。"
   en: "Long-form articles get a cover used on your website, plus landing pages: say the goal and AI builds the page on your site, started from a product, keyword or topic."

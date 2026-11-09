@@ -3,6 +3,7 @@ import { ArrowUpRight, Check, Loader2, MessageSquareText, RefreshCw, Send, Spark
 import { Badge, Button, cx } from './ui'
 import { dbList, isSite, openChat, runLocal, runTask, type Channel, type Publication } from '../lib/shuttle'
 import { useTaskRuns } from './Task'
+import SiteLanguages from './SiteLanguages'
 import { useCanRunAll } from '../lib/useShuttle'
 import { tr } from '../lib/i18n'
 import type { Ctx } from './views/types'
@@ -198,7 +199,8 @@ export function PublishSetup({ ctx, channel, bare }: { ctx: Ctx; channel: Channe
     }
   }
   return (
-    <div className={cx('flex flex-col gap-3 text-sm md:flex-row md:items-center', !bare && 'rounded-xl border border-border bg-background p-4')}>
+    <div className={cx('flex flex-col gap-3', !bare && 'rounded-xl border border-border bg-background p-4')}>
+    <div className="flex flex-col gap-3 text-sm md:flex-row md:items-center">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 font-semibold">
           {tr('publish.setup_title')}
@@ -216,6 +218,8 @@ export function PublishSetup({ ctx, channel, bare }: { ctx: Ctx; channel: Channe
           <Sparkles /> {ready ? tr('publish.reconfigure') : tr('publish.setup')}
         </Button>
       )}
+    </div>
+    {channel.type === 'creght_site' && <div className="border-t border-border pt-3"><SiteLanguages channel={channel} onChanged={() => ctx.reloadChannels()} /></div>}
     </div>
   )
 }

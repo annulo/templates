@@ -1,0 +1,55 @@
+{
+  "name": "文章译文",
+  "desc": "一篇文章在一种语言下的译文：发到多语言网站时写进 CMS 的 body._i18n.<语言>。助手按任务 tasks/translate-article.md 翻（translations.save），用户也能在文章页上改。见 docs/multilingual.md",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "article_id": {
+        "type": "string",
+        "description": "哪篇文章（articles 的 id）"
+      },
+      "locale": {
+        "type": "string",
+        "description": "语言（en、zh、ar、pt…，和网站开的语言一样写）"
+      },
+      "title": {
+        "type": "string",
+        "description": "标题的译文"
+      },
+      "summary": {
+        "type": "string",
+        "description": "摘要的译文"
+      },
+      "body": {
+        "type": "string",
+        "description": "正文的译文（HTML，结构、链接、图片和原文一样）"
+      },
+      "keywords": {
+        "type": "string",
+        "description": "关键词的译文（逗号分隔）"
+      },
+      "source_hash": {
+        "type": "string",
+        "description": "翻译时原文（标题、摘要、正文、关键词）的指纹：原文后来改了就对不上，页面标「原文已改」"
+      },
+      "status": {
+        "type": "string",
+        "description": "draft（AI 翻的，用户还没看过）/ ready（用户确认过或自己改过）"
+      },
+      "chat_id": {
+        "type": "string",
+        "description": "翻译它的那段对话：要改就回到这段对话接着说"
+      },
+      "created_at": {
+        "type": "string"
+      },
+      "updated_at": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "article_id",
+      "locale"
+    ]
+  }
+}

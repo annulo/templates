@@ -9,6 +9,7 @@ import { tr } from '../../lib/i18n'
 import { useTables } from '../../lib/useTables'
 import { dbDelete, dbList, dbPatch, isSite, openChat, runLocal, runTask, type Channel, type LandingPage, type Product } from '../../lib/shuttle'
 import type { Ctx } from './types'
+import { localeName } from '../ArticleLanguages'
 
 // 落地页（网站下单独一页）：为一个目标单独做的页面。新建时写这页要做什么，交给助手照任务 tasks/landing-page.md
 // 写简报、直接改网站代码、推到预览；要改、要上线都回到做它的那段对话（「继续对话」），不在这里弹框收意见。记录在 landing_pages（local/landing.ts）。
@@ -17,7 +18,23 @@ export const LANDING_TASK = 'landing-page'
 
 const STATUS_TONE = { planning: 'primary', preview: 'warn', live: 'ok', archived: 'default' } as const
 
-const parseIds = (s?: string): string[] => {
+/** 网站开的语言（渠道表的 locales）：两种以上才是多语言网站 */
+const siteLocales = (ch?: Channel): { locales: string[]; def: string } | null => {
+  const c = ch as (Channel & { locales?: string; default_locale?: string }) | undefined
+  if (c?.type !== 'creght_site') return null
+  const locales = parseIds(c.locales)
+  return locales.length > 1 ? { locales, def: locales.includes(c.default_locale ?? '') ? c.default_locale! : locales[0] } : null
+}
+const parseUrls = (s?: string): Record<string, { preview?: string; live?: string }> => {
+  try {
+    const v = JSON.parse(s || '{}')
+    return v && typeof v === 'object' ? v : {}
+  } catch {
+    return {}
+  }
+}
+
+function parseIds(s?: string): string[] {
   try {
     const v = JSON.parse(s || '[]')
     return Array.isArray(v) ? v.map(String) : []
@@ -98,6 +115,10 @@ function Row({ p, site, products, running, expanded, onToggle, onChanged }: { p:
     try { await f(); onChanged() } catch (e) { setErr((e as Error).message) } finally { setBusy(false) }
   }
   const link = p.status === 'live' ? p.url : p.preview_url || p.url
+  // 多语言网站：每种语言一个地址（landing.save 按默认语言的地址加前缀算好）
+  const locales = parseIds(p.locales)
+  const urls = parseUrls(p.urls)
+  const localeLinks = locales.length > 1 ? locales.map((l) => ({ l, href: p.status === 'live' ? urls[l]?.live : urls[l]?.preview || urls[l]?.live })).filter((x) => x.href) : []
   const names = parseIds(p.product_ids).map((id) => products.find((x) => x.id === id)?.name).filter(Boolean) as string[]
   // 找不到原来的对话（老数据、对话删了）：新开一段接着做，任务从表里取上下文
   const resume = () => act(async () => { const r = await runTask(LANDING_TASK, { id: p.id }); openChat(r.chat_id) })
@@ -119,6 +140,7 @@ function Row({ p, site, products, running, expanded, onToggle, onChanged }: { p:
         </button>
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
           {link && <a href={link} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1 px-2 text-xs text-primary-text hover:underline">{p.status === 'live' ? tr('landing.view_live') : tr('landing.view_preview')}<ArrowUpRight className="size-3" /></a>}
+          {localeLinks.length > 1 && localeLinks.slice(1).map((x) => <a key={x.l} href={x.href} target="_blank" rel="noreferrer" title={localeName(x.l)} className="inline-flex h-8 items-center px-1 text-xs text-primary-text hover:underline">{x.l}</a>)}
           {running ? (
             <Button size="sm" variant="outline" onClick={() => openChat(running)}><Loader2 className="animate-spin" />{tr('task.running')} · {tr('task.view')}</Button>
           ) : p.chat_id ? (
@@ -135,6 +157,10 @@ function Row({ p, site, products, running, expanded, onToggle, onChanged }: { p:
             {p.note && <><dt className="text-muted-foreground">{tr('landing.f_note')}</dt><dd className="whitespace-pre-wrap [overflow-wrap:anywhere]">{p.note}</dd></>}
             {p.summary && <><dt className="text-muted-foreground">{tr('landing.f_summary')}</dt><dd className="[overflow-wrap:anywhere]">{p.summary}</dd></>}
             {p.live_at && <><dt className="text-muted-foreground">{tr('landing.f_live')}</dt><dd>{fmtTime(p.live_at)}</dd></>}
+            {locales.length > 1 && <><dt className="text-muted-foreground">{tr('landing.f_locales')}</dt><dd className="flex flex-wrap gap-x-3 gap-y-1">{locales.map((l) => {
+              const href = localeLinks.find((x) => x.l === l)?.href
+              return href ? <a key={l} href={href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-primary-text hover:underline">{localeName(l)}<ArrowUpRight className="size-3" /></a> : <span key={l}>{localeName(l)}</span>
+            })}</dd></>}
           </dl>
           {p.brief ? (
             <div className="rounded-lg border border-border bg-background px-4 py-3">
@@ -181,6 +207,7 @@ export function LandingDialog({ open, sites, products, preset, onClose, onStarte
   const [picked, setPicked] = useState<string[]>([])
   const [keyword, setKeyword] = useState('')
   const [note, setNote] = useState('')
+  const [langs, setLangs] = useState<string[]>([])
   const [existing, setExisting] = useState<LandingPage[]>([])
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
@@ -188,7 +215,7 @@ export function LandingDialog({ open, sites, products, preset, onClose, onStarte
     if (!open) return
     const x = preset ?? {}
     setSite((s) => (x.channel_id && sites.some((c) => c.id === x.channel_id) ? x.channel_id : sites.some((c) => c.id === s) ? s : sites[0]?.id ?? ''))
-    setGoal(x.goal ?? ''); setPicked(x.product_ids ?? []); setKeyword(x.keyword ?? ''); setNote(x.note ?? ''); setError(''); setExisting([])
+    setGoal(x.goal ?? ''); setPicked(x.product_ids ?? []); setKeyword(x.keyword ?? ''); setNote(x.note ?? ''); setError(''); setExisting([]); setLangs([])
     if (preset) dbList('landing_pages').then((l) => setExisting(l.filter((p) => sameSource(p, x)))).catch(() => {})
   }, [open])
   const start = async () => {
@@ -197,6 +224,7 @@ export function LandingDialog({ open, sites, products, preset, onClose, onStarte
       const x = preset ?? {}
       const { id } = await runLocal<{ id: string }>('landing.create', {
         channel_id: site, goal: goal.trim(), product_ids: picked, keyword: keyword.trim(), note: note.trim(),
+        ...(multi ? { locales: chosen } : {}),
         // 关键词改成了别的词，就不算从那个关键词来的
         ...(x.keyword_id && keyword.trim() === (x.keyword ?? '').trim() ? { keyword_id: x.keyword_id } : {}),
         ...(x.topic_id ? { topic_id: x.topic_id } : {}),
@@ -212,7 +240,12 @@ export function LandingDialog({ open, sites, products, preset, onClose, onStarte
       setStarting(false)
     }
   }
+  useEffect(() => setLangs([]), [site])
   const toggle = (id: string) => setPicked((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]))
+  // 多语言网站：默认全选；默认语言总要做（页面在默认语言的地址上也要能看），不能取消
+  const multi = siteLocales(sites.find((c) => c.id === site))
+  const chosen = multi ? (langs.length ? langs : multi.locales) : []
+  const toggleLang = (l: string) => setLangs(chosen.includes(l) ? chosen.filter((x) => x !== l) : [...chosen, l])
   return (
     <Dialog open={open} onClose={onClose} title={tr('landing.new')} width={560} footer={<>
       <Button variant="ghost" size="sm" onClick={onClose}>{tr('common.cancel')}</Button>
@@ -253,6 +286,21 @@ export function LandingDialog({ open, sites, products, preset, onClose, onStarte
                   {x.name}
                 </button>
               ))}
+            </div>
+          </Field>
+        )}
+        {multi && (
+          <Field group label={tr('landing.f_locales')} hint={tr('landing.locales_hint')}>
+            <div className="flex flex-wrap gap-1.5">
+              {multi.locales.map((l) => {
+                const on = l === multi.def || chosen.includes(l)
+                return (
+                  <button key={l} type="button" aria-pressed={on} disabled={l === multi.def} onClick={() => toggleLang(l)}
+                    className={cx('cursor-pointer rounded-full border px-2.5 py-1 text-xs disabled:cursor-default', on ? 'border-primary bg-primary/10 text-primary-text' : 'border-border hover:bg-accent')}>
+                    {localeName(l)}{l === multi.def && ` · ${tr('langs.default')}`}
+                  </button>
+                )
+              })}
             </div>
           </Field>
         )}

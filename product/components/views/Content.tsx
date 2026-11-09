@@ -22,6 +22,7 @@ import { dbCreate, dbDelete, dbList, dbPatch, openChat, openShuttleSettings, run
 import type { Ctx } from './types'
 import { numLocale, tr } from '../../lib/i18n'
 import { ArticleOrigins } from '../Origins'
+import ArticleLanguages from '../ArticleLanguages'
 import { AiScore, aiScoreOn } from '../AiScore'
 
 // label 按当前语言取（getter）
@@ -739,6 +740,8 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
 
       {work && <work.Panel article={a} all={all} open={open} onChanged={onChanged} />}
       {inspiration && <InspirationReferences ctx={ctx} targetType="article" targetId={a.id} onChanged={onChanged} />}
+      {/* 要发的网站开了多种语言时才出现（docs/multilingual.md）：长文才发网站 */}
+      {type === 'article' && publishScope !== 'social' && <ArticleLanguages a={a} onChanged={onChanged} />}
       <PublishRecords ctx={ctx} article={a} posts={posts} pubs={pubs} focus={focus} onChanged={onChanged} onPublish={openPublish} linkedRecords={publicationLinks} />
 
       <PublishDialog open={publishing} ctx={ctx} article={a} posts={posts} pubs={pubs} scope={publishScope} onClose={() => { setPublishing(false); onChanged() }} onRewrite={() => setRewritingOpen(true)} />

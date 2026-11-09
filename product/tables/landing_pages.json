@@ -42,7 +42,15 @@
       },
       "language": {
         "type": "string",
-        "description": "页面语言（en、zh…），空的按网站主语言"
+        "description": "主打的语言（从关键词来的是关键词的语言）；多语言网站上别的语言的版本照它的意思写。空的按网站默认语言"
+      },
+      "locales": {
+        "type": "string",
+        "description": "多语言网站：这页做了哪几种语言，JSON 数组字符串（总含网站的默认语言）；单语言网站为空。见 docs/multilingual.md"
+      },
+      "urls": {
+        "type": "string",
+        "description": "多语言网站：每种语言的地址，JSON {\"zh\":{\"preview\":\"…/zh/x\",\"live\":\"…/zh/x\"}}，按默认语言的 preview_url / url 加语言前缀算（landing.save 存时算好）"
       },
       "brief": {
         "type": "string",

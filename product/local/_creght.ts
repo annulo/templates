@@ -108,6 +108,31 @@ export async function contents(ctx: any, projectID: string, collection: string, 
   return (await call(ctx, projectID, 'cms_content_list', { project_id: projectID, collection, limit }))?.list ?? []
 }
 
+const noTool = (e: any) => /没有工具|unknown tool|no such tool|tool .*not found|not found.*tool/i.test(String(e?.message ?? e))
+
+/**
+ * 按 id 读一条内容（body 原样，带着 _i18n），没有返回 null。
+ * 用平台的 cms_content_get；老的部署没有这个工具，就一页页翻 cms_content_list 找
+ */
+export async function getContent(ctx: any, projectID: string, collection: string, id: string): Promise<any | null> {
+  try {
+    return (await call(ctx, projectID, 'cms_content_get', { project_id: projectID, collection, id })) ?? null
+  } catch (e: any) {
+    if (!noTool(e)) {
+      if (/没有这条内容|no such content|不存在/i.test(String(e?.message ?? e))) return null
+      throw e
+    }
+  }
+  for (let offset = 0; offset < 5000; offset += 100) {
+    const page = await call(ctx, projectID, 'cms_content_list', { project_id: projectID, collection, limit: 100, offset })
+    const rows: any[] = page?.list ?? []
+    const found = rows.find((r) => r.id === id)
+    if (found) return found
+    if (rows.length < 100 || page?.has_more === false) return null
+  }
+  return null
+}
+
 /** 新建一条内容，立即上线，返回 id */
 export async function createContent(ctx: any, projectID: string, collection: string, slug: string, body: Record<string, unknown>): Promise<string> {
   return (await call(ctx, projectID, 'cms_content_create', { project_id: projectID, collection, slug, body }))?.id
