@@ -1,0 +1,101 @@
+{
+  "name": "落地页",
+  "desc": "网站上的落地页：为一个目标（拿询盘、试用、推一款产品、接住一个关键词）单独做的页面。助手照简报直接改网站代码做出来，推到预览，用户在对话里确认后上线（tasks/landing-page.md）",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "做在哪个网站（channels 里的 creght 站点或 WordPress）"
+      },
+      "title": {
+        "type": "string",
+        "description": "页面名，给运营看的（比如「LED 面板灯 · 欧洲批发」）"
+      },
+      "goal": {
+        "type": "string",
+        "description": "用户要这页做什么：拿什么转化、推什么、给谁看（新建时用户写的原话）"
+      },
+      "note": {
+        "type": "string",
+        "description": "用户这次的其他要求（风格、参考页面、必须有的内容）"
+      },
+      "product_ids": {
+        "type": "string",
+        "description": "这页推的产品（products 的 id），JSON 数组字符串"
+      },
+      "keyword": {
+        "type": "string",
+        "description": "主关键词（可选）：这页要接住的搜索词"
+      },
+      "keyword_id": {
+        "type": "string",
+        "description": "从关键词来的：keywords 的 id"
+      },
+      "topic_id": {
+        "type": "string",
+        "description": "从选题来的：topics 的 id"
+      },
+      "opportunity_id": {
+        "type": "string",
+        "description": "从增长机会来的（产品运营模板）：growth_opportunities 的 id"
+      },
+      "language": {
+        "type": "string",
+        "description": "主打的语言（从关键词来的是关键词的语言）；多语言网站上别的语言的版本照它的意思写。空的按网站默认语言"
+      },
+      "locales": {
+        "type": "string",
+        "description": "多语言网站：这页做了哪几种语言，JSON 数组字符串（总含网站的默认语言）；单语言网站为空。见 docs/multilingual.md"
+      },
+      "urls": {
+        "type": "string",
+        "description": "多语言网站：每种语言的地址，JSON {\"zh\":{\"preview\":\"…/zh/x\",\"live\":\"…/zh/x\"}}，按默认语言的 preview_url / url 加语言前缀算（landing.save 存时算好）"
+      },
+      "brief": {
+        "type": "string",
+        "description": "页面简报（Markdown，助手写）：给谁看、核心卖点、一屏一屏的结构、CTA、用到的真实资料、还缺什么"
+      },
+      "path": {
+        "type": "string",
+        "description": "页面路径（/led-panel-wholesale），助手按网站的路由定"
+      },
+      "preview_url": {
+        "type": "string",
+        "description": "预览地址：推到预览后能打开看的完整网址"
+      },
+      "url": {
+        "type": "string",
+        "description": "线上地址：上线后的完整网址"
+      },
+      "status": {
+        "type": "string",
+        "description": "planning（助手在写简报、做页面）/ preview（做好了，在预览里等用户看）/ live（已上线）/ archived（不用了）"
+      },
+      "chat_id": {
+        "type": "string",
+        "description": "做这页的那段对话：要改就回到这段对话接着说"
+      },
+      "summary": {
+        "type": "string",
+        "description": "助手做完写的一句话：这页长什么样、做了哪几块"
+      },
+      "live_at": {
+        "type": "string",
+        "description": "上线时间 ISO8601"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "channel_id",
+      "goal"
+    ]
+  }
+}

@@ -11,6 +11,10 @@ import Calendar from '../components/views/Calendar'
 import Assets from '../components/views/Assets'
 import Channels from '../components/views/Channels'
 import Social from '../components/views/Social'
+import SiteVisits from '../components/views/SiteVisits'
+import Search from '../components/views/Search'
+import Geo from '../components/views/Geo'
+import Audit from '../components/views/Audit'
 import CompanyProducts from '../components/views/CompanyProducts'
 import SocialNavEntry from '../components/SocialNavEntry'
 import ProjectSettings from '../components/views/ProjectSettings'
@@ -19,7 +23,7 @@ import Assistant from '../components/views/Assistant'
 import type { Ctx, View } from '../components/views/types'
 import { Notice, Skeleton, cx } from '../components/ui'
 import PluginNotice from '../components/PluginNotice'
-import { channelStats, dbList, watchComputer, type ComputerStatus, listChannels, loadProfile, memberLoginURL, MemberLoginRequired, openShuttle, ShuttleUnavailable, type Channel, type ChannelStats, type Profile } from '../lib/shuttle'
+import { channelStats, dbList, isSite, watchComputer, type ComputerStatus, listChannels, loadProfile, memberLoginURL, MemberLoginRequired, openShuttle, ShuttleUnavailable, type Channel, type ChannelStats, type Profile } from '../lib/shuttle'
 import { useT } from '../lib/i18n'
 import { useInShuttle } from '../lib/useShuttle'
 import { NAV } from '../lib/edition'
@@ -123,7 +127,7 @@ export default function Index() {
   }, [])
   useEffect(loadProfileRow, [loadProfileRow])
 
-  const view: View = (['overview', 'reports', 'company', 'content', 'calendar', 'assets', 'social', 'channels', 'settings', 'help', 'assistant'] as View[]).includes(params.view as View) ? (params.view as View) : 'overview'
+  const view: View = (['overview', 'reports', 'company', 'content', 'calendar', 'assets', 'social', 'channels', 'site', 'search', 'geo', 'audit', 'settings', 'help', 'assistant'] as View[]).includes(params.view as View) ? (params.view as View) : 'overview'
 
   const loadChannels = useCallback(() => {
     listChannels()
@@ -244,7 +248,7 @@ export default function Index() {
       {mobileOpen && <button type="button" aria-label={t('close_nav')} onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 cursor-pointer bg-black/35 md:hidden" />}
       <aside id="workspace-navigation" aria-label={t('navigation')} className={cx('fixed inset-y-0 left-0 z-40 w-[224px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:static md:z-auto md:translate-x-0', mobileOpen ? 'flex translate-x-0' : 'hidden -translate-x-full md:flex')}>
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 pt-4 pb-3">
-          {NAV.map((g, gi) => g.presentation === 'social' ? <div key={g.group} className="mt-4">
+          {NAV.filter((g) => !g.sites || channels.some(isSite)).map((g, gi) => g.presentation === 'social' ? <div key={g.group} className="mt-4">
             <SocialNavEntry channels={channels} active={view === 'social'} disabled={!ctx} onClick={(e) => goFrom(e, 'social')} />
           </div> : (
             <div key={g.group ?? gi} className={cx(gi > 0 && 'mt-5')}>
@@ -333,6 +337,14 @@ export default function Index() {
             <CompanyProducts ctx={ctx} params={params} setParam={setParam} />
           ) : view === 'social' ? (
             <Social ctx={ctx} params={params} setParam={setParam} />
+          ) : view === 'site' ? (
+            <SiteVisits ctx={ctx} params={params} setParam={setParam} />
+          ) : view === 'search' ? (
+            <Search ctx={ctx} params={params} setParam={setParam} />
+          ) : view === 'geo' ? (
+            <Geo ctx={ctx} params={params} setParam={setParam} />
+          ) : view === 'audit' ? (
+            <Audit ctx={ctx} params={params} setParam={setParam} />
           ) : view === 'channels' ? (
             <Channels ctx={ctx} current={params.channel ?? ''} setCurrent={(id) => setParam('channel', id)} />
           ) : view === 'settings' ? (

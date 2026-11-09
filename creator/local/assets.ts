@@ -5,7 +5,8 @@
 //        files: [{ url, mime?, name? }] 是一组（小红书的 6 张图），存成一条，顺序就是轮播顺序；每个可以带类型（mime）和名字（「封面」「步骤 2」）。
 //        urls: [...] 是只有地址的简写，url（+ mime）是单个文件。没给 mime 按扩展名推（annulo upload --local --json 打印的 content_type 就是它）。
 //        article_id 是哪篇文章做出来的（文章页列出它的产物），note 是备注（怎么做的、改了什么，不写路径），自动记下做它的对话（ctx.chat_id）。
-//        use: true 时把它用到这篇文章上：视频文章设成发布用的视频，图文把这组图换成配图
+//        use: true 时把它用到这篇文章上：视频文章设成发布用的视频，图文把这组图换成配图；
+//        use: 'cover' 把组里第一张图设成封面：长文的 cover（发网站用）、视频的 video_cover
 //   assets.replace({ asset_id, n, url, mime?, name?, note? })
 //        只改一组里的第 n 个（从 1 开始）：换成新文件，备注后面追加这次改了什么；这篇文章里用着旧地址的（配图、视频）一起换
 
@@ -34,10 +35,15 @@ const filesOf = (x: any): File[] => {
   return x.url ? [{ url: x.url, mime: x.mime || mimeOf(x.url) }] : []
 }
 
-/** 把这组用到文章上：视频文章取组里第一个视频；图文用组里的图片当配图（按顺序） */
-function useOn(ctx: any, article: any, files: File[]) {
+/** 把这组用到文章上：视频文章取组里第一个视频；图文用组里的图片当配图（按顺序）；cover 是把第一张图设成长文、视频的封面 */
+function useOn(ctx: any, article: any, files: File[], use: true | 'cover') {
   const t = typeOf(article)
-  if (t === 'video') {
+  if (use === 'cover') {
+    const img = files.find((f) => f.mime.startsWith('image/'))
+    if (!img) throw new Error(L(ctx, '这组里没有图片，不能设成封面', 'This group has no image to use as the cover'))
+    if (t === 'post') throw new Error(L(ctx, '图文的封面是第一张配图：用 use: true 把这组换成配图', "A post's cover is its first image: use use: true to make this group its images"))
+    ctx.db.update('articles', article.id, { [t === 'video' ? 'video_cover' : 'cover']: img.url, unread: true, updated_at: now() })
+  } else if (t === 'video') {
     const v = files.find((f) => f.mime.startsWith('video/'))
     if (!v) throw new Error(L(ctx, '这组里没有视频，不能设成视频文章发布用的视频', 'This group has no video to use for the video article'))
     ctx.db.update('articles', article.id, { video: v.url, unread: true, updated_at: now() })
@@ -45,7 +51,7 @@ function useOn(ctx: any, article: any, files: File[]) {
     const imgs = files.filter((f) => f.mime.startsWith('image/')).map((f) => f.url)
     if (!imgs.length) throw new Error(L(ctx, '这组里没有图片，不能用作配图', 'This group has no images to use'))
     ctx.db.update('articles', article.id, { images: JSON.stringify(imgs), unread: true, updated_at: now() })
-  } else throw new Error(L(ctx, 'use 只用于视频、图文：长文的图插进正文（content.update）', 'use is for videos and image posts; insert images into a long-form body with content.update'))
+  } else throw new Error(L(ctx, "长文的图插进正文（content.update）；要设成封面传 use: 'cover'", "Insert images into a long-form body with content.update; to make one the cover pass use: 'cover'"))
 }
 
 const MIME_RE = /^[a-z]+\/[\w.+-]+$/
@@ -59,7 +65,7 @@ function fileOf(ctx: any, f: { url?: string; mime?: string; name?: string }): Fi
   return { url, mime: mime || mimeOf(url), ...(name ? { name } : {}) }
 }
 
-export function add(input: { files?: { url: string; mime?: string; name?: string }[]; url?: string; urls?: string[]; mime?: string; article_id?: string; note?: string; name?: string; use?: boolean }, ctx: any) {
+export function add(input: { files?: { url: string; mime?: string; name?: string }[]; url?: string; urls?: string[]; mime?: string; article_id?: string; note?: string; name?: string; use?: boolean | 'cover' }, ctx: any) {
   const list = input?.files?.length ? input.files : input?.urls?.length ? input.urls.map((url) => ({ url })) : input?.url ? [{ url: input.url, mime: input.mime }] : []
   if (!list.length) throw badUrl(ctx)
   const files: File[] = list.map((f) => fileOf(ctx, f))
@@ -72,7 +78,7 @@ export function add(input: { files?: { url: string; mime?: string; name?: string
   })
   if (input.use) {
     if (!article) throw new Error(L(ctx, 'use 要和 article_id 一起用', 'use needs article_id'))
-    useOn(ctx, article, files)
+    useOn(ctx, article, files, input.use === 'cover' ? 'cover' : true)
   }
   return { asset_id: row.id, ref: `@assets:${row.id}`, files: files.length, ...(article ? { link: `/?view=content&article=${article.id}` } : {}) }
 }
@@ -89,13 +95,15 @@ export function replace(input: { asset_id: string; n: number; url: string; mime?
   files[n - 1] = { ...files[n - 1], ...next, name: next.name ?? files[n - 1].name }
   const note = [String(x.note ?? '').trim(), String(input.note ?? '').trim()].filter(Boolean).join('\n')
   ctx.db.update('assets', x.id, { url: files[0].url, mime: files[0].mime, ...(files.length > 1 || x.files ? { files: JSON.stringify(files) } : {}), kind: kindOf(files.map((f) => f.mime)), note })
-  // 这篇文章里用着旧地址的（图文的配图、视频文章的视频）一起换成新的；已经发出去的帖子不动
+  // 这篇文章里用着旧地址的（图文的配图、视频文章的视频、封面）一起换成新的；已经发出去的帖子不动
   const a = x.article_id ? ctx.db.get('articles', x.article_id) : null
   if (a) {
     const patch: Record<string, any> = {}
     const imgs = parseList(a.images)
     if (imgs.includes(old)) patch.images = JSON.stringify(imgs.map((u: string) => (u === old ? url : u)))
     if (a.video === old) patch.video = url
+    if (a.cover === old) patch.cover = url
+    if (a.video_cover === old) patch.video_cover = url
     if (Object.keys(patch).length) ctx.db.update('articles', a.id, { ...patch, updated_at: now() })
   }
   return { asset_id: x.id, n, ref: `@assets:${x.id}#${n}` }

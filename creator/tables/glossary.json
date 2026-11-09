@@ -1,0 +1,34 @@
+{
+  "name": "术语表",
+  "desc": "翻译时固定的说法：一个词在各种语言里怎么说，或者不翻（品牌、型号）。翻文章、做多语言落地页都照它，助手翻译时遇到新的专有词就补进来（glossary.save）。见 docs/multilingual.md",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "term": {
+        "type": "string",
+        "description": "原文里的词（一般是网站默认语言的写法）"
+      },
+      "translations": {
+        "type": "string",
+        "description": "各语言的说法，JSON {\"zh\":\"岩板\",\"ar\":\"…\"}；keep 为 true 时可以为空"
+      },
+      "keep": {
+        "type": "boolean",
+        "description": "不翻：品牌、型号、缩写，各语言都照原文写"
+      },
+      "note": {
+        "type": "string",
+        "description": "备注：什么时候用、第一次出现怎么写"
+      },
+      "created_at": {
+        "type": "string"
+      },
+      "updated_at": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "term"
+    ]
+  }
+}

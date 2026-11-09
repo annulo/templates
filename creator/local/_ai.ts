@@ -1,6 +1,8 @@
 // 本机函数共用的工具（文件名以 _ 开头：不作为可调用的函数，只给别的文件 import）。
 
 import { L } from './_i18n'
+// 网站地址、读网站讲什么在网站运营共用模块（local/_site.ts），这里转出去，老代码照旧从 _ai 引
+export { siteBase, siteDigest } from './_site'
 
 /** 调一次模型，要它按 JSON 回答，解析出来。模型偶尔会包一层 ```json 或者前后带话，这里都兼容 */
 export async function askJSON<T = any>(ctx: any, system: string, prompt: string): Promise<T> {
@@ -17,7 +19,7 @@ export async function askJSON<T = any>(ctx: any, system: string, prompt: string)
   }
 }
 
-export type Profile = { id?: string; name: string; positioning?: string; business?: string; profile?: string; advantages?: string; cooperation?: string; customer_types?: string; markets?: string; buyer_concerns?: string; tone?: string; keywords?: string; avoid?: string; created_at?: string }
+export type Profile = { id?: string; name: string; positioning?: string; business?: string; profile?: string; advantages?: string; cooperation?: string; customer_types?: string; markets?: string; buyer_concerns?: string; tone?: string; keywords?: string; avoid?: string; brand_terms?: string; company_role?: string; audience?: string; created_at?: string }
 
 /** 我的定位：profile 表那一行（多行时取最早建的），还没填返回 { name: '' } */
 export function profile(ctx: any): Profile {
@@ -39,7 +41,6 @@ function withLegacyProfile<T extends Record<string, any>>(p: T): T {
   for (const [from, to] of LEGACY_PROFILE) if (!out[to] && typeof out[from] === 'string' && out[from].trim()) out[to] = out[from]
   return out as T
 }
-
 
 /** 定位写成给模型看的一段话 */
 export function projectBrief(p: any): string {

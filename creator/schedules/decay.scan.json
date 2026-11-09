@@ -1,0 +1,5 @@
+{
+  "fn": "decay.scan",
+  "every": "7d",
+  "name": "找流量下滑的页面"
+}

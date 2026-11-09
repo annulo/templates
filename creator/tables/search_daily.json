@@ -1,0 +1,41 @@
+{
+  "name": "搜索趋势",
+  "desc": "独立站在 Google 搜索里每天的点击和曝光（GSC），gsc.sync 写入最近 180 天，更早的保留",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "date": {
+        "type": "string",
+        "description": "日期 YYYY-MM-DD（GSC 的日期，太平洋时间）"
+      },
+      "clicks": {
+        "type": "number",
+        "description": "点击"
+      },
+      "impressions": {
+        "type": "number",
+        "description": "曝光"
+      },
+      "ctr": {
+        "type": "number",
+        "description": "点击率 0~1"
+      },
+      "position": {
+        "type": "number",
+        "description": "平均排名"
+      },
+      "synced_at": {
+        "type": "string",
+        "description": "同步时间 ISO8601"
+      }
+    },
+    "required": [
+      "channel_id",
+      "date"
+    ]
+  }
+}

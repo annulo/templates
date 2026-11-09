@@ -568,8 +568,8 @@ Click "Save" at the bottom of the page; the next topics and content follow the n
 
 export const channels: Article = {
   id: 'channels',
-  title: { zh: '账号', en: 'Accounts' },
-  summary: { zh: '添加和移除社媒账号、登录、看上次发布和采集成没成；登录状态只在这台电脑上。', en: 'Add and remove social accounts, log in, and see whether the last publish and collection worked; logins stay on this computer.' },
+  title: { zh: '账号和网站', en: 'Accounts & sites' },
+  summary: { zh: '添加和移除社媒账号、自己的网站，登录、看上次发布和采集成没成；登录状态只在这台电脑上。', en: 'Add and remove social accounts and your own websites, log in, and see whether the last publish and collection worked; logins stay on this computer.' },
   body: {
     zh: `左侧下方的「账号」：连接你要运营的社媒账号。添加、登录、处理发布和采集的失败都在这里，数据在「社交媒体」里看。
 
@@ -593,6 +593,16 @@ export const channels: Article = {
 - 下面两行写着上次发布、上次采集成没成（「发布正常 · 2 小时前」「采集失败 · 昨天」……）。失败了会写是哪一步、给出处理的按钮，见「社交媒体」一篇。
 
 账号已经加上、但这个平台在项目里还没接入的，会显示「未接入」，点「让助手接入 …」（后面是平台名）交给助手把这个平台接进来。
+
+## 网站
+
+有自己的网站也加在这里：「添加账号」里选「Creght 站点」（从你的 creght 账号下的站点里挑）或「WordPress」（填网站地址、用户名和应用密码）。加了网站，左侧多出一组「网站」：
+- 「网站访问」：访问量、来源、热门页面（creght 站点）；
+- 「谷歌排名」：连上 Google Search Console 后看搜索表现、关键词，WordPress 站点看 GA4；
+- 「AI 搜索推荐」：拿问题去问 ChatGPT、豆包等 AI，看它们怎么介绍你、推荐了谁；
+- 「网站检查」：检查标题、描述、链接这些问题，交给助手修。
+
+内容发到网站：内容页点「发布」，发成「长文」，勾上网站。第一次发要先点网站旁边的「让 AI 配置」，助手看过网站的后台写好发布方式，之后就能直接发、也能排期；再发同一条是更新网站上那篇。
 
 ## 移除
 
@@ -619,6 +629,16 @@ Each account has a small card at the top with its platform and status (Connected
 - Two lines below say whether the last publish and the last collection worked ("Last publish OK · 2 hours ago", "Last collection failed · yesterday"…). A failure says which step broke and gives you a button to deal with it; see "Social media".
 
 If the account is added but its platform isn't set up in this project yet, it shows "Not set up". Click "Set up … with the assistant" (the platform name is in the button) to have the assistant add the platform.
+
+## Websites
+
+Add your own website here too: in "Add account" pick "Creght site" (choose one of the sites under your creght account) or "WordPress" (enter the site URL, username and an application password). Once a site is added, a "Website" group appears in the sidebar:
+- "Site traffic": visits, sources and top pages (creght sites);
+- "Google rankings": search performance and keywords once Google Search Console is linked; GA4 for WordPress sites;
+- "AI search": asks ChatGPT, Doubao and other AIs your questions to see how they describe you and whom they recommend;
+- "Site check": finds title, description and link problems and hands them to the assistant to fix.
+
+To publish content to the site, click "Publish" on a piece of content, choose "Article" and tick the site. The first time, click "Have AI set it up" next to the site: the assistant looks at the site's back office and sets up publishing, after which you can publish or schedule directly. Publishing the same content again updates the post on the site.
 
 ## Removing
 

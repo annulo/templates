@@ -1,0 +1,94 @@
+{
+  "name": "文章发布记录",
+  "desc": "一篇文章在一个网站上一行：发布状态、CMS 内容 id、地址。由 local/_publish.ts 的 publishTo 写，页面显示每个网站的发布状态",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "article_id": {
+        "type": "string",
+        "description": "文章 id"
+      },
+      "channel_id": {
+        "type": "string",
+        "description": "网站（channels）id"
+      },
+      "status": {
+        "type": "string",
+        "description": "draft（网站版本草稿）/ scheduled（排了期还没发过，到点由 publishing.publishScheduled 发）/ publishing（发布中）/ published（已发布）/ failed（失败，看 error）"
+      },
+      "scheduled_at": {
+        "type": "string",
+        "description": "排期时间 ISO8601：有值就是排了期，到点由定时任务 publishing.publishScheduled 发（Annulo 的 due，发过的是更新）；开始发时清空"
+      },
+      "title": {
+        "type": "string",
+        "description": "这个网站独立的标题；空则继承文章"
+      },
+      "summary": {
+        "type": "string",
+        "description": "这个网站独立的摘要；空则继承文章"
+      },
+      "body": {
+        "type": "string",
+        "description": "这个网站独立的 HTML 正文；空则继承文章"
+      },
+      "video": {
+        "type": "string",
+        "description": "这个网站独立的视频素材；空则继承文章"
+      },
+      "keywords": {
+        "type": "string",
+        "description": "这个网站独立的关键词；空则继承文章"
+      },
+      "cms_id": {
+        "type": "string",
+        "description": "网站 CMS 里这篇的内容 id（WordPress 是文章 id）：再发就是更新它"
+      },
+      "cms_collection": {
+        "type": "string",
+        "description": "CMS 集合 key（WordPress 可空）"
+      },
+      "slug": {
+        "type": "string",
+        "description": "在这个网站上的 slug"
+      },
+      "url": {
+        "type": "string",
+        "description": "在这个网站上的访问地址"
+      },
+      "media": {
+        "type": "string",
+        "description": "正文里的本机图片传到这个网站后的地址，JSON：文件内容的 sha256 → 网站上的地址。再发同一篇时传过的图不重传。由 publishTo 写"
+      },
+      "error": {
+        "type": "string",
+        "description": "最近一次失败的报错原文"
+      },
+      "published_at": {
+        "type": "string",
+        "description": "第一次发布成功的时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      },
+      "warning": {
+        "type": "string",
+        "description": "发出去了但有地方没照文章来（比如发布脚本是旧的、没用上文章设的封面）：给用户看的一句话，再发一次没问题了就清掉"
+      },
+      "locale_urls": {
+        "type": "string",
+        "description": "多语言网站：这篇各语言版本的网址，JSON {\"zh\":\"https://…/zh/blog/x\"}（默认语言的就是 url）"
+      },
+      "locales": {
+        "type": "string",
+        "description": "多语言网站：这次发上去的语言，JSON 数组字符串（含默认语言）"
+      }
+    },
+    "required": [
+      "article_id",
+      "channel_id",
+      "status"
+    ]
+  }
+}

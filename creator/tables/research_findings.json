@@ -1,0 +1,55 @@
+{
+  "name": "调研结果",
+  "desc": "来源事实、判断与写作建议分别保存，必须关联资料版本",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "source_id": {
+        "type": "string",
+        "description": "资料记录；竞品报告使用 onboarding 标识并保留来源快照"
+      },
+      "source_version": {
+        "type": "number",
+        "description": "整理时使用的正文版本"
+      },
+      "title": {
+        "type": "string",
+        "description": "结果标题"
+      },
+      "kind": {
+        "type": "string",
+        "description": "buyer_question / opportunity / product_clue / format / competitor_report"
+      },
+      "fact": {
+        "type": "string",
+        "description": "来源事实，不代表自有产品事实"
+      },
+      "quote": {
+        "type": "string",
+        "description": "事实对应的原文摘录"
+      },
+      "interpretation": {
+        "type": "string",
+        "description": "分析判断"
+      },
+      "suggestion": {
+        "type": "string",
+        "description": "写作建议"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "source_snapshot": {
+        "type": "string",
+        "description": "整理时原始来源信息快照 JSON，正文更新不改历史出处"
+      }
+    },
+    "required": [
+      "source_id",
+      "source_version",
+      "title",
+      "kind"
+    ]
+  }
+}

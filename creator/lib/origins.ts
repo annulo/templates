@@ -11,6 +11,7 @@ export type OriginType =
   | 'competitor_page' // 竞品新上的页面（competitor_pages）
   | 'competitor' // 竞品（competitors：竞对总览、规格对比里出的）
   | 'inspiration_source' // 灵感来源（research_sources，详细快照在 content_references kind=source）
+  | 'playbook' // 风格卡（playbooks：照这张卡出的选题）
   | 'opportunity' // 增长机会（product 的 growth_opportunities）
   | 'campaign' // 主题计划（product 的 campaigns）
   | 'marketing_plan' // 营销计划（product 的 marketing_plans）
@@ -64,7 +65,7 @@ export const CONTENT_ORIGINS: ContentOrigin[] = ['geo', 'keyword', 'search', 'co
 
 const ORIGIN_KIND: Record<string, ContentOrigin> = {
   geo_question: 'geo', keyword: 'keyword', search_query: 'search', competitor_page: 'competitor', competitor: 'competitor',
-  inspiration_source: 'inspiration', opportunity: 'plan', campaign: 'plan', marketing_plan: 'plan',
+  inspiration_source: 'inspiration', playbook: 'inspiration', opportunity: 'plan', campaign: 'plan', marketing_plan: 'plan',
 }
 // 没记 origins 的老选题按 topics.source 归
 const SOURCE_KIND: Record<string, ContentOrigin> = { geo: 'geo', keyword: 'keyword', search: 'search', gsc: 'search', competitor: 'competitor', research: 'inspiration', research_sources: 'inspiration', inspiration: 'inspiration', seo: 'keyword', marketing: 'plan', campaign: 'plan' }

@@ -1,7 +1,7 @@
 import type { ChecklistState } from '../../lib/useChecklist'
 import type { Channel, ChannelStats, Profile } from '../../lib/shuttle'
 
-export type View = 'overview' | 'reports' | 'company' | 'content' | 'calendar' | 'assets' | 'social' | 'channels' | 'settings' | 'help' | 'assistant'
+export type View = 'overview' | 'reports' | 'company' | 'content' | 'calendar' | 'assets' | 'social' | 'channels' | 'site' | 'search' | 'geo' | 'audit' | 'settings' | 'help' | 'assistant'
 
 /** 各视图共用的上下文：项目资料、渠道、访问汇总、是否在 Shuttle 里 */
 export type Ctx = {

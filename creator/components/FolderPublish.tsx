@@ -12,7 +12,8 @@ import { IMAGE, MD, VIDEO, base, fmtSize, folderMediaFor, isDraft, joinPath, par
 import { enqueue } from '../lib/publishQueue'
 import { fileSrc } from '../lib/files'
 import { tr, useT } from '../lib/i18n'
-import { dbList, openChat, runLocal, runTask, uploadLocalFile, type Article } from '../lib/shuttle'
+import { dbList, isSite, openChat, runLocal, runTask, uploadLocalFile, type Article } from '../lib/shuttle'
+import { setupPublish } from './PublishTargets'
 import { CHANNEL_TYPES } from '../lib/channels'
 import { SOCIAL, loggedInElsewhere, useElsewhere } from '../lib/social'
 import { FIELDS } from '../plugins/social/local/_fields'
@@ -157,9 +158,10 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   useEffect(() => {
     if (!open) return
     setSent({})
-    dbList('social_posts').then((l) => {
+    // 网站的发布记录在 publications（没加过网站的项目这张表是空的）
+    Promise.all([dbList('social_posts'), dbList('publications').catch(() => [])]).then(([posts, pubs]) => {
       const m: Record<string, { status: string; at?: string }> = {}
-      for (const p of l.filter((p) => p.article_id === article.id && (p.status === 'published' || p.status === 'scheduled'))) {
+      for (const p of [...posts, ...pubs].filter((p) => p.article_id === article.id && (p.status === 'published' || p.status === 'scheduled'))) {
         const at = p.status === 'published' ? p.published_at : p.scheduled_at
         const had = m[p.channel_id]
         if (!had || (had.status !== 'published' && p.status === 'published') || (had.status === p.status && (at ?? '') > (had.at ?? ''))) m[p.channel_id] = { status: p.status, at }
@@ -235,7 +237,9 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
   const tagList = tags.split(/[,，\s]+/).map((x) => x.replace(/^#/, '').trim()).filter(Boolean)
 
   const machine = useElsewhere(ctx.channels)
-  const accounts = ctx.channels.filter((ch) => !!SOCIAL[ch.type])
+  // 网站（creght 站点、WordPress）在前，只发长文，跑网站自己的发布脚本（core/features/websites 的 publishing）
+  const accounts = [...ctx.channels.filter(isSite), ...ctx.channels.filter((ch) => !!SOCIAL[ch.type])]
+  const siteNotReady = (ch: (typeof accounts)[number]) => isSite(ch) && (ch.publish_status !== 'ready' || !ch.publisher)
   // 能设封面的账号：视频的封面（videoCover：小红书、抖音、B站），长文的文章封面（articleCover：知乎）
   const takesCover = (type: string) => (kind === 'video' ? !!FIELDS[type]?.videoCover : kind === 'article' && !!FIELDS[type]?.articleCover)
   const coverUsed = accounts.some((ch) => takesCover(ch.type))
@@ -273,7 +277,8 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
       i.src = m.src
     }
   }, [coverUsed, namedCovers, covers, baseCover, root])
-  const blocked = (ch: { type: string; login_status?: string } & Parameters<typeof loggedInElsewhere>[0]) => !supports(FIELDS[ch.type], kind) ? t('unsupported', { kind: t(`kind_${kind}`) })
+  const blocked = (ch: (typeof accounts)[number]) => isSite(ch) ? (kind !== 'article' ? t('site_article_only') : handing ? t('manual_cant') : siteNotReady(ch) ? t('site_setup') : '')
+    : !supports(FIELDS[ch.type], kind) ? t('unsupported', { kind: t(`kind_${kind}`) })
     : handing && !FIELDS[ch.type]?.handOver ? t('manual_cant')
     : loggedInElsewhere(ch, machine) ? t('on_machine', { name: loggedInElsewhere(ch, machine) })
     : ch.login_status === 'expired' ? t('expired') : ''
@@ -289,7 +294,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
     const ts = at ? Date.parse(at) : 0
     if (at && !(ts > Date.now())) { setError(t('future_time')); setRunning(false); return }
     try {
-      const r = await runLocal<{ ready: { channel_id: string; post_id: string }[]; problems: { channel_id: string; problems: string[] }[] }>('folder.publish', {
+      const r = await runLocal<{ ready: { channel_id: string; post_id?: string; publisher?: string }[]; problems: { channel_id: string; problems: string[] }[] }>('folder.publish', {
         article_id: article.id, kind, title, body, tags: tagList, images: images.map((i) => i.ref), video: video?.ref ?? '',
         ...(coverUsed ? { video_cover: coverOf(coverGroups[0]?.key ?? '', coverGroups[0]?.ratio)?.ref ?? '', video_covers: coverCovers() } : {}),
         channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}),
@@ -297,7 +302,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
       const name = (id: string) => accounts.find((c) => c.id === id)?.name ?? ''
       // 交给我的排在最后：它要等人在窗口里点发布（最多 30 分钟），别让自动发的跟着等
       const handed = !ts && handMode
-      if (!ts && r.ready.length) enqueue(r.ready.map((p) => ({ article_id: article.id, article_title: title || article.title, channel_id: p.channel_id, channel_name: name(p.channel_id), post_id: p.post_id, ...(handed ? { manual: true as const } : {}) })))
+      if (!ts && r.ready.length) enqueue(r.ready.map((p) => ({ article_id: article.id, article_title: title || article.title, channel_id: p.channel_id, channel_name: name(p.channel_id), post_id: p.post_id, publisher: p.publisher, ...(handed ? { manual: true as const } : {}) })))
       if (r.ready.length) toast(ts ? t('scheduled_toast', { n: r.ready.length }) : handed ? t('manual_toast', { n: r.ready.length }) : t('started_toast', { n: r.ready.length }))
       if (!r.problems.length) { onClose(); return }
       setResult(Object.fromEntries(r.problems.map((p) => [p.channel_id, p.problems.join('；')])))
@@ -485,7 +490,7 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
             {!accounts.length ? <Notice>{t('no_accounts')}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); ctx.go('channels') }}>{t('go_add')}</button></Notice>
               : <div className="max-h-64 space-y-1 overflow-y-auto">{[...accounts].sort((a, b) => Number(!!blocked(a)) - Number(!!blocked(b))).map((ch) => {
                 const why = blocked(ch)
-                const { length, max } = lengthOn(content, ch.type)
+                const { length, max } = isSite(ch) ? { length: 0, max: 0 } : lengthOn(content, ch.type)
                 const was = sent[ch.id]
                 const note = result[ch.id] ? <span className="text-destructive">{result[ch.id]}</span>
                   : why || (max > 0 && length > max ? <span className="text-amber-700 dark:text-amber-400">{t('too_long', { n: length, max })}</span>
@@ -495,6 +500,8 @@ export default function FolderPublish({ open, ctx, article, onClose }: { open: b
                   <input type="checkbox" disabled={!!why || running} checked={picked.includes(ch.id)} onChange={() => setPicked((l) => l.includes(ch.id) ? l.filter((x) => x !== ch.id) : [...l, ch.id])} className="size-4 accent-primary" />
                   <ChannelAvatar ch={ch} />
                   <span className="min-w-0 flex-1"><span className="flex min-w-0 items-center gap-2"><span className="truncate text-sm font-medium">{ch.name}</span><PlatformTag type={ch.type} /></span><span className="block text-xs leading-relaxed text-muted-foreground">{note}</span></span>
+                  {/* 网站没配好发布方式：交给助手配置（写发布脚本），配完回来就能勾 */}
+                  {siteNotReady(ch) && kind === 'article' && <Button size="sm" variant="outline" needsShuttle onClick={(e) => { e.preventDefault(); void setupPublish(ch.id) }}>{t('site_setup_btn')}</Button>}
                   {result[ch.id] && <Badge tone="bad">{t('not_passed')}</Badge>}
                 </label>
               })}</div>}

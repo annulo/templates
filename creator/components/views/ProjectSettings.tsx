@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Check, Loader } from 'lucide-react'
 import { Button, Field, Notice, PageHeader, Panel, inputCls } from '../ui'
-import { runLocal, type Profile } from '../../lib/shuttle'
+import { isSite, runLocal, type Profile } from '../../lib/shuttle'
 import type { Ctx } from './types'
 import { tr } from '../../lib/i18n'
 
@@ -25,7 +25,7 @@ export default function ProjectSettings({ ctx, embedded = false }: { ctx: Ctx; e
         name: f.name.trim() || ctx.profile.name,
         positioning: f.positioning ?? '', business: f.business ?? '', profile: f.profile ?? '', advantages: f.advantages ?? '',
         cooperation: f.cooperation ?? '', customer_types: f.customer_types ?? '', markets: f.markets ?? '', buyer_concerns: f.buyer_concerns ?? '',
-        tone: f.tone ?? '', keywords: f.keywords ?? '', avoid: f.avoid ?? '',
+        tone: f.tone ?? '', keywords: f.keywords ?? '', avoid: f.avoid ?? '', brand_terms: f.brand_terms ?? '',
       })
       setSaved(true)
       ctx.reloadProfile()
@@ -69,6 +69,8 @@ export default function ProjectSettings({ ctx, embedded = false }: { ctx: Ctx; e
             <Field label={tr('settings.keywords')} hint={tr('settings.comma')}>{line('keywords', 'settings.keywords_ph')}</Field>
           </div>
           <Field label={tr('settings.avoid')}>{area('avoid', 'settings.avoid_ph')}</Field>
+          {/* 品牌词给网站的谷歌排名、AI 搜索区分「搜你的」：没加网站时不显示 */}
+          {ctx.channels.some(isSite) && <Field label={tr('settings.brand')} hint={tr('settings.brand_hint')}>{line('brand_terms', 'settings.brand_ph')}</Field>}
         </Panel>
       </div>
       {/* 保存钉在视口底部：表单长，改了上面的字段不用滚到底。-bottom-4 和 -mx 抵掉滚动区（pages/Index.tsx）的内边距，左右铺满、下面不漏 */}

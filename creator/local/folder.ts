@@ -22,7 +22,7 @@ import { check } from '../plugins/social/local/social'
 //   folder.open({ article_id, path?, reveal? })  用系统程序打开 / 在访达里显示
 //   folder.retitle({ article_id, title })        改这条内容的名字；文件夹是按老名字建的就跟着改
 //   folder.publish({ article_id, kind, title, body, tags, images, video, channel_ids, scheduled_at? })
-//                                                → { ready, problems }  发布时挑好的内容发到几个账号（每次新建帖子，见下面）
+//                                                → { ready, problems }  发布时挑好的内容发到几个账号（每次新建帖子，见下面）；网站只发长文，ready 里带 publisher
 
 // 只读角色（服务端部署）能看文件夹、读文件，不能改
 export const readonly = ['list', 'read']
@@ -217,6 +217,12 @@ export function retitle(input: { article_id: string; title: string }, ctx: any) 
   return { folder: patch.folder ?? dir }
 }
 
+const SITE_TYPES = ['creght_site', 'wordpress']
+/** 网站渠道（channels 表）；老项目没有这张表，读不到就当不是网站 */
+function siteOf(ctx: any, id: string) {
+  try { return ctx.db.get('channels', id) } catch { return null }
+}
+
 const isRef = (u: string) => /^(https?:\/\/|\/_(annulo|shuttle)\/uploaded\/|local:|folder:|work:)/.test(u)
 
 /**
@@ -251,10 +257,25 @@ export function publish(input: { article_id: string; kind: 'post' | 'video' | 'a
     video_cover: kind === 'post' ? '' : input.video_cover === undefined ? (kind === 'video' ? String(a.video_cover ?? '') : '') : input.video_cover ? ref(String(input.video_cover)) : '',
     cover_text: String(input.cover_text ?? ''), category: String(input.category ?? ''),
   }
-  const ready: { channel_id: string; post_id: string }[] = []
+  const ready: { channel_id: string; post_id?: string; publisher?: string }[] = []
   const problems: { channel_id: string; problems: string[] }[] = []
   const now = new Date().toISOString()
   for (const id of ids) {
+    // 网站（channels 表，网站运营共用模块 core/features/websites）：只发长文；挑好的标题、正文记在这篇在这个网站的发布记录（publications）上，
+    // 发布脚本 <publisher>.publish 照它发（publishTo 里发布记录有值的字段盖过文章的），正文里文件夹的图是引用，发的时候传到网站。再发是更新
+    const site = siteOf(ctx, id)
+    if (site && SITE_TYPES.includes(site.type)) {
+      if (kind !== 'article') { problems.push({ channel_id: id, problems: [L(ctx, '网站只发长文', 'Websites take articles only')] }); continue }
+      if (site.publish_status !== 'ready' || !site.publisher) { problems.push({ channel_id: id, problems: [L(ctx, '这个网站还没配好发布方式', "This website's publishing isn't set up yet")] }); continue }
+      const pub = ctx.db.query('publications', { where: { article_id: a.id, channel_id: id }, limit: 1 }).list[0]
+      if (pub?.status === 'publishing') { problems.push({ channel_id: id, problems: [L(ctx, '这个网站正在发这条，等它发完', 'This is being published to this site; wait for it to finish')] }); continue }
+      // 发过的保持 published（到点是更新），没发过的排期记 scheduled、马上发记 draft（发的时候 publishTo 改状态）
+      const row = { title: content.title, body, summary: '', video: '', keywords: (input.tags ?? []).join(', '), error: '', updated_at: now, scheduled_at: at, status: pub?.status === 'published' ? 'published' : at ? 'scheduled' : 'draft' }
+      if (pub) ctx.db.update('publications', pub.id, row)
+      else ctx.db.insert('publications', { ...row, article_id: a.id, channel_id: id })
+      ready.push({ channel_id: id, publisher: site.publisher })
+      continue
+    }
     const ch = ctx.db.get('social_accounts', id)
     if (!ch) { problems.push({ channel_id: id, problems: [L(ctx, '没有这个账号', 'No such account')] }); continue }
     if (!supports(FIELDS[ch.type], kind)) { problems.push({ channel_id: id, problems: [L(ctx, '这个平台不发这种内容', "This platform doesn't take this kind of post")] }); continue }

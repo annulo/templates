@@ -1,0 +1,50 @@
+{
+  "name": "站点问题",
+  "desc": "站点体检发现的问题",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "run_id": {
+        "type": "string",
+        "description": "哪次体检发现的"
+      },
+      "check": {
+        "type": "string",
+        "description": "检查项 key"
+      },
+      "severity": {
+        "type": "string",
+        "description": "high / medium / low"
+      },
+      "title": {
+        "type": "string",
+        "description": "问题"
+      },
+      "detail": {
+        "type": "string",
+        "description": "说明和修复建议"
+      },
+      "pages": {
+        "type": "string",
+        "description": "涉及的页面，JSON 数组字符串"
+      },
+      "status": {
+        "type": "string",
+        "description": "open / fixing / fixed / ignored"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "channel_id",
+      "check",
+      "title"
+    ]
+  }
+}

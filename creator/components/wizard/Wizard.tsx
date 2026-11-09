@@ -10,7 +10,8 @@ import RunButton from '../RunButton'
 import { TaskButton } from '../Task'
 
 /** 只有行业标了 wizard 的步骤才自动显示；进度始终来自业务数据。 */
-export default function Wizard({ ctx, onExit, initialStep }: { ctx: Ctx; onExit: () => void; initialStep?: string | null }) {
+/** onExit(true)：用户点了「开始运营」，回到总览接着做后面的起步任务 */
+export default function Wizard({ ctx, onExit, initialStep }: { ctx: Ctx; onExit: (started?: boolean) => void; initialStep?: string | null }) {
   const { data, setData, error, setError, load } = ctx.checklist
   const [picked, setPicked] = useState<string | null>(initialStep ?? null)
   const [busy, setBusy] = useState(false)
@@ -27,7 +28,7 @@ export default function Wizard({ ctx, onExit, initialStep }: { ctx: Ctx; onExit:
   const finish = async () => {
     setData(await runLocal<ChecklistData>('today.closeWizard', {}))
     ctx.reloadProfile()
-    onExit()
+    onExit(true)
   }
   const call = async (fn: string, input: unknown, exit = false) => {
     setBusy(true)
@@ -46,6 +47,9 @@ export default function Wizard({ ctx, onExit, initialStep }: { ctx: Ctx; onExit:
   const skip = () => step && call('today.skip', { key: step.key })
   const Screen = step?.screen ? WIZARD_SCREENS[step.screen] : undefined
   const siteLoading = step?.key === 'site' && stepBusy
+  // 进度按全部起步任务算（向导是前几步，开始运营后在总览上接着做），和侧边栏、总览的清单一致
+  const all = data?.setup ?? steps
+  const position = step ? all.findIndex((s) => s.key === step.key) + 1 : all.length
   return (
     <main className="relative flex h-dvh min-w-0 flex-col overflow-hidden bg-background text-foreground">
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-8">
@@ -55,8 +59,8 @@ export default function Wizard({ ctx, onExit, initialStep }: { ctx: Ctx; onExit:
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-8 sm:py-12">
         <div className="mx-auto w-full max-w-xl space-y-6">
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">{tr('wizard.progress', { n: Math.min(index + 1, steps.length), total: steps.length })}</p>
-            <progress className="setup-progress block h-1.5 w-full overflow-hidden rounded-full" value={steps.filter((s) => s.done || s.skipped).length} max={steps.length || 1} aria-label={tr('wizard.title')} />
+            <p className="text-xs text-muted-foreground">{tr('wizard.progress', { n: position || Math.min(index + 1, all.length), total: all.length })}</p>
+            <progress className="setup-progress block h-1.5 w-full overflow-hidden rounded-full" value={all.filter((s) => s.done || s.skipped).length} max={all.length || 1} aria-label={tr('wizard.title')} />
           </div>
           {error && <Notice tone="error">{error}</Notice>}
           {step ? <section key={step.key} className="space-y-6">
@@ -71,8 +75,8 @@ export default function Wizard({ ctx, onExit, initialStep }: { ctx: Ctx; onExit:
       <footer className="shrink-0 border-t border-border px-5 py-4">
         <div className="mx-auto flex w-full max-w-xl flex-wrap items-center justify-between gap-3">
           <Button variant="ghost" disabled={busy || stepBusy || index === 0} onClick={() => setPicked(steps[index - 1]?.key ?? null)}><ArrowLeft />{tr('wizard.back')}</Button>
-          {/* 定位那一屏「下一步」是保存表单；别的步骤没做完能跳过，做完了（比如加完账号回来）往下走，最后一步做完就进总览 */}
-          {step?.key === 'profile' ? <Button type="submit" form="creator-profile" feedback={false} disabled={busy || stepBusy}>{stepBusy && <Loader2 className="size-4 animate-spin" />}{tr('onboarding.next')}</Button> : step && !step.done ? <Button variant="ghost" disabled={busy} onClick={skip}>{tr('today.skip')}</Button> : step && (index < steps.length - 1 ? <Button disabled={busy} onClick={() => setPicked(steps[index + 1].key)}>{tr('onboarding.next')}</Button> : <Button disabled={busy} onClick={finish}>{tr('wizard.overview')}</Button>)}
+          {/* 外贸、产品的简报、网站两屏和自媒体的定位一屏「下一步」是提交表单；别的步骤没做完能跳过，做完了（比如加完账号回来）往下走，最后一步做完就进总览 */}
+          {step?.key === 'company-details' ? <Button type="submit" form="trade-onboarding-brief" feedback={false} disabled={busy || stepBusy}>{stepBusy && <Loader2 className="size-4 animate-spin" />}{tr('onboarding.start_operations')}</Button> : step?.key === 'site' ? <Button type="submit" form="trade-onboarding-site" feedback={false} disabled={busy || stepBusy || !siteCanContinue}>{stepBusy && <Loader2 className="size-4 animate-spin" />}{tr('onboarding.next')}</Button> : step?.key === 'profile' ? <Button type="submit" form="creator-profile" feedback={false} disabled={busy || stepBusy}>{stepBusy && <Loader2 className="size-4 animate-spin" />}{tr('onboarding.next')}</Button> : step && !step.done ? <Button variant="ghost" disabled={busy} onClick={skip}>{tr('today.skip')}</Button> : step && (index < steps.length - 1 ? <Button disabled={busy} onClick={() => setPicked(steps[index + 1].key)}>{tr('onboarding.next')}</Button> : <Button disabled={busy} onClick={finish}>{tr('wizard.overview')}</Button>)}
         </div>
       </footer>
       {siteLoading && <div role="status" aria-live="polite" className="absolute inset-0 z-50 flex items-center justify-center bg-background px-6 text-center">

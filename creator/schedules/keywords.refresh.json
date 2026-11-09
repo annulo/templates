@@ -1,0 +1,5 @@
+{
+  "fn": "keywords.refresh",
+  "every": "7d",
+  "name": "更新关键词排名"
+}

@@ -18,8 +18,10 @@ function niceMax(v: number) {
  * 按天的折线趋势图（纯 SVG，不依赖图表库）。第一条序列带浅色面积，
  * 悬停显示十字线和当天各序列的值。宽度跟随容器。
  */
-/** onPick 给了就能点：点图上某一天回调它的下标，picked 那一天画一条标记线 */
-export default function TrendChart({ days, series, height = 260, label, onPick, picked }: { days: string[]; series: TrendSeries[]; height?: number; label?: string; onPick?: (i: number) => void; picked?: number | null }) {
+/** onPick 给了就能点：点图上某一天回调它的下标，picked 那一天画一条标记线。
+ *  max：纵轴上限固定成它（得分这类有满分的），不给按数据取整齐的刻度；bars：画成柱状（每个点一列，几条序列并排），悬停整列加底色；
+ *  xLabels={false}：不标横轴（很密的小图放不下，悬停照样显示是哪一天） */
+export default function TrendChart({ days, series, height = 260, label, onPick, picked, max: fixedMax, bars = false, xLabels = true }: { days: string[]; series: TrendSeries[]; height?: number; label?: string; onPick?: (i: number) => void; picked?: number | null; max?: number; bars?: boolean; xLabels?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(0)
   const [hover, setHover] = useState<number | null>(null)
@@ -33,14 +35,17 @@ export default function TrendChart({ days, series, height = 260, label, onPick, 
   const padL = 36
   const padR = 8
   const padT = 10
-  const padB = 26
+  const padB = xLabels ? 26 : 6
   const innerW = Math.max(0, w - padL - padR)
   const innerH = height - padT - padB
-  const max = niceMax(Math.max(0, ...series.flatMap((s) => s.values)))
+  const max = fixedMax ?? niceMax(Math.max(0, ...series.flatMap((s) => s.values)))
   const n = days.length
-  const x = (i: number) => padL + (n <= 1 ? innerW / 2 : (i / (n - 1)) * innerW)
+  // 柱状：每个点占一格（最宽 18px，从左往右排，点少时不铺满），细柱子在格子中间；折线：第一个点贴左边、最后一个贴右边
+  const band = bars ? Math.min(18, innerW / Math.max(1, n)) : innerW / Math.max(1, n)
+  const x = (i: number) => (bars ? padL + (i + 0.5) * band : padL + (n <= 1 ? innerW / 2 : (i / (n - 1)) * innerW))
+  const barW = Math.max(2, Math.min(10, band * 0.6) / Math.max(1, series.length))
   const y = (v: number) => padT + innerH - (v / max) * innerH
-  const labelEvery = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(innerW / 56))))
+  const labelEvery = bars ? Math.max(1, Math.ceil(56 / Math.max(1, band))) : Math.max(1, Math.ceil(n / Math.max(1, Math.floor(innerW / 56))))
 
   const path = (vals: number[]) => vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')
 
@@ -56,8 +61,10 @@ export default function TrendChart({ days, series, height = 260, label, onPick, 
           onClick={() => onPick && hover !== null && onPick(hover)}
           onMouseMove={(e) => {
             const r = e.currentTarget.getBoundingClientRect()
-            const i = Math.round(((e.clientX - r.left - padL) / Math.max(1, innerW)) * (n - 1))
-            setHover(Math.min(n - 1, Math.max(0, i)))
+            const i = bars ? Math.floor((e.clientX - r.left - padL) / Math.max(1, band)) : Math.round(((e.clientX - r.left - padL) / Math.max(1, innerW)) * (n - 1))
+            // 柱状不铺满：停在柱子右边的空白处不算哪一根
+            if (bars && i >= n) setHover(null)
+            else setHover(Math.min(n - 1, Math.max(0, i)))
           }}
         >
           {[0, 0.25, 0.5, 0.75, 1].map((t) => (
@@ -68,22 +75,36 @@ export default function TrendChart({ days, series, height = 260, label, onPick, 
               </text>
             </g>
           ))}
-          {days.map((d, i) =>
+          {xLabels && days.map((d, i) =>
             // 均匀取标签，最后一天总是标出来（离前一个太近就让位）
             (i % labelEvery === 0 && !(i !== n - 1 && n - 1 - i < labelEvery / 2)) || i === n - 1 ? (
-              <text key={d} x={x(i)} y={height - 8} textAnchor={i === n - 1 && n > 1 ? 'end' : i === 0 ? 'start' : 'middle'} fontSize="11" fill="var(--muted-foreground)">
+              <text key={d + i} x={x(i)} y={height - 8} textAnchor={bars ? 'middle' : i === n - 1 && n > 1 ? 'end' : i === 0 ? 'start' : 'middle'} fontSize="11" fill="var(--muted-foreground)">
                 {fmtDay(d)}
               </text>
             ) : null,
           )}
-          {series[0] && <path d={`${path(series[0].values)}L${x(n - 1)},${y(0)}L${x(0)},${y(0)}Z`} fill={series[0].color} opacity={0.08} />}
-          {series.map((s) => (
-            <path key={s.name} d={path(s.values)} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-          ))}
+          {bars ? (
+            <>
+              {hover !== null && <rect x={padL + hover * band} y={padT} width={band} height={innerH} fill="var(--muted-foreground)" opacity={0.08} />}
+              {series.map((s, si) =>
+                s.values.map((v, i) => {
+                  const h = Math.max(0, y(0) - y(v))
+                  return <rect key={`${s.name}-${i}`} x={x(i) - (barW * series.length) / 2 + si * barW} y={y(0) - h} width={barW} height={h} rx={2} fill={s.color} opacity={hover === null || hover === i ? 0.85 : 0.5} />
+                }),
+              )}
+            </>
+          ) : (
+            <>
+              {series[0] && <path d={`${path(series[0].values)}L${x(n - 1)},${y(0)}L${x(0)},${y(0)}Z`} fill={series[0].color} opacity={0.08} />}
+              {series.map((s) => (
+                <path key={s.name} d={path(s.values)} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+              ))}
+            </>
+          )}
           {picked != null && picked >= 0 && picked < n && (
             <line x1={x(picked)} x2={x(picked)} y1={padT} y2={padT + innerH} stroke={series[0]?.color ?? 'var(--primary)'} strokeWidth={1.5} strokeDasharray="4 3" />
           )}
-          {hover !== null && (
+          {hover !== null && !bars && (
             <g>
               <line x1={x(hover)} x2={x(hover)} y1={padT} y2={padT + innerH} stroke="var(--muted-foreground)" strokeOpacity={0.35} />
               {series.map((s) => (

@@ -1,0 +1,5 @@
+{
+  "fn": "geo.check",
+  "every": "7d",
+  "name": "每周 AI 搜索检测（ChatGPT）"
+}

@@ -48,6 +48,10 @@
         "type": "string",
         "description": "图文笔记的配图，JSON 数组字符串（顺序就是轮播顺序，第一张是封面）；长文的图在正文里，不用这个"
       },
+      "cover": {
+        "type": "string",
+        "description": "长文的封面图（资料库里的图片地址）：发到网站时当文章封面（列表缩略图、分享卡片）；空的用正文第一张图。图文笔记的封面是 images 第一张，视频的是 video_cover"
+      },
       "cover_text": {
         "type": "string",
         "description": "图文笔记没有配图时，封面图上的大字（小红书、Instagram 用它生成文字封面）"
@@ -131,6 +135,10 @@
       "chat_id": {
         "type": "string",
         "description": "最近一次在对话里改这条内容的文件夹的对话 id（folder.create / write 时记 ctx.chat_id），页面上「继续对话」回到它"
+      },
+      "lang": {
+        "type": "string",
+        "description": "原文是什么语言（en、zh…）；空的取选题简报的 language，再没有当是要发的网站的默认语言。多语言网站的译文在 article_translations 表"
       }
     },
     "required": [

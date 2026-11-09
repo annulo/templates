@@ -1,0 +1,49 @@
+{
+  "name": "GEO 问题",
+  "desc": "拿来问 AI（ChatGPT）的问题：品牌问题看 AI 怎么介绍你，其余看 AI 推荐了谁",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "question": {
+        "type": "string",
+        "description": "买家会问的问题"
+      },
+      "intent": {
+        "type": "string",
+        "description": "问题类型：brand 品牌问题（看 AI 怎么介绍你）/ commercial / comparison / informational（看 AI 推荐了谁、算可见度）"
+      },
+      "keywords": {
+        "type": "string",
+        "description": "对应的目标关键词，逗号分隔"
+      },
+      "status": {
+        "type": "string",
+        "description": "active / paused"
+      },
+      "source": {
+        "type": "string",
+        "description": "auto 按资料自动生成 / agent 助手生成 / manual 手动"
+      },
+      "auto_key": {
+        "type": "string",
+        "description": "按资料自动生成的品牌问题的句式 key（about / products / terms / role / website / compare / product:<产品 id>），用来去重"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      }
+    },
+    "required": [
+      "channel_id",
+      "question"
+    ]
+  }
+}

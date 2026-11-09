@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
+import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, HardDrive, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import RunButton from '../RunButton'
 import FacebookPublishRecovery from '../FacebookPublishRecovery'
 import FacebookComments from '../FacebookComments'
@@ -13,7 +13,7 @@ import WorkspaceTabs from '../WorkspaceTabs'
 import RichEditor from '../RichEditor'
 import SchedulePopover, { ScheduledLine } from '../SchedulePopover'
 import { Badge, Button, Dialog, ErrorDetails, Field, Notice, PageHeader, RangeToggle, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
-import { dbList, dbPatch, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, videoSrc } from '../../lib/shuttle'
+import { dbList, dbPatch, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, uploadLocalFile, videoSrc } from '../../lib/shuttle'
 import { SOCIAL, isSocial, type MetricKey, fieldsOf, isRich, isVideoPost, loggedInElsewhere, postPlatform, postText, richImages, toRich, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
 import Select from '../Select'
 import AssetPicker from '../AssetPicker'
@@ -56,7 +56,7 @@ function localDay(d: Date) {
  * 社交媒体：账号的状态和数据（粉丝、互动、采集）。内容的编辑、审核、发布、排期在内容页（各渠道版本）和发布日历，这里不重复。
  * 旧链接的 ?tab=… 已经没有对应的页签，落到账号概览；?post=<id> 仍然打开那一条（从平台采回来、不属于任何文章的帖子只在这里看得到）。
  */
-export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
+export default function Social({ ctx, params, setParam, title, hideTabs = false, onSectionChange }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; title?: string; hideTabs?: boolean; onSectionChange?: (section: 'overview' | 'data', extra: Record<string, string>) => void }) {
   type Section = 'overview' | 'data'
   const section: Section = params.section === 'data' ? 'data' : 'overview'
   const [posts, setPosts] = useState<SocialPost[] | null>(null)
@@ -102,7 +102,7 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const issues = accounts.filter((a) => expired(a) || broken(a))
   const collectable = accounts.filter((a) => !other(a) && a.login_status === 'ok')
   const oldest = collectable.map((a) => a.collected_at).filter((t): t is string => !!t).sort()[0]
-  const openSection = (next: Section, extra: Record<string, string> = {}) => ctx.go('social', { section: next, ...extra })
+  const openSection = (next: Section, extra: Record<string, string> = {}) => onSectionChange ? onSectionChange(next, extra) : ctx.go('social', { section: next, ...extra })
   const manage = () => ctx.go('channels', selected ? { channel: selected.id } : {})
   const focused = owned.find((p) => p.id === params.post)
   const openPost = (p: SocialPost) => p.article_id ? ctx.go('content', { article: p.article_id, version: p.id }) : setParam('post', p.id)
@@ -123,11 +123,11 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
   const recent = [...owned].filter((p) => p.status === 'published').sort((x, y) => Date.parse(y.published_at || '') - Date.parse(x.published_at || '')).slice(0, 5)
 
   return <div className="space-y-6">
-    <PageHeader title={tr('social.hub_title')} desc={tr('social.hub_desc')} actions={<>
+    <PageHeader title={title || tr('social.hub_title')} desc={tr('social.hub_desc')} actions={<>
       <Button variant="outline" onClick={manage}>{tr('social.manage_accounts')}</Button>
       <Button onClick={() => ctx.go('content', { tab: 'articles', new: '1' })}><Plus />{tr('social.create_social')}</Button>
     </>} />
-    <WorkspaceTabs id="social" label={tr('social.hub_title')} value={section} onChange={(next) => openSection(next, selected ? { account: selected.id } : {})} options={[{ value: 'overview', label: tr('social.tab_overview') }, { value: 'data', label: tr('social.tab_data') }]} />
+    {!hideTabs && <WorkspaceTabs id="social" label={tr('social.hub_title')} value={section} onChange={(next) => openSection(next, selected ? { account: selected.id } : {})} options={[{ value: 'overview', label: tr('social.tab_overview') }, { value: 'data', label: tr('social.tab_data') }]} />}
     {error && <ErrorDetails message={error} />}
     <div id="social-panel" role="tabpanel" aria-labelledby={`social-${section}`} className="space-y-6">
       {accounts.length === 0 ? <Notice>{tr('social.hub_empty', { name: tr('nav.channels') })}</Notice> : section === 'overview' ? <>
@@ -149,7 +149,8 @@ export default function Social({ ctx, params, setParam }: { ctx: Ctx; params: Re
           <div className="hidden overflow-x-auto rounded-lg border border-border sm:block"><table className="w-full min-w-[720px] border-collapse">
             <thead className="border-b border-border bg-muted/40"><tr>{['platform', 'account', 'followers_30', 'connection_status', 'last_publish', 'todo'].map((key) => <th key={key} scope="col" className={tableHead}>{tr('social.' + key)}</th>)}</tr></thead>
             <tbody className="divide-y divide-border">{accounts.map((a) => <tr key={a.id} className="hover:bg-muted/30">
-              <td className={tableCell}><PlatformName type={a.type} name={platformOf(a)?.label ?? ''} /></td>
+              {/* 平台、账号、粉丝都点得进这个账号的数据表现 */}
+              <td className={tableCell}><button type="button" onClick={() => openSection('data', { account: a.id })} className="flex max-w-full cursor-pointer items-center text-left hover:text-primary-text"><PlatformName type={a.type} name={platformOf(a)?.label ?? ''} /></button></td>
               {/* 头像和总览「渠道与账号」表一样：有就显示，没有用占位 */}
               <td className={tableCell}><button type="button" onClick={() => openSection('data', { account: a.id })} className="flex max-w-56 cursor-pointer items-center gap-2.5 text-left font-medium hover:text-primary-text">{avatar(a)}<span className="truncate">{a.name}</span></button></td>
               <td className={tableCell}><button type="button" onClick={() => openSection('data', { account: a.id })} className="cursor-pointer hover:text-primary-text">{followers(a)}</button></td>
@@ -233,7 +234,7 @@ function CollectAll({ accounts, oldest, onDone }: { accounts: Channel[]; oldest?
   </div>
 }
 
-/** 平台图标使用仓库现有的真实品牌图标。 */
+/** 平台的彩色 logo（components/BrandIcons.tsx） */
 function PlatformIcon({ type, size = 12 }: { type?: Channel['type']; size?: number }) {
   const I = type ? CHANNEL_TYPES[type]?.icon : undefined
   return I ? <I size={size} className="shrink-0" /> : null
@@ -618,6 +619,51 @@ function EditDialog({ open, p, pf, onClose, onSave }: { open: boolean; p: Social
       </div>
     </Dialog>
   )
+}
+
+type DirectDraft = { channel_id: string; title: string; body: string; tags: string; category: string; video: string; images: string[]; mode: 'text' | 'images' | 'video' }
+const emptyDirect = (id: string): DirectDraft => ({ channel_id: id, title: '', body: '', tags: '', category: '', video: '', images: [], mode: 'text' })
+
+function DirectPostDialog({ open, onClose, accounts, current, onDone }: { open: boolean; onClose: () => void; accounts: Channel[]; current: string; onDone: () => void }) {
+  const [drafts, setDrafts] = useState<DirectDraft[]>([])
+  const [picking, setPicking] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  useEffect(() => { if (open) { setDrafts(current && accounts.some((a) => a.id === current) ? [emptyDirect(current)] : []); setError('') } }, [open, current])
+  const update = (id: string, patch: Partial<DirectDraft>) => setDrafts((xs) => xs.map((d) => d.channel_id === id ? { ...d, ...patch } : d))
+  const toggle = (id: string) => setDrafts((xs) => xs.some((d) => d.channel_id === id) ? xs.filter((d) => d.channel_id !== id) : [...xs, emptyDirect(id)])
+  const save = async () => {
+    setBusy(true); setError('')
+    try {
+      await runLocal('social/social.createDraftBatch', { drafts: drafts.map((d) => ({ channel_id: d.channel_id, title: d.title, body: d.body, tags: d.tags.split(/[\s,，#]+/).filter(Boolean), category: d.category, video: d.video, images: d.images })) })
+      onDone()
+    } catch (e) { setError((e as Error).message); return false } finally { setBusy(false) }
+  }
+  const picked = drafts.find((d) => d.channel_id === picking)
+  return <Dialog open={open} onClose={onClose} title={tr('social.create_content')} width={680} footer={<><Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>{tr('common.cancel')}</Button><Button successLabel={tr('ui.saved')} size="sm" disabled={busy || !drafts.length} onClick={save}>{busy && <Loader2 className="animate-spin" />}{tr('social.create_n', { n: drafts.length })}</Button></>}>
+    <div className="space-y-4">
+      {error && <Notice tone="error">{error}</Notice>}
+      <p className="text-sm text-muted-foreground">{tr('social.direct_hint')}</p>
+      <div className="flex flex-wrap gap-2">{accounts.map((a) => <label key={a.id} className={cx('flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm', drafts.some((d) => d.channel_id === a.id) ? 'border-primary/50 bg-primary/5' : 'border-border')}><input type="checkbox" className="size-4 accent-[var(--primary)]" checked={drafts.some((d) => d.channel_id === a.id)} onChange={() => toggle(a.id)} />{SOCIAL[a.type]?.label} · {a.name}</label>)}</div>
+      {drafts.map((d) => {
+        const ch = accounts.find((a) => a.id === d.channel_id)!
+        const isBili = ch.type === 'bilibili'
+        const pf = SOCIAL[ch.type]!
+        const tagList = d.tags.split(/[\s,，#]+/).filter(Boolean)
+        const length = pf.len(d.body, tagList)
+        return <section key={d.channel_id} className="space-y-3 rounded-xl border border-border bg-background p-4">
+          <h3 className="text-sm font-semibold">{pf.label} · {ch.name}</h3>
+          {isBili && <Field label={tr('social.f_title')} hint={String([...d.title].length)}><input className={inputCls} value={d.title} onChange={(e) => update(d.channel_id, { title: e.target.value })} /></Field>}
+          <Field label={tr('social.f_body')} hint={`${length} · ${pf.bodyHint}`}><textarea className={cx(inputCls, 'min-h-28 py-2')} value={d.body} onChange={(e) => update(d.channel_id, { body: e.target.value })} /></Field>
+          <Field label={tr('social.f_tags')}><input className={inputCls} value={d.tags} onChange={(e) => update(d.channel_id, { tags: e.target.value })} /></Field>
+          {isBili && <Field label={tr('social.category')}><input className={inputCls} value={d.category} onChange={(e) => update(d.channel_id, { category: e.target.value })} /></Field>}
+          {!isBili && <Segmented<'text' | 'images' | 'video'> value={d.mode} onChange={(v) => update(d.channel_id, { mode: v, video: v === 'video' ? d.video : '', images: v === 'images' ? d.images : [] })} options={[{ value: 'text', label: tr('social.mode_text') }, { value: 'images', label: tr('social.mode_images') }, { value: 'video', label: tr('social.mode_video') }]} />}
+          {(isBili || d.mode === 'video') ? <VideoField video={d.video} onChange={(video) => update(d.channel_id, { video })} /> : d.mode === 'images' ? <div className="flex items-center gap-2"><Button variant="outline" size="sm" onClick={() => setPicking(d.channel_id)}>{tr('social.pick_assets')}</Button>{d.images.length > 0 && <span className="text-xs text-muted-foreground">{d.images.length}/{pf.imagesMax}</span>}</div> : null}
+        </section>
+      })}
+      {picked && <AssetPicker open={!!picking} kind="image" max={SOCIAL[accounts.find((a) => a.id === picked.channel_id)!.type]?.imagesMax ?? 4} onClose={() => setPicking(null)} onPick={(urls) => { update(picked.channel_id, { images: urls, video: '' }); setPicking(null) }} />}
+    </div>
+  </Dialog>
 }
 
 /** 发布时没配图用的文字封面，和社媒插件 plugins/social/local/xhs.ts 的 textCard 同一个样式（1080×1440 等比缩小） */

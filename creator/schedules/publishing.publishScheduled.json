@@ -1,0 +1,8 @@
+{
+  "fn": "publishing.publishScheduled",
+  "due": {
+    "table": "publications",
+    "field": "scheduled_at"
+  },
+  "name": "发布到点的网站文章"
+}

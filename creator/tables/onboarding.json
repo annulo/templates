@@ -1,0 +1,104 @@
+{
+  "name": "外贸起步资料与结果",
+  "desc": "所选站点、用户资料、竞品确认名单和各项执行结果，不记录向导页码",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "key": {
+        "type": "string",
+        "description": "外贸起步资料，固定 trade"
+      },
+      "revision": {
+        "type": "number",
+        "description": "资料版本，用于拒绝过期任务写回"
+      },
+      "channel_id": {
+        "type": "string",
+        "description": "用户选择的网站渠道 id"
+      },
+      "details_saved_at": {
+        "type": "string",
+        "description": "用户保存公司资料的时间"
+      },
+      "competitors": {
+        "type": "string",
+        "description": "用户提供或确认的竞品列表 JSON：url、name、reason"
+      },
+      "competitors_confirmed": {
+        "type": "boolean",
+        "description": "是否经过用户确认"
+      },
+      "candidates": {
+        "type": "string",
+        "description": "等待用户确认的竞品推荐列表 JSON"
+      },
+      "company_status": {
+        "type": "string",
+        "description": "idle/running/done/failed/needs_review"
+      },
+      "company_note": {
+        "type": "string",
+        "description": "补充资料结果、待确认项或失败原因"
+      },
+      "company_draft": {
+        "type": "string",
+        "description": "重新解析网站得到的待确认公司资料 JSON；确认前不覆盖 profile"
+      },
+      "company_refresh": {
+        "type": "boolean",
+        "description": "本次公司资料解析需先生成待确认简报，不直接覆盖 profile"
+      },
+      "strategy_status": {
+        "type": "string",
+        "description": "历史内容策略状态，仅供旧项目数据兼容"
+      },
+      "strategy_report": {
+        "type": "string",
+        "description": "历史内容策略 Markdown，仅供旧项目数据兼容"
+      },
+      "strategy_note": {
+        "type": "string",
+        "description": "历史内容策略失败原因，仅供旧项目数据兼容"
+      },
+      "audit_status": {
+        "type": "string",
+        "description": "idle/running/done/failed"
+      },
+      "audit_result": {
+        "type": "string",
+        "description": "网站体检结果 JSON"
+      },
+      "audit_note": {
+        "type": "string",
+        "description": "体检失败原因"
+      },
+      "research_status": {
+        "type": "string",
+        "description": "idle/running/done/failed/needs_review"
+      },
+      "research_report": {
+        "type": "string",
+        "description": "竞品调研报告 Markdown"
+      },
+      "research_note": {
+        "type": "string",
+        "description": "竞品调研失败原因"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      },
+      "website_url": {
+        "type": "string",
+        "description": "用户直接输入的公开网址；与 channel_id 二选一"
+      }
+    },
+    "required": [
+      "key"
+    ]
+  }
+}

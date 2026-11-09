@@ -28,7 +28,8 @@ const period = (r: Report) => `${r.period_start.slice(5).replace('-', '/')} – 
 const deltaTone = (d?: string) => (!d ? 'text-muted-foreground' : /^[+↑]/.test(d.trim()) ? 'text-emerald-600 dark:text-emerald-400' : /^[-−↓]/.test(d.trim()) ? 'text-destructive' : 'text-muted-foreground')
 
 /** 运营周报：助手按任务 tasks/weekly-report.md 写（每 7 天定时，或点按钮），数字来自 reports.data；要求用户能在页面上改 */
-export default function Reports({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
+/** embedded：放在别的页面（比如工作台的标签）里时，标题降一级 */
+export default function Reports({ ctx, params, setParam, embedded = false }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; embedded?: boolean }) {
   const [list, setList] = useState<Report[] | null>(null)
   const [error, setError] = useState('')
   const [job, setJob] = useState<Schedule | null>(null) // 定时任务：显示下次什么时候自动写
@@ -75,7 +76,7 @@ export default function Reports({ ctx, params, setParam }: { ctx: Ctx; params: R
 
   return (
     <div className="space-y-6">
-      <PageHeader title={tr('reports.title')} desc={tr('reports.desc')} actions={action} />
+      <PageHeader level={embedded ? 2 : 1} title={tr('reports.title')} desc={tr('reports.desc')} actions={action} />
       {(error || runError) && <Notice tone="error">{error || runError}</Notice>}
       {task && <TaskRunning runs={task.running} title={() => tr('reports.running_title')} desc={tr('reports.running_desc')} />}
       <TaskFailed task={task} />
@@ -113,7 +114,8 @@ export default function Reports({ ctx, params, setParam }: { ctx: Ctx; params: R
   )
 }
 
-const VIEWS: View[] = ['overview', 'reports', 'company', 'content', 'calendar', 'assets', 'social', 'channels']
+// 各模板的页面不全一样（自媒体没有产品、询盘）：没有的页面 tr('nav.<页面>') 认不出来，链接到那里的建议不给按钮
+const VIEWS = ['overview', 'reports', 'company', 'products', 'content', 'calendar', 'assets', 'geo', 'search', 'audit', 'leads', 'social', 'channels', 'site'] as string[]
 
 /** 建议点了去哪：先用 link；老周报只有 action 文字，按起步配置的标题、侧栏的页面名猜，猜不到就不做成链接 */
 function suggestionTarget(ctx: Ctx, s: ReportSuggestion): (() => void) | null {
@@ -135,7 +137,7 @@ function suggestionTarget(ctx: Ctx, s: ReportSuggestion): (() => void) | null {
   if (it) return openSetup(it)
   const first = (s.action ?? '').split(/[→>]/)[0].trim()
   const view = first && VIEWS.find((v) => tr('nav.' + v) === first)
-  return view ? () => ctx.go(view) : null
+  return view ? () => ctx.go(view as View) : null
 }
 
 function SuggestionAction({ text, onClick }: { text: string; onClick: (() => void) | null }) {
