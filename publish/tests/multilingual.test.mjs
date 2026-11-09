@@ -13,16 +13,16 @@ after(() => fs.rmSync(dir, { recursive: true, force: true }))
 fs.cpSync(path.join(root, 'core/local'), path.join(dir, 'local'), { recursive: true })
 fs.cpSync(path.join(root, 'core/features/websites/local'), path.join(dir, 'local'), { recursive: true })
 await build({
-  stdin: { contents: "export * as pub from './local/_publish';export * as loc from './local/_locales';export * as languages from './local/languages';export * as translations from './local/translations';export * as glossary from './local/glossary';", resolveDir: dir },
+  stdin: { contents: "export * as pub from './local/_publish';export * as loc from './local/_locales';export * as languages from './local/languages';export * as translations from './local/translations';export * as glossary from './local/glossary';export * as landing from './local/landing';", resolveDir: dir },
   bundle: true, platform: 'node', format: 'esm', outfile: path.join(dir, 'test.mjs'), logLevel: 'silent',
 })
-const { pub, loc, languages, translations, glossary } = await import(pathToFileURL(path.join(dir, 'test.mjs')))
+const { pub, loc, languages, translations, glossary, landing } = await import(pathToFileURL(path.join(dir, 'test.mjs')))
 
 const HOME = (i18n) => `<html><script>window.TalizenConfig = { baseUrl: window.location.origin + '/api/', ${i18n ? `i18n: ${JSON.stringify(i18n)}, ` : ''}messages: {"blog":{"related":"x"}} };</script></html>`
 
 /** 假的项目：几张表、creght 的 MCP（CMS 内容存在 cms 里）、ctx.html 只认 img[src] */
 function fixture({ getTool = true } = {}) {
-  const tables = { articles: [], topics: [], channels: [], publications: [], article_translations: [], glossary: [], site_changes: [], keywords: [] }
+  const tables = { articles: [], topics: [], channels: [], publications: [], article_translations: [], glossary: [], site_changes: [], keywords: [], landing_pages: [] }
   const cms = []
   const calls = []
   let seq = 0
@@ -205,4 +205,33 @@ test('an older script with no translations to send does not nag', async () => {
   await script(ctx, site, { noBody: true })({ article_id: a.id })
   assert.equal(cms[0].body.title, 'Sofa guide')
   assert.equal(tables.publications[0].warning, '')
+})
+
+test('landing pages on a multilingual site: every language by default, the default one always, a URL per language', () => {
+  const { ctx, tables, site } = fixture()
+  const { id } = landing.create({ channel_id: site.id, goal: 'Get sofa inquiries', locales: ['ar'] }, ctx)
+  assert.deepEqual(JSON.parse(tables.landing_pages[0].locales), ['en', 'ar'])
+  assert.equal(tables.landing_pages[0].language, 'en')
+  assert.throws(() => landing.create({ channel_id: site.id, goal: 'x', locales: ['de'] }, ctx), /de/)
+  const all = landing.create({ channel_id: site.id, goal: 'All' }, ctx)
+  assert.deepEqual(JSON.parse(ctx.db.get('landing_pages', all.id).locales), ['en', 'zh', 'ar'])
+
+  const r = landing.save({ id, status: 'preview', preview_url: 'https://p.test/sofa-wholesale' }, ctx)
+  assert.deepEqual(r.urls, { en: { preview: 'https://p.test/sofa-wholesale' }, ar: { preview: 'https://p.test/ar/sofa-wholesale' } })
+  // 后来在对话里加一种语言
+  landing.save({ id, locales: ['en', 'ar', 'zh'] }, ctx)
+  landing.save({ id, status: 'live', url: 'https://shop.test/sofa-wholesale' }, ctx)
+  const urls = JSON.parse(ctx.db.get('landing_pages', id).urls)
+  assert.equal(urls.zh.live, 'https://shop.test/zh/sofa-wholesale')
+  assert.deepEqual(JSON.parse(tables.site_changes[0].pages), ['https://shop.test/sofa-wholesale', 'https://shop.test/zh/sofa-wholesale', 'https://shop.test/ar/sofa-wholesale'])
+})
+
+test('landing pages on a single-language site are unchanged', () => {
+  const { ctx, tables, site } = fixture()
+  ctx.db.update('channels', site.id, { locales: '["en"]' })
+  const { id } = landing.create({ channel_id: site.id, goal: 'x', language: 'en' }, ctx)
+  assert.equal(tables.landing_pages[0].locales, undefined)
+  const r = landing.save({ id, status: 'live', url: 'https://shop.test/x' }, ctx)
+  assert.equal(r.urls, undefined)
+  assert.deepEqual(JSON.parse(tables.site_changes[0].pages), ['https://shop.test/x'])
 })

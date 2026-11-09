@@ -1,6 +1,6 @@
 # 网站多语言：文章和落地页
 
-2026-11-09 起草，zhangliang 确认后开始做：文章（网站语言、翻译、多语言发布）已做，落地页还没做。外贸、产品运营两个模板一起用（网站运营模块）。只改模板，不改 Annulo：要用的 creght 能力（CMS 的 `_i18n`、站点代码推送）现在都有。
+2026-11-09 起草，zhangliang 确认后开始做，四步都已做完。外贸、产品运营两个模板一起用（网站运营模块）。只改模板，不改 Annulo：要用的 creght 能力（CMS 的 `_i18n`、站点代码推送）现在都有。
 
 ## 照着 creght 的做法
 
@@ -78,12 +78,13 @@ WordPress 没有原生多语言（要装 WPML、Polylang 这类插件，各家�
 
 落地页是直接写站点代码的（`docs/landing-pages.md`），多语言就照 pofung 的 `page/stone-dining-tables.tsx` 做：一个页面文件，文案按语言放在 `lib/copy/<落地页>/<语言>.ts`。
 
-- **表**：`landing_pages` 的 `language` 改成 `locales`（这页做了哪几种语言），加 `urls`（每种语言的预览和正式网址）。老记录的 `language` 读作只有一种语言的 `locales`。
-- **新建**：新建框里，网站开了多种语言时多一项「做哪几种语言」，默认全选。从关键词来的（关键词有 `lang`），这种语言的版本是主打，其他语言的版本照它的意思写，不逐字翻。
+- **表**：`landing_pages` 加 `locales`（这页做了哪几种语言，总带默认语言：页面在默认语言的地址上也要能看）、`urls`（每种语言的预览和线上地址）；`language` 留着，是主打的语言。单语言网站这两个字段为空，和以前一样。
+  `urls` 不用助手写：`landing.save` 按默认语言的 `preview_url` / `url` 加语言前缀算好存下。
+- **新建**：新建框里，网站开了多种语言时多一项「做哪几种语言」，默认全选，默认语言不能取消。从关键词来的（关键词有 `lang`），这种语言的版本是主打，其他语言的版本照它的意思写，不逐字翻。
 - **任务**（`tasks/landing-page.md` 加一节）：
   - 先看站点已有的多语言写法（`messages/`、`lib/copy/`、`lib/i18n.ts` 这类），照它的写；
   - 文案按语言分文件，`generateMetadata` 也按语言取标题和描述；站内链接用 `localizedPath()`；读术语表；
-  - 每种语言都推到预览、都打开看一遍（阿拉伯语要看从右往左的排版），每种语言的网址存进 `urls`；
+  - 每种语言都打开预览看一遍（阿拉伯语要看从右往左的排版：页面里用 `start` / `end`、`ms-` / `me-`，不写死左右）；
   - 用户之后在这段对话里说「再加一个西语」，就补一个文案文件、更新 `locales`。
 - **写法**：沿用 `prompts/landing-page.md`。各语言的语气偏好写在翻译的写法里，两个任务都读它。
 - **效果追踪**：第一次上线记的 `site_changes` 把所有语言的网址都放进 `pages`。
@@ -109,9 +110,7 @@ WordPress 没有原生多语言（要装 WPML、Polylang 这类插件，各家�
 1. ✅ 网站语言：`channels.locales`（`languages.read` 抓首页读），setup-publish 配好后读一次，文章页打开时没读过的自动读；网站设置的发布卡片下面显示语言（`components/SiteLanguages.tsx`）；
 2. ✅ 文章翻译：`article_translations`、`glossary`、任务 `tasks/translate-article.md`（写法 `prompts/translate-article.md`）、文章页的语言一栏（`components/ArticleLanguages.tsx`，挂在 core 的 `ArticleDetail`）；
 3. ✅ 多语言发布：`publishTo` 用脚本试发算 `_i18n`、发完单独写、`locales` / `locale_urls`；setup-publish 写明 `dry` 返回 `body`。测试 `publish/tests/multilingual.test.mjs`；
-4. 落地页多语言。
-
-1～3 做完，pofung 这样已经开了多语言的网站就能用；4 接着做。
+4. ✅ 落地页多语言：`landing_pages.locales` / `urls`、`landing.create` / `context` / `save` 认语言、任务加「多语言网站」一节、新建框选语言、列表显示各语言地址。
 
 ## 已定（2026-11-09）
 

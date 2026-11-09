@@ -355,6 +355,10 @@ export type LandingPage = {
   topic_id?: string;
   opportunity_id?: string;
   language?: string;
+  /** 多语言网站：这页做了哪几种语言（JSON 数组字符串） */
+  locales?: string;
+  /** 多语言网站：每种语言的地址，JSON {"zh":{"preview":"…","live":"…"}} */
+  urls?: string;
   /** 简报（Markdown） */
   brief?: string;
   path?: string;

@@ -632,7 +632,9 @@
     "no_site": "Landing pages are built on your website: add a website first (creght site or WordPress).",
     "add_site": "Add a website",
     "req_title": "AI requirements for landing pages",
-    "req_hint": "AI follows these for every landing page: structure, tone, how to write selling points, style."
+    "req_hint": "AI follows these for every landing page: structure, tone, how to write selling points, style.",
+    "f_locales": "Languages",
+    "locales_hint": "The site has several languages: one set of copy per language on the same page address (the site adds a prefix like /zh). The default language is always included."
   },
   "langs": {
     "confirm": "Approve",
