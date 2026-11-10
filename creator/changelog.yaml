@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.22.1
+  zh: "修好文章页多语言一栏里「原文语言」显示成代码的问题。"
+  en: "Fixed the \"Original language\" label on the article page showing as code."
 - version: 0.22.0
   zh: "能管理自己的网站：加 creght 站点或 WordPress，看访问、谷歌排名、AI 搜索推荐和网站检查，文章能发到网站，支持多语言。"
   en: "Manage your own website: add a creght site or WordPress to see traffic, Google rankings, AI search and site checks, and publish articles to it, in every language the site has."
