@@ -1611,6 +1611,7 @@
     "site_single": "This site has one language. To add more, ask the site's AI in the creght editor, then click \"Read languages again\".",
     "site_title": "Site languages",
     "site_unread": "This site's languages haven't been read yet.",
+    "source": "Original language",
     "stale_hint": "The original changed after this was translated",
     "title": "Languages",
     "translate": "Translate into {langs}",

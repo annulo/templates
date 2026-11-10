@@ -1,3 +1,6 @@
+- version: 0.20.1
+  zh: "修好文章页多语言一栏里「原文语言」显示成代码的问题。"
+  en: "Fixed the \"Original language\" label on the article page showing as code."
 - version: 0.20.0
   zh: "网站文章和落地页支持多语言：照 creght 站点开的语言，AI 翻出各语言版本，发布时一起发上去；术语表统一各语言的说法。"
   en: "Website articles and landing pages go multilingual: AI translates them into each language your creght site has, published together, with a glossary keeping terms consistent."

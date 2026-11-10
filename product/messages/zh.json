@@ -1611,6 +1611,7 @@
     "site_single": "这个网站只有一种语言。要做多语言，到 creght 编辑器里让站点的 AI 开，开好回来点「重新读取语言」。",
     "site_title": "网站语言",
     "site_unread": "还没读过这个网站的语言设置。",
+    "source": "原文语言",
     "stale_hint": "原文改过了，这份译文是按旧原文翻的",
     "title": "多语言",
     "translate": "翻译成 {langs}",
