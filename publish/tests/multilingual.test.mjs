@@ -235,3 +235,14 @@ test('landing pages on a single-language site are unchanged', () => {
   assert.equal(r.urls, undefined)
   assert.deepEqual(JSON.parse(tables.site_changes[0].pages), ['https://shop.test/x'])
 })
+
+test('every string the multilingual components use exists in zh and en', () => {
+  const files = ['components/ArticleLanguages.tsx', 'components/SiteLanguages.tsx']
+  const used = new Set(files.flatMap((f) => [...fs.readFileSync(path.join(root, 'core/features/websites', f), 'utf8').matchAll(/\b(?:tr\(|key: )'((?:langs|glossary)\.[a-z_]+)'/g)].map((m) => m[1])))
+  assert.ok(used.size > 20)
+  for (const lang of ['zh', 'en']) {
+    const msgs = JSON.parse(fs.readFileSync(path.join(root, `core/features/websites/messages/${lang}.json`), 'utf8'))
+    const missing = [...used].filter((k) => { const [ns, key] = k.split('.'); return typeof msgs[ns]?.[key] !== 'string' })
+    assert.deepEqual(missing, [], `${lang} is missing`)
+  }
+})
