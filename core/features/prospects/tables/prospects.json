@@ -1,0 +1,109 @@
+{
+  "name": "潜在客户",
+  "desc": "主动获客找来的潜在客户：官网反查到的公司、或 Apollo 的联系人，加上 AI 评分和开场白；跟进时转成询盘（leads）",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "batch_id": {
+        "type": "string",
+        "description": "prospect_batches 的 id"
+      },
+      "source": {
+        "type": "string",
+        "description": "web 官网反查（一行是一家公司，name 就是公司名，邮箱电话是官网上公开的）/ apollo（一行是一个人）；老数据没有时按 apollo"
+      },
+      "apollo_id": {
+        "type": "string",
+        "description": "Apollo 的联系人 id（Apollo 去重用；官网反查的空着，按 company_domain 去重）"
+      },
+      "name": {
+        "type": "string",
+        "description": "姓名"
+      },
+      "title": {
+        "type": "string",
+        "description": "职位"
+      },
+      "seniority": {
+        "type": "string",
+        "description": "级别"
+      },
+      "company": {
+        "type": "string",
+        "description": "公司"
+      },
+      "company_domain": {
+        "type": "string",
+        "description": "公司官网域名"
+      },
+      "company_size": {
+        "type": "string",
+        "description": "员工数"
+      },
+      "industry": {
+        "type": "string",
+        "description": "行业"
+      },
+      "country": {
+        "type": "string",
+        "description": "国家"
+      },
+      "city": {
+        "type": "string",
+        "description": "城市"
+      },
+      "linkedin_url": {
+        "type": "string",
+        "description": "领英主页"
+      },
+      "email": {
+        "type": "string",
+        "description": "邮箱（Apollo 要取邮箱、花积分；官网反查是官网上公开的）"
+      },
+      "email_status": {
+        "type": "string",
+        "description": "verified / guessed / unavailable / public（官网公开的）"
+      },
+      "phone": {
+        "type": "string",
+        "description": "电话"
+      },
+      "score": {
+        "type": "number",
+        "description": "AI 评分 0~100：和客户画像有多对口"
+      },
+      "score_reason": {
+        "type": "string",
+        "description": "评分理由"
+      },
+      "opener": {
+        "type": "string",
+        "description": "AI 写的一句开场白（领英邀请、开发信第一句）"
+      },
+      "status": {
+        "type": "string",
+        "description": "new 待处理 / qualified 合格 / skipped 跳过 / converted 已转询盘"
+      },
+      "lead_id": {
+        "type": "string",
+        "description": "转成的询盘 id"
+      },
+      "raw": {
+        "type": "string",
+        "description": "原始记录 JSON（截断）：Apollo 的联系人，或官网反查的网址、标题、摘要、全部邮箱电话"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "ISO8601"
+      }
+    },
+    "required": [
+      "batch_id",
+      "name"
+    ]
+  }
+}

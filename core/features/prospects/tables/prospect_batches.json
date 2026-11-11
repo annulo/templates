@@ -1,0 +1,64 @@
+{
+  "name": "获客批次",
+  "desc": "一次主动获客：客户画像（ICP）、找法（官网反查 / Apollo）、搜索词或 Apollo 筛选条件、跑到哪一步、多少人",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "批次名"
+      },
+      "icp": {
+        "type": "string",
+        "description": "客户画像 JSON：{ summary, industries[], regions[], company_size, roles[], buying_signals[], exclude[] }（助手按任务 draft-icp 写）"
+      },
+      "source": {
+        "type": "string",
+        "description": "怎么找：web 从企业官网反查（Google 搜索 + 读官网，不要账号）/ apollo 用 Apollo 找人（要 API Key）；老批次没有时按 apollo"
+      },
+      "queries": {
+        "type": "string",
+        "description": "web 用的 Google 搜索词 JSON 数组（英文，如 [\"LED lighting distributor Germany\"]）"
+      },
+      "filters": {
+        "type": "string",
+        "description": "Apollo 筛选条件 JSON：{ person_titles[], person_seniorities[], person_locations[], organization_num_employees_ranges[], q_organization_keyword_tags[], q_keywords }"
+      },
+      "limit": {
+        "type": "number",
+        "description": "这批最多找多少人"
+      },
+      "status": {
+        "type": "string",
+        "description": "draft 待确认 / running 进行中 / done 完成 / failed 失败"
+      },
+      "step": {
+        "type": "string",
+        "description": "search 搜索 / read 读官网 / score AI 评分 / done"
+      },
+      "found": {
+        "type": "number",
+        "description": "找到的人数（官网反查是公司数）"
+      },
+      "qualified": {
+        "type": "number",
+        "description": "评分合格（≥ 60）的人数"
+      },
+      "error": {
+        "type": "string",
+        "description": "失败原因；完成了也可能有提醒（比如 Google 要验证、只搜了一部分）"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "ISO8601"
+      }
+    },
+    "required": [
+      "name"
+    ]
+  }
+}

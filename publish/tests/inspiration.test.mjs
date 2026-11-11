@@ -11,7 +11,8 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'inspiration-test-'))
 fs.cpSync(path.join(root, 'product'), temp, { recursive: true })
 fs.cpSync(path.join(root, 'core/local'), path.join(temp, 'local'), { recursive: true })
 fs.cpSync(path.join(root, 'core/lib'), path.join(temp, 'lib'), { recursive: true })
-fs.cpSync(path.join(root, 'core/features/websites'), temp, { recursive: true })
+// 产品运营启用的共用模块（publish/targets.json 的 features），同 publish.py 的组装
+for (const f of JSON.parse(fs.readFileSync(path.join(root, 'publish/targets.json'), 'utf8')).product.features) fs.cpSync(path.join(root, 'core/features', f), temp, { recursive: true })
 await build({ stdin: { contents: "export * as inspiration from './local/inspiration'; export * as topics from './local/topics'; export * as content from './local/content';", resolveDir: temp }, outfile: path.join(temp, 'test.mjs'), bundle: true, platform: 'node', format: 'esm', plugins: [{ name: 'social-stub', setup(b) { b.onResolve({ filter: /plugins\/social\// }, (a) => ({ path: a.path, namespace: 'social-stub' })); b.onLoad({ filter: /.*/, namespace: 'social-stub' }, () => ({ contents: `export const FIELDS = {}; export async function summary() { return [] }
 export const CONTENT_TYPES = ['article', 'post', 'video'];
 export const contentType = c => c?.type === 'post' || c?.type === 'video' ? c.type : 'article';

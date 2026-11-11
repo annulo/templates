@@ -1,0 +1,86 @@
+{
+  "name": "竞品",
+  "desc": "盯着的竞品网站：从起步向导确认的竞品名单带过来，也能手动加、让 AI 推荐（推荐的要用户确认才开始读）；每天读一次它的 sitemap",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "竞品名"
+      },
+      "url": {
+        "type": "string",
+        "description": "官网首页"
+      },
+      "host": {
+        "type": "string",
+        "description": "域名（去重用）"
+      },
+      "reason": {
+        "type": "string",
+        "description": "为什么是竞品"
+      },
+      "kind": {
+        "type": "string",
+        "description": "direct 同类工厂、供应商 / brand 品牌商 / channel 渠道商、分销商（AI 推荐时分的类，手动加的为空）"
+      },
+      "evidence": {
+        "type": "string",
+        "description": "AI 推荐时的依据：在哪里看到它（搜索词、AI 回答、网址）"
+      },
+      "source": {
+        "type": "string",
+        "description": "onboarding 起步向导 / manual 手动 / agent AI 推荐 / geo AI 推荐的、在 AI 搜索回答里被引用过"
+      },
+      "status": {
+        "type": "string",
+        "description": "active 在盯 / paused 暂停 / suggested AI 推荐、等用户确认（不读）/ rejected 用户说不要（不读，下次不再推荐）"
+      },
+      "sitemaps": {
+        "type": "string",
+        "description": "找到的 sitemap 地址 JSON 数组"
+      },
+      "pages_total": {
+        "type": "number",
+        "description": "上次读到的页面数"
+      },
+      "counts": {
+        "type": "string",
+        "description": "按类型的页面数 JSON：{ product, blog, landing, other }"
+      },
+      "baseline_at": {
+        "type": "string",
+        "description": "第一次读完的时间：之前的页面算原有，之后出现的才算新发现"
+      },
+      "scanned_at": {
+        "type": "string",
+        "description": "上次读的时间"
+      },
+      "error": {
+        "type": "string",
+        "description": "上次读失败的原因"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "ISO8601"
+      },
+      "known": {
+        "type": "string",
+        "description": "已经见过的页面指纹 JSON 数组（基线和之后的都在里面；只给 scan 用）"
+      },
+      "recent": {
+        "type": "string",
+        "description": "最近更新的几个页面 JSON 数组 [{ url, kind, lastmod, title, description }]（每次读完更新，加进监控马上就有东西看）"
+      }
+    },
+    "required": [
+      "name",
+      "url",
+      "host"
+    ]
+  }
+}

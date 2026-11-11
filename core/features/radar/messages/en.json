@@ -1,0 +1,25 @@
+{
+  "growth": {
+    "title": "Growth",
+    "desc": "Every week, data from across the back office is rolled into one list: declining pages, pages close to page one, searches with no page, new competitor pages, AI recommending others, site issues, unhandled inquiries… Each item says why and what to do next; \"Do it\" takes you to the right page.",
+    "scanned": "Last calculated {when}",
+    "scan": "Recalculate",
+    "hint": "Sorted by impact; click \"Done\" when finished, and it comes back next week if the signal is still there",
+    "a_all": "All {n}",
+    "a_site": "Website {n}",
+    "a_content": "Content {n}",
+    "a_customers": "Customers {n}",
+    "empty": "Nothing to do in this group right now. It is recalculated every week.",
+    "handled": "{n} handled",
+    "p_high": "Priority",
+    "p_medium": "Worth doing",
+    "p_low": "When you have time",
+    "s_done": "Done",
+    "s_dismissed": "Ignored",
+    "next": "Next: ",
+    "go": "Do it",
+    "done": "Done",
+    "dismiss": "Ignore",
+    "undo": "Undo"
+  }
+}

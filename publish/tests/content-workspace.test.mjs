@@ -11,7 +11,8 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'content-workspace-'));
 fs.cpSync(path.join(root, 'product'), temp, { recursive: true });
 fs.cpSync(path.join(root, 'core/local'), path.join(temp, 'local'), { recursive: true });
 fs.cpSync(path.join(root, 'core/lib'), path.join(temp, 'lib'), { recursive: true });
-fs.cpSync(path.join(root, 'core/features/websites'), temp, { recursive: true });
+// 产品运营启用的共用模块（publish/targets.json 的 features），同 publish.py 的组装
+for (const f of JSON.parse(fs.readFileSync(path.join(root, 'publish/targets.json'), 'utf8')).product.features) fs.cpSync(path.join(root, 'core/features', f), temp, { recursive: true });
 await build({ stdin: { contents: "export * from './lib/contentWorkspace'; export * as workspace from './local/content-workspace'; export * as topics from './local/topics';", resolveDir: temp },
   bundle: true, platform: 'node', format: 'esm', outfile: path.join(temp, 'test.mjs'), logLevel: 'silent',
   // These read/classification tests never invoke the installed social transport or format adapters.

@@ -1,0 +1,130 @@
+{
+  "name": "询盘线索",
+  "desc": "渠道站点表单提交汇总成的线索：是否真实询盘、意向、跟进状态",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "来自哪个渠道"
+      },
+      "source": {
+        "type": "string",
+        "description": "来源：form（以后 email / dm）"
+      },
+      "source_ref": {
+        "type": "string",
+        "description": "原始记录的 id（表单提交 id），同一来源唯一，防重复写"
+      },
+      "form_name": {
+        "type": "string",
+        "description": "表单名"
+      },
+      "submitted_at": {
+        "type": "string",
+        "description": "提交时间 ISO8601"
+      },
+      "contact": {
+        "type": "string",
+        "description": "联系人：{ name, email, phone, company, title } 的 JSON 字符串"
+      },
+      "company": {
+        "type": "string",
+        "description": "公司"
+      },
+      "message": {
+        "type": "string",
+        "description": "留言摘要（不超过 1000 字）"
+      },
+      "fields": {
+        "type": "string",
+        "description": "表单原始字段 { key: 值 } 的 JSON 字符串"
+      },
+      "landing_page": {
+        "type": "string",
+        "description": "提交所在页面（去掉 query）"
+      },
+      "utm": {
+        "type": "string",
+        "description": "form_url 里的 utm_* 参数 JSON 字符串"
+      },
+      "referrer": {
+        "type": "string",
+        "description": "来源页"
+      },
+      "country": {
+        "type": "string",
+        "description": "国家 / 地区"
+      },
+      "is_real": {
+        "type": "boolean",
+        "description": "是否真实询盘（营销推销、垃圾、测试为 false）"
+      },
+      "pending": {
+        "type": "boolean",
+        "description": "刚入库、模型还没判断为 true；leads.judge 判断完改成 false"
+      },
+      "intent": {
+        "type": "string",
+        "description": "意向：high / medium / low"
+      },
+      "intent_reason": {
+        "type": "string",
+        "description": "意向判断的一句话理由"
+      },
+      "status": {
+        "type": "string",
+        "description": "跟进阶段：new 新询盘 / contacted 已联系 / quoted 已报价 / negotiating 谈判中 / won 已成交 / lost 已流失 / spam 垃圾；旧的 qualified 由 leads.judge 改成 negotiating"
+      },
+      "owner": {
+        "type": "string",
+        "description": "负责人"
+      },
+      "note": {
+        "type": "string",
+        "description": "跟进备注"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "写入时间 ISO8601"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "更新时间 ISO8601"
+      },
+      "reply_subject": {
+        "type": "string",
+        "description": "回复草稿的邮件标题（助手按任务 reply-lead 写）"
+      },
+      "reply_body": {
+        "type": "string",
+        "description": "回复草稿的正文（纯文本，用户复制或用邮件发送）"
+      },
+      "reply_at": {
+        "type": "string",
+        "description": "回复草稿写好的时间 ISO8601"
+      },
+      "tags": {
+        "type": "string",
+        "description": "标签 JSON 数组（leads.judge 打）：quote 要报价 / sample 要样品 / oem 定制贴牌 / bulk 大批量 / distributor 代理分销 / urgent 着急"
+      },
+      "research": {
+        "type": "string",
+        "description": "客户背调结果 JSON（助手按任务 research-lead 写，leads.saveResearch 存）：verdict、conclusion、company、signals、risks、domain、next_steps、sources"
+      },
+      "research_at": {
+        "type": "string",
+        "description": "背调写好的时间 ISO8601"
+      },
+      "activities": {
+        "type": "string",
+        "description": "跟进记录 JSON 数组 [{ at, kind: status / note / reply / research, text }]，新的在后面，最多留 200 条"
+      }
+    },
+    "required": [
+      "channel_id",
+      "source",
+      "source_ref"
+    ]
+  }
+}

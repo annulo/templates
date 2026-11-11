@@ -1,0 +1,5 @@
+{
+  "fn": "leads.judge",
+  "every": "5m",
+  "name": "判断新询盘"
+}

@@ -1,0 +1,5 @@
+{
+  "fn": "competitors.scan",
+  "every": "1d",
+  "name": "读竞品网站的新页面"
+}

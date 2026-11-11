@@ -1,0 +1,44 @@
+{
+  "name": "询盘推送",
+  "desc": "每个独立站在 creght 注册的表单 webhook（leads.connect 维护）：运营后台的 Func 收到推送时按 webhook_id 找密钥验签。含密钥，不对页面公开",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "哪个独立站渠道"
+      },
+      "project_id": {
+        "type": "string",
+        "description": "渠道站点所在的 creght 项目"
+      },
+      "webhook_id": {
+        "type": "string",
+        "description": "creght 返回的 webhook id"
+      },
+      "url": {
+        "type": "string",
+        "description": "推送地址（运营后台的 /func/leads_hook）"
+      },
+      "secret": {
+        "type": "string",
+        "description": "签名密钥（只在注册时返回一次）"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "注册时间 ISO8601"
+      },
+      "kind": {
+        "type": "string",
+        "description": "form = 外部表单（WordPress 插件、Zapier…）的 webhook 密钥（leads.formHook）；空 = creght 表单 webhook"
+      },
+      "token": {
+        "type": "string",
+        "description": "外部表单 webhook 的密钥（kind=form）：?k= / 请求头 x-shuttle-key / 隐藏字段 shuttle_key"
+      }
+    },
+    "required": [
+      "channel_id"
+    ]
+  }
+}

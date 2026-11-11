@@ -31,30 +31,32 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 
 ## 第 1 步：独有功能挪进模块（产物不变）
 
-一个模块一个提交。模块里的文件挪到 `core/features/<模块>/` 下的同一路径，文案挪进模块的 `messages/*.json`，模板的 `targets.json` 启用它。
+模块里的文件挪到 `core/features/<模块>/` 下的同一路径，文案按命名空间挪进模块的 `messages/*.json`（括号里是挪的命名空间），模板的 `targets.json` 启用它。
 模块之间、模块和模板之间的依赖照现在的写，「有就用」的改写放到第 2 步。
 
 外贸的：
 
 | 模块 | 文件 |
 |---|---|
-| `leads` 询盘 | `backend/func/leads_hook.ts`、`components/FormHookCard.tsx`、`views/Leads.tsx`、`local/leads.ts`、表 `leads` `lead_hooks`、定时 `leads.sync` `leads.judge`、skill `leads`、任务 `reply-lead` `research-lead`、写法 `reply-lead`、`docs/leads.md` |
-| `prospects` 潜客 | `views/Prospects.tsx`、`local/prospects.ts` `_apollo.ts` `_webfind.ts`、表 `prospects` `prospect_batches`、任务 `draft-icp`、`docs/prospects.md`（用 `leads` 表） |
-| `competitors` 竞品 | `views/Competitors.tsx`、`local/competitors.ts`、表 `competitors` `competitor_pages`、定时 `competitors.scan`、任务 `competitor-*`、`docs/competitors.md` |
-| `knowledge` 知识库 | `views/Knowledge.tsx`、`local/knowledge.ts`、`lib/extract.ts`、任务 `summarize-knowledge`、`docs/knowledge.md` |
-| `radar` 增长雷达 | `views/Growth.tsx`、`local/growth.ts`、表 `growth_items`、定时 `growth.scan`、`docs/growth-radar.md` |
-| `dashboard` 看板 | `components/Dashboard.tsx`、`local/dashboard.ts`、`pages/Index.canvas.tsx`、`docs/dashboard.md` |
+| `leads` 询盘（`leads` `formhook`） | `backend/func/leads_hook.ts`、`components/FormHookCard.tsx`、`views/Leads.tsx`、`local/leads.ts`、表 `leads` `lead_hooks`、定时 `leads.sync` `leads.judge`、skill `leads`、任务 `reply-lead` `research-lead`、写法 `reply-lead`、`docs/leads.md` |
+| `prospects` 潜客（`prospects`） | `views/Prospects.tsx`、`local/prospects.ts` `_apollo.ts` `_webfind.ts`、表 `prospects` `prospect_batches`、任务 `draft-icp`、`docs/prospects.md`（用 `leads` 表） |
+| `competitors` 竞品（`competitors`） | `views/Competitors.tsx`、`local/competitors.ts`、表 `competitors` `competitor_pages`、定时 `competitors.scan`、任务 `competitor-*`、`docs/competitors.md` |
+| `knowledge` 知识库（`knowledge`） | `views/Knowledge.tsx`、`local/knowledge.ts`、`lib/extract.ts`、任务 `summarize-knowledge`、`docs/knowledge.md` |
+| `radar` 增长雷达（`growth`） | `views/Growth.tsx`、`local/growth.ts`、表 `growth_items`、定时 `growth.scan`、`docs/growth-radar.md` |
+| `dashboard` 看板（`board`） | `components/Dashboard.tsx`、`local/dashboard.ts`、`docs/dashboard.md`（`pages/Index.canvas.tsx` 是首页的预览，留在模板） |
 | 待定 | `local/images.ts`（AI 配图）、`_overlap.ts`（内容去重）、`_catalog.ts`（产品目录）：内容中心在用，第 2 步跟 `content.ts` 一起看是进 core 还是进模块 |
 
 产品运营的（`growth` 的改名放在第 2 步，这一步只挪）：
 
 | 模块 | 文件 |
 |---|---|
-| `campaigns` 增长机会和运营主题 | `views/Campaigns.tsx` `GrowthPlanning.tsx` `Opportunities.tsx`、`MarketingWorkspace.tsx`、`GrowthDashboard.tsx`、`local/growth.ts` `_growth.ts` `marketing.ts`、表 `campaigns` `channel_strategies` `growth_opportunities` `growth_reviews` `marketing_plans` `seo_targets`、任务和写法 `plan-/produce-/review-campaign` `seo-research` `seo-page-plan` `seo-page-implement`、定时 `marketing.planReviews`、skill `product-growth` `product-seo`、`docs/product-growth.md` `marketing-workflow.md` |
+| `campaigns` 增长机会和运营主题（`growth` `marketing`） | `views/Campaigns.tsx` `GrowthPlanning.tsx` `Opportunities.tsx`、`MarketingWorkspace.tsx`、`local/growth.ts` `_growth.ts` `marketing.ts`、表 `campaigns` `channel_strategies` `growth_opportunities` `growth_reviews` `marketing_plans` `seo_targets`、任务和写法 `plan-/produce-/review-campaign` `seo-research` `seo-page-plan` `seo-page-implement`、定时 `marketing.planReviews`、skill `product-growth` `product-seo`、`docs/product-growth.md` `marketing-workflow.md` |
 | `inspiration` 灵感库 | `local/inspiration.ts`、表 `reference_creators`、定时 `inspiration.sync`、任务和写法 `review-inspiration`、`docs/content-inspiration.md`（和 `playbooks` 一起用） |
 | `metrics` 转化指标 | `views/ProductMetrics.tsx`、`local/metrics.ts`、表 `product_metrics_daily` |
 
 产品运营的 `_growth.ts` 被 `products`、`profile`、`today`、`reports` 引用，挪进 `campaigns` 模块后这几处暂时还依赖它，第 2 步拆。
+`GrowthDashboard.tsx`（首页的数据看板）留在产品运营，第 2 步和外贸的 `dashboard` 模块、首页一起看。
+`radar` 和 `campaigns` 的文案都在 `growth` 命名空间下（两个模板各用一个，现在不冲突），第 2 步产品运营改名时把它的挪到新名字下，之后两个模块才能在同一个模板里一起启用。
 
 ## 第 2 步：合并分叉的文件
 
@@ -79,6 +81,6 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 ## 进度
 
 - [x] 第 0 步：`publish/merge_check.py`，基准 2026-11-11（含当时工作区里别人没提交的 core 改动）
-- [ ] 第 1 步
+- [x] 第 1 步（2026-11-11）：外贸 6 个、产品运营 3 个模块，四个模板的产物和基准一样，`npm run check` 通过；外贸和本仓库的测试改成按 `targets.json` 拷模块，失败的和挪之前一样（外贸 `onboarding` 1 个；本仓库 7 个是测试本身的问题：缺 esbuild、社媒插件的替身少了导出、自媒体测试缺 `_site`，另有别人还没提交的 `instagram-publish-prepare`）
 - [ ] 第 2 步
 - [ ] 第 3 步

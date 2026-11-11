@@ -1,0 +1,78 @@
+{
+  "name": "增长机会",
+  "desc": "growth.scan 每周汇总各处数据算出的机会清单：一条一个该做的事，带依据和下一步；信号没了就删掉",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "key": {
+        "type": "string",
+        "description": "去重键：同一件事每周算出来是同一个 key（比如 decay:<页面>、leads_high）"
+      },
+      "kind": {
+        "type": "string",
+        "description": "decay 内容下滑 / low_ctr 点击率偏低 / striking 差一点上首页 / search_gap 有人搜没页面 / competitor 竞品新页面 / geo_gap AI 推荐了别家 / geo_drop AI 可见度下降 / audit 严重网站问题 / leads_high 高意向询盘没处理 / leads_stale 跟进停了 / change_worse 改动后变差 / unpublished 写好没发 / setup 数据没接上"
+      },
+      "area": {
+        "type": "string",
+        "description": "site 独立站 / content 内容 / customers 客户 / setup 数据"
+      },
+      "priority": {
+        "type": "string",
+        "description": "high / medium / low"
+      },
+      "score": {
+        "type": "number",
+        "description": "排序用的分数，越大越靠前"
+      },
+      "title": {
+        "type": "string",
+        "description": "一句话：发现了什么"
+      },
+      "why": {
+        "type": "string",
+        "description": "依据：数据和为什么值得做"
+      },
+      "next": {
+        "type": "string",
+        "description": "下一步做什么"
+      },
+      "action": {
+        "type": "string",
+        "description": "下一步的动作 JSON：{kind: go, view, params} 去哪个页面 / {kind: task, task, input} 交给助手的任务"
+      },
+      "value": {
+        "type": "number",
+        "description": "这件事涉及的数量（询盘数、页面数…）；忽略后数量变多了会再出现"
+      },
+      "status": {
+        "type": "string",
+        "description": "空 / done（用户标了做完，下周信号还在就再出现）/ dismissed（不用管，数量变多才再出现）"
+      },
+      "status_value": {
+        "type": "number",
+        "description": "标记时的数量"
+      },
+      "status_week": {
+        "type": "string",
+        "description": "标记时是哪一周（这周周一的日期）"
+      },
+      "seen": {
+        "type": "boolean",
+        "description": "用户看过了（去掉「新」标识）"
+      },
+      "first_seen": {
+        "type": "string",
+        "description": "第一次出现的时间 ISO8601"
+      },
+      "scanned_at": {
+        "type": "string",
+        "description": "最近一次算出它的时间 ISO8601"
+      }
+    },
+    "required": [
+      "key",
+      "kind",
+      "title"
+    ]
+  }
+}

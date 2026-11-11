@@ -13,7 +13,10 @@
     "name": "产品运营助手",
     "features": [
       "websites",
-      "playbooks"
+      "playbooks",
+      "campaigns",
+      "inspiration",
+      "metrics"
     ]
   }
 }

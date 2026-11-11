@@ -1,0 +1,5 @@
+{
+  "fn": "growth.scan",
+  "every": "7d",
+  "name": "算本周的增长机会"
+}
