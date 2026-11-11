@@ -26,7 +26,7 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 
 - 挪文件（第 1 步）：**产物一个文件都不许变**（JSON 按内容比，文案挪进模块后键的顺序会变，不算）。
 - 合并文件（第 2 步）：只许变这次要合的文件，变的内容逐个看过；看过、确认要这么变了，再 `save` 更新基准。
-- 另外每一批跑一次 `npm run check`和 `publish/tests/` 里相关的测试；动了页面或本机函数的，用 `--local` 在一个外贸项目、一个产品运营项目上各点一遍。
+- 另外每一批跑一次 `npm run check`（外贸要点名：`npm run check trade`，它 2026-11-11 前没做过类型检查，还有 10 个老错误：外贸 `content.ts`、`Index.canvas.tsx`，`knowledge` 缺 `pdfjs-dist` 类型，`leads` 两处联合类型，`Social.tsx` 的 `video_cover`（外贸 `lib/shuttle.ts` 的 `SocialPost` 少这个字段），第 5 批合 `lib/shuttle.ts` 时修）和 `publish/tests/` 里相关的测试；动了页面或本机函数的，用 `--local` 在一个外贸项目、一个产品运营项目上各点一遍。
 - 基准包括工作区里别人还没提交的改动：别人提交、改了 core 之后，先 `diff` 确认变的都是他们的，再 `save`。
 
 ## 第 1 步：独有功能挪进模块（产物不变）
@@ -78,8 +78,13 @@ python3 publish/merge_check.py diff trade --show local/content.ts
    连同名字段的说明都按行业写；合成并集会让外贸的表里出现「注册事件」，助手读表结构会被带偏。两边同名的字段保持同名，合本机函数时公共字段统一处理、行业字段有就用。
    业务表每行是一份 JSON（`internal/localdb`），表文件只是声明，加字段不用迁移；
 3. 产品运营 `growth` 改名（已做）：`local/growth.ts` → `campaigns.ts`，页面、任务、skill、测试、`ANNULO.md` 里的 `growth.*` 改成 `campaigns.*`，文案命名空间一起改；`changelog.yaml` 写了；`_growth.ts`（取行、报错、校验网址和日期的小工具，外贸没有同名文件）先不动，第 4 批合函数时挪；
-4. 本机函数：`_ai` `_checklist` `_research` `profile` `products` `topics` `today` `reports` `content-workspace`，最后 `content.ts`（差 1000 行）；
-   要顺手统一的：产品运营 `topics.context` 返回 `existing_topics`、`sites`，任务里写的是 `existing`、`site.digest`（任务里暂时两种名字都写了）；
+4. 本机函数（`business/local/`）：以外贸为底；只有一边有的模块用「有就用」：`require('./market' + 'ing.ts')` 这样拼出路径，没有这个文件的模板打包不报错（照 `websites/local/geo.ts` 的 `_geo_brand`）；
+   按行业写的部分放 **行业文件**，每个模板一份：`local/_industry.ts`（项目资料拼给模型的标签）、`local/_checklist.ts`（起步步骤 `setupSteps`、每天的待办 `dailyItems`）。
+   - 已合：`content-workspace`、`_ai`、`_research`、`lib/contentWorkspace`、`today`（外贸的清单引擎，产品运营收起清单记的 `hidden` 也认）；
+   - **`profile.ts`、`products.ts` 不合，和资料、产品表一起是行业的**：两边同名不同义（外贸 `products.context` 读网站准备导入、`save` 一次一批、有分页 `page`；产品运营按 id 取一个、存一个、还有 `saveUseCase`；
+     `profile.context` 外贸读全部网站、产品运营读一个网址带产品和用户场景，`save` 一个只存非空、一个能清空还校验），页面、向导、任务都依赖各自的行为，硬合要重新设计接口、改两边所有调用；
+   - 还没合：`topics`、`reports`，最后 `content.ts`；`_growth.ts`（产品运营的小工具）跟着它们挪；
+   - 要顺手统一的：产品运营 `topics.context` 返回 `existing_topics`、`sites`，任务里写的是 `existing`、`site.digest`（任务里暂时两种名字都写了）；
 5. 页面和外壳：`components/views/types.ts`、`ContentPerformance.tsx`、`pages/Index.tsx`、`lib/shuttle.ts`、`lib/edition.ts`（只留导航、渠道、向导）、`backend/func/db.ts`、`talizen.config.ts`；
 6. 文案和帮助：`messages/*.json`、`help/*` 拆成 core + 行业差异。
 
@@ -94,6 +99,7 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 - [x] 第 0 步：`publish/merge_check.py`，基准 2026-11-11（含当时工作区里别人没提交的 core 改动）
 - [x] 第 1 步（2026-11-11）：外贸 6 个、产品运营 3 个模块，四个模板的产物和基准一样，`npm run check` 通过；外贸和本仓库的测试改成按 `targets.json` 拷模块，失败的和挪之前一样（外贸 `onboarding` 1 个；本仓库 7 个是测试本身的问题：缺 esbuild、社媒插件的替身少了导出、自媒体测试缺 `_site`，另有别人还没提交的 `instagram-publish-prepare`）
 - [ ] 第 2 步
+  - [~] 第 4 批：已合 content-workspace、_ai、_research、today（两个实验项目上前后结果一样）
   - [x] 第 3 批（2026-11-11）：产品运营 `growth.*` 改名 `campaigns.*`；Creght 产品运营上 `campaigns.context` `topics.context` `marketing.context` `inspiration.list` 正常，老名字报「没有 local/growth.ts」
   - [x] 第 2 批（2026-11-11）：`topics` `articles` `assets` `reports` 进 `business`；两个实验项目上 `content.context` `topics.context` `today.list` 正常
   - [x] 第 1 批（2026-11-11）：四个任务合进 `business` 模块；`--local` 到 pofungfurniture 运营（外贸）、Creght 产品运营，两边的上下文函数核对过字段；**等在 App 里各跑一次写文章、出选题再发版**
