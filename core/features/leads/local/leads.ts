@@ -282,7 +282,7 @@ export async function sync(input: { channel_id?: string }, ctx: any) {
   // 0. 还没注册实时推送的独立站先注册；失败不影响下面的拉取
   let hookErrors: string[] = []
   try {
-    hookErrors = (await connect({ channel_id: input?.channel_id }, ctx)).errors ?? []
+    hookErrors = ((await connect({ channel_id: input?.channel_id }, ctx)) as { errors?: string[] }).errors ?? []
   } catch (e: any) {
     hookErrors = [e.message]
   }
@@ -325,7 +325,7 @@ export async function sync(input: { channel_id?: string }, ctx: any) {
   if (errors.length && errors.length === chs.length) throw new Error(L(ctx, '同步失败：', 'Sync failed: ') + errors.join('; '))
   // 3. 判断待判断的（包括这次入库的，和别处写入、之前没判断完的）
   const j = await judge({}, ctx)
-  return { channels: chs.length, fetched, created, judged: j.judged, real: j.real, ...(errors.length ? { errors } : {}), ...(j.errors ? { judge_errors: j.errors } : {}), ...(hookErrors.length ? { webhook_errors: hookErrors } : {}) }
+  return { channels: chs.length, fetched, created, judged: j.judged, real: j.real, ...(errors.length ? { errors } : {}), ...((j as { errors?: string[] }).errors ? { judge_errors: (j as { errors?: string[] }).errors } : {}), ...(hookErrors.length ? { webhook_errors: hookErrors } : {}) }
 }
 
 type Activity = { at: string; kind: 'status' | 'note' | 'reply' | 'research'; text: string }

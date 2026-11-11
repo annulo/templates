@@ -26,7 +26,7 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 
 - 挪文件（第 1 步）：**产物一个文件都不许变**（JSON 按内容比，文案挪进模块后键的顺序会变，不算）。
 - 合并文件（第 2 步）：只许变这次要合的文件，变的内容逐个看过；看过、确认要这么变了，再 `save` 更新基准。
-- 另外每一批跑一次 `npm run check`（外贸要点名：`npm run check trade`，它 2026-11-11 前没做过类型检查，还有 9 个老错误（`content.ts` 的那个合并时修了）：外贸 `Index.canvas.tsx`，`knowledge` 缺 `pdfjs-dist` 类型，`leads` 两处联合类型，`Social.tsx` 的 `video_cover`（外贸 `lib/shuttle.ts` 的 `SocialPost` 少这个字段），第 5 批合 `lib/shuttle.ts` 时修）和 `publish/tests/` 里相关的测试；动了页面或本机函数的，用 `--local` 在一个外贸项目、一个产品运营项目上各点一遍。
+- 另外每一批跑一次 `npm run check`（外贸要点名：`npm run check trade`，它 2026-11-11 前没做过类型检查，老错误合并时都修了，2026-11-11 起四个模板都没有类型错误）和 `publish/tests/` 里相关的测试；动了页面或本机函数的，用 `--local` 在一个外贸项目、一个产品运营项目上各点一遍。
 - 基准包括工作区里别人还没提交的改动：别人提交、改了 core 之后，先 `diff` 确认变的都是他们的，再 `save`。
 
 ## 第 1 步：独有功能挪进模块（产物不变）
@@ -95,7 +95,11 @@ python3 publish/merge_check.py diff trade --show local/content.ts
    - **测存表的函数别在用户项目里直接写再删**：2026-11-11 测 `topics.save` 时，临时脚本「恢复」时把两个实验项目的全部选题写了一遍（`updated_at` 变了、没出处的多了空 `origins`），
      从 SQLite 的 WAL 里取回测试前的版本才恢复。要测写入就用测试（`publish/tests/`）或一次性项目；
    - 要顺手统一的：产品运营 `topics.context` 返回 `existing_topics`、`sites`，任务里写的是 `existing`、`site.digest`（任务里暂时两种名字都写了）；
-5. 页面和外壳：`components/views/types.ts`、`ContentPerformance.tsx`、`pages/Index.tsx`、`lib/shuttle.ts`、`lib/edition.ts`（只留导航、渠道、向导）、`backend/func/db.ts`、`talizen.config.ts`；
+5. 页面和外壳：
+   - 已合进 `business`：`components/ContentPerformance.tsx`（营销复盘改成插槽 `reviews`，产品运营的内容页传 `GrowthReviews` 进来；页面组件不能按路径 require，有就用的东西用插槽）、
+     `components/views/types.ts`（`View` 取两边的并集，实际有哪些页面看各模板的导航）、`lib/shuttle.ts`（类型取并集）、`backend/func/db.ts`（手机端开放的表取并集；改了要 `annulo push` 才到 creght，发版后项目升级带上）；
+   - **留在模板的行业文件**：`lib/edition.ts`（导航、渠道、向导页）、`talizen.config.ts`（页面标题描述；importMap 只能写死的值，外贸多一个 `pdfjs-dist`）；
+   - 还没合：`pages/Index.tsx`（外壳：路由、侧栏、起步清单），两边的导航数据结构不一样，要先统一 `lib/edition.ts` 的类型；
 6. 文案和帮助：`messages/*.json`、`help/*` 拆成 core + 行业差异。
 
 ## 第 3 步：收尾
@@ -109,6 +113,7 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 - [x] 第 0 步：`publish/merge_check.py`，基准 2026-11-11（含当时工作区里别人没提交的 core 改动）
 - [x] 第 1 步（2026-11-11）：外贸 6 个、产品运营 3 个模块，四个模板的产物和基准一样，`npm run check` 通过；外贸和本仓库的测试改成按 `targets.json` 拷模块，失败的和挪之前一样（外贸 `onboarding` 1 个；本仓库 7 个是测试本身的问题：缺 esbuild、社媒插件的替身少了导出、自媒体测试缺 `_site`，另有别人还没提交的 `instagram-publish-prepare`）
 - [ ] 第 2 步
+  - [~] 第 5 批：ContentPerformance、views/types、lib/shuttle、backend/func/db 合进 business；外贸的老类型错误修完
   - [x] 第 4 批（2026-11-11）：content-workspace、_ai、_research、today、topics、reports、content 合进 business；profile、products 留在模板（行业的）；两个实验项目上只读调用前后对比，写入的用测试
   - [x] 第 3 批（2026-11-11）：产品运营 `growth.*` 改名 `campaigns.*`；Creght 产品运营上 `campaigns.context` `topics.context` `marketing.context` `inspiration.list` 正常，老名字报「没有 local/growth.ts」
   - [x] 第 2 批（2026-11-11）：`topics` `articles` `assets` `reports` 进 `business`；两个实验项目上 `content.context` `topics.context` `today.list` 正常

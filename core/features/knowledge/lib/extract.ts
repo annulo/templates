@@ -26,6 +26,8 @@ export async function extractText(file: File, unsupported: string): Promise<stri
 
 let pdfjs: Promise<any> | null = null
 function loadPdf() {
+  // pdfjs-dist 由页面的 importMap 给（talizen.config.ts），仓库里没装它的类型
+  // @ts-ignore
   pdfjs ||= import('pdfjs-dist').then((m: any) => {
     const lib = m.default ?? m
     // worker 在别的域名上，直接 new Worker 会被拦：用同源的 blob 包一层 import 它（esm.talizen.com 允许跨域）

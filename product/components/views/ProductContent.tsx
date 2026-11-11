@@ -26,6 +26,8 @@ type Props = { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v
 type NewContent = { title: string; angle: string; type: ArticleType; account: string; topic?: any; savedId?: string }
 
 export default function ProductContent({ ctx, params, setParam: updateParam, workspace: requested }: Props) {
+  // 内容「发布后的效果」下面的营销复盘（运营主题模块）
+  const growthReviews = (targets: string[]) => <GrowthReviews ctx={ctx} workspace="social" targets={targets} />
   const { data, error, reload } = useProductData<ContentData>('content-workspace.context', {}, ctx.rev)
   const all = data ? contentEntries(data) : []
   const workspace = requested || legacyContentWorkspace(params, all)
@@ -132,7 +134,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
       publicationLinks={selectedEntry ? <PublicationLinks entry={selectedEntry} workspace={workspace} onChanged={reload} recordsShown /> : undefined}
       open={id => setParam('article', id)} onBack={() => { setParam('article', ''); setParam('version', '') }} onChanged={reload} />
       : null}
-    {selectedArticle && workspace === 'social' && selectedEntry && <ContentPerformance ctx={ctx} entry={selectedEntry} data={data!} />}
+    {selectedArticle && workspace === 'social' && selectedEntry && <ContentPerformance ctx={ctx} entry={selectedEntry} data={data!} reviews={growthReviews} />}
     {!selectedArticle && <>
       <PageHeader title={w(workspace + '_content')} desc={w(workspace + '_desc')} actions={<>
         <Button onClick={() => openNew()}><Plus />{w('new_content')}</Button>
@@ -202,7 +204,7 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
     </>}
     {params.plan && <MarketingPlans ctx={ctx} params={params} setParam={setParam} detailsOnly
       contentEntry={entries.find(e => e.plan?.id === params.plan)} workspace={workspace} onChanged={reload}
-      performance={workspace === 'social' && data && entries.find(e => e.plan?.id === params.plan) ? <ContentPerformance ctx={ctx} entry={entries.find(e => e.plan?.id === params.plan)!} data={data} /> : undefined} />}
+      performance={workspace === 'social' && data && entries.find(e => e.plan?.id === params.plan) ? <ContentPerformance ctx={ctx} entry={entries.find(e => e.plan?.id === params.plan)!} data={data} reviews={growthReviews} /> : undefined} />}
     {params.post && data && entries.find(e => e.post?.id === params.post) && <AdoptPostDialog entry={entries.find(e => e.post?.id === params.post)!}
       metrics={metrics.get('post:' + params.post)} account={destination(entries.find(e => e.post?.id === params.post)!)}
       articles={entries.filter(e => e.article && e.workspaces.includes('social')).map(e => e.article)}
