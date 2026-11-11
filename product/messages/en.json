@@ -131,7 +131,9 @@
     "s_content": "Content",
     "s_performance": "Performance",
     "s_health": "Site health",
-    "s_accounts": "Accounts and data"
+    "s_accounts": "Accounts and data",
+    "collapse_group": "Collapse group",
+    "expand_group": "Expand group"
   },
   "ui": {
     "done": "Done",

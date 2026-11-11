@@ -131,7 +131,9 @@
     "s_content": "内容",
     "s_performance": "表现与数据",
     "s_health": "网站健康",
-    "s_accounts": "账号与数据"
+    "s_accounts": "账号与数据",
+    "collapse_group": "收起这一组",
+    "expand_group": "展开这一组"
   },
   "ui": {
     "done": "已完成",

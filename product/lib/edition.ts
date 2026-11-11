@@ -7,7 +7,6 @@ import {
   Package,
   Radar,
   Search,
-  Share2,
   ShieldCheck,
   Lightbulb,
   ChartNoAxesCombined,
@@ -17,70 +16,41 @@ import {
 } from "lucide-react";
 import type { View } from "../components/views/types";
 import type { ChannelType } from "./shuttle";
-export type NavItem = { view: View; icon: typeof Globe };
-/** 侧栏分组：section 是组内的小标题（内容 / 表现 / 健康），让长分组有层次 */
-export type NavSection = { section?: string; items: NavItem[] };
-export type NavGroup = {
-  group?: string;
-  icon?: typeof Globe;
-  sections: NavSection[];
-};
+/** 一项导航：section 给了就在它上面显示组内的小标题（messages 的 nav.<section>），把长的组分出层次 */
+export type NavItem = { view: View; icon: typeof Globe; section?: string };
+/** 左侧导航：一组一个标题（messages 的 nav.<group>），每项显示 nav.<view> 和 nav.<view>_sub。外壳（pages/Index.tsx）和外贸共用这个结构 */
+export type NavGroup = { group?: string; items: NavItem[] };
 // 从上到下按使用频率：工作台 → 网站运营 → 自媒体运营 → 产品资料（不常改，放最下面）；组内常用的在前
 export const NAV: NavGroup[] = [
-  { sections: [{ items: [{ view: "overview", icon: LayoutDashboard }] }] },
+  { items: [{ view: "overview", icon: LayoutDashboard }] },
   {
     group: "g_site",
-    icon: Globe,
-    sections: [
-      {
-        section: "s_content",
-        items: [
-          { view: "website-content", icon: FileText },
-          { view: "landing", icon: LayoutTemplate },
-          { view: "opportunities", icon: Lightbulb },
-        ],
-      },
-      {
-        section: "s_performance",
-        items: [
-          { view: "search", icon: Search },
-          { view: "geo", icon: Radar },
-          { view: "site", icon: Activity },
-          { view: "metrics", icon: ChartNoAxesCombined },
-        ],
-      },
-      { section: "s_health", items: [{ view: "audit", icon: ShieldCheck }] },
+    items: [
+      { view: "website-content", icon: FileText, section: "s_content" },
+      { view: "landing", icon: LayoutTemplate },
+      { view: "opportunities", icon: Lightbulb },
+      { view: "search", icon: Search, section: "s_performance" },
+      { view: "geo", icon: Radar },
+      { view: "site", icon: Activity },
+      { view: "metrics", icon: ChartNoAxesCombined },
+      { view: "audit", icon: ShieldCheck, section: "s_health" },
     ],
   },
   {
     group: "g_social",
-    icon: Share2,
-    sections: [
-      {
-        section: "s_content",
-        items: [
-          { view: "social-content", icon: FileText },
-          { view: "inspiration", icon: Lightbulb },
-          { view: "calendar", icon: CalendarDays },
-        ],
-      },
-      {
-        section: "s_accounts",
-        // 单篇的数据挂在内容上（内容列表、复盘），这里只放账号：连接、定位、账号的数据
-        items: [{ view: "social", icon: UserRound }],
-      },
+    items: [
+      { view: "social-content", icon: FileText, section: "s_content" },
+      { view: "inspiration", icon: Lightbulb },
+      { view: "calendar", icon: CalendarDays },
+      // 单篇的数据挂在内容上（内容列表、复盘），这里只放账号：连接、定位、账号的数据
+      { view: "social", icon: UserRound, section: "s_accounts" },
     ],
   },
   {
     group: "g_library",
-    icon: Package,
-    sections: [
-      {
-        items: [
-          { view: "company", icon: Package },
-          { view: "assets", icon: Images },
-        ],
-      },
+    items: [
+      { view: "company", icon: Package },
+      { view: "assets", icon: Images },
     ],
   },
 ];
@@ -90,6 +60,7 @@ export const CHANNELS: ChannelType[] = [
   "xiaohongshu",
   "douyin",
   "x",
+  "instagram",
 ];
 import { lazy } from "react";
 import type { WizardScreen } from "../components/wizard/types";
