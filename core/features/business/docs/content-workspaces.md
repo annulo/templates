@@ -45,3 +45,23 @@
 旧 view=content 的 article、topic、plan 链接继续打开原记录，旧灵感链接进入灵感库。所有旧表和 ID 保持兼容，首次整理无需批量数据迁移。自媒体日历展示原 social_posts，网站与社媒的复盘队列分别展示。
 
 视频编辑支持独立封面：本机上传、粘贴或从资料库选一张，支持预览、更换、移除。上传期间不能保存或退出编辑，失败保留原封面。详情和媒体版本播放器显示同一封面；复制、沿用视频的转换保留封面。封面独立于图文配图和文字封面。小红书、抖音才将封面传给发布端，定时发布读取文章当前封面，上传失败停止发布。
+
+## 两个模板（2026-11-11 起共用一份）
+
+外贸和产品运营的内容工作区是同一份代码，在共用模块 `core/features/business/`（见仓库 `docs/merge-trade-product.md`）：
+
+- `lib/contentWorkspace.ts`：一条内容（营销计划 + 选题 + 文章 + 帖子）属于哪个工作区，看真实的发布目标、发布记录、选题来源，不按标题和类型猜；AI 搜索、谷歌排名、竞品来的选题都算网站；
+- `local/content-workspace.ts`：页面的数据（`context`）、社媒效果（`performance`、`ranking`）、并入平台上直接发的帖子（`adoptPost`）、确认归属（`assign`）、手动改状态和发布链接（`setStage`）；
+  有营销计划（运营主题模块的 `local/marketing.ts`）的带上 `plans`、`reviews`，没有的是空的；
+- `components/views/ContentWorkspace.tsx`、`components/ContentStatus.tsx`、`components/ContentPerformance.tsx`。
+  营销计划和复盘（导入营销资料、社媒的「待复盘」、计划详情、发布后的复盘、文章从灵感库选参考）由模板的页面表 `lib/views.tsx` 用 `marketing` 传进来：产品运营传，外贸不传。
+
+外贸的侧栏按「在哪个阵地运营」分（照 TradeMax）：
+
+| 组 | 里面 |
+|---|---|
+| 工作台 | 运营总览 · 增长机会 · 每周总结 |
+| 独立站运营 | 内容：网站文章、落地页 · 表现：网站访问、谷歌排名、AI 搜索推荐 · 洞察：竞品监控、网站检查 |
+| 自媒体运营 | 内容：社媒内容、发布日历 · 账号：账号与数据 |
+| 客户 | 询盘 · 主动获客 |
+| 资料 | 公司与产品 · 企业资料 · 素材库 |

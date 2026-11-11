@@ -4,10 +4,10 @@ import { useEffect, useState, type ReactNode } from 'react'
 import ProductOverview from '../components/views/ProductOverview'
 import ProductFacts from '../components/views/ProductFacts'
 import GrowthPlanning from '../components/views/GrowthPlanning'
-import { AccountStrategies, useMarketing } from '../components/MarketingWorkspace'
+import { AccountStrategies, GrowthReviews, MarketingImport, MarketingPlans, useMarketing } from '../components/MarketingWorkspace'
 import Campaigns from '../components/views/Campaigns'
 import ProductMetrics from '../components/views/ProductMetrics'
-import ProductContent from '../components/views/ProductContent'
+import ContentWorkspace, { type Marketing } from '../components/views/ContentWorkspace'
 import InspirationLibrary from '../components/InspirationLibrary'
 import Calendar from '../components/views/Calendar'
 import Assets from '../components/views/Assets'
@@ -67,9 +67,9 @@ export function renderView(view: View, { ctx, params, setParam, bumpRev }: PageP
     case 'inspiration': return <InspirationLibrary {...p} workspace="social" onChanged={bumpRev} />
     case 'content':
       if (params.tab === 'inspiration') return <InspirationLibrary {...p} workspace="social" onChanged={bumpRev} />
-      return <ProductContent key={view} {...p} />
+      return <ContentWorkspace key={view} {...p} marketing={marketing(ctx)} />
     case 'website-content': case 'social-content':
-      return <ProductContent key={view} {...p} workspace={view === 'website-content' ? 'website' : 'social'} />
+      return <ContentWorkspace key={view} {...p} workspace={view === 'website-content' ? 'website' : 'social'} marketing={marketing(ctx)} />
     case 'landing': return <Landing {...p} />
     case 'calendar': return <Calendar {...p} scope="social" />
     case 'assets': return <Assets {...p} />
@@ -91,6 +91,16 @@ export function renderView(view: View, { ctx, params, setParam, bumpRev }: PageP
     case 'help': return <Help {...p} />
     case 'assistant': return <Assistant {...p} />
     default: return <ProductOverview ctx={ctx} tab="today" onTab={tabs} />
+  }
+}
+
+/** 内容页里的营销计划和复盘（运营主题模块）：导入营销资料、社媒的待复盘、营销计划详情、文章能从灵感库选参考 */
+function marketing(ctx: Ctx): Marketing {
+  return {
+    Import: ({ data, onDone }) => <MarketingImport data={data} onDone={onDone} />,
+    Reviews: ({ targets }) => <GrowthReviews ctx={ctx} workspace="social" targets={targets} />,
+    Plan: ({ params, setParam, entry, workspace, onChanged, performance }) => <MarketingPlans ctx={ctx} params={params} setParam={setParam} detailsOnly contentEntry={entry} workspace={workspace} onChanged={onChanged} performance={performance} />,
+    inspiration: true,
   }
 }
 
