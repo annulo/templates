@@ -47,12 +47,13 @@ annulo run content.update --input @/tmp/article-update.json
 能改的字段：`title`、`summary`、`body`、`tags`（数组），长文还有 `slug`、`keywords`，图文笔记还有 `images`（数组）、`cover_text`，视频还有 `video`、`category`。
 存完回复用户：改了哪几处（一两句），最后给出这篇的链接 `[打开「标题」](/?view=content&article=<article_id>)`。已经发出去的网站和账号不会跟着变，要更新就在文章页再发一次。
 
+长文改了正文时，`content.update` 返回 `checks` 的话：`repeats.inside` / `repeats.others` 是这篇里互相重复、和别的文章重复的段落（第 `n` 段），用户的要求没说保留的，顺手改掉再存一次（只改这一轮）。
+
 长文存完跑一次 `annulo run aeo.article --input '{"article_id":"<article_id>"}'`，回复里带一句现在的 AI 引用分。要求是「按 AI 引用分改」（文章页「交给 AI 改这几处」发来的）时，只改它点名的段落和项，改完再跑一次看分数变了没有；补不了的不编。
 
+## 有运营主题时
 
-## 产品运营上下文
-
-先读 skills/product-growth/SKILL.md。campaign 和 opportunity 提供运营目标；target_platform 指定平台表达，简报的语言优先。产品功能、边界、价格和案例只使用 products 与 research 的真实事实，use_cases 的空白成果不能补成数字。小红书、抖音需要的导流方式与限制按社媒插件的当前规格和任务处理；X 按账号定位和语言写。所有草稿保留 topic_id，content.save 会记录运营主题与产品关联。
+上下文里的 `campaign`、`opportunity`、`target_platform` 有值时（产品运营的运营主题、增长机会）：先读 skills/product-growth/SKILL.md。campaign 和 opportunity 提供运营目标；target_platform 指定平台表达，简报的语言优先。产品功能、边界、价格和案例只使用 products 与 research 的真实事实，use_cases 的空白成果不能补成数字。小红书、抖音需要的导流方式与限制按社媒插件的当前规格和任务处理；X 按账号定位和语言写。所有草稿保留 topic_id，content.save 会记录运营主题与产品关联。
 
 ## 视频封面
 

@@ -60,15 +60,23 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 
 ## 第 2 步：合并分叉的文件
 
-**以外贸那份为底**，把产品运营的差异补进去，合好的放进 `core/`（两个模板都删掉自己那份）。外贸老用户多，以它为底，改过这些文件的用户升级时冲突最少。
+**以外贸那份为底**，把产品运营的差异补进去，合好的放进共用模块 **`core/features/business/`**（外贸和产品运营都启用，两个模板删掉自己那份）。
+不放 `core/`：自媒体模板也有同名的任务、本机函数，放进 core 会和它同路径冲突。外贸老用户多，以它为底，改过这些文件的用户升级时冲突最少。
 数据表取两边字段的并集，只加字段，不改名、不删。行业不一样的地方按「有这个模块 / 有这个字段就用」写，实在分不开的放进 `lib/edition.ts` 这类行业文件。
+
+合并任务的写法：外贸的内容全留着；只有一边有的（产品运营的运营主题、灵感、平台表现，外贸的查重、企业资料、竞品）写成「上下文里有 X 时 / 项目里有 X 时」，
+每个项目只走到自己有的那部分；行业用词换成两边都通的（买家 → 客户）。
+
+**写法文件（`prompts/`）不合**：写法是「怎么写」，内容就是行业的（外贸写给买家、讲起订量交期认证，产品运营写给用户、讲功能和场景），留在各模板当行业文件。
 
 从小到大，每一批合完发一版两个模板：
 
-1. 任务和写法（差几十行以内）：`tasks/rewrite-article` `revise-article` `write-article` `suggest-topics` `weekly-report` `draft-profile` `import-products`、`prompts/*`；
+1. 任务：`write-article` `suggest-topics` `revise-article` `rewrite-article`（已合）；
+   `weekly-report` `draft-profile` `import-products` 依赖各自的周报数据和资料字段（询盘、公司角色、起订量 / 注册激活、定价、功能），等第 2、4 批合完数据表和函数再看，可能一直是行业文件；
 2. 数据表：`profile`（外贸的 `company_role` `cooperation`…，产品运营的 `pricing` `signup_event` `activation_event`…）、`products`（外贸的 `moq` `lead_time` `certs` `specs`，产品运营的 `features` `limitations` `proof`）、`topics` / `articles`（产品运营多出的 `campaign_id` `opportunity_id` 等关联字段）；
 3. 产品运营 `growth` 改名：`growth.*` → `opportunities.*` / `campaigns.*`，`_growth.ts` 拆开；页面、任务、定时任务、skill 里的调用一起改，`changelog.yaml` 写明（用户自己写的代码调了老名字的要改）；
 4. 本机函数：`_ai` `_checklist` `_research` `profile` `products` `topics` `today` `reports` `content-workspace`，最后 `content.ts`（差 1000 行）；
+   要顺手统一的：产品运营 `topics.context` 返回 `existing_topics`、`sites`，任务里写的是 `existing`、`site.digest`（任务里暂时两种名字都写了）；
 5. 页面和外壳：`components/views/types.ts`、`ContentPerformance.tsx`、`pages/Index.tsx`、`lib/shuttle.ts`、`lib/edition.ts`（只留导航、渠道、向导）、`backend/func/db.ts`、`talizen.config.ts`；
 6. 文案和帮助：`messages/*.json`、`help/*` 拆成 core + 行业差异。
 
@@ -83,4 +91,5 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 - [x] 第 0 步：`publish/merge_check.py`，基准 2026-11-11（含当时工作区里别人没提交的 core 改动）
 - [x] 第 1 步（2026-11-11）：外贸 6 个、产品运营 3 个模块，四个模板的产物和基准一样，`npm run check` 通过；外贸和本仓库的测试改成按 `targets.json` 拷模块，失败的和挪之前一样（外贸 `onboarding` 1 个；本仓库 7 个是测试本身的问题：缺 esbuild、社媒插件的替身少了导出、自媒体测试缺 `_site`，另有别人还没提交的 `instagram-publish-prepare`）
 - [ ] 第 2 步
+  - [x] 第 1 批（2026-11-11）：四个任务合进 `business` 模块；`--local` 到 pofungfurniture 运营（外贸）、Creght 产品运营，两边的上下文函数核对过字段；**等在 App 里各跑一次写文章、出选题再发版**
 - [ ] 第 3 步

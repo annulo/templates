@@ -55,14 +55,13 @@ annulo run content.save --input @/tmp/rewrite.json
 
 content.save 报错就按报错改了再存。存完回复用户：改写成了什么、多长、配了几张图，最后给出新文章的链接 `[打开「标题」](/?view=content&article=<content.save 返回的 article_id>)`。
 
-
 ## 要求里要把视频（或图）也做出来时
 
 比如「另写一篇视频，再把视频做出来」：存好新文章后，接着在**新的那篇**上照项目的任务 `tasks/work-on-article.md` 做（`work.context` 用新文章的 id，做文件、`assets.add` 挂在新文章上），回复里给新文章的链接。
 
-## 产品运营上下文
+## 有运营主题时
 
-先读 skills/product-growth/SKILL.md。campaign 和 opportunity 提供运营目标；target_platform 指定平台表达，简报的语言优先。产品功能、边界、价格和案例只使用 products 与 research 的真实事实，use_cases 的空白成果不能补成数字。小红书、抖音需要的导流方式与限制按社媒插件的当前规格和任务处理；X 按账号定位和语言写。所有草稿保留 topic_id，content.save 会记录运营主题与产品关联。
+上下文里的 `campaign`、`opportunity`、`target_platform` 有值时（产品运营的运营主题、增长机会）：先读 skills/product-growth/SKILL.md。campaign 和 opportunity 提供运营目标；target_platform 指定平台表达，简报的语言优先。产品功能、边界、价格和案例只使用 products 与 research 的真实事实，use_cases 的空白成果不能补成数字。小红书、抖音需要的导流方式与限制按社媒插件的当前规格和任务处理；X 按账号定位和语言写。所有草稿保留 topic_id，content.save 会记录运营主题与产品关联。
 
 rewriteContext 返回 evidence_id 时，content.save 必须传入同一个 evidence_id 与 source_id，以保留本次改写的来源快照。不要在保存前重新读取来替换依据。
 
