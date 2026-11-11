@@ -2,6 +2,8 @@
 
 本仓库（github.com/annulo/templates）是 Annulo 公开模板的源码，`main` 上改、在这里提 PR。用户看到的模板是组装好的成品，在 `release` 分支上，由发布脚本提交，不在那里改。
 
+**外贸和产品运营正在合成一份源码（2026-11-11 起，见公开仓库 [docs/merge-trade-product.md](docs/merge-trade-product.md)）：合并期间这两个模板不开发新功能，只修 bug；改它们之前先读那篇看进度。**
+
 - `<模板>/`：一个模板就是一个完整的运营后台，发到用户项目里的东西都在这里。现在有空白 `blank/`、自媒体 `creator/`、产品运营 `product/`。**改模板的页面、业务本机函数、任务、表、定时任务都在这里改**；
 - `core/`：几个模板共用的代码，发布时拷进每个模板的产物（路径和产物里一样；空白模板不带，`publish/targets.json` 里 `"core": false`）：
   公共脚本（`core/local/`）、通用 skill（`core/skills/`）、几个模板都有的组件和页面（`core/components/`，内容中心 `core/components/views/Content.tsx` 和它的发布、改写、编辑组件都在这里）、
