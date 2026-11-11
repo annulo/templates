@@ -104,7 +104,8 @@ python3 publish/merge_check.py diff trade --show local/content.ts
      侧栏上额外的数字（`useNavBadges`：外贸的增长雷达、产品运营的灵感库）、页面写表后要不要整个重拉（`REFRESH_ON_DB_CHANGE`，产品运营要）、侧栏折叠记在哪个键（`NAV_COLLAPSED`）。
      不放 `lib/edition.ts`：页面组件会 import edition（渠道列表），反过来会循环；也不放 `pages/`（那里的文件是路由）。
      产品运营的导航改成外贸的结构（组下的小标题标在第一项的 `section` 上），侧栏样式跟外贸一样（不再有组图标、缩进和顶上的模板名）；
-6. 文案和帮助：`messages/*.json`、`help/*` 拆成 core + 行业差异。
+6. 文案和帮助（已做）：两个模板中英文都一字不差的 1280 条文案挪进 `business/messages`，模板里剩下的是行业用词（外贸 110 条、产品运营 170 条，比如导航、AI 搜索的说法）和自己页面的文案；组装出来的文案内容不变。
+   **`help/` 留在模板**：帮助文章讲的是各自行业的功能（外贸 1567 行、产品运营 66 行）。
 
 ## 第 3 步：收尾
 
@@ -117,6 +118,7 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 - [x] 第 0 步：`publish/merge_check.py`，基准 2026-11-11（含当时工作区里别人没提交的 core 改动）
 - [x] 第 1 步（2026-11-11）：外贸 6 个、产品运营 3 个模块，四个模板的产物和基准一样，`npm run check` 通过；外贸和本仓库的测试改成按 `targets.json` 拷模块，失败的和挪之前一样（外贸 `onboarding` 1 个；本仓库 7 个是测试本身的问题：缺 esbuild、社媒插件的替身少了导出、自媒体测试缺 `_site`，另有别人还没提交的 `instagram-publish-prepare`）
 - [ ] 第 2 步
+  - [x] 第 6 批（2026-11-11）：文案拆成 business + 行业差异
   - [~] 第 5 批：ContentPerformance、views/types、lib/shuttle、backend/func/db、外壳 pages/Index 合进 business；外贸的老类型错误修完；两个实验项目本机渲染 136～140 个模块都编译通过，**等在 App 里逐页点一遍**
   - [x] 第 4 批（2026-11-11）：content-workspace、_ai、_research、today、topics、reports、content 合进 business；profile、products 留在模板（行业的）；两个实验项目上只读调用前后对比，写入的用测试
   - [x] 第 3 批（2026-11-11）：产品运营 `growth.*` 改名 `campaigns.*`；Creght 产品运营上 `campaigns.context` `topics.context` `marketing.context` `inspiration.list` 正常，老名字报「没有 local/growth.ts」
