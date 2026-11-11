@@ -1,3 +1,5 @@
+// 网站和自媒体两个内容工作区：一份文章表、选题表，按真实的发布目标、发布记录、选题来源判断属于哪边（不按标题、类型猜）。
+// 外贸和产品运营共用（business 模块）；没有营销计划（campaigns 模块）的项目 plans 传空数组。设计见 docs/content-workspaces.md
 export type ContentWorkspace = 'website' | 'social'
 export type ContentStage = 'planned' | 'creating' | 'draft' | 'ready' | 'scheduled' | 'published' | 'verify' | 'blocked' | 'archived'
 export const editableContentStages = ['planned', 'creating', 'draft', 'ready', 'scheduled', 'published', 'verify', 'blocked', 'archived'] as const
@@ -107,7 +109,8 @@ export function recordWorkspaces(record: any, data: ContentData, visited = new S
     const target = data.channels.find(c => c.id === record.target_account_id)
     if (target) add(target.type)
     if (!result.size && record.channel_id) add(data.channels.find(c => c.id === record.channel_id)?.type)
-    if (['search', 'geo'].includes(record.source)) result.add('website')
+    // 谷歌排名、AI 搜索推荐、竞品新发现来的选题都是给网站写的
+    if (['search', 'geo', 'competitor'].includes(record.source)) result.add('website')
     if (!result.size) {
       const channels = parse(record.brief).channels
       const terms = Array.isArray(channels) ? channels : String(channels || '').toLowerCase().split(/[,，、/|\s]+/)

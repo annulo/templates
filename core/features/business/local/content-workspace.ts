@@ -1,18 +1,28 @@
-import { context as marketingContext } from './marketing'
 import { L } from './_i18n'
 import { contentEntries, editableContentStages, entryPosts, postsMetrics, metricKeys, publishedUrl, type ContentData, type EditableContentStage, type ContentWorkspace, type PostMetrics } from '../lib/contentWorkspace'
 export const cloud = ['context']
 
+declare const require: (path: string) => any
+
+/** 营销计划（campaigns 模块的 local/marketing.ts，产品运营有）：没有这个文件的项目返回 null */
+function marketing(): ((input: {}, ctx: any) => any) | null {
+  try {
+    return require('./market' + 'ing.ts').context ?? null // 拼出来的路径：没有这个文件的模板打包时不报错
+  } catch {
+    return null
+  }
+}
+
+// 网站文章、社媒内容两个页面的数据。有营销计划的（产品运营）带上 plans、reviews，没有的（外贸）是空的
 export function context(_input: {}, ctx: any) {
-  const marketing = marketingContext({}, ctx)
-  const read = (table: string) => ctx.db.query(table, { limit: 10000 }).list
-  let posts = [], publications = []
-  try { posts = read('social_posts') } catch {}
-  try { publications = read('publications') } catch {}
+  const read = (table: string) => { try { return ctx.db.query(table, { limit: 10000 }).list } catch { return [] } }
+  const plan = marketing()
+  const m = plan ? plan({}, ctx) : { plans: [], reviews: [], accounts: read('social_accounts') }
+  const posts = read('social_posts'), publications = read('publications')
   let post_gains = {}
   try { post_gains = postGains(posts, 7, ctx) } catch {}
-  return { ...marketing, articles: read('articles'), topics: read('topics'), posts, publications, post_gains,
-    channels: [...read('channels'), ...marketing.accounts] }
+  return { ...m, articles: read('articles'), topics: read('topics'), posts, publications, post_gains,
+    channels: [...read('channels'), ...m.accounts] }
 }
 
 /** 本机时区的日期 YYYY-MM-DD（和社媒插件采集时记的日期一致） */
@@ -141,7 +151,9 @@ export function setStage(input: { key: string; workspace: ContentWorkspace; stag
   if (input.stage !== '' && !editableContentStages.includes(input.stage)) throw new Error('Invalid content stage')
   // Editing one task does not need SEO, assets, reviews or every historical social post.
   const read = (table: string, where?: Record<string, string>) => JSON.parse(JSON.stringify(ctx.db.query(table, { limit: 10000, ...(where ? { where } : {}) }).list))
-  const data: ContentData = { plans: read('marketing_plans'), articles: read('articles'), topics: read('topics'),
+  let plans = []
+  if (marketing()) try { plans = read('marketing_plans') } catch {}
+  const data: ContentData = { plans, articles: read('articles'), topics: read('topics'),
     channels: [...read('channels'), ...read('social_accounts')], posts: [], publications: [] }
   let entry = contentEntries(data, input.workspace).find(e => e.key === input.key)
   if (entry?.article) {
