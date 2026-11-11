@@ -12,7 +12,7 @@
 2. **外贸独有的功能（线索、潜客、竞品…）可以放进本仓库（公开）的 `core/features/`**。私有仓库最后只剩外贸的行业文件和发布到 creght 的脚本。
 3. **`growth` 重名：外贸保留 `growth.*`**（增长雷达：`scan`、`list`、`mark`、`markSeen`，定时任务 `growth.scan`），
    **产品运营的改名为 `campaigns.*`**（函数名不变，只换前缀；原本想拆成 `opportunities.*` / `campaigns.*`，但 `context` 一次给两边的数据、好几处都靠它，拆开要复制或互相引用，就整个改名），文案命名空间 `growth` 也改成 `campaigns`。产品运营用户少，改名的影响小。
-4. **合并期间两个模板都不开发新功能**，只修 bug（修在哪份就按当时的进度修，合过的修 core）。
+4. 合并期间（2026-11-11）两个模板都不开发新功能；已结束。
 
 ## 怎么保证没改坏
 
@@ -127,4 +127,4 @@ python3 publish/merge_check.py diff trade --show local/content.ts
   - [x] 第 3 批（2026-11-11）：产品运营 `growth.*` 改名 `campaigns.*`；Creght 产品运营上 `campaigns.context` `topics.context` `marketing.context` `inspiration.list` 正常，老名字报「没有 local/growth.ts」
   - [x] 第 2 批（2026-11-11）：`topics` `articles` `assets` `reports` 进 `business`；两个实验项目上 `content.context` `topics.context` `today.list` 正常
   - [x] 第 1 批（2026-11-11）：四个任务合进 `business` 模块；`--local` 到 pofungfurniture 运营（外贸）、Creght 产品运营，两边的上下文函数核对过字段；**等在 App 里各跑一次写文章、出选题再发版**
-- [~] 第 3 步：两个仓库的 AGENTS.md 已写新结构和「加一个行业」；冻结说明等发版后去掉；发版
+- [x] 第 3 步（2026-11-11）：两个仓库的 AGENTS.md 写了新结构和「加一个行业」；发版：产品运营 `product/v0.21.0`，外贸第 175 版（cn 175、com 43、talizen 19，标签 v175）；冻结结束
