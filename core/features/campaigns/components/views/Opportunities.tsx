@@ -26,7 +26,7 @@ type Data = {
 };
 export default function Opportunities({ ctx }: { ctx: Ctx }) {
   const { data, error, reload } = useProductData<Data>(
-    "growth.context",
+    "campaigns.context",
     {},
     ctx.rev,
   );
@@ -173,11 +173,11 @@ export default function Opportunities({ ctx }: { ctx: Ctx }) {
               )}
               <div className="flex flex-wrap gap-2">
                 <Button
-                  fn="growth.createCampaign"
+                  fn="campaigns.createCampaign"
                   variant="outline"
                   onClick={async () => {
                     const c = await runLocal<Campaign>(
-                      "growth.createCampaign",
+                      "campaigns.createCampaign",
                       { opportunity_id: o.id },
                     );
                     ctx.go("campaigns", { campaign: c.id });
@@ -214,10 +214,10 @@ export default function Opportunities({ ctx }: { ctx: Ctx }) {
               {g("cancel")}
             </Button>
             <Button
-              fn="growth.saveOpportunity"
+              fn="campaigns.saveOpportunity"
               onClick={async () => {
                 try {
-                  await runLocal("growth.saveOpportunity", edit);
+                  await runLocal("campaigns.saveOpportunity", edit);
                   setEdit(null);
                   reload();
                 } catch (e) {

@@ -9,8 +9,8 @@
 | 模块 | 数据与函数 |
 |---|---|
 | 产品与用户 | profile、products、use_cases；profile.context/save、products.list/save/saveUseCase |
-| 增长机会 | growth_opportunities；growth.context/saveOpportunity/savePagePlan |
-| 运营主题 | campaigns、topics、articles；growth.createCampaign/saveCampaign/campaignContext/savePlan/review |
+| 增长机会 | growth_opportunities；campaigns.context/saveOpportunity/savePagePlan |
+| 运营主题 | campaigns、topics、articles；campaigns.createCampaign/saveCampaign/campaignContext/savePlan/review |
 | 转化数据 | product_metrics_daily；metrics.importDaily/context/summary |
 | 灵感库 | research_sources、reference_creators、content_references；inspiration.list/saveSource/saveCreator/link/importLegacy；整理任务 review-inspiration，出选题传 source_ids |
 | 内容中心、素材、日历 | topics、articles、assets、publications；content.*、publish.prepare |

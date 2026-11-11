@@ -1,3 +1,6 @@
+- version: next
+  zh: "增长机会、运营主题的本机函数改名为 campaigns.*（原来是 growth.*），自己写的代码调了老名字的要跟着改。"
+  en: "Opportunity and campaign functions are now campaigns.* (formerly growth.*); update your own code that calls the old names."
 - version: 0.20.1
   zh: "修好文章页多语言一栏里「原文语言」显示成代码的问题。"
   en: "Fixed the \"Original language\" label on the article page showing as code."

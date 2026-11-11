@@ -1,5 +1,5 @@
 import { L } from "./_i18n";
-import { context as growthContext } from "./growth";
+import { context as growthContext } from "./campaigns";
 import { sourceSnapshot, link } from './inspiration';
 import { forWriting } from './playbooks';
 import { platformWorkspace } from '../lib/contentWorkspace';

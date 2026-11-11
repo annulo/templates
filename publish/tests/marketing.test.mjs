@@ -22,7 +22,7 @@ for (const f of JSON.parse(fs.readFileSync(path.join(root, 'publish/targets.json
 await build({
   stdin: {
     contents:
-      "export * as marketing from './local/marketing'; export * as growth from './local/growth'; export * as content from './local/content';",
+      "export * as marketing from './local/marketing'; export * as growth from './local/campaigns'; export * as content from './local/content';",
     resolveDir: temp,
   },
   outfile: path.join(temp, "test.mjs"),
@@ -217,15 +217,15 @@ test("same platform supports six stable account/angle variants and does not over
     title: "Angle " + i,
     outline: "Real evidence",
   }));
-  const first = growth.savePlan({ campaign_id: campaign.id, topics }, ctx);
+  const first = campaigns.savePlan({ campaign_id: campaign.id, topics }, ctx);
   assert.equal(first.topics.length, 6);
   assert.equal(tables.topics.length, 6);
   ctx.db.update("topics", first.topics[0].id, { title: "Our edited angle" });
-  const again = growth.savePlan({ campaign_id: campaign.id, topics }, ctx);
+  const again = campaigns.savePlan({ campaign_id: campaign.id, topics }, ctx);
   assert.equal(tables.topics.length, 6);
   assert.equal(again.topics[0].title, "Our edited angle");
   assert.throws(() =>
-    growth.savePlan(
+    campaigns.savePlan(
       { campaign_id: campaign.id, topics: [topics[0], topics[0]] },
       ctx,
     ),

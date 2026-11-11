@@ -7,7 +7,7 @@ import { runLocal } from "../lib/shuttle";
 import { tr } from "../lib/i18n";
 
 export const g = (key: string, vars?: Record<string, unknown>) =>
-  tr("growth." + key, vars);
+  tr("campaigns." + key, vars);
 export function TextFields({
   fields,
   value,
