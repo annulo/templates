@@ -36,6 +36,10 @@
         "type": "string",
         "description": "可选的视频素材公开 https 地址；本机视频须先上传到素材库，网站发布时随文章嵌入"
       },
+      "video_cover": {
+        "type": "string",
+        "description": "视频封面图片地址：从资料库选择或上传；独立于图文配图和封面大字。小红书、抖音发布使用，留空沿用平台默认封面。"
+      },
       "keywords": {
         "type": "string",
         "description": "关键词，逗号分隔"
@@ -120,53 +124,25 @@
         "type": "string",
         "description": "生成时简报、选中产品事实与调研依据快照 JSON，不随来源更新"
       },
-      "campaign_id": {
+      "workspace": {
         "type": "string",
-        "description": "关联运营主题 id"
-      },
-      "opportunity_id": {
-        "type": "string",
-        "description": "关联增长机会 id"
-      },
-      "product_id": {
-        "type": "string",
-        "description": "关联产品事实 id"
+        "description": "归属：website 网站 / social 自媒体；空的按发布目标、发布记录、选题来源判断（lib/contentWorkspace.ts）"
       },
       "target_platform": {
         "type": "string",
-        "description": "目标平台 website / xiaohongshu / douyin / x"
+        "description": "目标平台：website，或社媒平台（xiaohongshu、douyin、x、linkedin、facebook…）"
       },
       "target_account_id": {
         "type": "string",
-        "description": "目标社媒账号 ID，账号名不能代替身份"
-      },
-      "account_role_key": {
-        "type": "string",
-        "description": "账号内容策略标识"
-      },
-      "plan_key": {
-        "type": "string",
-        "description": "同一主题内稳定内容版本标识"
-      },
-      "marketing_plan_id": {
-        "type": "string",
-        "description": "原营销计划记录 ID"
-      },
-      "workspace": {
-        "type": "string",
-        "description": "内容归属 website / social；旧记录未确认时为空，不根据内容格式猜测"
+        "description": "目标网站或社媒账号的 id"
       },
       "publication_links": {
         "type": "string",
-        "description": "按工作区保存用户确认的实际发布链接 JSON：social / website 数组；保留历史，不代替平台发布回执"
+        "description": "用户手动关联的发布链接 JSON：{ website: [网址], social: [网址] }"
       },
       "workflow_stages": {
         "type": "string",
-        "description": "按工作区保存的手动任务进度 JSON：website / social；空值恢复自动判断，不代替发布或排期记录"
-      },
-      "video_cover": {
-        "type": "string",
-        "description": "视频封面图片地址：从资料库选择或上传；独立于图文配图和封面大字。小红书、抖音发布使用，留空沿用平台默认封面。"
+        "description": "用户手动设的进度 JSON：{ website: 阶段, social: 阶段 }；没有就按真实记录算"
       },
       "playbook_id": {
         "type": "string",
@@ -179,6 +155,30 @@
       "lang": {
         "type": "string",
         "description": "原文是什么语言（en、zh…）；空的取选题简报的 language，再没有当是要发的网站的默认语言。多语言网站的译文在 article_translations 表"
+      },
+      "campaign_id": {
+        "type": "string",
+        "description": "关联运营主题 id"
+      },
+      "opportunity_id": {
+        "type": "string",
+        "description": "关联增长机会 id"
+      },
+      "product_id": {
+        "type": "string",
+        "description": "关联产品 id"
+      },
+      "account_role_key": {
+        "type": "string",
+        "description": "账号内容策略标识"
+      },
+      "plan_key": {
+        "type": "string",
+        "description": "同一主题内稳定内容版本标识"
+      },
+      "marketing_plan_id": {
+        "type": "string",
+        "description": "原营销计划记录 ID"
       }
     },
     "required": [

@@ -73,7 +73,10 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 
 1. 任务：`write-article` `suggest-topics` `revise-article` `rewrite-article`（已合）；
    `weekly-report` `draft-profile` `import-products` 依赖各自的周报数据和资料字段（询盘、公司角色、起订量 / 注册激活、定价、功能），等第 2、4 批合完数据表和函数再看，可能一直是行业文件；
-2. 数据表：`profile`（外贸的 `company_role` `cooperation`…，产品运营的 `pricing` `signup_event` `activation_event`…）、`products`（外贸的 `moq` `lead_time` `certs` `specs`，产品运营的 `features` `limitations` `proof`）、`topics` / `articles`（产品运营多出的 `campaign_id` `opportunity_id` 等关联字段）；
+2. 数据表：`topics` / `articles` 取并集（外贸为底，加上产品运营的 `campaign_id` `opportunity_id` `product_id` `account_role_key` `plan_key` `marketing_plan_id`），`assets` / `reports` 两边一样，都进 `business`（已合）。
+   **`profile` / `products` 留在各模板当行业文件**（2026-11-11 看过以后改的）：它们就是行业的数据模型（外贸：公司角色、合作方式、型号、规格、起订量、交期、认证；产品运营：激活 / 注册 / 付费事件、定价、功能、能力边界、案例），
+   连同名字段的说明都按行业写；合成并集会让外贸的表里出现「注册事件」，助手读表结构会被带偏。两边同名的字段保持同名，合本机函数时公共字段统一处理、行业字段有就用。
+   业务表每行是一份 JSON（`internal/localdb`），表文件只是声明，加字段不用迁移；
 3. 产品运营 `growth` 改名：`growth.*` → `opportunities.*` / `campaigns.*`，`_growth.ts` 拆开；页面、任务、定时任务、skill 里的调用一起改，`changelog.yaml` 写明（用户自己写的代码调了老名字的要改）；
 4. 本机函数：`_ai` `_checklist` `_research` `profile` `products` `topics` `today` `reports` `content-workspace`，最后 `content.ts`（差 1000 行）；
    要顺手统一的：产品运营 `topics.context` 返回 `existing_topics`、`sites`，任务里写的是 `existing`、`site.digest`（任务里暂时两种名字都写了）；
@@ -91,5 +94,6 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 - [x] 第 0 步：`publish/merge_check.py`，基准 2026-11-11（含当时工作区里别人没提交的 core 改动）
 - [x] 第 1 步（2026-11-11）：外贸 6 个、产品运营 3 个模块，四个模板的产物和基准一样，`npm run check` 通过；外贸和本仓库的测试改成按 `targets.json` 拷模块，失败的和挪之前一样（外贸 `onboarding` 1 个；本仓库 7 个是测试本身的问题：缺 esbuild、社媒插件的替身少了导出、自媒体测试缺 `_site`，另有别人还没提交的 `instagram-publish-prepare`）
 - [ ] 第 2 步
+  - [x] 第 2 批（2026-11-11）：`topics` `articles` `assets` `reports` 进 `business`；两个实验项目上 `content.context` `topics.context` `today.list` 正常
   - [x] 第 1 批（2026-11-11）：四个任务合进 `business` 模块；`--local` 到 pofungfurniture 运营（外贸）、Creght 产品运营，两边的上下文函数核对过字段；**等在 App 里各跑一次写文章、出选题再发版**
 - [ ] 第 3 步

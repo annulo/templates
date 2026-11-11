@@ -48,6 +48,42 @@
         "type": "string",
         "description": "编辑选题 JSON：audience / buyer_question / product_ids / outline / language / channels / cta / gaps"
       },
+      "workspace": {
+        "type": "string",
+        "description": "归属：website 网站 / social 自媒体；空的按发布目标、发布记录、选题来源判断（lib/contentWorkspace.ts）"
+      },
+      "target_platform": {
+        "type": "string",
+        "description": "目标平台：website，或社媒平台（xiaohongshu、douyin、x、linkedin、facebook…）"
+      },
+      "target_account_id": {
+        "type": "string",
+        "description": "目标网站或社媒账号的 id"
+      },
+      "publication_links": {
+        "type": "string",
+        "description": "用户手动关联的发布链接 JSON：{ website: [网址], social: [网址] }"
+      },
+      "workflow_stages": {
+        "type": "string",
+        "description": "用户手动设的进度 JSON：{ website: 阶段, social: 阶段 }；没有就按真实记录算"
+      },
+      "content_type": {
+        "type": "string",
+        "description": "要做成的类型：article 长文 / post 图文 / video 视频"
+      },
+      "origins": {
+        "type": "string",
+        "description": "出处 JSON 数组 [{ type, id, label, channel_id? }]：这个选题是从哪些记录来的（geo_question AI 搜索问题、keyword 关键词、search_query 谷歌搜索词、competitor_page 竞品页面、competitor 竞品、inspiration_source 灵感来源…），label 是生成时的快照；core/lib/origins.ts 读写"
+      },
+      "chat_id": {
+        "type": "string",
+        "description": "出这个选题的对话（助手出的、在对话里转的才有）"
+      },
+      "playbook_id": {
+        "type": "string",
+        "description": "按哪张风格卡（竞品打法卡）写（playbooks 的 id）：写这个选题时把卡交给 AI"
+      },
       "campaign_id": {
         "type": "string",
         "description": "关联运营主题 id"
@@ -58,19 +94,7 @@
       },
       "product_id": {
         "type": "string",
-        "description": "关联产品事实 id"
-      },
-      "target_platform": {
-        "type": "string",
-        "description": "目标平台 website / xiaohongshu / douyin / x"
-      },
-      "content_type": {
-        "type": "string",
-        "description": "article / post / video"
-      },
-      "target_account_id": {
-        "type": "string",
-        "description": "目标社媒账号 ID，账号名不能代替身份"
+        "description": "关联产品 id"
       },
       "account_role_key": {
         "type": "string",
@@ -83,30 +107,6 @@
       "marketing_plan_id": {
         "type": "string",
         "description": "原营销计划记录 ID"
-      },
-      "workspace": {
-        "type": "string",
-        "description": "内容归属 website / social；旧记录未确认时为空，不根据内容格式猜测"
-      },
-      "publication_links": {
-        "type": "string",
-        "description": "按工作区保存用户确认的实际发布链接 JSON：social / website 数组；保留历史，不代替平台发布回执"
-      },
-      "workflow_stages": {
-        "type": "string",
-        "description": "按工作区保存的手动任务进度 JSON：website / social；空值恢复自动判断，不代替发布或排期记录"
-      },
-      "origins": {
-        "type": "string",
-        "description": "出处 JSON 数组 [{ type, id, label, channel_id? }]：这个选题是从哪些记录来的（geo_question AI 搜索问题、keyword 关键词、search_query 谷歌搜索词、competitor_page 竞品页面、competitor 竞品、inspiration_source 灵感来源…），label 是生成时的快照；core/lib/origins.ts 读写"
-      },
-      "chat_id": {
-        "type": "string",
-        "description": "出这个选题的对话（助手出的、在对话里转的才有）"
-      },
-      "playbook_id": {
-        "type": "string",
-        "description": "按哪张风格卡写（playbooks 的 id）：写这个选题时把卡交给 AI"
       }
     },
     "required": [
