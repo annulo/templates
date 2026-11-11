@@ -83,7 +83,11 @@ python3 publish/merge_check.py diff trade --show local/content.ts
    - 已合：`content-workspace`、`_ai`、`_research`、`lib/contentWorkspace`、`today`（外贸的清单引擎，产品运营收起清单记的 `hidden` 也认）；
    - **`profile.ts`、`products.ts` 不合，和资料、产品表一起是行业的**：两边同名不同义（外贸 `products.context` 读网站准备导入、`save` 一次一批、有分页 `page`；产品运营按 id 取一个、存一个、还有 `saveUseCase`；
      `profile.context` 外贸读全部网站、产品运营读一个网址带产品和用户场景，`save` 一个只存非空、一个能清空还校验），页面、向导、任务都依赖各自的行为，硬合要重新设计接口、改两边所有调用；
-   - 还没合：`topics`、`reports`，最后 `content.ts`；`_growth.ts`（产品运营的小工具）跟着它们挪；
+   - `topics`（已合）：外贸为底；标题去重改成不分大小写、只和同一工作区（或没归属）的比（产品运营的做法，外贸以前是全局按原文比）；网站选题和已有文章查重（外贸的 `_overlap`，产品运营新得到）；
+     上下文是外贸那套（资料、已有选题和文章、网站摘要）加上运营主题模块的；灵感来源、竞品新页面有模块才用；网站选题记 `target_platform: website`、社媒记 `content_type: post`。`_catalog`、`_overlap` 一起进 `business`；
+   - 还没合：`reports`，最后 `content.ts`；`_growth.ts`（产品运营的小工具）跟着它们挪；
+   - **测存表的函数别在用户项目里直接写再删**：2026-11-11 测 `topics.save` 时，临时脚本「恢复」时把两个实验项目的全部选题写了一遍（`updated_at` 变了、没出处的多了空 `origins`），
+     从 SQLite 的 WAL 里取回测试前的版本才恢复。要测写入就用测试（`publish/tests/`）或一次性项目；
    - 要顺手统一的：产品运营 `topics.context` 返回 `existing_topics`、`sites`，任务里写的是 `existing`、`site.digest`（任务里暂时两种名字都写了）；
 5. 页面和外壳：`components/views/types.ts`、`ContentPerformance.tsx`、`pages/Index.tsx`、`lib/shuttle.ts`、`lib/edition.ts`（只留导航、渠道、向导）、`backend/func/db.ts`、`talizen.config.ts`；
 6. 文案和帮助：`messages/*.json`、`help/*` 拆成 core + 行业差异。
@@ -99,7 +103,7 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 - [x] 第 0 步：`publish/merge_check.py`，基准 2026-11-11（含当时工作区里别人没提交的 core 改动）
 - [x] 第 1 步（2026-11-11）：外贸 6 个、产品运营 3 个模块，四个模板的产物和基准一样，`npm run check` 通过；外贸和本仓库的测试改成按 `targets.json` 拷模块，失败的和挪之前一样（外贸 `onboarding` 1 个；本仓库 7 个是测试本身的问题：缺 esbuild、社媒插件的替身少了导出、自媒体测试缺 `_site`，另有别人还没提交的 `instagram-publish-prepare`）
 - [ ] 第 2 步
-  - [~] 第 4 批：已合 content-workspace、_ai、_research、today（两个实验项目上前后结果一样）
+  - [~] 第 4 批：已合 content-workspace、_ai、_research、today、topics（两个实验项目上前后结果一样，topics.context 只多了预期的字段）
   - [x] 第 3 批（2026-11-11）：产品运营 `growth.*` 改名 `campaigns.*`；Creght 产品运营上 `campaigns.context` `topics.context` `marketing.context` `inspiration.list` 正常，老名字报「没有 local/growth.ts」
   - [x] 第 2 批（2026-11-11）：`topics` `articles` `assets` `reports` 进 `business`；两个实验项目上 `content.context` `topics.context` `today.list` 正常
   - [x] 第 1 批（2026-11-11）：四个任务合进 `business` 模块；`--local` 到 pofungfurniture 运营（外贸）、Creght 产品运营，两边的上下文函数核对过字段；**等在 App 里各跑一次写文章、出选题再发版**
