@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ArrowUpRight, ClipboardList, Link2, Loader, NotebookPen, Plus, Sparkles } from 'lucide-react'
 import { ArticleDetail, RowMore, removeArticle } from './Content'
 import { WritingBriefDialog } from '../ContentEvidence'
@@ -6,13 +6,11 @@ import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
 import { AiScoreTag, aiScoreOn } from '../AiScore'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
 import { aiWork } from '../Artifacts'
-import { GrowthReviews, MarketingImport, MarketingPlans } from '../MarketingWorkspace'
 import ContentPerformance, { MetricsLine } from '../ContentPerformance'
 import ContentStatus, { LinkChips, PublicationLinks, StageBadge } from '../ContentStatus'
 import { TaskFailed, TaskLaunchButton, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { Button, Dialog, Field, Notice, PageHeader, Skeleton, cx, inputCls, toast } from '../ui'
 import Select from '../Select'
-import { useProductData } from '../ProductFields'
 import { contentEntries, entryAccountIds, entryMetrics, legacyContentWorkspace, reviewWorkspace, type ContentData, type ContentEntry, type ContentStage, type ContentWorkspace } from '../../lib/contentWorkspace'
 import { dbCreate, dbPatch, isSite, runLocal } from '../../lib/shuttle'
 import { isEn, tr } from '../../lib/i18n'
@@ -22,11 +20,41 @@ import type { Ctx } from './types'
 export const w = (key: string, vars?: Record<string, unknown>) => tr('workspace.' + key, vars)
 const PAGE = 50
 const stages: ContentStage[] = ['planned', 'creating', 'draft', 'ready', 'scheduled', 'published', 'verify', 'blocked', 'archived']
-type Props = { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; workspace?: ContentWorkspace }
+/**
+ * 营销计划和复盘（运营主题模块，产品运营有）：模板的页面表（lib/views.tsx）传进来，没有就不显示这些
+ *   Import 页头上「导入营销资料」；Reviews 社媒的「待复盘」页签和一条内容发布后的复盘（targets 给了只看这几条）；
+ *   Plan 一条营销计划的详情（performance 是它发布后的效果）；inspiration 文章详情里能从灵感库选参考
+ */
+export type Marketing = {
+  Import: (p: { data: ContentData; onDone: () => void }) => ReactNode
+  Reviews: (p: { targets?: string[] }) => ReactNode
+  Plan: (p: { params: Record<string, string>; setParam: (k: string, v: string) => void; entry?: ContentEntry; workspace: ContentWorkspace; onChanged: () => void; performance?: ReactNode }) => ReactNode
+  inspiration?: boolean
+}
+type Props = { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; workspace?: ContentWorkspace; marketing?: Marketing }
+
+/** 读一次内容数据（content-workspace.context），ctx.rev 变了（助手改了表）重读 */
+function useContentData(rev: unknown) {
+  const [data, setData] = useState<ContentData | null>(null)
+  const [error, setError] = useState('')
+  const reload = useCallback(() => {
+    runLocal<ContentData>('content-workspace.context', {})
+      .then((d) => (setData(d), setError('')))
+      .catch((e) => setError((e as Error).message))
+  }, [])
+  useEffect(reload, [reload, rev])
+  return { data, error, reload }
+}
 type NewContent = { title: string; angle: string; type: ArticleType; account: string; topic?: any; savedId?: string }
 
-export default function ProductContent({ ctx, params, setParam: updateParam, workspace: requested }: Props) {
-  const { data, error, reload } = useProductData<ContentData>('content-workspace.context', {}, ctx.rev)
+/**
+ * 网站文章 / 社媒内容：同一份文章、选题表按工作区分开看（lib/contentWorkspace.ts 判断归属），新建、发布都只在所属工作区。
+ * 外贸和产品运营共用（business 模块）；营销计划和复盘有运营主题模块的才有（marketing）。设计见 docs/content-workspaces.md
+ */
+export default function ContentWorkspace({ ctx, params, setParam: updateParam, workspace: requested, marketing }: Props) {
+  // 内容「发布后的效果」下面的营销复盘（运营主题模块）
+  const growthReviews = marketing ? (targets: string[]) => marketing.Reviews({ targets }) : undefined
+  const { data, error, reload } = useContentData(ctx.rev)
   const all = data ? contentEntries(data) : []
   const workspace = requested || legacyContentWorkspace(params, all)
   const setParam = (key: string, value: string) => {
@@ -63,8 +91,8 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
     && (!params.account || entryAccountIds(e, data!, workspace).includes(params.account))
     && (!query.trim() || [e.title, e.topic?.angle, e.plan?.notes, e.article?.body, e.post?.body].join(' ').toLowerCase().includes(query.trim().toLowerCase())))
   if (sort !== 'recent') rows.sort((a, b) => score(b) - score(a))
-  const dueReviews = workspace === 'social' && data ? (data.reviews || []).filter((r: any) => r.status === 'pending' && r.due_at <= new Date().toISOString() && reviewWorkspace(r, data) === 'social').length : 0
-  const reviewing = workspace === 'social' && params.ownership === 'reviews'
+  const dueReviews = marketing && workspace === 'social' && data ? (data.reviews || []).filter((r: any) => r.status === 'pending' && r.due_at <= new Date().toISOString() && reviewWorkspace(r, data) === 'social').length : 0
+  const reviewing = !!marketing && workspace === 'social' && params.ownership === 'reviews'
   const openNew = (topic?: any) => {
     setSaveError('')
     setForm({ title: topic?.title || '', angle: topic?.angle || '', type: workspace === 'website' ? 'article' : topic?.content_type || 'post', account: topic?.target_account_id || params.account || '', topic })
@@ -127,18 +155,18 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
   return <div className="space-y-5">
     {selectedArticle ? <ArticleDetail key={selectedArticle.id} work={aiWork} ctx={ctx} a={selectedArticle} all={data!.articles}
       posts={data!.posts.filter(p => p.article_id === selectedArticle.id)} pubs={data!.publications.filter(p => p.article_id === selectedArticle.id)}
-      focus={params.version} displayStatus={published ? 'published' : 'draft'} inspiration publishScope={workspace}
+      focus={params.version} displayStatus={published ? 'published' : 'draft'} inspiration={!!marketing?.inspiration} publishScope={workspace}
       statusControl={selectedEntry ? <ContentStatus entry={selectedEntry} workspace={workspace} onChanged={reload} /> : undefined}
       publicationLinks={selectedEntry ? <PublicationLinks entry={selectedEntry} workspace={workspace} onChanged={reload} recordsShown /> : undefined}
       open={id => setParam('article', id)} onBack={() => { setParam('article', ''); setParam('version', '') }} onChanged={reload} />
       : null}
-    {selectedArticle && workspace === 'social' && selectedEntry && <ContentPerformance ctx={ctx} entry={selectedEntry} data={data!} />}
+    {selectedArticle && workspace === 'social' && selectedEntry && <ContentPerformance ctx={ctx} entry={selectedEntry} data={data!} reviews={growthReviews} />}
     {!selectedArticle && <>
       <PageHeader title={w(workspace + '_content')} desc={w(workspace + '_desc')} actions={<>
         <Button onClick={() => openNew()}><Plus />{w('new_content')}</Button>
         <TaskLaunchButton task="suggest-topics" input={{ workspace }} match={r => r.input?.workspace === workspace} reqKey="topic_requirements" onFinished={reload}
           title={tr('content.gen_topics')} desc={w('suggest_desc')} reqTitle={tr('content.req_title')} reqHint={tr('content.req_hint')} startLabel={tr('content.start_topics')} variant="outline">{tr('content.gen_topics')}</TaskLaunchButton>
-        <MarketingImport data={data} onDone={reload} />
+        {marketing && data && marketing.Import({ data, onDone: reload })}
       </>} />
       <TaskRunning runs={(writer.task?.running || []).filter(r => r.input?.workspace === workspace || entries.some(e => e.topic?.id === r.input?.topic_id && e.workspaces.includes(workspace)))} title={() => w('stage_creating')} desc={tr('content.writing_desc')} />
       <TaskFailed task={writer.task} />
@@ -149,10 +177,10 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
           <button type="button" onClick={() => setParam('ownership', '')} className={cx('cursor-pointer rounded-lg px-3 py-2 text-sm', !params.ownership || params.ownership === 'owned' ? 'bg-accent font-medium' : 'text-muted-foreground hover:bg-accent')}>{w('owned_count', { n: owned.length })}</button>
           {!!unassigned.length && <button type="button" onClick={() => setParam('ownership', 'unassigned')} className={cx('cursor-pointer rounded-lg px-3 py-2 text-sm', params.ownership === 'unassigned' ? 'bg-accent font-medium' : 'text-muted-foreground hover:bg-accent')}>{w('unassigned_count', { n: unassigned.length })}</button>}
           {!!platform.length && <button type="button" onClick={() => setParam('ownership', 'platform')} className={cx('cursor-pointer rounded-lg px-3 py-2 text-sm', params.ownership === 'platform' ? 'bg-accent font-medium' : 'text-muted-foreground hover:bg-accent')}>{w('platform_count', { n: platform.length })}</button>}
-          {workspace === 'social' && <button type="button" onClick={() => setParam('ownership', 'reviews')} className={cx('cursor-pointer rounded-lg px-3 py-2 text-sm', reviewing ? 'bg-accent font-medium' : 'text-muted-foreground hover:bg-accent')}>
+          {marketing && workspace === 'social' && <button type="button" onClick={() => setParam('ownership', 'reviews')} className={cx('cursor-pointer rounded-lg px-3 py-2 text-sm', reviewing ? 'bg-accent font-medium' : 'text-muted-foreground hover:bg-accent')}>
             {w('reviews_tab')}{!!dueReviews && <span className="ml-1.5 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary-text">{dueReviews}</span>}</button>}
         </div>
-        {reviewing ? <GrowthReviews ctx={ctx} workspace="social" /> : <>
+        {reviewing ? marketing!.Reviews({}) : <>
         {params.ownership === 'unassigned' && <Notice>{w('unassigned_note')}</Notice>}
         {params.ownership === 'platform' && <Notice>{w('platform_note')}</Notice>}
         <div className={cx('grid grid-cols-1 gap-3', workspace === 'social' ? 'sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_150px_160px_160px_150px]' : 'sm:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_160px_176px_176px]')}>
@@ -200,9 +228,8 @@ export default function ProductContent({ ctx, params, setParam: updateParam, wor
       </>}
       </>}
     </>}
-    {params.plan && <MarketingPlans ctx={ctx} params={params} setParam={setParam} detailsOnly
-      contentEntry={entries.find(e => e.plan?.id === params.plan)} workspace={workspace} onChanged={reload}
-      performance={workspace === 'social' && data && entries.find(e => e.plan?.id === params.plan) ? <ContentPerformance ctx={ctx} entry={entries.find(e => e.plan?.id === params.plan)!} data={data} /> : undefined} />}
+    {params.plan && marketing?.Plan({ params, setParam, entry: entries.find(e => e.plan?.id === params.plan), workspace, onChanged: reload,
+      performance: workspace === 'social' && data && entries.find(e => e.plan?.id === params.plan) ? <ContentPerformance ctx={ctx} entry={entries.find(e => e.plan?.id === params.plan)!} data={data} reviews={growthReviews} /> : undefined })}
     {params.post && data && entries.find(e => e.post?.id === params.post) && <AdoptPostDialog entry={entries.find(e => e.post?.id === params.post)!}
       metrics={metrics.get('post:' + params.post)} account={destination(entries.find(e => e.post?.id === params.post)!)}
       articles={entries.filter(e => e.article && e.workspaces.includes('social')).map(e => e.article)}

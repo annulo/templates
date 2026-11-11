@@ -300,7 +300,7 @@ export function MarketingPlans({
             <div className="min-w-0 flex-1">
               <div className="font-medium">{p.title}</div>
               <p className="mt-1 text-xs text-muted-foreground">
-                {p.content_id} · {tr("growth.platform_" + p.platform)} ·{" "}
+                {p.content_id} · {tr("campaigns.platform_" + p.platform)} ·{" "}
                 {p.role_name || m("account_unconfirmed")} ·{" "}
                 {p.target_account?.name || m("unbound")}
                 {p.article ? ` · ${m("draft_exists")}` : ""}
@@ -324,7 +324,7 @@ export function MarketingPlans({
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
               <Badge>{active.content_id}</Badge>
-              <Badge>{tr("growth.platform_" + active.platform)}</Badge>
+              <Badge>{tr("campaigns.platform_" + active.platform)}</Badge>
               {contentEntry && workspace ? <ContentStatus entry={contentEntry} workspace={workspace} onChanged={() => { reload(); onChanged?.() }} /> : <Badge>{m("stage_" + active.stage)}</Badge>}
               <Badge>{active.role_name || m("account_unconfirmed")}</Badge>
             </div>

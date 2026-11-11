@@ -1,7 +1,7 @@
 import { all, row, error, url } from "./_growth";
 import { json } from "./_research";
 import { canonical, importLegacy } from "./inspiration";
-import { saveOpportunity } from "./growth";
+import { saveOpportunity } from "./campaigns";
 import { save as saveContent } from "./content";
 import { L } from "./_i18n";
 

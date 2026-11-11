@@ -41,7 +41,7 @@ export default function Campaigns({
   setParam: (k: string, v: string) => void;
 }) {
   const { data, error, reload } = useProductData<Data>(
-    "growth.context",
+    "campaigns.context",
     {},
     ctx.rev,
   );
@@ -137,11 +137,11 @@ export default function Campaigns({
               {g("cancel")}
             </Button>
             <Button
-              fn="growth.saveCampaign"
+              fn="campaigns.saveCampaign"
               onClick={async () => {
                 try {
                   const c = await runLocal<Campaign>(
-                    "growth.saveCampaign",
+                    "campaigns.saveCampaign",
                     edit,
                   );
                   setEdit(null);
@@ -263,7 +263,7 @@ function CampaignDetail({
   edit: () => void;
 }) {
   const { data, error, reload } = useProductData<Detail>(
-    "growth.campaignContext",
+    "campaigns.campaignContext",
     { campaign_id: campaign.id },
     ctx.rev,
   );

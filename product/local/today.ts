@@ -1,146 +1,123 @@
-import { L } from "./_i18n";
-import { setupSteps } from "./_checklist";
-import { all } from "./_growth";
-export const cloud = [
-  "list",
-  "skip",
-  "unskip",
-  "dismiss",
-  "setupPanel",
-  "openWizard",
-  "closeWizard",
-];
-function state(ctx: any, key: string, data: any) {
-  const old = ctx.db.query("checklist", { where: { key }, limit: 1 }).list[0];
-  if (old) ctx.db.update("checklist", old.id, data);
-  else ctx.db.insert("checklist", { key, ...data });
+// 总览的任务清单（本机函数）：按业务表里的数据算出「现在该做什么」，一步一步带用户把业务运营起来。
+// 全是确定的规则，不调模型：秒开、每次结果一样。每一项带一个动作（去哪个页面 / 跑哪个本机函数 / 交给助手的哪个任务）。
+//
+//   today.list({})                  起步任务（一次性，按顺序）+ 今天要做的（每天按数据算）
+//   today.skip({ key })             跳过一个起步任务（排到最后，不再挡着下一步）
+//   today.unskip({ key })
+//   today.dismiss({ key, value })   忽略一条今天要做的；value 是当时的数量，数量变多了会再出现
+//   today.setupPanel({ open })      总览上的起步清单展开 / 收起（起步没做完时默认展开，用户收起后记住）
+//
+// 跳过、忽略记在 checklist 表（一项一行：key、status、value）。
+// 起步任务和今天要做的有哪些、怎么说，是行业文件 local/_checklist.ts（setupSteps、dailyItems，各行业模板各一份）；这里是共用的清单引擎（外贸和产品运营的 business 模块）。
+
+import { L } from './_i18n'
+import { setupSteps, dailyItems } from './_checklist'
+
+// 手机上打开后台（不在 Shuttle 里）时这几个也能用：annulo push 会把它们打包成站点 Func，只能用 ctx.db、ctx.mcp('creght', …)、ctx.locale
+export const cloud = ['list', 'skip', 'unskip', 'dismiss', 'openWizard', 'closeWizard', 'setupPanel']
+
+export type Action = { kind: 'go'; view: string; params?: Record<string, string> } | { kind: 'run'; fn: string; input?: unknown } | { kind: 'task'; task: string; input?: unknown }
+
+export type Item = {
+  key: string
+  title: string
+  /** 为什么要做（一句话） */
+  why: string
+  /** 大概要几分钟 */
+  minutes?: number
+  wizard?: boolean
+  screen?: string
+  summary?: string
+  done: boolean
+  skipped?: boolean
+  /** 正在后台做（比如开始运营时自动跑的网站检查）：清单上显示进行中，不显示按钮 */
+  running?: boolean
+  /** 今天要做的：涉及几条（询盘数、待审数…） */
+  count?: number
+  action: Action
+  action_label: string
+  /** 做完以后结果在哪个页面：已完成的行点了去这里；没有就去 go 动作的页面 */
+  page?: { view: string; params?: Record<string, string> }
+  /** 「交给助手」：交给助手的任务（tasks/<task>.md，新开一段对话跑）；没有就不显示这个按钮 */
+  ask?: { task: string; input?: unknown }
 }
+
+type State = { id: string; key: string; status: 'skipped' | 'dismissed'; value?: number }
+
+const all = (ctx: any, table: string): any[] => {
+  try {
+    return ctx.db.query(table, { limit: 1000 }).list
+  } catch {
+    return [] // 表还没建（老项目）：当作没有数据
+  }
+}
+const has = (ctx: any, table: string) => {
+  try {
+    return ctx.db.query(table, { limit: 1 }).list.length > 0
+  } catch {
+    return false
+  }
+}
+
+function states(ctx: any): State[] {
+  return all(ctx, 'checklist') as State[]
+}
+
 export function list(_input: {}, ctx: any) {
-  const states = all(ctx, "checklist");
-  const setup = setupSteps(ctx).map((s) => ({
-    ...s,
-    skipped: states.some((r) => r.key === s.key && r.status === "skipped"),
-  }));
-  const daily: any[] = [];
-  const today = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10);
-  const add = (
-    key: string,
-    n: number,
-    zh: string,
-    en: string,
-    whyZh: string,
-    whyEn: string,
-    view: string,
-  ) => {
-    if (
-      !n ||
-      states.some(
-        (s) => s.key === key && s.status === "dismissed" && s.value >= n,
-      )
-    )
-      return;
-    daily.push({
-      key,
-      count: n,
-      done: false,
-      title: L(ctx, zh, en),
-      why: L(ctx, whyZh, whyEn),
-      action: { kind: "go", view },
-      action_label: L(ctx, "查看并处理", "Review"),
-    });
-  };
-  add(
-    "d_review",
-    all(ctx, "campaigns").filter(
-      (c) => c.review_at && c.review_at <= today && c.status !== "done",
-    ).length,
-    "有运营主题到了复查时间",
-    "Campaigns are due for review",
-    "查看内容表现和产品转化，记录下一步。",
-    "Review content and conversion data, then record next steps.",
-    "campaigns",
-  );
-  add(
-    "d_opportunity_review",
-    all(ctx, "growth_opportunities").filter(
-      (o) =>
-        o.review_at &&
-        o.review_at <= today &&
-        !["done", "parked"].includes(o.status),
-    ).length,
-    "有增长机会需要复查",
-    "Growth opportunities are due for review",
-    "核对搜索意图、页面表现与需求证据是否变化。",
-    "Recheck search intent, page performance and demand evidence.",
-    "opportunities",
-  );
-  add(
-    "d_issues",
-    all(ctx, "site_issues").filter(
-      (i) => i.status === "open" && i.severity === "high",
-    ).length,
-    "有重要的网站问题",
-    "Important website issues need attention",
-    "优先修复影响访问或搜索收录的问题。",
-    "Fix issues affecting access or search visibility.",
-    "audit",
-  );
-  add(
-    "d_drafts",
-    all(ctx, "articles").filter((a) => a.status === "draft").length,
-    "有内容草稿待检查与发布",
-    "Content drafts need review",
-    "核对产品事实、素材和目标账号，再决定发布。",
-    "Check product facts, assets and accounts before publishing.",
-    "content",
-  );
-  add(
-    "d_health",
-    all(ctx, "social_health").filter((h) => h.ok === false).length,
-    "有账号操作失败",
-    "Account operations need attention",
-    "检查登录状态和最近发布、采集的结果。",
-    "Check account login and publishing health.",
-    "channels",
-  );
-  const complete = setup.filter((s) => s.done).length;
-  return {
-    setup,
-    daily,
-    done: complete,
-    total: setup.length,
-    current: setup.find((s) => !s.done && !s.skipped)?.key || null,
-    setup_hidden: states.some(
-      (s) => s.key === "setup-panel" && s.status === "hidden",
-    ),
-    wizard: {
-      steps: setup.filter((s) => s.wizard),
-      current: setup.find((s) => s.wizard && !s.done && !s.skipped)?.key || null,
-      closed: states.some((s) => s.key === "wizard" && s.status === "dismissed"),
-    },
-  };
+  const st = states(ctx)
+  const skipped = new Set(st.filter((s) => s.status === 'skipped').map((s) => s.key))
+  const setup = setupSteps(ctx, { all, has }).map((s) => ({ ...s, skipped: !s.done && skipped.has(s.key) }))
+  // 当前这一步：第一个没做完、没跳过的；都跳过了就是第一个没做完的
+  // 正在后台做的（running）不挡着下一步
+  const current = (setup.find((s) => !s.done && !s.skipped && !s.running) ?? setup.find((s) => !s.done))?.key ?? null
+  const dismissed = new Map(st.filter((s) => s.status === 'dismissed').map((s) => [s.key, s.value ?? 0]))
+  const daily = dailyItems(ctx, { all, has }).filter((d) => !(dismissed.has(d.key) && (d.count ?? 1) <= (dismissed.get(d.key) ?? 0)))
+  const steps = setup.filter((s) => s.wizard)
+  const wizard = { steps, current: steps.find((s) => !s.done && !s.skipped)?.key ?? null, closed: st.some((s) => s.key === 'wizard' && s.status === 'dismissed') }
+  // 产品运营以前收起时记的是 hidden
+  const setup_hidden = st.some((s) => s.key === 'setup-panel' && (s.status === 'dismissed' || (s.status as string) === 'hidden'))
+  return { wizard, setup, current, done: setup.filter((s) => s.done).length, total: setup.length, daily, setup_hidden }
 }
+
+function upsert(ctx: any, key: string, patch: Partial<State> | null) {
+  const old = states(ctx).find((s) => s.key === key)
+  if (!patch) {
+    if (old) ctx.db.delete('checklist', old.id)
+    return
+  }
+  if (old) ctx.db.update('checklist', old.id, { ...patch, updated_at: new Date().toISOString() })
+  else ctx.db.insert('checklist', { key, ...patch, updated_at: new Date().toISOString() })
+}
+
 export function skip(input: { key: string }, ctx: any) {
-  state(ctx, input.key, { status: "skipped" });
-  return list({}, ctx);
+  if (!input?.key) throw new Error(L(ctx, '缺 key', 'Missing key'))
+  upsert(ctx, input.key, { status: 'skipped' })
+  return list({}, ctx)
 }
+
 export function unskip(input: { key: string }, ctx: any) {
-  state(ctx, input.key, { status: "" });
-  return list({}, ctx);
+  upsert(ctx, input?.key, null)
+  return list({}, ctx)
 }
-export function dismiss(input: { key: string; value: number }, ctx: any) {
-  state(ctx, input.key, { status: "dismissed", value: input.value });
-  return list({}, ctx);
+
+export function dismiss(input: { key: string; value?: number }, ctx: any) {
+  if (!input?.key) throw new Error(L(ctx, '缺 key', 'Missing key'))
+  upsert(ctx, input.key, { status: 'dismissed', value: input.value ?? 1 })
+  return list({}, ctx)
 }
-export function setupPanel(input: { open: boolean }, ctx: any) {
-  state(ctx, "setup-panel", { status: input.open ? "" : "hidden" });
-  return list({}, ctx);
-}
-export function openWizard(_input: {}, ctx: any) {
-  state(ctx, "wizard", { status: "" });
-  return list({}, ctx);
-}
+
+/** 关闭只记在清单里，不保存向导进度。 */
 export function closeWizard(_input: {}, ctx: any) {
-  state(ctx, "wizard", { status: "dismissed" });
-  return list({}, ctx);
+  upsert(ctx, 'wizard', { status: 'dismissed' })
+  return list({}, ctx)
+}
+
+export function openWizard(_input: {}, ctx: any) {
+  upsert(ctx, 'wizard', null)
+  return list({}, ctx)
+}
+
+export function setupPanel(input: { open: boolean }, ctx: any) {
+  upsert(ctx, 'setup-panel', input?.open ? null : { status: 'dismissed' })
+  return list({}, ctx)
 }

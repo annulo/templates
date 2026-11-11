@@ -4,7 +4,7 @@ description: 按运营主题计划生成各平台草稿。
 prompt: produce-campaign
 ---
 
-参数 campaign_id。跑 growth.campaignContext。先按用户要求和 prompts/produce-campaign.md（用户版优先）确认本次范围。
+参数 campaign_id。跑 campaigns.campaignContext。先按用户要求和 prompts/produce-campaign.md（用户版优先）确认本次范围。
 
 逐条处理已规划 topics：如果该 topic 已有关联文章，保留现有草稿，不重复创建；需要修改时走 revise-article。没有文章时读取 tasks/write-article.md，按 topic_id 和 content_type 跑 content.context，用相同 evidence_id 保存 content.save。
 

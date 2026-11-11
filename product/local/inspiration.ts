@@ -1,6 +1,6 @@
 import { L } from "./_i18n";
 import { json, requireRow, evidenceFor } from "./_research";
-import { context as growthContext } from "./growth";
+import { context as growthContext } from "./campaigns";
 import { all } from "./_growth";
 import { creatorNotes, userIdOf } from "../plugins/social/local/_xhs_web";
 

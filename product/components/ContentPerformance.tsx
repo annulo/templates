@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowUpRight, Eye, Heart, MessageCircle, TrendingUp } from 'lucide-react'
 import TrendChart from './charts/TrendChart'
-import { GrowthReviews } from './MarketingWorkspace'
 import { Panel, Segmented, Skeleton, cx } from './ui'
 import { CHANNEL_TYPES } from '../lib/channels'
 import { platformOf } from '../lib/social'
@@ -32,12 +31,12 @@ export function MetricsLine({ m }: { m?: Metrics }) {
 
 /**
  * 内容详情里的「发布后的效果」：每个平台版本一张小图（各自的刻度：平台之间的量级差得多，画在一起小的会被压平），
- * 下面是这条内容的复盘。没发出去、也没有复盘时不显示。
+ * 下面是这条内容的复盘（模板传进来的 reviews：产品运营的营销复盘；外贸没有）。没发出去、也没有复盘时不显示。
  */
-export default function ContentPerformance({ ctx, entry, data }: { ctx: Ctx; entry: ContentEntry; data: ContentData }) {
+export default function ContentPerformance({ ctx, entry, data, reviews }: { ctx: Ctx; entry: ContentEntry; data: ContentData; reviews?: (targets: string[]) => ReactNode }) {
   const posts = entryPosts(entry, data)
   const ids = posts.map(p => p.id).join(',')
-  const targets = [entry.plan?.id, entry.article?.id].filter(Boolean)
+  const targets = [entry.plan?.id, entry.article?.id].filter(Boolean) as string[]
   const [days, setDays] = useState<Record<string, Day[]> | null>(null)
   const [metric, setMetric] = useState<Metric>('views')
   useEffect(() => {
@@ -75,6 +74,6 @@ export default function ContentPerformance({ ctx, entry, data }: { ctx: Ctx; ent
       </div>
       <p className="mt-3 text-xs text-muted-foreground">{w('performance_note')}</p>
     </Panel>}
-    {!!targets.length && <GrowthReviews ctx={ctx} workspace="social" targets={targets} />}
+    {!!targets.length && reviews?.(targets)}
   </>
 }

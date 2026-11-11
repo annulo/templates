@@ -1,3 +1,4 @@
+// 内容的状态标签和「状态与发布链接」弹窗（网站、自媒体两个工作区共用；外贸和产品运营共用的 business 模块）
 import { useState } from 'react'
 import { ExternalLink, Link2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Badge, Button, Dialog, Field, Notice, cx, inputCls } from './ui'

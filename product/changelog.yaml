@@ -1,3 +1,6 @@
+- version: 0.21.0
+  zh: "与外贸助手共用一套代码：写网站文章会查重，周报多了网站检查和关键词；增长机会的函数改名为 campaigns.*。"
+  en: "Now shares one codebase with the trade template: website articles are checked for duplicates, and weekly reports add site audits and keywords. Opportunity functions are renamed to campaigns.*."
 - version: 0.20.1
   zh: "修好文章页多语言一栏里「原文语言」显示成代码的问题。"
   en: "Fixed the \"Original language\" label on the article page showing as code."
