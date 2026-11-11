@@ -9,9 +9,15 @@
   公共脚本（`core/local/`）、通用 skill（`core/skills/`）、几个模板都有的组件和页面（`core/components/`，内容中心 `core/components/views/Content.tsx` 和它的发布、改写、编辑组件都在这里）、
   `core/lib/`、表、文案（`core/messages/*.json` 和模板的按键合并，同一个键只能在一处）；
   模板自己业务的 skill 放模板里（产品运营的增长方法在 `product/skills/`），不要往通用 skill 里写某个模板的业务；
-- `core/features/<模块>/` 是部分模板才用的共用模块（现在有网站运营 `websites/`），`targets.json` 里 `features: ["websites"]` 的模板才组装进去，放到产物根目录；模块不能覆盖模板或 core 同路径的文件；
+- `core/features/<模块>/` 是部分模板才用的共用模块（网站运营 `websites/`、风格卡 `playbooks/`，外贸和产品运营共用的 `business/`，以及只有一个模板启用、但以后别的模板也能用的：询盘 `leads/`、潜客 `prospects/`、竞品 `competitors/`、知识库 `knowledge/`、增长雷达 `radar/`、看板 `dashboard/`、增长机会和运营主题 `campaigns/`、灵感库 `inspiration/`、转化指标 `metrics/`），`targets.json` 里 `features: ["websites"]` 的模板才组装进去，放到产物根目录；模块不能覆盖模板或 core 同路径的文件；
   模块里的东西三个模板（外贸、产品运营、自媒体）一起用：页面、本机函数、表、任务，还有 `lib/sites.ts`（网站的类型和封装，模板的 `lib/shuttle.ts` 整个导出它）、`local/_site.ts`（网站地址、读网站内容）、`messages/*.json`（网站的文案，和 core、模板的按键合并，同一个键只能在一处）。
   模板之间不一样的地方不复制一份改，在模块里留插入的位置，模板传进来：「谷歌排名」页的 `headerActions`（产品运营的增长机会按钮）、「账号和网站」页的 `siteExtra`（外贸的表单询盘卡片）、AI 搜索的品牌问题句式 `local/_geo_brand.ts`（有就用）；文案写法不同的键留在各模板；
+- **外贸和产品运营是一份源码发两个模板**（2026-11-11 合并，见 [docs/merge-trade-product.md](docs/merge-trade-product.md)）：共用的后台外壳、内容页、写文章 / 出选题 / 周报 / 今日任务的本机函数和任务、选题和文章表、文案都在 `core/features/business/`；
+  模板目录只放**行业文件**：`annulo.json` / `shuttle.json`、`ANNULO.md` / `SHUTTLE.md`、`lib/edition.ts`（导航、渠道、向导页）、`lib/views.tsx`（有哪些页面、每个页面渲染什么、老链接、侧栏上的数字）、
+  `local/_industry.ts`（项目资料拼给模型的标签）、`local/_checklist.ts`（起步步骤、每天的待办）、资料和产品（`tables/profile.json` `products.json`、`local/profile.ts` `products.ts`、页面、`tasks/draft-profile.md` `import-products.md`）、
+  写法 `prompts/`、入门任务、周报任务 `tasks/weekly-report.md`、总览页、向导页、`help/`、`talizen.config.ts`、文案里的行业用词。
+  共用代码里只有一边有的东西写成「有就用」：本机函数按拼出来的路径 `require('./campa' + 'igns.ts')`（没有这个文件的模板打包不报错），页面用插槽（比如内容页的 `marketing`、谷歌排名页的 `headerActions`）。
+  **加一个行业**：建模板目录，写上面这些行业文件，`targets.json` 里启用 `websites`、`business` 和要用的模块；类型检查 `npm run check <模板>`，business 的写文章测试 `publish/tests/business/content.test.mjs`；
 - **core 还有一个不在本仓库的用户**：私有的外贸模板（Annulo 团队的 `shuttle-template` 仓库）也用这里的 `core/`，发布时从本仓库已推送的提交里取。改 core 要照「core 里的代码要在每个带 core 的模板里都能跑」写，外贸那边由 Annulo 团队验证；
 - 社媒平台不在这个仓库：是 Annulo 插件 **social**（github.com/annulo/plugins），模板在 `annulo.json` 的 `"plugins"` 里声明，项目新建、升级时 Annulo 装进 `plugins/social/`。
   改社媒平台的脚本、写作任务、写法、定时任务、skill 都在插件仓库里改，不要在模板里另写一份；

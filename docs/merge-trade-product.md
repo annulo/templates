@@ -120,11 +120,11 @@ python3 publish/merge_check.py diff trade --show local/content.ts
 
 - [x] 第 0 步：`publish/merge_check.py`，基准 2026-11-11（含当时工作区里别人没提交的 core 改动）
 - [x] 第 1 步（2026-11-11）：外贸 6 个、产品运营 3 个模块，四个模板的产物和基准一样，`npm run check` 通过；外贸和本仓库的测试改成按 `targets.json` 拷模块，失败的和挪之前一样（外贸 `onboarding` 1 个；本仓库 7 个是测试本身的问题：缺 esbuild、社媒插件的替身少了导出、自媒体测试缺 `_site`，另有别人还没提交的 `instagram-publish-prepare`）
-- [ ] 第 2 步
+- [x] 第 2 步（第 5 批等在 App 里逐页点一遍）
   - [x] 第 6 批（2026-11-11）：文案拆成 business + 行业差异
   - [~] 第 5 批：ContentPerformance、views/types、lib/shuttle、backend/func/db、外壳 pages/Index、内容页 ContentWorkspace、ContentStatus 合进 business；外贸的老类型错误修完；两个实验项目本机渲染 136～140 个模块都编译通过，**等在 App 里逐页点一遍**
   - [x] 第 4 批（2026-11-11）：content-workspace、_ai、_research、today、topics、reports、content 合进 business；profile、products 留在模板（行业的）；两个实验项目上只读调用前后对比，写入的用测试
   - [x] 第 3 批（2026-11-11）：产品运营 `growth.*` 改名 `campaigns.*`；Creght 产品运营上 `campaigns.context` `topics.context` `marketing.context` `inspiration.list` 正常，老名字报「没有 local/growth.ts」
   - [x] 第 2 批（2026-11-11）：`topics` `articles` `assets` `reports` 进 `business`；两个实验项目上 `content.context` `topics.context` `today.list` 正常
   - [x] 第 1 批（2026-11-11）：四个任务合进 `business` 模块；`--local` 到 pofungfurniture 运营（外贸）、Creght 产品运营，两边的上下文函数核对过字段；**等在 App 里各跑一次写文章、出选题再发版**
-- [ ] 第 3 步
+- [~] 第 3 步：两个仓库的 AGENTS.md 已写新结构和「加一个行业」；冻结说明等发版后去掉；发版
