@@ -32,9 +32,9 @@ export function evidenceFor(ctx: any, topic: any, articleId?: string) {
   const sourceIds = new Set<string>()
   const sources = sourceRefs.filter((r: any) => { if (sourceIds.has(r.source_id)) return false; sourceIds.add(r.source_id); return true }).map((r: any) => json(r.snapshot, {} as any))
   // 产品的事实字段按行业不同（外贸：型号、规格、起订量、交期、认证；产品运营：功能、能力边界、案例、来源），表里没有的字段是空的、不进快照
-  const products = ids.map((id) => ctx.db.get('products', id)).filter((p: any) => p && p.status !== 'hidden').map((p: any) => ({
+  const products = ids.map((id) => ctx.db.get('products', id)).filter((p: any) => p && p.status !== 'hidden').map((p: any) => Object.fromEntries(Object.entries({
     id: p.id, name: p.name, model: p.model, summary: p.summary, audience: p.audience, features: p.features, limitations: p.limitations,
     specs: p.specs, moq: p.moq, price: p.price, lead_time: p.lead_time, certs: p.certs, proof: p.proof, source_url: p.source_url, verified_at: p.verified_at, url: p.url,
-  }))
+  }).filter(([, v]) => v !== null && v !== undefined)))
   return { captured_at: now(), brief, findings, sources, products }
 }
