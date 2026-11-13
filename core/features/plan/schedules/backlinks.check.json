@@ -1,0 +1,5 @@
+{
+  "fn": "backlinks.check",
+  "every": "7d",
+  "name": "检查外链还在不在"
+}

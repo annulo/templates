@@ -5,6 +5,7 @@ import Checklist from "../Checklist";
 import { g } from "../ProductFields";
 import { GrowthOverview } from "../MarketingWorkspace";
 import GrowthDashboard from "../GrowthDashboard";
+import { PlanCard } from "./Plan";
 import { tr } from "../../lib/i18n";
 import type { Ctx, View } from "./types";
 
@@ -53,6 +54,8 @@ function Today({ ctx }: { ctx: Ctx }) {
   const [days, setDays] = useState(30);
   return (
     <div className="space-y-6">
+      {/* 90 天增长计划：进度、本周还剩几件事；没有计划时引导起草 */}
+      <PlanCard ctx={ctx} />
       {/* 先看数据：网站访问和社媒，时间段管整块 */}
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">

@@ -59,6 +59,35 @@ const has = (ctx: any, table: string) => {
   }
 }
 
+declare const require: (path: string) => any
+
+/** 90 天增长计划（plan 模块，有就用）：检查点到了、这周还没做完的计划项排在「今天要做的」最前面 */
+function planItems(ctx: any): Item[] {
+  let week: any
+  try {
+    week = require('./pl' + 'an.ts').thisWeek({}, ctx) // 拼出来的路径：没有这个模块的模板打包不报错
+  } catch {
+    return []
+  }
+  const out: Item[] = []
+  if (week.checkpoint_due)
+    out.push({
+      key: 'plan-checkpoint-' + week.checkpoint_due, done: false,
+      title: L(ctx, `增长计划到 Day ${week.checkpoint_due} 检查点了`, `Growth plan: day ${week.checkpoint_due} checkpoint is due`),
+      why: L(ctx, '对着开始时的数据看效果，排好下一阶段', 'Compare with the baseline and plan the next phase'),
+      action: { kind: 'go', view: 'plan' }, action_label: L(ctx, '去检查', 'Review'),
+      ask: { task: 'plan-checkpoint', input: { day: week.checkpoint_due } },
+    })
+  for (const it of week.items ?? [])
+    out.push({
+      key: 'plan-item-' + it.id, done: false,
+      title: it.title, why: it.why || L(ctx, `增长计划第 ${it.week} 周`, `Growth plan, week ${it.week}`),
+      action: it.action ?? { kind: 'go', view: 'plan' }, action_label: L(ctx, '去做', 'Do it'),
+      page: { view: 'plan' },
+    })
+  return out
+}
+
 function states(ctx: any): State[] {
   return all(ctx, 'checklist') as State[]
 }
@@ -71,7 +100,7 @@ export function list(_input: {}, ctx: any) {
   // 正在后台做的（running）不挡着下一步
   const current = (setup.find((s) => !s.done && !s.skipped && !s.running) ?? setup.find((s) => !s.done))?.key ?? null
   const dismissed = new Map(st.filter((s) => s.status === 'dismissed').map((s) => [s.key, s.value ?? 0]))
-  const daily = dailyItems(ctx, { all, has }).filter((d) => !(dismissed.has(d.key) && (d.count ?? 1) <= (dismissed.get(d.key) ?? 0)))
+  const daily = [...planItems(ctx), ...dailyItems(ctx, { all, has })].filter((d) => !(dismissed.has(d.key) && (d.count ?? 1) <= (dismissed.get(d.key) ?? 0)))
   const steps = setup.filter((s) => s.wizard)
   const wizard = { steps, current: steps.find((s) => !s.done && !s.skipped)?.key ?? null, closed: st.some((s) => s.key === 'wizard' && s.status === 'dismissed') }
   // 产品运营以前收起时记的是 hidden

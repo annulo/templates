@@ -1,0 +1,24 @@
+{
+  "name": "外链",
+  "desc": "别的网站上指向我们网站的链接：社媒主页和帖子、B2B 平台店铺、行业目录、客座文章……手动登记或从社媒帖子自动登记，定期检查还在不在",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "kind": { "type": "string", "description": "social 社媒 / b2b B2B 平台 / directory 行业目录 / article 客座文章、媒体报道 / forum 论坛问答 / other" },
+      "platform": { "type": "string", "description": "平台或网站名（instagram、facebook、alibaba、某个目录站…）" },
+      "source_url": { "type": "string", "description": "外链所在的页面地址（同一地址只登记一次）" },
+      "target_url": { "type": "string", "description": "指向我们网站的哪个页面" },
+      "channel_id": { "type": "string", "description": "指向哪个网站（channels）" },
+      "anchor": { "type": "string", "description": "链接文字" },
+      "nofollow": { "type": "boolean", "description": "是不是 nofollow（社媒基本都是：对谷歌排名直接帮助有限，主要是引流和品牌）" },
+      "status": { "type": "string", "description": "planned 打算做 / live 在线 / lost 找不到了（页面没了或链接被删） / unknown 检查不了（要登录、反爬）" },
+      "auto": { "type": "boolean", "description": "从社媒帖子自动登记的" },
+      "post_id": { "type": "string", "description": "自动登记时对应的社媒帖子（social_posts）" },
+      "note": { "type": "string", "description": "备注" },
+      "checked_at": { "type": "string", "description": "上次检查时间 ISO8601" },
+      "check_error": { "type": "string", "description": "上次检查出的问题" },
+      "created_at": { "type": "string", "description": "登记时间 ISO8601" }
+    },
+    "required": ["source_url"]
+  }
+}

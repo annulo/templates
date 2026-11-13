@@ -3,7 +3,7 @@ import type { Channel, ChannelStats, Profile } from '../../lib/shuttle'
 
 // 外贸和产品运营的页面合在一起（business 模块）；每个模板实际有哪些页面看它的 lib/edition.ts 和 pages/Index.tsx
 export type View = 'overview' | 'growth' | 'reports' | 'company' | 'products' | 'content' | 'website-content' | 'landing' | 'social-content' | 'calendar' | 'assets' | 'geo' | 'search' | 'audit' | 'leads' | 'knowledge' | 'competitors' | 'prospects' | 'social' | 'channels' | 'site' | 'settings' | 'help' | 'assistant'
-  | 'opportunities' | 'campaigns' | 'metrics' | 'inspiration' | 'social-metrics'
+  | 'opportunities' | 'campaigns' | 'metrics' | 'inspiration' | 'social-metrics' | 'plan'
 
 /** 各视图共用的上下文：项目资料、渠道、访问汇总、是否在 Shuttle 里 */
 export type Ctx = {

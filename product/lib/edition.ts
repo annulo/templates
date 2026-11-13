@@ -13,6 +13,7 @@ import {
   LayoutTemplate,
   UserRound,
   Activity,
+  Target,
 } from "lucide-react";
 import type { View } from "../components/views/types";
 import type { ChannelType } from "./shuttle";
@@ -22,7 +23,7 @@ export type NavItem = { view: View; icon: typeof Globe; section?: string };
 export type NavGroup = { group?: string; items: NavItem[] };
 // 从上到下按使用频率：工作台 → 网站运营 → 自媒体运营 → 产品资料（不常改，放最下面）；组内常用的在前
 export const NAV: NavGroup[] = [
-  { items: [{ view: "overview", icon: LayoutDashboard }] },
+  { items: [{ view: "overview", icon: LayoutDashboard }, { view: "plan", icon: Target }] },
   {
     group: "g_site",
     items: [
