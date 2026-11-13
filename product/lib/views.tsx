@@ -2,6 +2,7 @@
 // 外壳（pages/Index.tsx，外贸和产品运营共用的 business 模块）读它；左侧导航怎么分组在 lib/edition.ts。
 import { useEffect, useState, type ReactNode } from 'react'
 import ProductOverview from '../components/views/ProductOverview'
+import PlanView from '../components/views/Plan'
 import ProductFacts from '../components/views/ProductFacts'
 import GrowthPlanning from '../components/views/GrowthPlanning'
 import { AccountStrategies, GrowthReviews, MarketingImport, MarketingPlans, useMarketing } from '../components/MarketingWorkspace'
@@ -31,7 +32,7 @@ import type { Ctx, View } from '../components/views/types'
 export const NAV_COLLAPSED = 'annulo:product-nav-collapsed'
 
 /** 地址栏 view= 认的页面；别的都当总览 */
-export const VIEWS: View[] = ['overview', 'reports', 'company', 'opportunities', 'campaigns', 'metrics', 'content', 'website-content', 'landing', 'social-content', 'inspiration', 'social-metrics', 'calendar', 'assets', 'search', 'geo', 'audit', 'social', 'channels', 'site', 'help', 'assistant', 'settings']
+export const VIEWS: View[] = ['overview', 'plan', 'reports', 'company', 'opportunities', 'campaigns', 'metrics', 'content', 'website-content', 'landing', 'social-content', 'inspiration', 'social-metrics', 'calendar', 'assets', 'search', 'geo', 'audit', 'social', 'channels', 'site', 'help', 'assistant', 'settings']
 
 /** 页面写了表（db:changed）时整个后台重拉一遍：产品运营的几个页面（增长机会、运营主题、灵感库）靠它刷新 */
 export const REFRESH_ON_DB_CHANGE = true
@@ -60,6 +61,7 @@ export function renderView(view: View, { ctx, params, setParam, bumpRev }: PageP
   const p = { ctx, params, setParam }
   const tabs = (v: string) => ctx.go(v === 'weekly' ? 'reports' : 'overview')
   switch (view) {
+    case 'plan': return <PlanView {...p} />
     case 'company': case 'settings': return <ProductFacts {...p} />
     case 'opportunities': return <GrowthPlanning {...p} />
     case 'campaigns': return <Campaigns {...p} />

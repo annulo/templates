@@ -6,4 +6,4 @@ prompt: weekly-report
 
 先跑 reports.data（days=7），所有数字使用返回的数据与各自窗口。搜索与社媒口径需单独说明；转化是事件次数，不能写成跨期去重用户或同一批用户漏斗。
 
-结合运营主题和增长机会写 title / summary / body / highlights / suggestions，用 reports.save 保存 period_start 与 period_end。suggestions 中的页面入口使用实际 view：company / opportunities / campaigns / metrics / content / search / channels。无数据明确写待接入，不把缺失当作零，不凭发文或点赞数断言收入增长。
+有 `plan`（90 天增长计划）时，开头先写计划进度：第几天、目标进度（三层分开说）、这一期该做的计划项做了几件、到没到检查点，下周建议优先从计划项里来。结合运营主题和增长机会写 title / summary / body / highlights / suggestions，用 reports.save 保存 period_start 与 period_end。suggestions 中的页面入口使用实际 view：company / opportunities / campaigns / metrics / content / search / channels。无数据明确写待接入，不把缺失当作零，不凭发文或点赞数断言收入增长。

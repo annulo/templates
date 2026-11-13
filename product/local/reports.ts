@@ -160,6 +160,23 @@ export async function data(input: { days?: number }, ctx: any) {
   const competitors = cw.competitors.length ? cw.competitors : null
   const out: Record<string, unknown> = { period_start, period_end, days, channels, ...(leadsModule ? { leads } : {}), search, geo, audits, changes: { reviewed, waiting }, content, growth, keywords, competitors, previous_report }
 
+  // 90 天增长计划（plan 模块）：第几天、目标进度、这一期该做的计划项做了没有、关键词地图和外链的情况；周报照它写「计划进度」
+  const planModule = optional('plan')
+  if (planModule) {
+    const g = planModule.get({}, ctx)
+    if (g.plan && g.plan.status !== 'draft') {
+      const weekNow = g.position?.week ?? 0
+      const recent = (g.items ?? []).filter((i: any) => i.week <= weekNow && i.week >= weekNow - Math.ceil(days / 7))
+      const map = planModule.keywordMap({}, ctx)
+      out.plan = {
+        status: g.plan.status, day: g.position?.day ?? null, week: weekNow, phase: g.position?.phase ?? null, level: g.plan.level, summary: g.plan.summary,
+        progress: g.progress, checkpoint_due: g.checkpoint_due, last_checkpoint: (g.plan.checkpoints ?? []).slice(-1)[0] ?? null,
+        items: recent.map((i: any) => ({ week: i.week, title: i.title, status: i.status || 'todo', auto: !!i.auto })),
+        keyword_map: map.by_stage,
+        backlinks: optional('backlinks') ? optional('backlinks').list({}, ctx).by_status : null,
+      }
+    }
+  }
   // 转化（转化指标模块）：这一期和上一期同样长的一段，按天导入的注册、激活、付费
   const metrics = optional('metrics')
   if (metrics) {

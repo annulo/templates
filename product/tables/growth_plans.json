@@ -1,0 +1,26 @@
+{
+  "name": "增长计划",
+  "desc": "90 天增长计划：目标（三档里选一档）、开始时的基线、三个阶段的重点、Day 30 / 60 / 90 检查点。同一时间只有一份 active；draft 是 AI 刚起草、等用户选目标的",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "status": { "type": "string", "description": "draft 等用户选目标 / active 进行中 / done 90 天结束 / archived 被新计划替换" },
+      "start_date": { "type": "string", "description": "计划第 1 天的日期 YYYY-MM-DD。老项目从中间阶段开始时往前推（从第 2 阶段开始就是激活那天减 30 天）" },
+      "start_phase": { "type": "number", "description": "从第几阶段开始：1 / 2 / 3（老项目按已有数据判断）" },
+      "stage_reason": { "type": "string", "description": "为什么从这个阶段开始（给用户看的一两句）" },
+      "summary": { "type": "string", "description": "这 90 天的打法（给用户看的两三句）" },
+      "phases": { "type": "string", "description": "三个阶段，JSON：[{ phase, title, focus, goals: [string] }]" },
+      "options": { "type": "string", "description": "AI 给的三档目标，JSON：[{ level: conservative|normal|aggressive, note, targets: { 指标: 数值 } }]" },
+      "recommended": { "type": "string", "description": "AI 推荐哪一档" },
+      "level": { "type": "string", "description": "用户选的那一档" },
+      "targets": { "type": "string", "description": "生效的目标，JSON：{ 指标: 90 天后要到的数值 }（指标见 plan.ts 的 METRICS）" },
+      "baseline": { "type": "string", "description": "开始时的基线，JSON：{ at, metrics: { 指标: 数值或 null } }" },
+      "checkpoints": { "type": "string", "description": "检查点，JSON：[{ day: 30|60|90, at, metrics, summary, wins, issues, adjustments, chat_id }]" },
+      "chat_id": { "type": "string", "description": "起草这份计划的对话：页面上「继续对话」回到这里" },
+      "activated_at": { "type": "string", "description": "用户选定目标、开始执行的时间 ISO8601" },
+      "created_at": { "type": "string", "description": "起草时间 ISO8601" },
+      "updated_at": { "type": "string", "description": "更新时间 ISO8601" }
+    },
+    "required": ["status"]
+  }
+}
