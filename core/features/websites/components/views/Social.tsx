@@ -1,3 +1,6 @@
+import { InstagramConnectionButton, instagramApi } from '../InstagramAccountFlow'
+import InstagramPublishRecovery from '../InstagramPublishRecovery'
+import { instagramPublishRecovery } from '../../lib/instagramPublishRecovery'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, HardDrive, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import RunButton from '../RunButton'
@@ -100,7 +103,7 @@ export default function Social({ ctx, params, setParam, title, hideTabs = false,
   const broken = (a: Channel) => brokenOf(health.rows, a.id).some((r) => r.op === 'publish') || owned.some((p) => p.channel_id === a.id && p.status === 'failed')
   // 要人处理的账号：登录过期，或者发布出了问题（流程失效、有发失败的帖子）。统计卡片叫「待处理账号」，不只是发布异常
   const issues = accounts.filter((a) => expired(a) || broken(a))
-  const collectable = accounts.filter((a) => !other(a) && a.login_status === 'ok')
+  const collectable = accounts.filter((a) => !instagramApi(a) && !other(a) && a.login_status === 'ok')
   const oldest = collectable.map((a) => a.collected_at).filter((t): t is string => !!t).sort()[0]
   const openSection = (next: Section, extra: Record<string, string> = {}) => onSectionChange ? onSectionChange(next, extra) : ctx.go('social', { section: next, ...extra })
   const manage = () => ctx.go('channels', selected ? { channel: selected.id } : {})
@@ -115,6 +118,7 @@ export default function Social({ ctx, params, setParam, title, hideTabs = false,
   const followers = (a: Channel) => metricUnavailable(a, 'followers') ? <span className="text-muted-foreground">{tr('facebook_connect.metric_unavailable')}</span> : a.followers == null ? <span className="text-muted-foreground">{tr('social.not_collected')}</span> : <span className="inline-flex items-baseline gap-1.5"><span className="tabular-nums">{n(a.followers)}</span>{/* 列里是累计粉丝；旁边的箭头是近 30 天的增减，悬停说明 */}{gain[a.id] != null && <span title={tr('social.followers_gain_30_title', { sign: gain[a.id]! > 0 ? '+' : gain[a.id]! < 0 ? '-' : '', n: n(Math.abs(gain[a.id]!)) })} className={cx('text-xs tabular-nums', gain[a.id]! > 0 ? 'text-emerald-600 dark:text-emerald-400' : gain[a.id]! < 0 ? 'text-destructive' : 'text-muted-foreground')}>{gain[a.id]! > 0 ? '↑' : gain[a.id]! < 0 ? '↓' : ''}{n(Math.abs(gain[a.id]!))}</span>}</span>
   const action = (a: Channel) => {
     const link = 'cursor-pointer text-sm font-medium text-primary-text hover:underline'
+    if (a.type === 'instagram' && (other(a) || expired(a))) return <InstagramConnectionButton channel={a} onDone={onChanged} />
     if (a.type === 'facebook' && (other(a) || expired(a))) return <FacebookConnectionButton channel={a} onDone={onChanged} />
     if (other(a) || expired(a)) return <RunButton inline watch fn="social/social.login" input={{ channel_id: a.id }} icon={UserRound} variant="ghost" onError={setError} onDone={onChanged}>{other(a) ? tr('social.login_here') : tr('social.relogin')}</RunButton>
     return <button type="button" className={link} onClick={() => openSection('data', { account: a.id })}>{broken(a) ? tr('social.fix_publish') : tr('social.view_data')}</button>
@@ -321,8 +325,9 @@ function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channe
               {tr('social.open_profile')}
             </RunButton>
           )}
+          {ch.type === 'instagram' && <InstagramConnectionButton channel={ch} onDone={onDone} />}
           {ch.type === 'facebook' && <FacebookConnectionButton channel={ch} onDone={onDone} />}
-          {ch.type === 'facebook' && (other || expired) ? null : other || expired ? (
+          {instagramApi(ch) || (['facebook', 'instagram'].includes(ch.type) && (other || expired)) ? null : other || expired ? (
             <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} onError={setError} onDone={onDone}>
               {other ? tr('social.login_here') : tr('social.relogin')}
             </RunButton>
@@ -349,7 +354,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
   const pf = postPlatform(platformOf(owner) ?? Object.values(SOCIAL)[0]!, owner?.type, p)
   // 正在发布：上一次留在表里的报错先不显示，跑完重新读表再说
   const [publishingNow, setPublishingNow] = useState(false)
-  const recovery = facebookPublishRecovery(p, owner)
+  const recovery = facebookPublishRecovery(p, owner) || instagramPublishRecovery(p, owner)
   const recover = async (input: import('../../lib/facebookPublishRecovery').FacebookRecoveryInput) => {
     setPublishingNow(true)
     try { await runLocal('social/social.publish', input) }
@@ -430,6 +435,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
         {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} fromArticle={!!p.article_id} />}
         {!publishingNow && (p.status === 'failed' || (p.status === 'scheduled' && p.error)) && p.error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{p.error}</div>}
         <FacebookComments post={p} channel={owner} />
+        {recovery && <InstagramPublishRecovery post={p} channel={owner} disabled={publishingNow || busy} onAction={recover} />}
         {recovery && <FacebookPublishRecovery post={p} channel={owner} disabled={publishingNow || busy} onAction={recover} />}
         {p.status === 'publishing' && <div className="text-xs text-muted-foreground">{tr('social.stuck_hint')}</div>}
         {p.status === 'removed' && <div className="text-xs text-muted-foreground">{tr('social.removed_from', { when: p.removed_at ? fmtTime(p.removed_at) : '', p: pf.label })}</div>}
@@ -462,7 +468,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
               <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onStart={() => setPublishingNow(true)} onDone={() => { setPublishingNow(false); onChanged() }}>
                 {p.status === 'failed' ? tr('social.republish') : tr('social.publish_now')}
               </RunButton>
-              <SchedulePopover size="sm" hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} onSchedule={(at) => patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string })} />
+              {!instagramApi(owner) && <SchedulePopover size="sm" hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} onSchedule={(at) => patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string })} />}
               <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
                 <Pencil />
                 {tr('social.edit')}
@@ -474,7 +480,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
               {tr('social.mark_failed')}
             </Button>
           )}
-          {!recovery && p.status === 'scheduled' && (
+          {!recovery && p.status === 'scheduled' && !instagramApi(owner) && (
             <>
               <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onStart={() => setPublishingNow(true)} onDone={() => { setPublishingNow(false); onChanged() }}>
                 {tr('social.publish_now')}
@@ -482,6 +488,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
               <SchedulePopover size="sm" current={p.scheduled_at} hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} onSchedule={(at) => patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string })} onUnschedule={() => patch({ status: 'approved', scheduled_at: null as unknown as string })} />
             </>
           )}
+          {!recovery && p.status === 'scheduled' && instagramApi(owner) && <Button size="sm" variant="outline" onClick={() => patch({ status: 'approved', scheduled_at: null as unknown as string })}>{tr('instagram_connect.unschedule')}</Button>}
           {(p.status === 'removed' || p.status === 'rejected') &&
             (purging ? (
               <>

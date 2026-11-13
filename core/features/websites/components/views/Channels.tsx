@@ -1,3 +1,4 @@
+import { InstagramConnectionButton, instagramApi } from '../InstagramAccountFlow'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowUpRight, BarChart3, Globe, Plus, RefreshCw, Settings, Trash2, UserRound, X } from 'lucide-react'
 import { PublishSetup } from '../PublishTargets'
@@ -206,12 +207,12 @@ function AccountConnection({ ch, actions, other, health, posts, onOpenPost, onDo
             </RunButton>
           )}
           {/* 登录正常时能直接采集（和社交媒体页的账号卡片一样）；没登录或登录过期先登录 */}
-          {!other && !expired && ch.login_status === 'ok' && (
+          {!instagramApi(ch) && !other && !expired && ch.login_status === 'ok' && (
             <RunButton inline watch fn="social/social.collect" input={{ channel_id: ch.id }} icon={RefreshCw} variant="ghost" onError={setError} onDone={onDone}>
               {tr('social.collect')}
             </RunButton>
           )}
-          {ch.type === 'facebook' ? <FacebookConnectionButton channel={ch} onDone={onDone} /> : <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} variant={other || expired ? 'default' : 'ghost'} onError={setError} onDone={onDone}>
+          {ch.type === 'instagram' ? <InstagramConnectionButton channel={ch} onDone={onDone} /> : ch.type === 'facebook' ? <FacebookConnectionButton channel={ch} onDone={onDone} /> : <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} variant={other || expired ? 'default' : 'ghost'} onError={setError} onDone={onDone}>
             {other ? tr('social.login_here') : tr('social.relogin')}
           </RunButton>}
           {actions}

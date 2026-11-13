@@ -1,3 +1,6 @@
+import InstagramPublishRecovery from './InstagramPublishRecovery'
+import { instagramPublishRecovery } from '../lib/instagramPublishRecovery'
+import { instagramApi } from './InstagramAccountFlow'
 import { metricText } from '../lib/apiMetrics'
 import { facebookPublishRecovery } from '../lib/facebookPublishRecovery'
 import FacebookPublishRecovery from './FacebookPublishRecovery'
@@ -48,7 +51,7 @@ const metricsLine = (p: SocialPost) => tr('versions.metrics', { v: metricText(p,
 
 /** 已发布记录的删除：点开一个小菜单二选一。「从平台删除」去平台上删帖子；「只删记录」平台上的不动（平台上已经手动删过、
  *  或者同一条重复记了两次时用，从平台删除会报找不到） */
-function DeleteMenu({ label, busy, disabled, onRemote, onRecord, remoteHint }: { label: string; busy: boolean; disabled: boolean; onRemote: () => void; onRecord: () => void; remoteHint?: string }) {
+function DeleteMenu({ label, busy, disabled, onRemote, onRecord, remoteHint }: { label: string; busy: boolean; disabled: boolean; onRemote?: () => void; onRecord: () => void; remoteHint?: string }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -67,10 +70,10 @@ function DeleteMenu({ label, busy, disabled, onRemote, onRecord, remoteHint }: {
       </Button>
       {open && (
         <div role="menu" className="absolute top-full right-0 z-30 mt-1 w-64 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg">
-          <button type="button" role="menuitem" className={cx(item, 'text-destructive')} onClick={() => { setOpen(false); onRemote() }}>
+          {onRemote && <button type="button" role="menuitem" className={cx(item, 'text-destructive')} onClick={() => { setOpen(false); onRemote() }}>
             {tr('article.delete_from_platform', { p: label })}
             <span className="text-xs text-muted-foreground">{remoteHint ?? tr('article.delete_from_platform_hint', { p: label })}</span>
-          </button>
+          </button>}
           <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); onRecord() }}>
             {tr('article.delete_record_only')}
             <span className="text-xs text-muted-foreground">{tr('article.delete_record_only_hint', { p: label })}</span>
@@ -125,21 +128,24 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
 
   // 不能选的原因：平台不支持这种类型、网站没配好发布、登录在别的电脑、登录过期
   const blocked = (ch: Channel) => !takes(ch) ? tr('article.pub_unsupported', { type: TYPE_META[t].label })
+    : instagramApi(ch) && (t === 'video' || when === 'later') ? tr('instagram_connect.single_now')
     : isSite(ch) ? (ch.publish_status !== 'ready' || !ch.publisher ? tr('article.pub_site_setup') : '')
     : loggedInElsewhere(ch, machine) ? tr('social.on_machine', { name: loggedInElsewhere(ch, machine) })
     : ch.login_status === 'expired' ? tr('article.pub_expired') : ''
   const usable = accounts.filter((ch) => !blocked(ch))
+  const eligiblePicked = picked.filter(id => usable.some(ch => ch.id === id))
   const unsupported = accounts.filter((ch) => !takes(ch))
   const toggle = (id: string) => setPicked((l) => l.includes(id) ? l.filter((x) => x !== id) : [...l, id])
 
   // 发布放到后台排队（lib/publishQueue）：这里只做准备（建发布记录、过平台检查），马上关掉弹窗；
   // 没通过检查的账号留在弹窗里写原因，别的照常进后台。进度在发布记录和右下角看
   const go = async () => {
+    if (!eligiblePicked.length) return
     setRunning(true); setError('')
     const ts = when === 'later' ? Date.parse(at) : 0
     if (when === 'later' && !(ts > Date.now())) { setError(tr('versions.future_time')); setRunning(false); return }
     try {
-      const r = await runLocal<{ ready: { channel_id: string; post_id?: string; publisher?: string }[]; problems: { channel_id: string; problems: string[] }[] }>('publish.prepare', { article_id: article.id, channel_ids: picked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}) })
+      const r = await runLocal<{ ready: { channel_id: string; post_id?: string; publisher?: string }[]; problems: { channel_id: string; problems: string[] }[] }>('publish.prepare', { article_id: article.id, channel_ids: eligiblePicked, ...(ts ? { scheduled_at: new Date(ts).toISOString() } : {}) })
       const name = (id: string) => accounts.find((c) => c.id === id)?.name ?? ''
       if (!ts && r.ready.length) enqueue(r.ready.map((p) => ({ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: name(p.channel_id), post_id: p.post_id, publisher: p.publisher })))
       if (r.ready.length) toast(ts ? tr('article.pub_scheduled_toast', { n: r.ready.length }) : tr('article.pub_started_toast', { n: r.ready.length }))
@@ -168,7 +174,7 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
       : sent ? (isSite(ch) ? tr('article.pub_site_update') : tr('article.pub_sent_before', { when: fmtTime(sent.published_at) }))
       : CHANNEL_TYPES[ch.type]?.label
     return <label key={ch.id} className={cx('flex items-center gap-3 rounded-lg border px-3 py-2', why ? 'cursor-default border-border opacity-60' : picked.includes(ch.id) ? 'cursor-pointer border-primary/50 bg-primary/5' : 'cursor-pointer border-border hover:bg-accent/50')}>
-      <input type="checkbox" disabled={!!why || running} checked={picked.includes(ch.id)} onChange={() => toggle(ch.id)} className="size-4 accent-primary" />
+      <input type="checkbox" disabled={!!why || running} checked={!why && picked.includes(ch.id)} onChange={() => toggle(ch.id)} className="size-4 accent-primary" />
       <ChannelAvatar ch={ch} />
       <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{ch.name}</span><span className="block text-xs leading-relaxed text-muted-foreground">{note}</span></span>
       {isSite(ch) && takes(ch) && (ch.publish_status !== 'ready' || !ch.publisher) && <Button size="sm" variant="outline" needsShuttle onClick={(e) => { e.preventDefault(); void setupPublish(ch.id) }}>{tr('publish.setup')}</Button>}
@@ -178,7 +184,7 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
 
   return <Dialog open={open} onClose={onClose} title={tr('article.pub_title', { type: TYPE_META[t].label })} width={580} footer={<>
     <Button variant="ghost" size="sm" onClick={onClose}>{Object.keys(result).length ? tr('common.close') : tr('common.cancel')}</Button>
-    <Button fn="publish.prepare" size="sm" disabled={running || !picked.length} onClick={go}>{running ? <Loader2 className="animate-spin" /> : <Send />}{when === 'later' ? tr('article.pub_schedule_go', { n: picked.length }) : tr('article.pub_go', { n: picked.length })}</Button>
+    <Button fn="publish.prepare" size="sm" disabled={running || !eligiblePicked.length} onClick={go}>{running ? <Loader2 className="animate-spin" /> : <Send />}{when === 'later' ? tr('article.pub_schedule_go', { n: eligiblePicked.length }) : tr('article.pub_go', { n: eligiblePicked.length })}</Button>
   </>}>
     <div className="space-y-4">
       {!accounts.length ? <Notice>{tr('versions.no_channels')}<button type="button" className="ml-1 cursor-pointer text-primary-text hover:underline" onClick={() => { onClose(); ctx.go('channels') }}>{tr('versions.go_add', { name: tr('nav.channels') })}</button></Notice> : <>
@@ -298,7 +304,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
     {!list.length && !pubs.length && !linkedRecords ? <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">{tr('article.records_empty')}<div className="mt-3"><Button size="sm" feedback={false} onClick={onPublish}><Send />{tr('article.publish')}</Button></div></div>
       : !!list.length && <div className="rounded-lg border border-border">{list.map((p) => {
         const ch = ctx.channels.find((c) => c.id === p.channel_id)
-        const recovery = facebookPublishRecovery(p, ch)
+        const recovery = facebookPublishRecovery(p, ch) || instagramPublishRecovery(p, ch)
         const legacy = ['draft', 'pending_review', 'rejected'].includes(p.status)
         return <div key={p.id} id={`pub-${p.id}`} className={cx('space-y-2 border-b border-border px-3 py-3 first:rounded-t-lg last:rounded-b-lg last:border-b-0', focus === p.id && 'bg-primary/5')}>
           <div className="flex min-w-0 items-center gap-3">
@@ -319,7 +325,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
             {jobOf(p.id) ? <Badge tone="primary">{jobOf(p.id)!.state === 'running' ? tr('meta.social_status.publishing') : tr('article.pub_queued')}</Badge> : <Badge tone={statusTone(p.status)}>{tr(`meta.social_status.${p.status}`)}</Badge>}
             {p.status === 'published' && !jobOf(p.id) && ch && (
               <DeleteMenu label={CHANNEL_TYPES[ch.type]?.label ?? ''} busy={busy === 'remove' + p.id} disabled={!!busy}
-                onRemote={() => act('remove' + p.id, () => runLocal('social/social.remove', { post_id: p.id }))}
+                onRemote={instagramApi(ch) ? undefined : () => act('remove' + p.id, () => runLocal('social/social.remove', { post_id: p.id }))}
                 onRecord={() => act('remove' + p.id, async () => {
                   // 插件的 purge 不删「已发布」的（怕平台上还挂着、这里查不到）；用户明确选了只删记录，先标成已删除再清
                   await dbPatch('social_posts', p.id, { status: 'removed', removed_at: new Date().toISOString() })
@@ -333,6 +339,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
           <JobLine job={jobOf(p.id)} />
           <FacebookComments post={p} channel={ch} />
           {!jobOf(p.id) && p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
+          {!jobOf(p.id) && <InstagramPublishRecovery post={p} channel={ch} disabled={!!busy} onAction={(input) => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', ...input }])} />}
           {!jobOf(p.id) && <FacebookPublishRecovery post={p} channel={ch} disabled={!!busy} onAction={(input) => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', ...input }])} />}
           {/* 已经从平台删掉的：留着记录能看到删过，不要了就删记录 */}
           {p.status === 'removed' && !jobOf(p.id) && <div className="flex justify-end"><Button fn="social/social.purge" size="sm" variant="ghost" className="text-muted-foreground" disabled={!!busy} onClick={() => act('purge' + p.id, () => runLocal('social/social.purge', { post_id: p.id }))}><Trash2 />{tr('article.delete_record')}</Button></div>}
@@ -340,7 +347,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
             {!recovery && (p.status === 'failed' || p.status === 'approved' || p.status === 'scheduled') && <Button size="sm" variant="outline" fn="social/social.publish" feedback={false} onClick={() => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', post_id: p.id }])}><Send />{p.status === 'failed' ? tr('article.retry') : tr('social.publish_now')}</Button>}
             {p.status === 'scheduled' && !recovery && <SchedulePopover size="sm" current={p.scheduled_at} onSchedule={(iso) => dbPatch('social_posts', p.id, { status: 'scheduled', scheduled_at: iso }).then(onChanged)} onUnschedule={() => dbPatch('social_posts', p.id, { status: 'approved', scheduled_at: '' }).then(onChanged)} />}
             {p.status === 'publishing' && <Button size="sm" variant="outline" disabled={!!busy} onClick={() => act('stuck' + p.id, () => dbPatch('social_posts', p.id, { status: 'failed', error: tr('social.stuck_error') }))}>{tr('social.mark_failed')}</Button>}
-            {p.status !== 'publishing' && <Button fn="social/social.purge" size="sm" variant="ghost" className="ml-auto text-muted-foreground" disabled={!!busy} onClick={() => act('purge' + p.id, () => runLocal('social/social.purge', { post_id: p.id }))}><Trash2 />{tr('article.delete_record')}</Button>}
+            {p.status !== 'publishing' && !recovery && <Button fn="social/social.purge" size="sm" variant="ghost" className="ml-auto text-muted-foreground" disabled={!!busy} onClick={() => act('purge' + p.id, () => runLocal('social/social.purge', { post_id: p.id }))}><Trash2 />{tr('article.delete_record')}</Button>}
           </div>}
         </div>
       })}</div>}

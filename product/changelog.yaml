@@ -1,3 +1,6 @@
+- version: next
+  zh: "账号管理支持 Instagram 官方 API 连接、授权检测和口令更新；内容中心可发单张 JPEG，发布异常时先核对结果，避免重复发帖。"
+  en: "Manage Instagram API connections and credentials, check authorization, and publish single JPEG images from the content center. Uncertain attempts offer result checks to avoid duplicate posts."
 - version: 0.21.0
   zh: "与外贸助手共用一套代码：写网站文章会查重，周报多了网站检查和关键词；增长机会的函数改名为 campaigns.*。"
   en: "Now shares one codebase with the trade template: website articles are checked for duplicates, and weekly reports add site audits and keywords. Opportunity functions are renamed to campaigns.*."
