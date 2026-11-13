@@ -1,3 +1,6 @@
+- version: 0.22.0
+  zh: "新增 90 天增长计划：AI 定目标、排每周要做的事，第 30/60/90 天对着谷歌数据检查效果；还有关键词地图和外链记录。"
+  en: "New 90-day growth plan: AI sets targets and weekly tasks, with day 30/60/90 checks against Google data; plus a keyword map and backlink tracking."
 - version: 0.21.0
   zh: "与外贸助手共用一套代码：写网站文章会查重，周报多了网站检查和关键词；增长机会的函数改名为 campaigns.*。"
   en: "Now shares one codebase with the trade template: website articles are checked for duplicates, and weekly reports add site audits and keywords. Opportunity functions are renamed to campaigns.*."
