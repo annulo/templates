@@ -1,3 +1,6 @@
+- version: 0.23.1
+  zh: "关键词地图里没页面的主题能直接转成选题，不用再去关键词页。"
+  en: "Topics without a page can now be turned into content topics right from the keyword map."
 - version: 0.23.0
   zh: "增长计划每周的事能自动判断做完了没有，AI 做完也会自己标；首页加「今天要做的」卡片，后台换成灰底白卡片。"
   en: "Growth plan tasks now mark themselves done from your data, or by AI when it finishes them; the home page adds a Today card, and the dashboard gets a cleaner card layout."
