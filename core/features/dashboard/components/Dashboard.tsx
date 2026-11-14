@@ -29,10 +29,10 @@ type Summary = {
 
 // 每张卡片：图标、点了去哪、没连上时去哪连
 const CARDS: { key: CardKey; icon: ComponentType<{ className?: string }>; go: [View, Record<string, string>?]; connect: [View, Record<string, string>?]; suffix?: string }[] = [
+  { key: 'leads', icon: MessagesSquare, go: ['leads'], connect: ['channels'] },
   { key: 'visitors', icon: Users, go: ['site'], connect: ['channels'] },
   { key: 'clicks', icon: MousePointerClick, go: ['search'], connect: ['search'] },
   { key: 'geo', icon: Radar, go: ['geo'], connect: ['geo'], suffix: '/100' },
-  { key: 'leads', icon: MessagesSquare, go: ['leads'], connect: ['channels'] },
   { key: 'pipeline', icon: Kanban, go: ['leads', { mode: 'board' }], connect: ['leads'] },
   { key: 'social', icon: Heart, go: ['social'], connect: ['channels'] },
 ]
@@ -83,7 +83,8 @@ export default function Dashboard({ ctx }: { ctx: Ctx }) {
       </div>
       {error && <Notice tone="error">{error}</Notice>}
 
-      <div className="grid grid-cols-2 gap-3 @min-[480px]/overview:grid-cols-3 @min-[680px]/overview:grid-cols-6">
+      {/* 六个指标拼成一条：一张卡片、格子之间一条细线（gap-px 露出底下的边框色）；询盘是外贸最看重的，放第一格、淡绿底 */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border @min-[480px]/overview:grid-cols-3 @min-[680px]/overview:grid-cols-6">
         {CARDS.map((c) => (
           <StatCard key={c.key} meta={c} card={data?.cards[c.key]} onGo={(target) => ctx.go(target[0], target[1])} />
         ))}
@@ -172,20 +173,20 @@ function StatCard({ meta, card, onGo }: { meta: (typeof CARDS)[number]; card?: C
       type="button"
       onClick={() => onGo(none ? meta.connect : meta.go)}
       title={card?.error}
-      className="flex min-w-0 cursor-pointer flex-col rounded-xl border border-border bg-background px-3.5 py-3 text-left transition-colors hover:border-primary/40"
+      className={cx('flex min-w-0 cursor-pointer flex-col px-4 py-3.5 text-left transition-colors', meta.key === 'leads' ? 'bg-gradient-to-b from-emerald-50 to-background hover:from-emerald-100/70 dark:from-emerald-500/10' : 'bg-background hover:bg-muted/40')}
     >
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <Icon className="size-3.5 shrink-0" />
         <span className="truncate">{b('c_' + meta.key)}</span>
       </span>
       {!card ? (
-        <Skeleton className="mt-2 h-7 w-16" />
+        <Skeleton className="mt-2.5 h-7 w-16" />
       ) : none ? (
         <span className="mt-2 text-sm font-medium text-primary-text">{card.status === 'error' ? b('c_error') : b('c_connect_' + meta.key)}</span>
       ) : (
         <>
-          <span className="mt-1.5 flex items-baseline gap-1">
-            <span className="text-2xl leading-none font-semibold tracking-tight tabular-nums">{fmtNum(card.cur ?? 0)}</span>
+          <span className="mt-2 flex items-baseline gap-1">
+            <span className="text-[26px] leading-none font-semibold tracking-tight tabular-nums">{fmtNum(card.cur ?? 0)}</span>
             {meta.suffix && <span className="text-xs text-muted-foreground">{meta.suffix}</span>}
           </span>
           <span className="mt-1 flex h-4 min-w-0 items-center gap-1 text-[11px] tabular-nums">

@@ -715,7 +715,12 @@
     "metric_short_comments": "评论",
     "trend_label": "累计{m}的走势",
     "trend_one_day": "每天的数据从 {day} 开始记，再采集几天就能看到走势。",
-    "trend_none": "还没有每天的数据，采集后这里显示走势。"
+    "trend_none": "还没有每天的数据，采集后这里显示走势。",
+    "group_attention": "需要你处理",
+    "group_progress": "进行中",
+    "group_published": "已发布",
+    "group_archived": "已归档",
+    "group_other": "其他"
   },
   "content": {
     "ai_topic_line": "这次写的主题：{topic}",
@@ -1104,7 +1109,11 @@
     "daily_title": "今天要做的",
     "daily_empty": "今天没有要处理的事。可以去写一篇文章，或者看看谷歌排名。",
     "daily_empty_setup": "起步配置可以按需完成或跳过；有需要处理的事项时，会显示在这里。",
-    "dismiss": "忽略"
+    "dismiss": "忽略",
+    "daily_count": "{n} 件",
+    "daily_minutes": "约 {n} 分钟",
+    "show_all": "全部 {n} 件",
+    "daily_title_short": "今天要做的事"
   },
   "products": {
     "title": "产品",

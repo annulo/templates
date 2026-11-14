@@ -4,18 +4,67 @@
   "json_schema": {
     "type": "object",
     "properties": {
-      "plan_id": { "type": "string", "description": "属于哪份计划（growth_plans）" },
-      "phase": { "type": "number", "description": "第几阶段 1 / 2 / 3" },
-      "week": { "type": "number", "description": "第几周 1~13" },
-      "area": { "type": "string", "description": "keywords 关键词 / competitors 竞品 / site 网站 / content 内容 / links 外链和社媒 / data 数据 / leads 询盘" },
-      "title": { "type": "string", "description": "要做什么（一句话）" },
-      "why": { "type": "string", "description": "为什么这周做它" },
-      "action": { "type": "string", "description": "动作 JSON：{kind: go, view, params} 去哪个页面 / {kind: task, task, input} 交给助手的任务" },
-      "check": { "type": "string", "description": "自动判断做完的条件 JSON：{ metric, gte, delta? }，delta 为 true 时按比基线多了多少算；没有就手动标" },
-      "status": { "type": "string", "description": "空 待做 / done 做完了 / skipped 不做了" },
-      "done_at": { "type": "string", "description": "做完的时间 ISO8601" },
-      "created_at": { "type": "string", "description": "创建时间 ISO8601" }
+      "plan_id": {
+        "type": "string",
+        "description": "属于哪份计划（growth_plans）"
+      },
+      "phase": {
+        "type": "number",
+        "description": "第几阶段 1 / 2 / 3"
+      },
+      "week": {
+        "type": "number",
+        "description": "第几周 1~13"
+      },
+      "area": {
+        "type": "string",
+        "description": "keywords 关键词 / competitors 竞品 / site 网站 / content 内容 / links 外链和社媒 / data 数据 / leads 询盘"
+      },
+      "title": {
+        "type": "string",
+        "description": "要做什么（一句话）"
+      },
+      "why": {
+        "type": "string",
+        "description": "为什么这周做它"
+      },
+      "action": {
+        "type": "string",
+        "description": "动作 JSON：{kind: go, view, params} 去哪个页面 / {kind: task, task, input} 交给助手的任务"
+      },
+      "check": {
+        "type": "string",
+        "description": "自动判断做完的条件 JSON：{ metric, gte, delta? }，delta 为 true 时按比基线多了多少算；没有就手动标"
+      },
+      "status": {
+        "type": "string",
+        "description": "空 待做 / done 做完了 / skipped 不做了"
+      },
+      "done_at": {
+        "type": "string",
+        "description": "做完的时间 ISO8601"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "创建时间 ISO8601"
+      },
+      "done_by": {
+        "type": "string",
+        "description": "谁标的做完：auto 按数据自动判断 / ai 助手做完对应的事标的 / user 用户在页面上点的"
+      },
+      "done_note": {
+        "type": "string",
+        "description": "做完的依据（自动判断的数据、助手做了什么），页面上显示在标题下面"
+      },
+      "auto_off": {
+        "type": "boolean",
+        "description": "用户撤销过自动判断：以后不再自动标这一条"
+      }
     },
-    "required": ["plan_id", "week", "title"]
+    "required": [
+      "plan_id",
+      "week",
+      "title"
+    ]
   }
 }

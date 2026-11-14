@@ -636,7 +636,7 @@ export function ArticleDetail({ ctx, a, all, posts, pubs, focus, displayStatus, 
 
   return (
     <div className="space-y-5">
-      <div ref={headerRef} className="sticky -top-4 -mx-4 -mt-4 px-4 md:-mx-6 md:px-6 z-20 border-b border-border bg-background py-3">
+      <div ref={headerRef} className="sticky -top-4 -mx-4 -mt-4 px-4 md:-mx-6 md:px-6 z-20 border-b border-border bg-[var(--page-bg,var(--background))] py-3">
         {/* 左边的箭头回列表（顶栏面包屑的「内容中心」也行）；右边是状态和操作。外面这条的 -mt-4 抵掉滚动区的上内边距 */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">

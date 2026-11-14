@@ -60,7 +60,7 @@
     "later": "之后几周（{n} 周）",
     "go": "去做",
     "done": "做完了",
-    "auto_done": "已达成",
+    "auto_done": "自动判断做完",
     "skipped": "不做了",
     "mark_done": "做完了",
     "skip": "不做",
@@ -139,6 +139,12 @@
     "lf_target_hint": "不填就是首页 {site}",
     "lf_note": "备注",
     "map_page_pos": "页面平均 {n}",
-    "map_page_pos_hint": "这个页面所有搜索词的平均排名，不只是这个主题的词"
+    "map_page_pos_hint": "这个页面所有搜索词的平均排名，不只是这个主题的词",
+    "ai_done": "AI 做完",
+    "carried": "第 {n} 周没做完",
+    "past": "之前几周做完的 {n} 件",
+    "more": "更多",
+    "undo_auto": "判断错了，撤销",
+    "auto_hint": "做了会按数据自动标上，AI 做的它自己标"
   }
 }

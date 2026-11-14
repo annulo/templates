@@ -153,3 +153,46 @@ test('关键词地图：按主题走到哪一步，询盘按落地页算', () =>
   assert.equal(m.rows[0].cluster, 'sofa') // 走得最远的在前
   assert.equal(plan.compute(ctx).clusters_live, 1)
 })
+
+test('自动判断做完：按去的页面看这周的数据，存下依据；撤销后不再自动标；没做完的挪到本周', () => {
+  const { ctx, tables } = fixture({ channels: [{ id: 'c1', type: 'creght_site' }], site_issues: [{ id: 'i1', status: 'open', severity: 'high' }] })
+  plan.saveDraft(draft({ items: [
+    { week: 1, title: '挖词并筛选', action: { kind: 'go', view: 'search', params: { tab: 'keywords' } } },
+    { week: 1, title: '修严重问题', action: { kind: 'go', view: 'audit' } },
+    { week: 1, title: '发 2 篇文章', action: { kind: 'go', view: 'website-content' } },
+    { week: 1, title: '看一遍公司资料', action: { kind: 'go', view: 'company' } },
+    { week: 1, title: '写竞对总览', action: { kind: 'task', task: 'competitor-overview', input: {} } },
+  ] }), ctx)
+  plan.activate({ level: 'normal' }, ctx)
+  let g = plan.get({}, ctx)
+  assert.equal(g.items.filter((i) => i.status).length, 0)
+
+  const now = new Date().toISOString()
+  tables.keywords = [{ id: 'k1', keyword: 'sofa', status: 'idea', reviewed_at: now }]
+  tables.site_issues[0].status = 'fixed'; tables.site_issues[0].updated_at = now
+  tables.publications = [{ article_id: 'a1', status: 'published', published_at: now }]
+  g = plan.get({}, ctx)
+  const by = Object.fromEntries(g.items.map((i) => [i.title, i]))
+  assert.equal(by['挖词并筛选'].status, 'done')
+  assert.equal(by['挖词并筛选'].done_by, 'auto')
+  assert.match(by['挖词并筛选'].done_note, /筛了 1 个词/)
+  assert.equal(by['修严重问题'].status, 'done')
+  assert.equal(by['发 2 篇文章'].status, '') // 要 2 篇，只发了 1 篇
+  assert.equal(by['看一遍公司资料'].status, '') // 判断不了，手动标
+  // 存进表了：数据再变也不退回去
+  tables.keywords = []
+  assert.equal(plan.get({}, ctx).items.find((i) => i.title === '挖词并筛选').status, 'done')
+  // 撤销自动判断：不再自动标
+  plan.mark({ id: by['挖词并筛选'].id, status: '' }, ctx)
+  tables.keywords = [{ id: 'k2', keyword: 'x', reviewed_at: now }]
+  assert.equal(plan.get({}, ctx).items.find((i) => i.title === '挖词并筛选').status, '')
+  // 助手标的
+  plan.mark({ id: by['写竞对总览'].id, status: 'done', by: 'ai', note: '写了 6 家的竞对总览' }, ctx)
+  const ai = plan.get({}, ctx).items.find((i) => i.title === '写竞对总览')
+  assert.deepEqual([ai.status, ai.done_by, ai.done_note], ['done', 'ai', '写了 6 家的竞对总览'])
+  // 到了第 2 周：第 1 周没做完的挪进来
+  tables.growth_plans[0].start_date = day(8)
+  const w = plan.thisWeek({}, ctx)
+  assert.equal(w.week, 2)
+  assert.ok(w.items.some((i) => i.title === '看一遍公司资料' && i.carried))
+})

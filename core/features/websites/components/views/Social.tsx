@@ -187,7 +187,7 @@ export default function Social({ ctx, params, setParam, title, hideTabs = false,
       </> : selected ? <>
         {/* 账号和时间段粘在顶部，往下看帖子时也能随时换。-top-4 和 -mx 抵掉滚动区（pages/Index.tsx）的内边距，下面的内容不会从上方和两边漏出来。
             -mt-6 抵掉和页签之间的 space-y-6：上下都只剩 py-3，文字到页签线和到自己底线一样远 */}
-        <div className="sticky -top-4 -mx-4 -mt-6 px-4 md:-mx-6 md:px-6 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background py-3">
+        <div className="sticky -top-4 -mx-4 -mt-6 px-4 md:-mx-6 md:px-6 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-[var(--page-bg,var(--background))] py-3">
           <Select value={selected.id} onChange={(v) => setParam('account', v)} ariaLabel={tr('social.account')} title={tr('social.account')} variant="inline" options={accounts.map((a) => { const I = CHANNEL_TYPES[a.type]?.icon; return { value: a.id, label: a.name, sub: platformOf(a)?.label, icon: I ? <I size={14} /> : undefined } })} />
           <RangeToggle value={days} onChange={setDays} options={[7, 30, 90].map((d) => ({ value: d, label: tr('common.last_days', { n: d }) }))} />
         </div>

@@ -43,7 +43,8 @@ export default function GrowthDashboard({ ctx, days }: { ctx: Ctx; days: number 
   const socialLine = social.daily?.[metric];
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+      {/* 六个指标拼成一条：一张卡片、格子之间一条细线（gap-px 露出底下的边框色），数字是这一块的主角 */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-3 xl:grid-cols-6">
         <Kpi label={d("pv")} value={site.data?.pv} delta={site.data?.delta} spark={site.data?.trend.map((t) => t.pv)} loading={site.loading} onClick={() => ctx.go("site")} />
         <Kpi label={d("uv")} value={site.data?.uv} spark={site.data?.trend.map((t) => t.uv)} color="var(--series-2)" loading={site.loading} onClick={() => ctx.go("site")} />
         <Kpi label={d("views")} value={social.totals?.views} signed spark={social.daily?.views.values} loading={social.loading} onClick={() => ctx.go("social-metrics")} />
@@ -362,13 +363,13 @@ const signed = (v: number | null) => (v == null ? "—" : (v > 0 ? "+" : "") + f
 function Kpi({ label, value, delta, spark, color = "var(--series-1)", signed: sign, loading, onClick }: { label: string; value?: number | null; delta?: number | null; spark?: number[]; color?: string; signed?: boolean; loading?: boolean; onClick: () => void }) {
   const up = delta != null && delta > 0;
   return (
-    <button type="button" onClick={onClick} className="rounded-xl border border-border bg-background px-3 py-2.5 text-left transition-colors hover:border-primary/40">
-      <div className="truncate text-[11px] text-muted-foreground">{label}</div>
+    <button type="button" onClick={onClick} className="cursor-pointer bg-background px-4 py-3.5 text-left transition-colors hover:bg-muted/40">
+      <div className="truncate text-xs font-medium text-muted-foreground">{label}</div>
       {loading ? (
-        <Skeleton className="mt-1 h-6 w-20" />
+        <Skeleton className="mt-2 h-7 w-20" />
       ) : (
-        <div className="mt-0.5 flex items-baseline gap-2">
-          <span className="text-xl font-semibold tracking-tight tabular-nums">{value == null ? "—" : sign ? signed(value) : fmtNum(value)}</span>
+        <div className="mt-1.5 flex items-baseline gap-2">
+          <span className="text-[26px] leading-none font-semibold tracking-tight tabular-nums">{value == null ? "—" : sign ? signed(value) : fmtNum(value)}</span>
           {delta != null && Number.isFinite(delta) && delta !== 0 && (
             <span className={cx("inline-flex items-center text-xs font-medium tabular-nums", up ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
               {up ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
@@ -384,12 +385,12 @@ function Kpi({ label, value, delta, spark, color = "var(--series-1)", signed: si
 
 /** 卡片底部的迷你折线：只看走势，不标刻度；不到两个点时留出同样的高度 */
 function Spark({ values, color }: { values?: number[]; color: string }) {
-  if (!values || values.length < 2) return <div className="mt-1.5 h-5" />;
+  if (!values || values.length < 2) return <div className="mt-2.5 h-6" />;
   const max = Math.max(...values), min = Math.min(0, ...values);
   const span = max - min || 1;
   const pts = values.map((v, i) => `${((i / (values.length - 1)) * 100).toFixed(2)},${(28 - ((v - min) / span) * 26 - 1).toFixed(2)}`);
   return (
-    <svg viewBox="0 0 100 28" preserveAspectRatio="none" className="mt-1.5 h-5 w-full" aria-hidden>
+    <svg viewBox="0 0 100 28" preserveAspectRatio="none" className="mt-2.5 h-6 w-full" aria-hidden>
       <polygon points={`0,28 ${pts.join(" ")} 100,28`} fill={color} opacity={0.1} />
       <polyline points={pts.join(" ")} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
     </svg>

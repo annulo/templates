@@ -60,7 +60,7 @@
     "later": "Upcoming weeks ({n})",
     "go": "Do it",
     "done": "Done",
-    "auto_done": "Reached",
+    "auto_done": "Done (detected)",
     "skipped": "Skipped",
     "mark_done": "Done",
     "skip": "Skip",
@@ -139,6 +139,12 @@
     "lf_target_hint": "Leave empty for the homepage {site}",
     "lf_note": "Note",
     "map_page_pos": "Page avg {n}",
-    "map_page_pos_hint": "Average rank of the page across all queries, not just this topic"
+    "map_page_pos_hint": "Average rank of the page across all queries, not just this topic",
+    "ai_done": "Done by AI",
+    "carried": "Left over from week {n}",
+    "past": "Done in earlier weeks ({n})",
+    "more": "More",
+    "undo_auto": "Wrong, undo",
+    "auto_hint": "marked automatically from your data; AI marks what it does"
   }
 }
