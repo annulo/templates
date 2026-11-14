@@ -11,7 +11,7 @@ import { tr } from '../../lib/i18n'
 import type { Ctx, View } from './types'
 
 type Action = { kind: 'go'; view: View; params?: Record<string, string> } | { kind: 'task'; task: string; input?: unknown }
-type Item = { id: string; phase: number; week: number; area: string; title: string; why: string; action: Action | null; status: '' | 'done' | 'skipped'; auto?: boolean; done_by?: '' | 'auto' | 'ai' | 'user'; done_note?: string }
+type Item = { id: string; phase: number; week: number; area: string; title: string; why: string; action: Action | null; status: '' | 'done' | 'skipped'; auto?: boolean; done_by?: '' | 'auto' | 'ai' | 'user'; done_note?: string; done_at?: string; who?: 'you' | 'ai'; scope?: 'week' | 'month' }
 type Progress = { metric: string; tier: 'process' | 'leading' | 'result'; better: 'up' | 'down'; label: string; baseline: number | null; current: number | null; target: number; pct: number | null }
 type Option = { level: 'conservative' | 'normal' | 'aggressive'; note: string; targets: Record<string, number> }
 type Phase = { phase: number; title: string; focus: string; goals: string[] }
@@ -20,6 +20,7 @@ type Plan = {
   id: string; status: 'draft' | 'active' | 'done'; summary: string; start_date: string; start_phase: number; stage_reason: string
   phases: Phase[]; options: Option[]; recommended: string; level: string; targets: Record<string, number>
   baseline: { at?: string; metrics?: Record<string, number | null> }; checkpoints: Checkpoint[]; chat_id?: string
+  weekly: { who: string; title: string; action?: Action }[]
 }
 type Data = {
   plan: Plan | null
@@ -254,29 +255,16 @@ function Summary({ plan, current }: { plan: Plan; current?: number }) {
   )
 }
 
-/** 执行中 / 已结束：进度、目标、检查点、每周的事 */
+/** 执行中 / 已结束：计划看板（照 talizen-research/plan.html）——头部周期和档位、现在最该做的（你 / AI 两栏）、路线图、每周节奏、怎么衡量、已经完成、常用链接 */
 function Active({ ctx, data, plan, onChanged }: { ctx: Ctx; data: Data; plan: Plan; onChanged: () => void }) {
   const pos = data.position
   const day = Math.min(pos?.day ?? 1, 90)
   const due = data.checkpoint_due
+  const week = plan.status === 'done' ? 99 : pos?.week ?? 1
+  const items = data.items ?? []
   return (
-    <div className="space-y-6">
-      <div className="space-y-2 rounded-xl border border-border bg-background p-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div className="text-sm">
-            {plan.status === 'done' ? (
-              <span className="font-semibold">{tr('plan.finished')}</span>
-            ) : (
-              <>
-                <span className="text-2xl font-semibold tabular-nums">{tr('plan.day', { n: day })}</span>
-                <span className="ml-1 text-muted-foreground">/ 90 · {tr('plan.week', { n: pos?.week ?? 1 })} · {tr(`plan.phase_name_${pos?.phase ?? 1}`)}</span>
-              </>
-            )}
-          </div>
-          <span className="text-xs text-muted-foreground">{tr('plan.level_is', { level: tr(`plan.level_${plan.level}`), date: plan.start_date })}</span>
-        </div>
-        <Timeline day={plan.status === 'done' ? 90 : day} checkpoints={plan.checkpoints} />
-      </div>
+    <div className="space-y-8">
+      <BoardHead plan={plan} day={day} week={pos?.week ?? 1} phase={pos?.phase ?? 1} onChanged={onChanged} />
 
       {due && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4">
@@ -288,11 +276,263 @@ function Active({ ctx, data, plan, onChanged }: { ctx: Ctx; data: Data; plan: Pl
         </div>
       )}
 
-      <Targets progress={data.progress ?? []} />
-      <Summary plan={plan} current={plan.status === 'done' ? undefined : pos?.phase} />
+      {plan.status !== 'done' && <NowBoard ctx={ctx} items={items} week={week} onChanged={onChanged} />}
+      <Roadmap ctx={ctx} plan={plan} items={items} week={week} onChanged={onChanged} />
+      {plan.weekly?.length > 0 && <Rhythm ctx={ctx} list={plan.weekly} />}
+      <Measure ctx={ctx} progress={data.progress ?? []} />
       {plan.checkpoints.length > 0 && <Checkpoints list={plan.checkpoints} />}
-      <Weeks ctx={ctx} items={data.items ?? []} currentWeek={plan.status === 'done' ? 99 : pos?.week ?? 1} onChanged={onChanged} />
+      <DoneList items={items} />
+      <Links ctx={ctx} />
     </div>
+  )
+}
+
+const addDays = (date: string, n: number) => {
+  const d = new Date(date + 'T00:00:00')
+  d.setDate(d.getDate() + n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const md = (date: string) => date.slice(5).replace('-', '/')
+
+/** 谁来做的标签：你（橙）/ AI（蓝），和 plan.html 一样 */
+function Who({ who }: { who?: string }) {
+  const ai = who === 'ai'
+  return <span className={cx('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[11px] font-semibold', ai ? 'bg-primary/10 text-primary' : 'bg-amber-500/15 text-amber-700 dark:text-amber-400')}>{tr(ai ? 'plan.who_ai' : 'plan.who_you')}</span>
+}
+
+/** 头部：计划周期、今天第几天、阶段，档位（随时换，只换目标），图例，时间线 */
+function BoardHead({ plan, day, week, phase, onChanged }: { plan: Plan; day: number; week: number; phase: number; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const setLevel = async (level: string) => {
+    if (level === plan.level || busy) return
+    setBusy(true)
+    try { await runLocal('plan.setLevel', { level }); onChanged() } finally { setBusy(false) }
+  }
+  return (
+    <div className="space-y-4 rounded-xl border border-border bg-background p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <div className="text-sm">
+            {plan.status === 'done' ? (
+              <span className="text-lg font-semibold">{tr('plan.finished')}</span>
+            ) : (
+              <>
+                <span className="text-2xl font-semibold tabular-nums">{tr('plan.day', { n: day })}</span>
+                <span className="ml-1 text-muted-foreground">/ 90 · {tr('plan.week', { n: week })} · {plan.phases.find((p) => p.phase === phase)?.title || tr(`plan.phase_name_${phase}`)}</span>
+              </>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{tr('plan.period', { from: plan.start_date, to: addDays(plan.start_date, 89) })}</p>
+        </div>
+        {plan.status !== 'done' && plan.options.length > 0 && (
+          <div className="space-y-1 text-right">
+            <Segmented value={plan.level} onChange={setLevel} options={plan.options.map((o) => ({ value: o.level, label: tr(`plan.level_${o.level}`) + (o.level === plan.recommended ? ' ★' : '') }))} />
+            <p className="text-[11px] text-muted-foreground">{tr('plan.level_hint')}</p>
+          </div>
+        )}
+      </div>
+      {plan.summary && <p className="text-sm leading-relaxed">{plan.summary}</p>}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5"><Who who="you" />{tr('plan.legend_you')}</span>
+        <span className="inline-flex items-center gap-1.5"><Who who="ai" />{tr('plan.legend_ai')}</span>
+      </div>
+      <Timeline day={plan.status === 'done' ? 90 : day} checkpoints={plan.checkpoints} />
+    </div>
+  )
+}
+
+/** 现在最该做的：从本周往后取还没做完的（前几周没做完的排最前），你的最多 5 件、AI 的最多 4 件，两栏各取各的 */
+function NowBoard({ ctx, items, week, onChanged }: { ctx: Ctx; items: Item[]; week: number; onChanged: () => void }) {
+  const open = items.filter((i) => !i.status).sort((a, b) => a.week - b.week)
+  const cols: ['you' | 'ai', number][] = [['you', 5], ['ai', 4]]
+  return (
+    <section className="space-y-3">
+      <h3 className="text-base font-semibold">{tr('plan.now_title')} <span className="ml-1 text-xs font-normal text-muted-foreground">{tr('plan.now_desc')}</span></h3>
+      <div className="grid gap-4 md:grid-cols-2">
+        {cols.map(([who, max]) => {
+          const list = open.filter((i) => (i.who === 'ai' ? 'ai' : 'you') === who).slice(0, max)
+          return (
+            <div key={who} className={cx('rounded-xl border border-border bg-background', who === 'you' ? 'shadow-[inset_3px_0_0_var(--color-amber-500,#f59e0b)]' : 'shadow-[inset_3px_0_0_var(--color-primary)]')}>
+              <div className="px-4 pt-3 pb-1 text-sm font-semibold">{tr(who === 'you' ? 'plan.col_you' : 'plan.col_ai', { n: list.length })}</div>
+              {list.length ? list.map((i) => <Row key={i.id} item={i} ctx={ctx} onChanged={onChanged} readOnly={false} currentWeek={week} compact />) : <p className="px-4 pb-4 text-xs text-muted-foreground">{tr('plan.col_empty')}</p>}
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+/** 路线图：开始阶段按周、后面按月（scope=month），每段一个进度条，当前这段高亮；做完的段收起来 */
+function Roadmap({ ctx, plan, items, week, onChanged }: { ctx: Ctx; plan: Plan; items: Item[]; week: number; onChanged: () => void }) {
+  const [opened, setOpened] = useState<Record<string, boolean>>({})
+  type Seg = { key: string; title: string; from: number; to: number; list: Item[] }
+  const segs: Seg[] = []
+  for (const i of [...items].sort((a, b) => a.week - b.week)) {
+    const month = i.scope === 'month'
+    const key = month ? `m${i.week}` : `w${i.week}`
+    let seg = segs.find((s) => s.key === key)
+    if (!seg) {
+      const phase = plan.phases.find((p) => p.phase === (i.phase || 1))
+      const title = month ? tr('plan.month_n', { n: i.week >= 9 ? 3 : 2 }) : tr('plan.week', { n: i.week })
+      seg = { key, title: phase?.title ? `${title} · ${phase.title}` : title, from: i.week, to: month ? i.week + 3 : i.week, list: [] }
+      segs.push(seg)
+    }
+    seg.list.push(i)
+  }
+  if (!segs.length) return null
+  return (
+    <section className="space-y-3">
+      <h3 className="text-base font-semibold">{tr('plan.roadmap')} <span className="ml-1 text-xs font-normal text-muted-foreground">{tr('plan.roadmap_desc')}</span></h3>
+      {segs.map((sg) => {
+        const n = sg.list.length
+        const d = sg.list.filter((i) => i.status).length
+        const current = week >= sg.from && week <= sg.to
+        const past = week > sg.to
+        const show = opened[sg.key] ?? (!past || d < n)
+        const dates = plan.start_date ? `${md(addDays(plan.start_date, (sg.from - 1) * 7))} – ${md(addDays(plan.start_date, Math.min(sg.to * 7, 90) - 1))}` : ''
+        return (
+          <div key={sg.key} className="space-y-2">
+            <button type="button" onClick={() => setOpened((o) => ({ ...o, [sg.key]: !show }))} className="flex w-full cursor-pointer flex-wrap items-center gap-2 text-left">
+              <span className="text-sm font-semibold">{sg.title}</span>
+              <span className="text-xs text-muted-foreground">{dates}</span>
+              {current && <Badge tone="primary">{tr('plan.now')}</Badge>}
+              <span className="ml-auto flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                <span className="h-1.5 w-24 overflow-hidden rounded-full bg-muted"><span className="block h-full rounded-full bg-emerald-500" style={{ width: `${(d / n) * 100}%` }} /></span>
+                {d}/{n}
+                <ChevronDown className={cx('size-3.5 transition-transform', show && 'rotate-180')} />
+              </span>
+            </button>
+            {show && (
+              <div className={cx('overflow-hidden rounded-xl border bg-background', current ? 'border-primary' : 'border-border')}>
+                {sg.list.map((i) => <Row key={i.id} item={i} ctx={ctx} onChanged={onChanged} readOnly={false} currentWeek={week} />)}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </section>
+  )
+}
+
+/** 每周固定节奏 */
+function Rhythm({ ctx, list }: { ctx: Ctx; list: { who: string; title: string; action?: Action }[] }) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-base font-semibold">{tr('plan.rhythm')} <span className="ml-1 text-xs font-normal text-muted-foreground">{tr('plan.rhythm_desc')}</span></h3>
+      <div className="overflow-hidden rounded-xl border border-border bg-background">
+        {list.map((w, i) => (
+          <div key={i} className="flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0">
+            <Who who={w.who} />
+            <span className="min-w-0 flex-1 text-sm">{w.title}</span>
+            {w.action?.kind === 'go' && <Button size="sm" variant="ghost" feedback={false} onClick={() => ctx.go((w.action as any).view, (w.action as any).params)}>{tr('plan.go')} <ArrowRight /></Button>}
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/** 指标去哪看 */
+const METRIC_VIEW: Record<string, [View, Record<string, string>?]> = {
+  pages_published: ['website-content'], social_published: ['social-content'], keywords_targeting: ['search', { tab: 'keywords' }], competitors_watched: ['competitors'],
+  issues_high_open: ['audit'], pages_with_impressions: ['search'], impressions_28d: ['search'], keywords_top30: ['search', { tab: 'keywords' }], keywords_top10: ['search', { tab: 'keywords' }],
+  geo_visibility: ['geo'], clicks_28d: ['search'], leads_28d: ['leads'], deals_open: ['leads', { mode: 'board' }], clusters_live: ['plan', { tab: 'map' }], backlinks_live: ['plan', { tab: 'links' }],
+}
+
+/** 怎么衡量：每个指标一行，开始时、现在、第 30 天该到（按目标线性算）、90 天目标、去哪看 */
+function Measure({ ctx, progress }: { ctx: Ctx; progress: Progress[] }) {
+  if (!progress.length) return null
+  const rows = [...progress].sort((a, b) => TIERS.indexOf(b.tier) - TIERS.indexOf(a.tier))
+  const at30 = (p: Progress) => (p.baseline == null ? null : p.baseline + (p.target - p.baseline) / 3)
+  return (
+    <section className="space-y-3">
+      <h3 className="text-base font-semibold">{tr('plan.measure')} <span className="ml-1 text-xs font-normal text-muted-foreground">{tr('plan.measure_desc')}</span></h3>
+      <div className="overflow-x-auto rounded-xl border border-border bg-background">
+        <table className="w-full min-w-[620px] text-sm">
+          <thead className="border-b border-border text-left text-xs text-muted-foreground">
+            <tr>
+              <th className="px-4 py-2 font-normal">{tr('plan.m_metric')}</th>
+              <th className="px-3 py-2 text-right font-normal">{tr('plan.m_base')}</th>
+              <th className="px-3 py-2 text-right font-normal">{tr('plan.m_now')}</th>
+              <th className="px-3 py-2 text-right font-normal">{tr('plan.m_30')}</th>
+              <th className="px-3 py-2 text-right font-normal">{tr('plan.m_90')}</th>
+              <th className="px-4 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((p) => {
+              const v = METRIC_VIEW[p.metric]
+              return (
+                <tr key={p.metric} className="border-b border-border last:border-b-0">
+                  <td className="px-4 py-2.5">
+                    <div>{p.label}</div>
+                    <div className="text-[11px] text-muted-foreground">{tr(`plan.tier_${p.tier}`)}</div>
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{fmt(p.baseline)}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums font-semibold">{p.current == null ? <span className="text-xs font-normal text-muted-foreground">{tr('plan.not_connected')}</span> : fmt(p.current)}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{fmt(at30(p))}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{fmt(p.target)}{(p.pct ?? 0) >= 100 && <Check className="ml-1 inline size-3.5 text-emerald-600" />}</td>
+                  <td className="px-4 py-2.5 text-right">{v && <Button size="sm" variant="ghost" feedback={false} onClick={() => ctx.go(v[0], v[1])}>{tr('plan.m_see')}</Button>}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
+/** 已经完成：分析网站做掉的事，加上做完的计划项（最近的在前） */
+function DoneList({ items }: { items: Item[] }) {
+  const [diag, setDiag] = useState<{ key: string; status: string; summary?: string }[]>([])
+  useEffect(() => void runLocal<{ run: { steps: { key: string; status: string; summary?: string }[] } | null }>('diagnosis.get', {}).then((r) => setDiag((r.run?.steps ?? []).filter((s) => s.status === 'done' && s.summary))).catch(() => {}), [])
+  const done = items.filter((i) => i.status === 'done').sort((a, b) => String(b.done_at ?? '').localeCompare(String(a.done_at ?? ''))).slice(0, 12)
+  if (!diag.length && !done.length) return null
+  return (
+    <section className="space-y-3">
+      <h3 className="text-base font-semibold">{tr('plan.done_title')}</h3>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {diag.map((s) => (
+          <div key={s.key} className="rounded-lg border border-border bg-background p-3 text-xs">
+            <div className="font-semibold text-emerald-700 dark:text-emerald-400">✓ {tr(`diagnosis.step_${s.key}`)}</div>
+            <p className="mt-1 text-muted-foreground">{s.summary}</p>
+          </div>
+        ))}
+        {done.map((i) => (
+          <div key={i.id} className="rounded-lg border border-border bg-background p-3 text-xs">
+            <div className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-400">✓ <span className="text-foreground">{i.title}</span></div>
+            {i.done_note && <p className="mt-1 text-muted-foreground">{i.done_note}</p>}
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/** 常用链接：网站、谷歌搜索后台、谷歌分析，和后台里常去的几页 */
+function Links({ ctx }: { ctx: Ctx }) {
+  const site = ctx.channels.find((c) => ['creght_site', 'wordpress', 'website'].includes(c.type))
+  const url = site ? site.live_url || site.preview_url || '' : ''
+  const ext: [string, string][] = [
+    ...(url ? [[tr('plan.link_site'), url] as [string, string]] : []),
+    ['Google Search Console', site?.gsc_property ? `https://search.google.com/search-console?resource_id=${encodeURIComponent(site.gsc_property)}` : 'https://search.google.com/search-console'],
+    ['Google Analytics', 'https://analytics.google.com/'],
+  ]
+  const inner: [string, View, Record<string, string>?][] = [[tr('plan.tab_map'), 'plan', { tab: 'map' }], [tr('plan.tab_links'), 'plan', { tab: 'links' }], [tr('plan.link_audit'), 'audit'], [tr('plan.link_geo'), 'geo']]
+  return (
+    <section className="space-y-3">
+      <h3 className="text-base font-semibold">{tr('plan.links')}</h3>
+      <div className="flex flex-wrap gap-2">
+        {ext.map(([label, href]) => (
+          <a key={label} href={href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-muted/40">{label} ↗</a>
+        ))}
+        {inner.map(([label, v, p]) => (
+          <button key={label} type="button" onClick={() => ctx.go(v, p)} className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-muted/40">{label}</button>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -311,45 +551,6 @@ function Timeline({ day, checkpoints }: { day: number; checkpoints: Checkpoint[]
               {done && <Check className="mr-0.5 inline size-3" />}Day {d}
             </div>
           </div>
-        )
-      })}
-    </div>
-  )
-}
-
-/** 目标：三层分开看，每个指标 基线 → 现在 / 目标 */
-function Targets({ progress }: { progress: Progress[] }) {
-  if (!progress.length) return null
-  return (
-    <div className="grid gap-3 md:grid-cols-3">
-      {TIERS.map((tier) => {
-        const list = progress.filter((p) => p.tier === tier)
-        if (!list.length) return null
-        return (
-          <Panel key={tier} title={tr(`plan.tier_${tier}`)}>
-            <p className="-mt-1 mb-3 text-xs text-muted-foreground">{tr(`plan.tier_${tier}_hint`)}</p>
-            <ul className="space-y-3">
-              {list.map((p) => (
-                <li key={p.metric} className="space-y-1">
-                  <div className="flex items-baseline justify-between gap-2 text-xs">
-                    <span>{p.label}</span>
-                    <span className="tabular-nums">
-                      <span className="text-muted-foreground">{fmt(p.baseline)} → </span>
-                      <span className="font-semibold">{fmt(p.current)}</span>
-                      <span className="text-muted-foreground"> / {fmt(p.target)}</span>
-                    </span>
-                  </div>
-                  {p.current == null ? (
-                    <p className="text-[11px] text-muted-foreground">{tr('plan.not_connected')}</p>
-                  ) : (
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div className={cx('h-full rounded-full', (p.pct ?? 0) >= 100 ? 'bg-emerald-500' : 'bg-primary')} style={{ width: `${p.pct ?? 0}%` }} />
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </Panel>
         )
       })}
     </div>
@@ -463,14 +664,15 @@ function Toggle({ open, onClick, children }: { open: boolean; onClick: () => voi
   )
 }
 
-function Row({ item: i, ctx, onChanged, readOnly, currentWeek }: { item: Item; ctx?: Ctx; onChanged: () => void; readOnly: boolean; currentWeek: number }) {
+function Row({ item: i, ctx, onChanged, readOnly, currentWeek, compact = false }: { item: Item; ctx?: Ctx; onChanged: () => void; readOnly: boolean; currentWeek: number; compact?: boolean }) {
   const a = i.action
-  const carried = !readOnly && !i.status && i.week < currentWeek
+  const carried = !readOnly && !i.status && (i.scope === 'month' ? i.week + 3 : i.week) < currentWeek
   return (
     <div className={cx('flex flex-wrap items-start gap-3 border-b border-border px-4 py-3 last:border-b-0', i.status && 'opacity-60')}>
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          {i.area && <Badge>{tr(`plan.area_${i.area}`)}</Badge>}
+          {!compact && <Who who={i.who} />}
+          {i.area && !compact && <Badge>{tr(`plan.area_${i.area}`)}</Badge>}
           <span className={cx('text-sm font-medium [overflow-wrap:anywhere]', i.status === 'skipped' && 'line-through')}>{i.title}</span>
           {i.status === 'done' && <Badge tone="ok">{tr(i.done_by === 'auto' ? 'plan.auto_done' : i.done_by === 'ai' ? 'plan.ai_done' : 'plan.done')}</Badge>}
           {i.status === 'skipped' && <Badge>{tr('plan.skipped')}</Badge>}
@@ -557,7 +759,8 @@ export function PlanCard({ ctx }: { ctx: Ctx }) {
     )
   const pos = data.position
   const left = (data.items ?? []).filter((i) => !i.status && i.week <= (pos?.week ?? 0)).length
-  const key = (data.progress ?? []).filter((p) => p.tier !== 'process').slice(0, 3)
+  // 现在最该做的 3 件（和看板同一个顺序：前几周没做完的在前）
+  const next = (data.items ?? []).filter((i) => !i.status).sort((a, b) => a.week - b.week).slice(0, 3)
   return (
     <button type="button" onClick={() => ctx.go('plan')} className="block w-full cursor-pointer space-y-3 rounded-xl border border-border bg-background p-4 text-left hover:bg-muted/30">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -574,15 +777,15 @@ export function PlanCard({ ctx }: { ctx: Ctx }) {
       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-primary" style={{ width: `${(Math.min(pos?.day ?? 0, 90) / 90) * 100}%` }} />
       </div>
-      {key.length > 0 && (
-        <div className="grid gap-2 text-xs sm:grid-cols-3">
-          {key.map((p) => (
-            <div key={p.metric} className="flex justify-between gap-2">
-              <span className="text-muted-foreground">{p.label}</span>
-              <span className="tabular-nums"><span className="font-semibold">{fmt(p.current)}</span><span className="text-muted-foreground"> / {fmt(p.target)}</span></span>
-            </div>
+      {plan.status !== 'done' && next.length > 0 && (
+        <ul className="space-y-1.5">
+          {next.map((i) => (
+            <li key={i.id} className="flex items-center gap-2 text-xs">
+              <Who who={i.who} />
+              <span className="min-w-0 flex-1 truncate">{i.title}</span>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </button>
   )
