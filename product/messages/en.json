@@ -1691,7 +1691,7 @@
     "later": "Upcoming weeks ({n})",
     "go": "Do it",
     "done": "Done",
-    "auto_done": "Reached",
+    "auto_done": "Done (detected)",
     "skipped": "Skipped",
     "mark_done": "Done",
     "skip": "Skip",
@@ -1770,7 +1770,13 @@
     "lf_target_hint": "Leave empty for the homepage {site}",
     "lf_note": "Note",
     "map_page_pos": "Page avg {n}",
-    "map_page_pos_hint": "Average rank of the page across all queries, not just this topic"
+    "map_page_pos_hint": "Average rank of the page across all queries, not just this topic",
+    "ai_done": "Done by AI",
+    "carried": "Left over from week {n}",
+    "past": "Done in earlier weeks ({n})",
+    "more": "More",
+    "undo_auto": "Wrong, undo",
+    "auto_hint": "marked automatically from your data; AI marks what it does"
   },
   "campaigns": {
     "template_name": "Product growth assistant",
@@ -2720,6 +2726,11 @@
     "trend_label": "Cumulative {m} over time",
     "trend_one_day": "Daily data starts on {day}. The trend appears after a few more days of collection.",
     "trend_none": "No daily data yet. The trend appears here after collection.",
+    "group_attention": "Needs you",
+    "group_progress": "In progress",
+    "group_published": "Published",
+    "group_archived": "Archived",
+    "group_other": "Other",
     "website_content": "Website content",
     "social_content": "Social content",
     "website_desc": "Manage topics, plans, drafts and live content by destination page.",
@@ -2942,7 +2953,11 @@
     "daily_title": "To do today",
     "daily_empty": "Nothing to handle today. Write an article or check your Google rankings.",
     "daily_empty_setup": "Complete or skip setup as needed. Work that needs attention will appear here.",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "daily_count": "{n} to do",
+    "daily_minutes": "about {n} min",
+    "show_all": "All {n}",
+    "daily_title_short": "Today's to-dos"
   },
   "products": {
     "title": "Products",

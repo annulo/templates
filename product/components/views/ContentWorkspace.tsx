@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { ArrowUpRight, ClipboardList, Link2, Loader, NotebookPen, Plus, Sparkles } from 'lucide-react'
+import { ArrowUpRight, ClipboardList, Link2, Loader, NotebookPen, Plus, Search as SearchIcon, Sparkles } from 'lucide-react'
 import { ArticleDetail, RowMore, removeArticle } from './Content'
 import { WritingBriefDialog } from '../ContentEvidence'
 import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
@@ -18,6 +18,16 @@ import { CONTENT_ORIGINS, contentOrigins, type ContentOrigin } from '../../lib/o
 import type { Ctx } from './types'
 
 export const w = (key: string, vars?: Record<string, unknown>) => tr('workspace.' + key, vars)
+
+/** 页签：下划线样式，选中的加粗、底下一条深色线 */
+const tabCls = (on: boolean) => cx('-mb-px cursor-pointer border-b-2 pb-2.5 text-sm transition-colors', on ? 'border-foreground font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')
+
+// 列表按状态分组：要用户处理的在最上面，然后是进行中、已发布、已归档。筛了某个状态或按数据排序时不分组
+const GROUPS: [string, ContentStage[]][] = [['attention', ['draft', 'ready', 'verify', 'blocked']], ['progress', ['planned', 'creating', 'scheduled']], ['published', ['published']], ['archived', ['archived']]]
+function groupRows(rows: ContentEntry[], grouped: boolean): { key: string; rows: ContentEntry[] }[] {
+  if (!grouped) return [{ key: 'all', rows }]
+  return GROUPS.map(([key, stages]) => ({ key, rows: rows.filter(e => stages.includes(e.stage)) })).concat([{ key: 'other', rows: rows.filter(e => !GROUPS.some(([, st]) => st.includes(e.stage))) }])
+}
 const PAGE = 50
 const stages: ContentStage[] = ['planned', 'creating', 'draft', 'ready', 'scheduled', 'published', 'verify', 'blocked', 'archived']
 /**
@@ -91,6 +101,7 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
     && (!params.account || entryAccountIds(e, data!, workspace).includes(params.account))
     && (!query.trim() || [e.title, e.topic?.angle, e.plan?.notes, e.article?.body, e.post?.body].join(' ').toLowerCase().includes(query.trim().toLowerCase())))
   if (sort !== 'recent') rows.sort((a, b) => score(b) - score(a))
+  const visible = new Set(groupRows(rows, stage === 'all' && sort === 'recent').flatMap(g => g.rows).slice(0, shown).map(e => e.key))
   const dueReviews = marketing && workspace === 'social' && data ? (data.reviews || []).filter((r: any) => r.status === 'pending' && r.due_at <= new Date().toISOString() && reviewWorkspace(r, data) === 'social').length : 0
   const reviewing = !!marketing && workspace === 'social' && params.ownership === 'reviews'
   const openNew = (topic?: any) => {
@@ -173,31 +184,40 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
       {error && <Notice tone="error">{error}</Notice>}
       {!data && !error && <Skeleton className="h-40 rounded-xl" />}
       {data && <>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setParam('ownership', '')} className={cx('cursor-pointer rounded-lg px-3 py-2 text-sm', !params.ownership || params.ownership === 'owned' ? 'bg-accent font-medium' : 'text-muted-foreground hover:bg-accent')}>{w('owned_count', { n: owned.length })}</button>
-          {!!unassigned.length && <button type="button" onClick={() => setParam('ownership', 'unassigned')} className={cx('cursor-pointer rounded-lg px-3 py-2 text-sm', params.ownership === 'unassigned' ? 'bg-accent font-medium' : 'text-muted-foreground hover:bg-accent')}>{w('unassigned_count', { n: unassigned.length })}</button>}
-          {!!platform.length && <button type="button" onClick={() => setParam('ownership', 'platform')} className={cx('cursor-pointer rounded-lg px-3 py-2 text-sm', params.ownership === 'platform' ? 'bg-accent font-medium' : 'text-muted-foreground hover:bg-accent')}>{w('platform_count', { n: platform.length })}</button>}
-          {marketing && workspace === 'social' && <button type="button" onClick={() => setParam('ownership', 'reviews')} className={cx('cursor-pointer rounded-lg px-3 py-2 text-sm', reviewing ? 'bg-accent font-medium' : 'text-muted-foreground hover:bg-accent')}>
+        <div role="tablist" className="flex flex-wrap items-center gap-x-6 border-b border-border">
+          <button type="button" role="tab" aria-selected={!params.ownership || params.ownership === 'owned'} onClick={() => setParam('ownership', '')} className={tabCls(!params.ownership || params.ownership === 'owned')}>{w('owned_count', { n: owned.length })}</button>
+          {!!unassigned.length && <button type="button" role="tab" aria-selected={params.ownership === 'unassigned'} onClick={() => setParam('ownership', 'unassigned')} className={tabCls(params.ownership === 'unassigned')}>{w('unassigned_count', { n: unassigned.length })}</button>}
+          {!!platform.length && <button type="button" role="tab" aria-selected={params.ownership === 'platform'} onClick={() => setParam('ownership', 'platform')} className={tabCls(params.ownership === 'platform')}>{w('platform_count', { n: platform.length })}</button>}
+          {marketing && workspace === 'social' && <button type="button" role="tab" aria-selected={reviewing} onClick={() => setParam('ownership', 'reviews')} className={tabCls(reviewing)}>
             {w('reviews_tab')}{!!dueReviews && <span className="ml-1.5 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary-text">{dueReviews}</span>}</button>}
         </div>
         {reviewing ? marketing!.Reviews({}) : <>
         {params.ownership === 'unassigned' && <Notice>{w('unassigned_note')}</Notice>}
         {params.ownership === 'platform' && <Notice>{w('platform_note')}</Notice>}
-        <div className={cx('grid grid-cols-1 gap-3', workspace === 'social' ? 'sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_150px_160px_160px_150px]' : 'sm:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_160px_176px_176px]')}>
-          <input type="search" aria-label={w('search')} placeholder={w('search')} value={query} onChange={e => setQuery(e.target.value)} className={cx(inputCls, 'min-w-0 xl:col-span-1', workspace === 'social' ? 'sm:col-span-2' : 'sm:col-span-3')} />
-          <Select ariaLabel={w('stage_filter')} value={stage} onChange={v => setParam('stage', v)} options={[
+        {/* 搜索占满剩下的宽度，筛选是后面一排紧凑的按钮（显示当前选的值） */}
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="relative min-w-48 flex-1">
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input type="search" aria-label={w('search')} placeholder={w('search')} value={query} onChange={e => setQuery(e.target.value)} className={cx(inputCls, 'h-8 rounded-lg pl-9')} />
+          </label>
+          <Select variant="inline" className="max-w-52" ariaLabel={w('stage_filter')} value={stage} onChange={v => setParam('stage', v)} options={[
             { value: 'all', label: w('all_stages') }, ...stages.map(s => ({ value: s, label: `${w('stage_' + s)} ${base.filter(e => e.stage === s).length}` }))]} />
-          <Select ariaLabel={w('account_filter')} value={params.account || ''} onChange={v => setParam('account', v)} options={[
+          <Select variant="inline" className="max-w-52" ariaLabel={w('account_filter')} value={params.account || ''} onChange={v => setParam('account', v)} options={[
             { value: '', label: w(workspace === 'website' ? 'all_sites' : 'all_accounts') }, ...accounts.map(c => ({ value: c.id, label: c.name }))]} />
-          <Select ariaLabel={tr('origin.filter')} value={origin} onChange={v => setParam('origin', v)} options={[
+          <Select variant="inline" className="max-w-52" ariaLabel={tr('origin.filter')} value={origin} onChange={v => setParam('origin', v)} options={[
             { value: '', label: tr('origin.filter_all') }, ...CONTENT_ORIGINS.map(k => ({ k, n: base.filter(e => origins.get(e.key)?.includes(k)).length })).filter(o => o.n || o.k === origin).map(o => ({ value: o.k, label: `${tr('origin.k_' + o.k)} ${o.n}` }))]} />
-          {workspace === 'social' && <Select ariaLabel={w('sort')} value={sort} onChange={v => setParam('sort', v === 'recent' ? '' : v)} options={[
+          {workspace === 'social' && <Select variant="inline" className="max-w-52" ariaLabel={w('sort')} value={sort} onChange={v => setParam('sort', v === 'recent' ? '' : v)} options={[
             { value: 'recent', label: w('sort_recent') }, { value: 'views', label: w('sort_views') }, { value: 'gain', label: w('sort_gain') }]} />}
         </div>
-        {!rows.length ? <Notice>{w('content_empty')}</Notice> : <div className="divide-y divide-border rounded-xl border border-border bg-background">
-          {rows.slice(0, shown).map(entry => <div key={entry.key} className="flex flex-wrap items-start gap-3 px-4 py-4">
+        {!rows.length ? <Notice>{w('content_empty')}</Notice> : <>
+          {groupRows(rows, stage === 'all' && sort === 'recent').map(group => {
+            const list = group.rows.filter(e => visible.has(e.key))
+            return !!list.length && <section key={group.key} className="space-y-2">
+              {group.key !== 'all' && <h3 className="flex items-center gap-1.5 px-0.5 text-xs font-semibold text-muted-foreground">{w('group_' + group.key)}<span className="font-normal tabular-nums">{group.rows.length}</span></h3>}
+              <div className="divide-y divide-border rounded-xl border border-border bg-background">
+                {list.map(entry => <div key={entry.key} className="flex flex-wrap items-start gap-3 px-4 py-4">
             <div className="min-w-0 flex-1">
-              <button type="button" className="cursor-pointer text-left text-sm font-medium hover:text-primary-text" onClick={() => openEntry(entry)}>{entry.title || tr('versions.untitled')}</button>
+              <button type="button" className="cursor-pointer text-left text-sm font-semibold hover:text-primary-text" onClick={() => openEntry(entry)}>{entry.title || tr('versions.untitled')}</button>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <TypeBadge type={entry.article?.type || entry.topic?.content_type || entry.plan?.content_type || (entry.post?.video ? 'video' : workspace === 'website' ? 'article' : 'post')} />
                 <span>{destination(entry)}</span>
@@ -223,8 +243,11 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
                 {...(entry.article ? { onRewrite: () => setRewrite(entry.article), onCopy: () => copy(entry.article), onDelete: async () => { await removeArticle(entry.article, data.posts, data.publications); reload() } } : {})} />}
             </div>
           </div>)}
-          {rows.length > shown && <div className="px-4 py-3"><Button size="sm" variant="ghost" onClick={() => setShown(n => n + PAGE)}>{w('show_more', { n: rows.length - shown })}</Button></div>}
-        </div>}
+              </div>
+            </section>
+          })}
+          {rows.length > shown && <div><Button size="sm" variant="ghost" onClick={() => setShown(n => n + PAGE)}>{w('show_more', { n: rows.length - shown })}</Button></div>}
+        </>}
       </>}
       </>}
     </>}

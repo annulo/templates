@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { ArrowRight, Check, ChevronDown, Flag, MessageSquareText, Play, Sparkles, Undo2, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { ArrowRight, Check, ChevronDown, Flag, MessageSquareText, MoreHorizontal, Play, Sparkles, Undo2, X } from 'lucide-react'
 import RunButton from '../RunButton'
 import { TaskButton, TaskLaunchButton } from '../Task'
 import { Badge, Button, Notice, PageHeader, Panel, Segmented, Skeleton, cx } from '../ui'
@@ -10,7 +10,7 @@ import { tr } from '../../lib/i18n'
 import type { Ctx, View } from './types'
 
 type Action = { kind: 'go'; view: View; params?: Record<string, string> } | { kind: 'task'; task: string; input?: unknown }
-type Item = { id: string; phase: number; week: number; area: string; title: string; why: string; action: Action | null; status: '' | 'done' | 'skipped'; auto?: boolean }
+type Item = { id: string; phase: number; week: number; area: string; title: string; why: string; action: Action | null; status: '' | 'done' | 'skipped'; auto?: boolean; done_by?: '' | 'auto' | 'ai' | 'user'; done_note?: string }
 type Progress = { metric: string; tier: 'process' | 'leading' | 'result'; better: 'up' | 'down'; label: string; baseline: number | null; current: number | null; target: number; pct: number | null }
 type Option = { level: 'conservative' | 'normal' | 'aggressive'; note: string; targets: Record<string, number> }
 type Phase = { phase: number; title: string; focus: string; goals: string[] }
@@ -371,78 +371,142 @@ function CpList({ title, items }: { title: string; items: string[] }) {
   )
 }
 
-/** 每周的事：这周和之前没做完的展开，以后的折叠 */
+/**
+ * 每周的事。执行中：本周在最上面，前几周没做完的挪进本周（标「第 N 周没做完」）；前几周做完的收起来；以后几周折叠。
+ * 草稿：按周排开。
+ */
 function Weeks({ ctx, items, currentWeek = 0, onChanged, readOnly = false }: { ctx?: Ctx; items: Item[]; currentWeek?: number; onChanged: () => void; readOnly?: boolean }) {
   const [showLater, setShowLater] = useState(false)
+  const [showPast, setShowPast] = useState(false)
   const weeks = [...new Set(items.map((i) => i.week))].sort((a, b) => a - b)
   if (!weeks.length) return null
-  const now = readOnly ? weeks : weeks.filter((w) => w <= currentWeek)
-  const later = readOnly ? [] : weeks.filter((w) => w > currentWeek)
-  const block = (w: number) => {
-    const list = items.filter((i) => i.week === w)
-    const left = list.filter((i) => !i.status).length
-    return (
-      <div key={w} className="space-y-2">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="font-semibold">{tr('plan.week', { n: w })}</span>
-          {w === currentWeek && <Badge tone="ok">{tr('plan.this_week')}</Badge>}
-          {!readOnly && <span className="text-muted-foreground">{left ? tr('plan.left', { n: left }) : tr('plan.all_done')}</span>}
-        </div>
-        <div className="overflow-hidden rounded-xl border border-border bg-background">
-          {list.map((i) => <Row key={i.id} item={i} ctx={ctx} onChanged={onChanged} readOnly={readOnly} />)}
-        </div>
+  const block = (w: number, list: Item[], head?: ReactNode) => (
+    <div key={w} className="space-y-2">
+      <div className="flex items-center gap-2 text-xs">
+        <span className="font-semibold">{tr('plan.week', { n: w })}</span>
+        {head}
       </div>
+      <div className="overflow-hidden rounded-xl border border-border bg-background">
+        {list.map((i) => <Row key={i.id} item={i} ctx={ctx} onChanged={onChanged} readOnly={readOnly} currentWeek={currentWeek} />)}
+      </div>
+    </div>
+  )
+  if (readOnly)
+    return (
+      <section className="space-y-4">
+        <h3 className="text-sm font-semibold">{tr('plan.first_weeks')}</h3>
+        {weeks.map((w) => block(w, items.filter((i) => i.week === w)))}
+      </section>
     )
-  }
+  // 本周：先列前几周挪过来的，再列本周的；没做完的在前
+  const open = (i: Item) => (i.status ? 1 : 0)
+  const now = [...items.filter((i) => i.week < currentWeek && !i.status), ...items.filter((i) => i.week === currentWeek)].sort((a, b) => open(a) - open(b))
+  const left = now.filter((i) => !i.status).length
+  const past = items.filter((i) => i.week < currentWeek && i.status)
+  const later = weeks.filter((w) => w > currentWeek)
   return (
     <section className="space-y-4">
-      <h3 className="text-sm font-semibold">{readOnly ? tr('plan.first_weeks') : tr('plan.weekly')}</h3>
-      {/* 执行中：这周在最上面；草稿按周排 */}
-      {(readOnly ? now : now.slice().reverse()).map(block)}
+      <h3 className="text-sm font-semibold">{tr('plan.weekly')}</h3>
+      {now.length > 0 && block(currentWeek, now, <>
+        <Badge tone="ok">{tr('plan.this_week')}</Badge>
+        <span className="text-muted-foreground">{left ? tr('plan.left', { n: left }) : tr('plan.all_done')}</span>
+        <span className="text-muted-foreground">· {tr('plan.auto_hint')}</span>
+      </>)}
       {later.length > 0 && (
         <div className="space-y-4">
-          <button type="button" onClick={() => setShowLater((v) => !v)} className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            {tr('plan.later', { n: later.length })}
-            <ChevronDown className={cx('size-3.5 transition-transform', showLater && 'rotate-180')} />
-          </button>
-          {showLater && later.map(block)}
+          <Toggle open={showLater} onClick={() => setShowLater((v) => !v)}>{tr('plan.later', { n: later.length })}</Toggle>
+          {showLater && later.map((w) => block(w, items.filter((i) => i.week === w)))}
+        </div>
+      )}
+      {past.length > 0 && (
+        <div className="space-y-4">
+          <Toggle open={showPast} onClick={() => setShowPast((v) => !v)}>{tr('plan.past', { n: past.length })}</Toggle>
+          {showPast && [...new Set(past.map((i) => i.week))].sort((a, b) => b - a).map((w) => block(w, past.filter((i) => i.week === w)))}
         </div>
       )}
     </section>
   )
 }
 
-function Row({ item: i, ctx, onChanged, readOnly }: { item: Item; ctx?: Ctx; onChanged: () => void; readOnly: boolean }) {
+function Toggle({ open, onClick, children }: { open: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} aria-expanded={open} className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+      {children}
+      <ChevronDown className={cx('size-3.5 transition-transform', open && 'rotate-180')} />
+    </button>
+  )
+}
+
+function Row({ item: i, ctx, onChanged, readOnly, currentWeek }: { item: Item; ctx?: Ctx; onChanged: () => void; readOnly: boolean; currentWeek: number }) {
   const a = i.action
+  const carried = !readOnly && !i.status && i.week < currentWeek
   return (
     <div className={cx('flex flex-wrap items-start gap-3 border-b border-border px-4 py-3 last:border-b-0', i.status && 'opacity-60')}>
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           {i.area && <Badge>{tr(`plan.area_${i.area}`)}</Badge>}
           <span className={cx('text-sm font-medium [overflow-wrap:anywhere]', i.status === 'skipped' && 'line-through')}>{i.title}</span>
-          {i.status === 'done' && <Badge tone="ok">{i.auto ? tr('plan.auto_done') : tr('plan.done')}</Badge>}
+          {i.status === 'done' && <Badge tone="ok">{tr(i.done_by === 'auto' ? 'plan.auto_done' : i.done_by === 'ai' ? 'plan.ai_done' : 'plan.done')}</Badge>}
           {i.status === 'skipped' && <Badge>{tr('plan.skipped')}</Badge>}
+          {carried && <Badge tone="warn">{tr('plan.carried', { n: i.week })}</Badge>}
         </div>
-        {i.why && <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{i.why}</p>}
+        {i.status === 'done' && i.done_note ? (
+          <p className="flex items-start gap-1 text-xs text-emerald-700 dark:text-emerald-400 [overflow-wrap:anywhere]"><Check className="mt-0.5 size-3 shrink-0" />{i.done_note}</p>
+        ) : (
+          i.why && <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{i.why}</p>
+        )}
       </div>
       {!readOnly && (
-        <div className="flex shrink-0 flex-wrap items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           {!i.status && a?.kind === 'go' && ctx && (
             <Button size="sm" feedback={false} onClick={() => ctx.go(a.view, a.params)}>
               {tr('plan.go')} <ArrowRight />
             </Button>
           )}
+          {/* 交给助手的：带上这条计划项，助手做完自己标上 */}
           {!i.status && a?.kind === 'task' && (
-            <TaskButton task={a.task} input={a.input} onFinished={onChanged}>{tr('plan.go')}</TaskButton>
+            <TaskButton task={a.task} input={{ ...((a.input as object) ?? {}), plan_item_id: i.id }} onFinished={onChanged}>{tr('plan.go')}</TaskButton>
           )}
-          {i.status && !i.auto ? (
-            <RunButton inline fn="plan.mark" input={{ id: i.id, status: '' }} onDone={onChanged} variant="ghost" icon={Undo2}>{tr('plan.undo')}</RunButton>
-          ) : !i.status ? (
+          <RowMenu item={i} onChanged={onChanged} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 手动标做完 / 不做 / 撤销：大多数会自动判断，收进「···」里 */
+function RowMenu({ item: i, onChanged }: { item: Item; onChanged: () => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+  const mark = (status: '' | 'done' | 'skipped') => async () => {
+    await runLocal('plan.mark', { id: i.id, status })
+    setOpen(false)
+    onChanged()
+  }
+  const item = 'flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-muted'
+  return (
+    <div ref={ref} className="relative">
+      <Button size="icon-sm" variant="ghost" feedback={false} aria-label={tr('plan.more')} onClick={() => setOpen((v) => !v)}>
+        <MoreHorizontal />
+      </Button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-lg border border-border bg-background p-1 shadow-lg">
+          {i.status ? (
+            <button type="button" className={item} onClick={mark('')}>
+              <Undo2 className="size-4" />{tr(i.done_by === 'auto' ? 'plan.undo_auto' : 'plan.undo')}
+            </button>
+          ) : (
             <>
-              <RunButton inline fn="plan.mark" input={{ id: i.id, status: 'done' }} onDone={onChanged} variant="ghost" icon={Check}>{tr('plan.mark_done')}</RunButton>
-              <RunButton inline fn="plan.mark" input={{ id: i.id, status: 'skipped' }} onDone={onChanged} variant="ghost" icon={X}>{tr('plan.skip')}</RunButton>
+              <button type="button" className={item} onClick={mark('done')}><Check className="size-4" />{tr('plan.mark_done')}</button>
+              <button type="button" className={item} onClick={mark('skipped')}><X className="size-4" />{tr('plan.skip')}</button>
             </>
-          ) : null}
+          )}
         </div>
       )}
     </div>

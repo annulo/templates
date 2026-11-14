@@ -372,14 +372,80 @@ export function activate(input: { level: Level; targets?: Record<string, number>
 }
 
 /** 一条计划项按数据算出来做没做完 */
-function autoDone(it: any, m: Record<string, number | null>, base: Record<string, number | null>) {
+/** 按指标判断（AI 起草时写的 check）：做完了返回依据 */
+function metricDone(ctx: any, it: any, m: Record<string, number | null>, base: Record<string, number | null>): string | null {
   const c = parse<Check | null>(it.check, null)
-  if (!c) return false
+  if (!c) return null
   const cur = m[c.metric]
-  if (cur == null) return false
-  const better = METRICS[c.metric]?.better ?? 'up'
+  if (cur == null) return null
+  const def = METRICS[c.metric]
+  const better = def?.better ?? 'up'
   const v = c.delta ? (better === 'up' ? cur - (base[c.metric] ?? 0) : (base[c.metric] ?? 0) - cur) : cur
-  return better === 'down' && !c.delta ? v <= c.gte : v >= c.gte
+  const ok = better === 'down' && !c.delta ? v <= c.gte : v >= c.gte
+  if (!ok) return null
+  const label = def ? L(ctx, def.zh, def.en) : c.metric
+  return c.delta ? L(ctx, `${label}比开始时多了 ${fmtN(v)}`, `${label} up ${fmtN(v)} since the start`) : L(ctx, `${label}现在是 ${fmtN(cur)}`, `${label} is now ${fmtN(cur)}`)
+}
+const fmtN = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+
+/** 计划项那一周的第一天（ISO）：「这周做了没有」从这天算起；没做完挪到后面几周的，照样从这天算 */
+const weekStart = (start: string, week: number) => new Date(dayMs(start) + (week - 1) * 7 * DAY).toISOString()
+const since = (rows: any[], field: string | string[], from: string) => rows.filter((r) => (Array.isArray(field) ? field : [field]).some((f) => r[f] && String(r[f]) >= from))
+
+/**
+ * 按计划项去的页面、交给的任务，用这一周的数据判断做没做（AI 不用另写条件）：做完了返回依据，判断不了或没做完返回 null。
+ * 每一类认什么数据见 docs/growth-plan.md「自动判断做完」。
+ */
+export function actionDone(ctx: any, it: { action: Action | null; title?: string }, from: string): string | null {
+  const a = it.action
+  if (!a) return null
+  const view = a.kind === 'go' ? a.view : ''
+  const tab = a.kind === 'go' ? a.params?.tab ?? '' : ''
+  const task = a.kind === 'task' ? a.task : ''
+  const n = (x: number, zh: string, en: string) => (x > 0 ? L(ctx, zh.replace('{n}', String(x)), en.replace('{n}', String(x))) : null)
+
+  if ((view === 'search' && tab === 'keywords') || task === 'keyword-research') {
+    const kws = all(ctx, 'keywords')
+    return n(since(kws, 'reviewed_at', from).length, '这周筛了 {n} 个词', '{n} keywords screened this week')
+      ?? n(since(all(ctx, 'topics').filter((t) => t.source === 'keyword'), 'created_at', from).length, '这周把关键词转成了 {n} 个选题', '{n} keyword topics created this week')
+  }
+  if (view === 'competitors' || task.startsWith('competitor-')) {
+    const reports = since(all(ctx, 'research_findings').filter((f) => f.kind === 'competitor_report'), 'created_at', from).length
+    const added = since(all(ctx, 'competitors').filter((c) => c.status !== 'rejected'), 'created_at', from).length
+    if (task === 'competitor-overview' || task === 'competitor-compare') return n(reports, '这周写了 {n} 份竞品分析', '{n} competitor reports this week')
+    return n(reports, '这周写了 {n} 份竞品分析', '{n} competitor reports this week') ?? n(added, '这周加了 {n} 家竞品', '{n} competitors added this week')
+  }
+  if (view === 'audit') {
+    const issues = all(ctx, 'site_issues')
+    const fixed = since(issues.filter((i) => i.status === 'fixed'), 'updated_at', from).length
+    if (fixed) return L(ctx, `这周修好了 ${fixed} 个网站问题`, `${fixed} site issues fixed this week`)
+    return issues.length && !issues.some((i) => i.status === 'open' && i.severity === 'high') ? L(ctx, '严重问题都修完了', 'No serious issues left') : null
+  }
+  if (view === 'website-content' || view === 'content') {
+    const want = Math.max(1, Number((it.title ?? '').match(/(\d+)\s*(篇|个页面|pages?|articles?|posts?)/i)?.[1]) || 1)
+    const got = since(all(ctx, 'publications').filter((p) => p.status === 'published' || p.published_at), 'published_at', from).length
+    return got >= want ? L(ctx, `这周网站上发了 ${got} 篇`, `${got} articles published this week`) : null
+  }
+  if (task === 'suggest-topics') return n(since(all(ctx, 'topics'), 'created_at', from).length, '这周出了 {n} 个选题', '{n} topics this week')
+  if (view === 'landing') return n(since(all(ctx, 'landing_pages').filter((l) => l.status === 'live'), 'live_at', from).length, '这周上线了 {n} 个落地页', '{n} landing pages live this week')
+  if (view === 'social-content' || view === 'calendar') return n(since(all(ctx, 'social_posts').filter((p) => p.status === 'published'), 'published_at', from).length, '这周社媒发了 {n} 条', '{n} social posts this week')
+  if ((view === 'plan' && tab === 'links') || (view === 'social' && /链接|link/i.test(it.title ?? ''))) return n(since(all(ctx, 'backlinks'), 'created_at', from).length, '这周登记了 {n} 条外链', '{n} backlinks recorded this week')
+  if (view === 'leads') {
+    const leads = all(ctx, 'leads').filter((l) => l.is_real !== false && l.status !== 'spam')
+    const moved = since(leads.filter((l) => l.status && l.status !== 'new'), 'updated_at', from).length
+    return moved && !leads.some((l) => l.status === 'new' && l.intent === 'high') ? L(ctx, `这周跟进了 ${moved} 条询盘，高意向的都处理了`, `${moved} inquiries followed up; no high-intent ones waiting`) : null
+  }
+  if (view === 'geo' || task === 'geo-questions') {
+    if (task === 'geo-questions') return n(since(all(ctx, 'geo_questions'), 'created_at', from).length, '这周加了 {n} 个检测问题', '{n} questions added this week')
+    return n(since(all(ctx, 'geo_runs'), 'finished_at', from).length, '这周做了 AI 搜索检测', 'AI search checked this week')
+  }
+  if (view === 'search') {
+    // 没带页签的谷歌排名：连谷歌数据、改标题描述、补内容；先看是不是在连谷歌
+    if (/连|connect|link|Search Console|GSC/i.test(it.title ?? '')) return gscHistory(ctx).connected ? L(ctx, '谷歌数据已经连上了', 'Google data is connected') : null
+    if (tab === 'review') return null
+    return n(since(all(ctx, 'site_changes'), 'created_at', from).length, '这周有 {n} 个改动上线（改标题描述、补内容、刷新页面）', '{n} page changes went live this week')
+  }
+  return null // 公司资料、网站和账号、增长机会、关键词地图这类判断不了：手动标
 }
 
 export function get(_input: {}, ctx: any) {
@@ -394,9 +460,17 @@ export function get(_input: {}, ctx: any) {
   const items = all(ctx, 'plan_items')
     .filter((i) => i.plan_id === p.id)
     .map((i) => {
-      // 草稿还没有基线，不自动判断
-      const auto = !i.status && p.status !== 'draft' && autoDone(i, m, baseM)
-      return { ...i, action: parse<Action | null>(i.action, null), check: parse<Check | null>(i.check, null), status: i.status || (auto ? 'done' : ''), auto }
+      const it = { ...i, action: parse<Action | null>(i.action, null), check: parse<Check | null>(i.check, null) }
+      // 按数据判断做完了就存下来（以后数据再变也不退回去），带上依据；草稿还没开始、用户撤销过自动判断的不判断
+      if (!i.status && p.status === 'active' && !i.auto_off && p.start_date) {
+        const why = metricDone(ctx, i, m, baseM) ?? actionDone(ctx, it, weekStart(p.start_date, i.week))
+        if (why) {
+          const patch = { status: 'done', done_by: 'auto', done_note: why, done_at: nowISO() }
+          ctx.db.update('plan_items', i.id, patch)
+          Object.assign(it, patch)
+        }
+      }
+      return { ...it, auto: it.done_by === 'auto', carried: !it.status && !!pos && it.week < pos.week }
     })
     .sort((a, b) => a.week - b.week || String(a.created_at).localeCompare(String(b.created_at)))
   const progress = Object.entries(targets).map(([k, target]) => {
@@ -423,11 +497,19 @@ export function get(_input: {}, ctx: any) {
   }
 }
 
-export function mark(input: { id: string; status: '' | 'done' | 'skipped' }, ctx: any) {
+/**
+ * 标一条计划项。用户在页面上点的不带 by；助手做完对应的事标的带 by: 'ai' 和 note（做了什么，一句话）。
+ * 撤销自动标的（by 是 auto 的撤销）会记 auto_off：数据判断错了，以后不再自动标这一条。
+ */
+export function mark(input: { id: string; status: '' | 'done' | 'skipped'; by?: 'ai'; note?: string }, ctx: any) {
   const it = ctx.db.get('plan_items', input?.id)
   if (!it) throw new Error(L(ctx, '找不到这条计划项', 'Plan item not found'))
   const status = input.status === 'done' || input.status === 'skipped' ? input.status : ''
-  ctx.db.update('plan_items', it.id, { status, done_at: status ? nowISO() : '' })
+  ctx.db.update('plan_items', it.id, {
+    status, done_at: status ? nowISO() : '',
+    done_by: status ? (input.by === 'ai' ? 'ai' : 'user') : '', done_note: status ? String(input.note ?? '') : '',
+    ...(!status && it.done_by === 'auto' ? { auto_off: true } : {}),
+  })
   return { ok: true }
 }
 

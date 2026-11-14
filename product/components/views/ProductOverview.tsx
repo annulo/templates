@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { CalendarDays, FileText, Lightbulb, Target } from "lucide-react";
-import { PageHeader, Panel, Button, RangeToggle, Segmented } from "../ui";
+import { PageHeader, Panel, Button, RangeToggle } from "../ui";
+import TodayCard from "../TodayCard";
 import Checklist from "../Checklist";
 import { g } from "../ProductFields";
 import { GrowthOverview } from "../MarketingWorkspace";
@@ -9,20 +10,13 @@ import { PlanCard } from "./Plan";
 import { tr } from "../../lib/i18n";
 import type { Ctx, View } from "./types";
 
-/** 工作台：今日任务和每周总结合在一页，用标签切换（每周总结对应 view=reports，旧链接照样能打开） */
-export default function ProductOverview({
-  ctx,
-  tab,
-  onTab,
-  weekly,
-}: {
-  ctx: Ctx;
-  tab: "today" | "weekly";
-  onTab: (v: "today" | "weekly") => void;
-  weekly?: ReactNode;
-}) {
+/**
+ * 工作台：最上面「今天要做的事」和 90 天增长计划并排（一件一行，占位小），下面是数据看板、起步清单、增长概览。
+ * 每周总结是单独的一页（侧栏「每周总结」，view=reports）。
+ */
+export default function ProductOverview({ ctx }: { ctx: Ctx }) {
   return (
-    <div className="space-y-6">
+    <div className="@container/overview min-w-0 space-y-6">
       <PageHeader
         title={g("workbench_title")}
         desc={
@@ -31,15 +25,7 @@ export default function ProductOverview({
             : g("overview_desc")
         }
       />
-      <Segmented
-        value={tab}
-        onChange={onTab}
-        options={[
-          { value: "today", label: g("tab_today") },
-          { value: "weekly", label: g("tab_weekly") },
-        ]}
-      />
-      {tab === "weekly" ? weekly : <Today ctx={ctx} />}
+      <Today ctx={ctx} />
     </div>
   );
 }
@@ -54,8 +40,13 @@ function Today({ ctx }: { ctx: Ctx }) {
   const [days, setDays] = useState(30);
   return (
     <div className="space-y-6">
-      {/* 90 天增长计划：进度、本周还剩几件事；没有计划时引导起草 */}
-      <PlanCard ctx={ctx} />
+      {/* 今天要做的事 + 90 天增长计划，内容区够 560px 就并排一行（计划那栏窄，三个目标改成上下排） */}
+      <div className="grid gap-4 @min-[560px]/overview:grid-cols-[minmax(0,1fr)_minmax(220px,280px)]">
+        <TodayCard ctx={ctx} />
+        <div className="[&>*]:h-full [&_.grid]:grid-cols-1!">
+          <PlanCard ctx={ctx} />
+        </div>
+      </div>
       {/* 先看数据：网站访问和社媒，时间段管整块 */}
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">

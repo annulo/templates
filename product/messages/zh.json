@@ -1691,7 +1691,7 @@
     "later": "之后几周（{n} 周）",
     "go": "去做",
     "done": "做完了",
-    "auto_done": "已达成",
+    "auto_done": "自动判断做完",
     "skipped": "不做了",
     "mark_done": "做完了",
     "skip": "不做",
@@ -1770,7 +1770,13 @@
     "lf_target_hint": "不填就是首页 {site}",
     "lf_note": "备注",
     "map_page_pos": "页面平均 {n}",
-    "map_page_pos_hint": "这个页面所有搜索词的平均排名，不只是这个主题的词"
+    "map_page_pos_hint": "这个页面所有搜索词的平均排名，不只是这个主题的词",
+    "ai_done": "AI 做完",
+    "carried": "第 {n} 周没做完",
+    "past": "之前几周做完的 {n} 件",
+    "more": "更多",
+    "undo_auto": "判断错了，撤销",
+    "auto_hint": "做了会按数据自动标上，AI 做的它自己标"
   },
   "campaigns": {
     "template_name": "产品运营助手",
@@ -2720,6 +2726,11 @@
     "trend_label": "累计{m}的走势",
     "trend_one_day": "每天的数据从 {day} 开始记，再采集几天就能看到走势。",
     "trend_none": "还没有每天的数据，采集后这里显示走势。",
+    "group_attention": "需要你处理",
+    "group_progress": "进行中",
+    "group_published": "已发布",
+    "group_archived": "已归档",
+    "group_other": "其他",
     "website_content": "网站内容",
     "social_content": "自媒体内容",
     "website_desc": "按目标页面管理选题、内容计划、草稿和已上线内容。",
@@ -2942,7 +2953,11 @@
     "daily_title": "今天要做的",
     "daily_empty": "今天没有要处理的事。可以去写一篇文章，或者看看谷歌排名。",
     "daily_empty_setup": "起步配置可以按需完成或跳过；有需要处理的事项时，会显示在这里。",
-    "dismiss": "忽略"
+    "dismiss": "忽略",
+    "daily_count": "{n} 件",
+    "daily_minutes": "约 {n} 分钟",
+    "show_all": "全部 {n} 件",
+    "daily_title_short": "今天要做的事"
   },
   "products": {
     "title": "产品",

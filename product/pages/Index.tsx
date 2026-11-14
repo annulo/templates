@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
-import { Share2, CircleHelp, SlidersHorizontal, BarChart3, Menu, X, Sparkles, ChevronDown } from 'lucide-react'
+import { Share2, CircleHelp, SlidersHorizontal, BarChart3, Menu, X, Sparkles, ChevronDown, LayoutDashboard } from 'lucide-react'
 import Wizard from '../components/wizard/Wizard'
 import { runLocal } from '../lib/shuttle'
 import type { ChecklistData } from '../lib/useChecklist'
@@ -16,7 +16,7 @@ import { useChecklist } from '../lib/useChecklist'
 import PublishProgress from '../components/PublishProgress'
 
 // 后台的外壳（外贸和产品运营共用的 business 模块）：侧栏、顶栏、起步清单和向导、不在 Annulo 里时的提示。
-// 左侧导航分组由行业文件 lib/edition.ts 定义，有哪些页面由行业文件 lib/views.tsx 定义；紧凑单行，辅助说明放在 title 中。
+// 左侧导航分组由行业文件 lib/edition.ts 定义（组名、组的图标），有哪些页面由行业文件 lib/views.tsx 定义；每组能折叠，辅助说明放在 title 中。
 // 还没填项目资料时的占位（放在模块里：引用不变，项目设置的表单不会被重渲染冲掉）
 const EMPTY_PROFILE: Profile = { name: '' }
 
@@ -55,13 +55,15 @@ export default function Index() {
   const [error, setError] = useState('')
   const [days] = useState(30)
   const [mobileOpen, setMobileOpen] = useState(false)
-  // 侧栏收起的分组（记在这台电脑的浏览器里；读写不了就都展开）。当前页面所在的组总是展开
+  // 侧栏收起的分组（记在这台电脑的浏览器里；读写不了就都展开）。进到一个页面时，它所在的组自动展开
   const [collapsed, setCollapsed] = useState<string[]>([])
+  const [collapsedRead, setCollapsedRead] = useState(false)
   useEffect(() => {
     try {
       const saved: unknown = JSON.parse(localStorage.getItem(NAV_COLLAPSED) || '[]')
       if (Array.isArray(saved)) setCollapsed(saved.filter((x): x is string => typeof x === 'string'))
     } catch {}
+    setCollapsedRead(true)
   }, [])
   const toggleGroup = (group: string) =>
     setCollapsed((c) => {
@@ -331,6 +333,15 @@ export default function Index() {
     return () => clearInterval(timer)
   }, [geoLive, loadGeo])
 
+  const expandedFor = useRef('')
+  useEffect(() => {
+    if (!collapsedRead || expandedFor.current === navView) return
+    expandedFor.current = navView
+    const g = NAV.find((x) => x.items.some((n) => n.view === navView))
+    const k = g ? g.group ?? 'g_work' : ''
+    if (k && collapsed.includes(k)) toggleGroup(k)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navView, collapsedRead])
   // 页面标题跟着当前页走：Shuttle 顶栏的标签页、浏览器标签都显示它
   useEffect(() => {
     if (routeReady) document.title = t(navView)
@@ -338,9 +349,16 @@ export default function Index() {
   const group = NAV.find((g) => g.items.some((item) => item.view === navView))
   const socialSection = ['overview', 'content', 'data'].includes(params.section) ? params.section : params.tab || params.post ? 'content' : 'overview'
   const navClass = (active: boolean) => cx(
-    'relative flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-md px-3 md:h-8 text-left text-base transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
-    active ? 'bg-sidebar-accent font-semibold text-foreground before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:rounded-full before:bg-primary' : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground',
+    'relative flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 md:h-8 text-left text-base transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
+    active ? 'bg-background font-semibold text-primary-text shadow-[var(--card-shadow)] ring-1 ring-border/70' : 'text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground',
   )
+  // 侧栏一项后面的标记：数字（各模板自己的、待看的新文章）或「新」（AI 搜索有没看过的检测，count 为空）
+  const navBadge = (v: View): { count?: number; title: string } | null => {
+    if (v === 'geo' && geoBadge) return { title: t('geo_badge') }
+    if (badges[v]) return { count: badges[v]!.count, title: badges[v]!.title }
+    const pending = v === 'website-content' ? pendingReview.filter((x) => x === 'website').length : v === 'social-content' ? pendingReview.filter((x) => x === 'social').length : 0
+    return pending > 0 ? { count: pending, title: t('pending_badge', { n: pending }) } : null
+  }
   // 首屏只出一次骨架：整页布局先画出来，内容区用骨架占着，等要用的数据齐了再换成页面。
   // 挂载前（服务端渲染时还不知道在不在 Shuttle 里）、项目资料没读到、Shuttle 里今日清单（决定要不要先进引导）没读到，都算没齐。
   // 以前清单没读到时整页换成一块居中的骨架，挂载前后各画一次，看起来像闪了两次
@@ -348,46 +366,44 @@ export default function Index() {
   if (ctx && wizard && !wizard.closed && (wizardSession || autoWizard) && !wizardAway) return <Wizard initialStep={wizardStep} ctx={{ ...ctx, go: (v, extra) => { setWizardAway(true); go(v, extra) } }} onExit={(started) => { setWizardStep(null); setWizardSession(false); setWizardAway(false); go('overview'); if (started) { showSetup(true); void startAudit() } }} />
 
   return (
-    <main className="flex h-dvh min-w-0 overflow-hidden bg-background text-foreground">
+    <main className="app-canvas flex h-dvh min-w-0 overflow-hidden text-foreground">
       {mobileOpen && <button type="button" aria-label={t('close_nav')} onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 cursor-pointer bg-black/35 md:hidden" />}
-      <aside id="workspace-navigation" aria-label={t('navigation')} className={cx('fixed inset-y-0 left-0 z-40 w-[224px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:static md:z-auto md:translate-x-0', mobileOpen ? 'flex translate-x-0' : 'hidden -translate-x-full md:flex')}>
-        <nav className="min-h-0 flex-1 overflow-y-auto px-3 pt-4 pb-3">
-          {NAV.map((g, gi) => (
-            <div key={g.group ?? gi} className={cx(gi > 0 && 'mt-4')}>
-              {g.group ? (() => {
-                const active = g.items.some((n) => n.view === navView)
-                const open = active || !collapsed.includes(g.group)
-                return <button type="button" onClick={() => !active && toggleGroup(g.group!)} aria-expanded={open} title={active ? undefined : t(open ? 'collapse_group' : 'expand_group')}
-                  className={cx('flex w-full items-center justify-between gap-2 rounded-md px-3 pb-1.5 text-left text-xs font-medium text-muted-foreground', active ? 'cursor-default' : 'cursor-pointer hover:text-foreground')}>
-                  <span>{t(g.group)}</span>
-                  {!active && <ChevronDown className={cx('size-3.5 shrink-0 transition-transform', !open && '-rotate-90')} />}
+      <aside id="workspace-navigation" aria-label={t('navigation')} className={cx('fixed inset-y-0 left-0 z-40 w-[224px] shrink-0 flex-col bg-canvas transition-transform md:static md:z-auto md:translate-x-0', mobileOpen ? 'flex translate-x-0' : 'hidden -translate-x-full md:flex')}>
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3 pt-3 pb-3">
+          <div className="flex justify-end md:hidden">
+            <button type="button" onClick={() => setMobileOpen(false)} aria-label={t('close_nav')} className="rounded-md p-1 text-muted-foreground hover:bg-sidebar-accent"><X className="size-4" /></button>
+          </div>
+          {/* 一组一行标题（图标 + 组名 + 箭头），点了折叠 / 展开；组里的页面缩进在下面，左边一条细线。收起的组在标题上显示组里的数字，不漏掉要处理的 */}
+          {NAV.map((g, gi) => {
+            const key = g.group ?? 'g_work'
+            const open = !collapsed.includes(key)
+            const GroupIcon = g.icon ?? LayoutDashboard
+            const hidden = open ? null : g.items.map((n) => navBadge(n.view)).filter((x): x is NonNullable<typeof x> => !!x)
+            const hiddenCount = hidden?.reduce((sum, x) => sum + (x.count ?? 0), 0) ?? 0
+            return (
+              <div key={key} className={cx(gi > 0 && 'mt-1')}>
+                <button type="button" onClick={() => toggleGroup(key)} aria-expanded={open} title={t(open ? 'collapse_group' : 'expand_group')}
+                  className="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-left text-base font-semibold text-foreground transition-colors outline-none hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring md:h-9">
+                  <GroupIcon className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.8} />
+                  <span className="min-w-0 flex-1 truncate">{t(key)}</span>
+                  {!!hidden?.length && <span className="shrink-0 rounded-md bg-primary/10 px-1.5 text-xs leading-5 font-semibold tabular-nums text-primary-text">{hiddenCount ? (hiddenCount > 99 ? '99+' : hiddenCount) : tr('article.new_badge')}</span>}
+                  <ChevronDown className={cx('size-3.5 shrink-0 text-muted-foreground/70 transition-transform', !open && '-rotate-90')} />
                 </button>
-              })() : (
-                <div className="flex items-center justify-between gap-2 px-3 pb-1.5 text-xs font-medium text-muted-foreground">
-                  <span>{t('g_work')}</span>
-                  <button type="button" onClick={() => setMobileOpen(false)} aria-label={t('close_nav')} className="-mr-1 rounded-md p-1 hover:bg-sidebar-accent md:hidden"><X className="size-4" /></button>
-                </div>
-              )}
-              {(!g.group || g.items.some((n) => n.view === navView) || !collapsed.includes(g.group)) && <div className="space-y-0.5">
-                {g.items.map((n, ni) => {
-                  const pending = n.view === 'website-content' ? pendingReview.filter((x) => x === 'website').length : n.view === 'social-content' ? pendingReview.filter((x) => x === 'social').length : 0
-                  return <div key={n.view}>
-                    {n.section && <div className={cx('px-3 pb-0.5 text-[11px] text-muted-foreground/70', ni > 0 && 'pt-2')}>{t(n.section)}</div>}
-                    <button type="button" onClick={(e) => goFrom(e, n.view)} disabled={!ctx} aria-current={n.view === navView ? 'page' : undefined} title={t(n.view + '_sub')} className={navClass(n.view === navView)}>
-                      <n.icon className="size-4 shrink-0" strokeWidth={1.8} />
+                {open && <div className="mt-0.5 mb-2 ml-[18px] space-y-0.5 border-l border-border pl-2">
+                  {g.items.map((n) => {
+                    const badge = n.view === navView ? null : navBadge(n.view)
+                    return <button type="button" key={n.view} onClick={(e) => goFrom(e, n.view)} disabled={!ctx} aria-current={n.view === navView ? 'page' : undefined} title={t(n.view + '_sub')} className={navClass(n.view === navView)}>
                       <span className="truncate">{t(n.view)}</span>
-                      {n.view === 'geo' && geoBadge && n.view !== navView && <span title={t('geo_badge')} aria-label={t('geo_badge')} className="ml-auto shrink-0 rounded-full bg-primary/15 px-1.5 text-xs leading-5 font-medium text-primary-text">{tr('article.new_badge')}</span>}
-                      {badges[n.view] && n.view !== navView && <span title={badges[n.view]!.title} aria-label={badges[n.view]!.title} className="ml-auto shrink-0 rounded-full bg-primary/15 px-1.5 text-xs leading-5 font-medium tabular-nums text-primary-text">{badges[n.view]!.count > 99 ? '99+' : badges[n.view]!.count}</span>}
-                      {pending > 0 && <span title={t('pending_badge', { n: pending })} aria-label={t('pending_badge', { n: pending })} className="ml-auto shrink-0 rounded-full bg-primary/15 px-1.5 text-xs leading-5 font-medium tabular-nums text-primary-text">{pending > 99 ? '99+' : pending}</span>}
+                      {badge && <span title={badge.title} aria-label={badge.title} className="ml-auto shrink-0 rounded-md bg-primary/10 px-1.5 text-xs leading-5 font-semibold tabular-nums text-primary-text">{badge.count == null ? tr('article.new_badge') : badge.count > 99 ? '99+' : badge.count}</span>}
                     </button>
-                  </div>
-                })}
-              </div>}
-            </div>
-          ))}
+                  })}
+                </div>}
+              </div>
+            )
+          })}
         </nav>
-        {checklist.data && <button type="button" onClick={() => { go('overview'); showSetup(view === 'overview' ? !setupOpen : true) }} aria-expanded={setupOpen && view === 'overview'} aria-controls="setup-checklist" className="mx-5 mb-3 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <span className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">{t('setup')}<span className="tabular-nums">{checklist.data.done}/{checklist.data.total}</span></span>
+        {checklist.data && <button type="button" onClick={() => { go('overview'); showSetup(view === 'overview' ? !setupOpen : true) }} aria-expanded={setupOpen && view === 'overview'} aria-controls="setup-checklist" className="mx-3 mb-3 cursor-pointer rounded-xl border border-border bg-background p-3 text-left outline-none hover:border-primary/30 focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="mb-2 flex items-center justify-between gap-2 text-xs text-muted-foreground"><span className="font-semibold text-foreground">{t('setup')}</span><span className="tabular-nums">{checklist.data.done}/{checklist.data.total}</span></span>
           <progress aria-label={t('setup')} value={checklist.data.done} max={checklist.data.total || 1} className="setup-progress block h-1.5 w-full overflow-hidden rounded-full" />
         </button>}
         <div className="space-y-0.5 border-t border-sidebar-border px-3 py-2">

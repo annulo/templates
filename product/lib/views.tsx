@@ -45,9 +45,8 @@ export function contentView(extra: Record<string, string>, current: View): View 
   return 'content'
 }
 
-/** 侧栏亮哪一项：每周总结并进了工作台（旧的 view=reports 亮工作台）；老的「自媒体数据」亮账号页；老链接 view=content 按 workspace 亮网站文章或社媒内容 */
+/** 侧栏亮哪一项：老的「自媒体数据」亮账号页；老链接 view=content 按 workspace 亮网站文章或社媒内容 */
 export function navViewOf(view: View, params: Record<string, string>): View {
-  if (view === 'reports') return 'overview'
   if (view === 'social-metrics') return 'social'
   if (view === 'settings') return 'company'
   if (view === 'content') return params.tab === 'inspiration' ? 'inspiration' : params.workspace === 'website' ? 'website-content' : 'social-content'
@@ -59,7 +58,6 @@ export type PageProps = { ctx: Ctx; params: Record<string, string>; setParam: (k
 /** 当前页面 */
 export function renderView(view: View, { ctx, params, setParam, bumpRev }: PageProps): ReactNode {
   const p = { ctx, params, setParam }
-  const tabs = (v: string) => ctx.go(v === 'weekly' ? 'reports' : 'overview')
   switch (view) {
     case 'plan': return <PlanView {...p} />
     case 'company': case 'settings': return <ProductFacts {...p} />
@@ -75,8 +73,7 @@ export function renderView(view: View, { ctx, params, setParam, bumpRev }: PageP
     case 'landing': return <Landing {...p} />
     case 'calendar': return <Calendar {...p} scope="social" />
     case 'assets': return <Assets {...p} />
-    // 每周总结是工作台的一个页签
-    case 'reports': return <ProductOverview ctx={ctx} tab="weekly" onTab={tabs} weekly={<Reports {...p} embedded />} />
+    case 'reports': return <Reports {...p} />
     // 老的「自媒体数据与复盘」并进了账号页的「数据」（复盘在自媒体内容的「待复盘」），旧链接打开账号数据
     case 'social': case 'social-metrics': return <SocialAccounts ctx={ctx} params={view === 'social-metrics' ? { ...params, section: 'data' } : params} setParam={setParam} />
     case 'channels': return <Channels ctx={ctx} current={params.channel || ''} setCurrent={(v) => setParam('channel', v)} />
@@ -92,7 +89,7 @@ export function renderView(view: View, { ctx, params, setParam, bumpRev }: PageP
     case 'site': return <SiteVisits {...p} />
     case 'help': return <Help {...p} />
     case 'assistant': return <Assistant {...p} />
-    default: return <ProductOverview ctx={ctx} tab="today" onTab={tabs} />
+    default: return <ProductOverview ctx={ctx} />
   }
 }
 

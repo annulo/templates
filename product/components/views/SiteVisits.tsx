@@ -35,7 +35,7 @@ export default function SiteVisits({ ctx, params, setParam }: { ctx: Ctx; params
     <div className="space-y-6">
       <PageHeader title={tr('nav.site')} desc={tr('site_visits.desc')} />
       {/* 网站和时间段粘在顶部，往下看数据时也能随时换；写法和社交媒体「数据表现」那一行一样（-top-4 -mx 抵掉滚动区的内边距） */}
-      <div className="sticky -top-4 -mx-4 -mt-3 px-4 md:-mx-6 md:px-6 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background py-3">
+      <div className="sticky -top-4 -mx-4 -mt-3 px-4 md:-mx-6 md:px-6 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-[var(--page-bg,var(--background))] py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <SitePicker sites={sites} value={channel.id} onChange={(v) => setParam('channel', v)} />
           {url && (
