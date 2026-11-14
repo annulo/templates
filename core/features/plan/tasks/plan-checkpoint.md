@@ -25,7 +25,7 @@ annulo run plan.checkpointContext --input '{"day":30}'
 
 ## 3. 排下一阶段（30、60 天）
 
-`items` 排下一阶段每周的事（第 2 阶段第 5~8 周，第 3 阶段第 9~13 周），每周 3~5 件，格式同起草计划。按数据排：排在 4~30 位的词优先补内容、点击率低的页面改标题描述、有效的主题继续写、外链和社媒分发跟上、没做完的重要事项挪进来。
+`items` 排下一阶段每周的事（第 2 阶段第 5~8 周，第 3 阶段第 9~13 周），每周 3~5 件，格式同起草计划，每件写 `who`（`you` 用户本人做 / `ai` 助手做）。下一阶段原来按月排的粗事项（`scope: month`）会被换掉，有用的拆进每周里。按数据排：排在 4~30 位的词优先补内容、点击率低的页面改标题描述、有效的主题继续写、外链和社媒分发跟上、没做完的重要事项挪进来。
 目标明显定高或定低了，可以带 `targets`（只写要改的指标）；阶段重点要改带 `phases`（三个阶段都写上）。
 
 ## 4. 90 天：总复盘
@@ -36,7 +36,7 @@ annulo run plan.checkpointContext --input '{"day":30}'
 
 ```bash
 cat > /tmp/checkpoint.json <<'JSON'
-{ "day": 30, "summary": "…", "wins": ["…"], "issues": ["…"], "adjustments": ["…"], "items": [ { "week": 5, "area": "content", "title": "…", "why": "…", "action": { "kind": "go", "view": "search", "params": { "tab": "keywords" } } } ] }
+{ "day": 30, "summary": "…", "wins": ["…"], "issues": ["…"], "adjustments": ["…"], "items": [ { "week": 5, "area": "content", "who": "ai", "title": "…", "why": "…", "action": { "kind": "go", "view": "search", "params": { "tab": "keywords" } } } ] }
 JSON
 annulo run plan.saveCheckpoint --input @/tmp/checkpoint.json
 ```

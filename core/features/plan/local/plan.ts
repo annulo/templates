@@ -1,7 +1,7 @@
 import { L } from './_i18n'
 
 // 只读写业务表：手机上也能看计划、标做完
-export const cloud = ['get', 'mark', 'metrics', 'thisWeek', 'keywordMap']
+export const cloud = ['get', 'mark', 'metrics', 'thisWeek', 'keywordMap', 'setLevel']
 
 // 90 天增长计划（设计见 docs/growth-plan.md）：把关键词、竞品、网站检查、内容、社媒、谷歌数据、询盘这些现有功能串成一份有目标、有基线、有检查点的计划。
 // 起草和检查点的分析交给助手（任务 draft-plan、plan-checkpoint）；这里只取数、存表、按数据算进度，不调模型。
@@ -277,6 +277,8 @@ function countBy(rows: any[], key: string) {
 /** 校验并整理一条计划项 */
 function cleanItem(ctx: any, it: any, phase: number, views: Set<string>, tasks: Set<string>) {
   const week = Math.round(Number(it?.week))
+  const scope = it?.scope === 'month' ? 'month' : 'week'
+  if (scope === 'month' && week < 5) throw new Error(L(ctx, `按月的事项（scope=month）只用于第 2、3 个月，week 写那个月的第一周（5 或 9）：${String(it?.title).slice(0, 60)}`, `Monthly items (scope=month) are only for months 2 and 3; set week to that month's first week (5 or 9): ${String(it?.title).slice(0, 60)}`))
   if (!it?.title || !(week >= 1 && week <= 13)) throw new Error(L(ctx, `计划项要有 title 和 1~13 的 week：${JSON.stringify(it).slice(0, 120)}`, `Each item needs a title and week 1–13: ${JSON.stringify(it).slice(0, 120)}`))
   const a = it.action
   if (a && a.kind === 'go' && !views.has(a.view)) throw new Error(L(ctx, `没有「${a.view}」这个页面，只能用 context 里 catalog.views 的`, `No view "${a.view}"; use catalog.views from context`))
@@ -284,9 +286,13 @@ function cleanItem(ctx: any, it: any, phase: number, views: Set<string>, tasks: 
   const c = it.check
   if (c && (!METRICS[c.metric] || typeof c.gte !== 'number')) throw new Error(L(ctx, `check 的 metric 要是 metric_defs 里的、gte 是数字：${JSON.stringify(c)}`, `check.metric must be in metric_defs and gte a number: ${JSON.stringify(c)}`))
   return {
-    phase: Number(it.phase) || phase,
+    // 按月的事项属于它那个月的阶段（第 5~8 周第 2 阶段，第 9~13 周第 3 阶段）：检查点按阶段换掉它们
+    phase: Number(it.phase) || (scope === 'month' ? (week >= 9 ? 3 : 2) : phase),
     week,
     area: String(it.area || ''),
+    // 谁来做：没写的按动作猜，交给助手的任务是 AI 的，别的是用户的
+    who: it.who === 'ai' || it.who === 'you' ? it.who : a?.kind === 'task' ? 'ai' : 'you',
+    scope,
     title: String(it.title),
     why: String(it.why || ''),
     action: a ? JSON.stringify(a) : '',
@@ -331,7 +337,15 @@ export function saveDraft(input: any, ctx: any) {
     ctx.db.delete('growth_plans', old.id)
   }
   const recommended = LEVELS.includes(input?.recommended) ? input.recommended : 'normal'
+  // 每周固定节奏：3~4 件每周都做的事（看谷歌数据、发 1 篇、跟进询盘…）
+  const weekly = (Array.isArray(input?.weekly) ? input.weekly : []).slice(0, 6).filter((w: any) => w?.title).map((w: any) => {
+    const a = w.action
+    if (a && a.kind === 'go' && !views.has(a.view)) throw new Error(L(ctx, `weekly 里没有「${a.view}」这个页面`, `No view "${a.view}" in weekly`))
+    if (a && a.kind === 'task' && !tasks.has(a.task)) throw new Error(L(ctx, `weekly 里没有「${a.task}」这个任务`, `No task "${a.task}" in weekly`))
+    return { who: w.who === 'ai' ? 'ai' : 'you', title: String(w.title), ...(a ? { action: a } : {}) }
+  })
   const row = ctx.db.insert('growth_plans', {
+    weekly: JSON.stringify(weekly),
     status: 'draft',
     start_phase: phase,
     stage_reason: String(input?.stage?.reason || ''),
@@ -345,7 +359,17 @@ export function saveDraft(input: any, ctx: any) {
   })
   const id = row?.id ?? row
   for (const it of items) ctx.db.insert('plan_items', { ...it, plan_id: id })
-  return { id, status: 'draft', items: items.length, next: L(ctx, '请用户到「增长计划」页选一档目标、点「开始执行」', 'Ask the user to pick a target level on the Growth plan page and start') }
+  return { id, status: 'draft', items: items.length, recommended, next: L(ctx, `按推荐的那档开始执行：annulo run plan.activate --input '{"level":"${recommended}"}'`, `Start with the recommended level: annulo run plan.activate --input '{"level":"${recommended}"}'`) }
+}
+
+/** 执行中的计划换一档目标（看板顶部的档位）：只换目标，基线、计划项、第几天都不变 */
+export function setLevel(input: { level: Level }, ctx: any) {
+  const p = activePlan(ctx)
+  if (!p) throw new Error(L(ctx, '没有执行中的计划', 'No active plan'))
+  const opt = parse<any[]>(p.options, []).find((o) => o.level === input?.level)
+  if (!opt) throw new Error(L(ctx, '找不到这一档目标', 'Target level not found'))
+  ctx.db.update('growth_plans', p.id, { level: opt.level, targets: JSON.stringify(opt.targets), updated_at: nowISO() })
+  return get({}, ctx)
 }
 
 /** 用户选定一档目标，开始执行：记基线；从第 2、3 阶段开始的，第 1 天往前推 */
@@ -482,7 +506,9 @@ export function get(_input: {}, ctx: any) {
           Object.assign(it, patch)
         }
       }
-      return { ...it, auto: it.done_by === 'auto', carried: !it.status && !!pos && it.week < pos.week }
+      // 没做完、已经过了它那一周（按月的过了那个月）的，挪进本周显示
+      const last = it.scope === 'month' ? it.week + 3 : it.week
+      return { ...it, auto: it.done_by === 'auto', carried: !it.status && !!pos && last < pos.week }
     })
     .sort((a, b) => a.week - b.week || String(a.created_at).localeCompare(String(b.created_at)))
   const progress = Object.entries(targets).map(([k, target]) => {
@@ -500,6 +526,7 @@ export function get(_input: {}, ctx: any) {
     plan: {
       id: p.id, status: p.status, summary: p.summary, start_date: p.start_date, start_phase: p.start_phase, stage_reason: p.stage_reason,
       phases: parse(p.phases, []), options: parse(p.options, []), recommended: p.recommended, level: p.level, targets, baseline: base, checkpoints, chat_id: p.chat_id,
+      weekly: parse(p.weekly, []),
     },
     position: pos,
     progress,
@@ -597,7 +624,8 @@ export function saveCheckpoint(input: any, ctx: any) {
   ctx.db.update('growth_plans', p.id, patch)
   // 下一阶段还没做的旧计划项换成新的（做完的留着）
   if (items.length) {
-    for (const it of all(ctx, 'plan_items').filter((i) => i.plan_id === p.id && !i.status && (Number(i.phase) || 0) >= nextPhase)) ctx.db.delete('plan_items', it.id)
+    // 换掉下一阶段还没做的旧计划项（包括起草时按月先排的）；再往后那个阶段按月排的留着，到它的检查点再换
+    for (const it of all(ctx, 'plan_items').filter((i) => i.plan_id === p.id && !i.status && ((Number(i.phase) || 0) === nextPhase || ((Number(i.phase) || 0) > nextPhase && i.scope !== 'month')))) ctx.db.delete('plan_items', it.id)
     for (const it of items) ctx.db.insert('plan_items', { ...it, plan_id: p.id })
   }
   return { ok: true, day, items: items.length, done: day >= TOTAL_DAYS }

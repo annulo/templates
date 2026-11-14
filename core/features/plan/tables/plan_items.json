@@ -59,6 +59,14 @@
       "auto_off": {
         "type": "boolean",
         "description": "用户撤销过自动判断：以后不再自动标这一条"
+      },
+      "who": {
+        "type": "string",
+        "description": "谁来做：you 用户（要账号、要付费、要对外发布、要拍板的）/ ai 助手（写内容、改网站、跑检测）"
+      },
+      "scope": {
+        "type": "string",
+        "description": "week 某一周的事（默认）/ month 第 2、3 个月先排的粗粒度事项，week 是那个月的第一周；到检查点换成每周的"
       }
     },
     "required": [

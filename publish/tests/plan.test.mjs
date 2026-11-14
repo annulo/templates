@@ -198,3 +198,56 @@ test('自动判断做完：按去的页面看这周的数据，存下依据；�
   assert.equal(w.week, 2)
   assert.ok(w.items.some((i) => i.title === '看一遍公司资料' && i.carried))
 })
+
+test('看板数据：谁来做（没写按动作猜）、后两个月按月先排、每周固定节奏；换档只换目标', () => {
+  const { ctx, tables } = fixture()
+  plan.saveDraft(draft({
+    items: [
+      { week: 1, area: 'keywords', title: '挖词', action: { kind: 'task', task: 'keyword-research', input: {} } },
+      { week: 1, area: 'data', title: '连谷歌', action: { kind: 'go', view: 'search' } },
+      { week: 1, area: 'links', who: 'you', title: '外联', action: { kind: 'task', task: 'competitor-suggest', input: {} } },
+      { week: 5, scope: 'month', area: 'content', who: 'ai', title: '第 2 个月写 4 篇' },
+      { week: 9, scope: 'month', area: 'leads', who: 'you', title: '第 3 个月加询盘入口' },
+    ],
+    weekly: [{ who: 'you', title: '周一看谷歌数据', action: { kind: 'go', view: 'search' } }, { title: '' }],
+  }), ctx)
+  assert.throws(() => plan.saveDraft(draft({ items: [{ week: 2, scope: 'month', title: 'x' }] }), ctx), /scope=month/)
+  const by = Object.fromEntries(tables.plan_items.map((i) => [i.title, i]))
+  assert.equal(by['挖词'].who, 'ai')
+  assert.equal(by['连谷歌'].who, 'you')
+  assert.equal(by['外联'].who, 'you')
+  assert.deepEqual([by['第 2 个月写 4 篇'].scope, by['第 2 个月写 4 篇'].phase], ['month', 2])
+  assert.equal(by['第 3 个月加询盘入口'].phase, 3)
+
+  plan.activate({ level: 'normal' }, ctx)
+  let g = plan.get({}, ctx)
+  assert.deepEqual(g.plan.weekly, [{ who: 'you', title: '周一看谷歌数据', action: { kind: 'go', view: 'search' } }])
+  const base = g.plan.baseline
+  g = plan.setLevel({ level: 'aggressive' }, ctx)
+  assert.equal(g.plan.level, 'aggressive')
+  assert.equal(g.plan.targets.pages_published, 24)
+  assert.deepEqual(g.plan.baseline, base)
+
+  // 第 30 天检查点：换掉第 2 阶段按月排的，第 3 个月按月排的留着
+  tables.growth_plans[0].start_date = day(31)
+  plan.saveCheckpoint({ day: 30, summary: 's', items: [{ week: 5, area: 'content', who: 'ai', title: '第 5 周写 1 篇' }] }, ctx)
+  const titles = tables.plan_items.map((i) => i.title)
+  assert.ok(!titles.includes('第 2 个月写 4 篇'))
+  assert.ok(titles.includes('第 3 个月加询盘入口'))
+  assert.ok(titles.includes('第 5 周写 1 篇'))
+})
+
+test('开始时拿不到的指标，后来有了数补成基线', () => {
+  const { ctx, tables } = fixture()
+  plan.saveDraft(draft(), ctx)
+  plan.activate({ level: 'normal' }, ctx)
+  assert.equal(plan.get({}, ctx).plan.baseline.metrics.impressions_28d, null)
+  tables.channels = [{ id: 'c1', type: 'website', gsc_property: 'sc-domain:x.com' }]
+  tables.search_daily = Array.from({ length: 10 }, (_, i) => ({ channel_id: 'c1', date: day(i + 3), impressions: 12, clicks: 1 }))
+  const b = plan.get({}, ctx).plan.baseline
+  assert.equal(b.metrics.impressions_28d, 120)
+  assert.ok(b.filled.impressions_28d)
+  // 补过一次就不再变
+  tables.search_daily.push({ channel_id: 'c1', date: day(2), impressions: 50, clicks: 0 })
+  assert.equal(plan.get({}, ctx).plan.baseline.metrics.impressions_28d, 120)
+})
