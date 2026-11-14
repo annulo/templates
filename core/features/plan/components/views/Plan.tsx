@@ -5,6 +5,7 @@ import { TaskButton, TaskLaunchButton } from '../Task'
 import { Badge, Button, Notice, PageHeader, Panel, Segmented, Skeleton, cx } from '../ui'
 import KeywordMap from '../KeywordMap'
 import Backlinks from '../Backlinks'
+import Diagnosis, { startDiagnosis } from '../Diagnosis'
 import { openChat, runLocal } from '../../lib/shuttle'
 import { tr } from '../../lib/i18n'
 import type { Ctx, View } from './types'
@@ -104,11 +105,12 @@ export default function PlanView({ ctx, params = {}, setParam }: { ctx: Ctx; par
         <Backlinks ctx={ctx} />
       ) : (
         <>
+          <Diagnosis ctx={ctx} />
           {error && <Notice tone="error">{error}</Notice>}
           {data === null ? (
             <Skeleton className="h-48 rounded-xl" />
           ) : !plan ? (
-            <Empty stage={data.stage} action={draftButton(tr('plan.draft'))} />
+            <Empty stage={data.stage} action={<div className="flex flex-wrap items-center gap-2"><AnalyzeButton />{draftButton(tr('plan.draft_only'), 'outline')}</div>} />
           ) : plan.status === 'draft' ? (
             <Draft plan={plan} items={data.items ?? []} metrics={data.metrics ?? {}} onDone={load} redraft={draftButton(tr('plan.redraft'), 'outline')} />
           ) : (
@@ -117,6 +119,30 @@ export default function PlanView({ ctx, params = {}, setParam }: { ctx: Ctx; par
         </>
       )}
     </div>
+  )
+}
+
+/** 分析网站并生成计划（任务 site-diagnosis）：检查、关键词、AI 搜索、竞品都跑一遍再起草，进度在上面的卡片里 */
+function AnalyzeButton() {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  return (
+    <>
+      <Button disabled={busy} onClick={async () => {
+        setBusy(true)
+        setErr('')
+        try {
+          await startDiagnosis()
+        } catch (e) {
+          setErr((e as Error).message)
+        } finally {
+          setBusy(false)
+        }
+      }}>
+        <Sparkles /> {tr('plan.analyze')}
+      </Button>
+      {err && <span className="text-xs text-destructive">{err}</span>}
+    </>
   )
 }
 

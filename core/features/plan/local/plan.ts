@@ -207,6 +207,7 @@ function catalog(ctx: any) {
     { view: 'site', what: L(ctx, '网站访问：访客和来源', 'Site visits: visitors and sources') },
     { view: 'growth', what: L(ctx, '增长机会：每周汇总的信号', 'Growth opportunities: weekly signals') },
     { view: 'company', what: L(ctx, '公司与产品资料', 'Company and products') },
+    { view: 'overview', what: L(ctx, '总览：连接谷歌数据（Search Console、GA4）、开 AI 搜索检测', 'Overview: connect Google data (Search Console, GA4), turn on AI search checks') },
     { view: 'plan', params: { tab: 'map' }, what: L(ctx, '关键词地图：每个主题对应的页面、走到哪一步、带来的展示点击和询盘', 'Keyword map: page per topic, progress, impressions, clicks and inquiries') },
     { view: 'plan', params: { tab: 'links' }, what: L(ctx, '外链：登记社媒、B2B 平台、行业目录上指向网站的链接，检查还在不在', 'Backlinks: record links from social, B2B platforms and directories; check they are live') },
   ]

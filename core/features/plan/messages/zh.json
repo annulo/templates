@@ -146,6 +146,30 @@
     "past": "之前几周做完的 {n} 件",
     "more": "更多",
     "undo_auto": "判断错了，撤销",
-    "auto_hint": "做了会按数据自动标上，AI 做的它自己标"
+    "auto_hint": "做了会按数据自动标上，AI 做的它自己标",
+    "analyze": "分析网站并生成计划",
+    "draft_only": "只起草计划"
+  },
+  "diagnosis": {
+    "title_running": "正在分析你的网站",
+    "title_done": "网站分析完了，90 天计划已经排好",
+    "title_failed": "网站分析没跑完",
+    "desc_running": "第 {done}/{total} 步 · 大约 15~20 分钟，可以先去做别的，做完会在这里显示结论",
+    "desc_done": "下面是每一步的结论；计划按推荐的那档目标开始了，在增长计划里能换。",
+    "desc_failed": "计划没起草出来。看过程能知道卡在哪，也可以重新分析一次。",
+    "chat": "看过程",
+    "see_plan": "看计划",
+    "again": "重新分析",
+    "hide": "收起",
+    "step_audit": "网站检查",
+    "step_keywords": "挖关键词",
+    "step_geo": "AI 搜索检测",
+    "step_competitors": "找竞品",
+    "step_plan": "起草 90 天计划",
+    "doing_audit": "在抓网页、查问题…",
+    "doing_keywords": "在扩词、筛词、归主题…",
+    "doing_geo": "在问 AI 问题…",
+    "doing_competitors": "在联网找同行…",
+    "doing_plan": "在排目标和每周的事…"
   }
 }

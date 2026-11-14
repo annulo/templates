@@ -3,6 +3,7 @@ import { CalendarDays, FileText, Lightbulb, Target } from "lucide-react";
 import { PageHeader, Panel, Button, RangeToggle } from "../ui";
 import TodayCard from "../TodayCard";
 import DataConnect from "../DataConnect";
+import Diagnosis from "../Diagnosis";
 import Checklist from "../Checklist";
 import { g } from "../ProductFields";
 import { GrowthOverview } from "../MarketingWorkspace";
@@ -41,6 +42,8 @@ function Today({ ctx }: { ctx: Ctx }) {
   const [days, setDays] = useState(30);
   return (
     <div className="space-y-6">
+      {/* 填完网址后的「分析网站」进度，跑完看过就收起来 */}
+      <Diagnosis ctx={ctx} />
       {/* 谷歌数据、AI 搜索检测在这里连；都连好了收成一行 */}
       <DataConnect ctx={ctx} />
       {/* 今天要做的事 + 90 天增长计划，内容区够 560px 就并排一行（计划那栏窄，三个目标改成上下排） */}

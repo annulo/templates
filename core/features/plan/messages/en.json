@@ -146,6 +146,30 @@
     "past": "Done in earlier weeks ({n})",
     "more": "More",
     "undo_auto": "Wrong, undo",
-    "auto_hint": "marked automatically from your data; AI marks what it does"
+    "auto_hint": "marked automatically from your data; AI marks what it does",
+    "analyze": "Analyze my site and build a plan",
+    "draft_only": "Draft a plan only"
+  },
+  "diagnosis": {
+    "title_running": "Analyzing your website",
+    "title_done": "Website analyzed, and your 90-day plan is ready",
+    "title_failed": "The website analysis didn't finish",
+    "desc_running": "Step {done}/{total} · about 15–20 minutes. Feel free to do something else; results show up here.",
+    "desc_done": "Here's what each step found. The plan started at the recommended target level; you can switch levels in the growth plan.",
+    "desc_failed": "The plan wasn't drafted. Open the conversation to see where it stopped, or analyze again.",
+    "chat": "View progress",
+    "see_plan": "View plan",
+    "again": "Analyze again",
+    "hide": "Hide",
+    "step_audit": "Site check",
+    "step_keywords": "Keyword research",
+    "step_geo": "AI search check",
+    "step_competitors": "Find competitors",
+    "step_plan": "Draft the 90-day plan",
+    "doing_audit": "Crawling pages and checking issues…",
+    "doing_keywords": "Expanding, screening and grouping keywords…",
+    "doing_geo": "Asking AI questions…",
+    "doing_competitors": "Searching the web for peers…",
+    "doing_plan": "Setting targets and weekly tasks…"
   }
 }

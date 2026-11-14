@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Share2, CircleHelp, SlidersHorizontal, BarChart3, Menu, X, Sparkles, ChevronDown, LayoutDashboard } from 'lucide-react'
 import Wizard from '../components/wizard/Wizard'
-import { runLocal } from '../lib/shuttle'
+import { runLocal, runTask } from '../lib/shuttle'
 import type { ChecklistData } from '../lib/useChecklist'
 import type { Ctx, View } from '../components/views/types'
 import { Notice, Skeleton, cx, toast } from '../components/ui'
@@ -227,6 +227,21 @@ export default function Index() {
       runLocal('onboarding.audit', step.action.input ?? {}).catch(() => {}).finally(() => { setAuditing(false); checklist.load() })
     } catch { /* 起不来就留给用户在清单上点 */ }
   }
+  // 开始运营：有能用的助手就开一次「分析网站」（任务 site-diagnosis：检查、关键词、AI 搜索、竞品、起草并开始 90 天计划），
+  // 在后台的一段对话里跑，总览上的进度卡片看每一步；没有助手（没配模型）就只在后台做网站检查
+  const startDiagnosis = async () => {
+    try {
+      const ai = await runLocal<{ ready: boolean }>('onboarding.ai', {})
+      if (!ai.ready) return void startAudit()
+      const run = await runLocal<{ id: string; status: string; chat_id: string }>('diagnosis.start', {})
+      if (run.status !== 'running' || run.chat_id) return
+      const { chat_id } = await runTask('site-diagnosis', { id: run.id })
+      await runLocal('diagnosis.attach', { id: run.id, chat_id }).catch(() => {})
+      checklist.load()
+    } catch {
+      void startAudit()
+    }
+  }
   useEffect(() => { if (autoWizard) setWizardSession(true) }, [autoWizard])
   const openWizard = async (step?: string) => {
     try {
@@ -363,7 +378,7 @@ export default function Index() {
   // 挂载前（服务端渲染时还不知道在不在 Shuttle 里）、项目资料没读到、Shuttle 里今日清单（决定要不要先进引导）没读到，都算没齐。
   // 以前清单没读到时整页换成一块居中的骨架，挂载前后各画一次，看起来像闪了两次
   const booting = !routeReady || profile === undefined || (shuttle && !checklist.data && !checklist.error)
-  if (ctx && wizard && !wizard.closed && (wizardSession || autoWizard) && !wizardAway) return <Wizard initialStep={wizardStep} ctx={{ ...ctx, go: (v, extra) => { setWizardAway(true); go(v, extra) } }} onExit={(started) => { setWizardStep(null); setWizardSession(false); setWizardAway(false); go('overview'); if (started) { showSetup(true); void startAudit() } }} />
+  if (ctx && wizard && !wizard.closed && (wizardSession || autoWizard) && !wizardAway) return <Wizard initialStep={wizardStep} ctx={{ ...ctx, go: (v, extra) => { setWizardAway(true); go(v, extra) } }} onExit={(started) => { setWizardStep(null); setWizardSession(false); setWizardAway(false); go('overview'); if (started) { showSetup(true); void startDiagnosis() } }} />
 
   return (
     <main className="app-canvas flex h-dvh min-w-0 overflow-hidden text-foreground">
