@@ -452,8 +452,20 @@ export function get(_input: {}, ctx: any) {
   const p = shownPlan(ctx)
   if (!p) return { plan: null, stage: judgeStage(ctx) }
   const m = compute(ctx)
-  const base = parse<{ at?: string; metrics?: Record<string, number | null> }>(p.baseline, {})
+  const base = parse<{ at?: string; metrics?: Record<string, number | null>; filled?: Record<string, string> }>(p.baseline, {})
   const baseM = base.metrics ?? {}
+  // 开始时拿不到的指标（没连谷歌、没做过 AI 搜索检测），后来有了数：把第一次拿到的数补成基线，记下哪天补的（filled）。
+  // 不重新起草计划，目标照旧；进度从补上的那天算
+  if (p.status === 'active') {
+    const late = Object.keys(m).filter((k) => baseM[k] == null && m[k] != null)
+    if (late.length) {
+      const at = nowISO()
+      for (const k of late) baseM[k] = m[k]
+      base.metrics = baseM
+      base.filled = { ...(base.filled ?? {}), ...Object.fromEntries(late.map((k) => [k, at])) }
+      ctx.db.update('growth_plans', p.id, { baseline: JSON.stringify(base) })
+    }
+  }
   const targets = parse<Record<string, number>>(p.targets, {})
   const pos = p.status !== 'draft' && p.start_date ? position(p.start_date) : null
   const checkpoints = parse<any[]>(p.checkpoints, [])

@@ -28,6 +28,15 @@ type Summary = {
 }
 
 // 每张卡片：图标、点了去哪、没连上时去哪连
+/** 总览上的「连接数据」卡片在不在：在就滚过去、闪一下 */
+function toConnect() {
+  const el = typeof document !== 'undefined' ? document.getElementById('data-connect') : null
+  if (!el) return false
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  el.animate?.([{ boxShadow: '0 0 0 3px var(--color-primary)' }, { boxShadow: '0 0 0 0 transparent' }], { duration: 1200 })
+  return true
+}
+
 const CARDS: { key: CardKey; icon: ComponentType<{ className?: string }>; go: [View, Record<string, string>?]; connect: [View, Record<string, string>?]; suffix?: string }[] = [
   { key: 'leads', icon: MessagesSquare, go: ['leads'], connect: ['channels'] },
   { key: 'visitors', icon: Users, go: ['site'], connect: ['channels'] },
@@ -171,7 +180,8 @@ function StatCard({ meta, card, onGo }: { meta: (typeof CARDS)[number]; card?: C
   return (
     <button
       type="button"
-      onClick={() => onGo(none ? meta.connect : meta.go)}
+      // 谷歌点击、AI 搜索没连：总览上有「连接数据」卡片（DataConnect）就滚到它那里连，没有再去对应页面
+      onClick={() => { if (none && (meta.key === 'clicks' || meta.key === 'geo') && toConnect()) return; onGo(none ? meta.connect : meta.go) }}
       title={card?.error}
       className={cx('flex min-w-0 cursor-pointer flex-col px-4 py-3.5 text-left transition-colors', meta.key === 'leads' ? 'bg-gradient-to-b from-emerald-50 to-background hover:from-emerald-100/70 dark:from-emerald-500/10' : 'bg-background hover:bg-muted/40')}
     >

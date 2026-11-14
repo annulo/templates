@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CalendarDays, FileText, Lightbulb, Target } from "lucide-react";
 import { PageHeader, Panel, Button, RangeToggle } from "../ui";
 import TodayCard from "../TodayCard";
+import DataConnect from "../DataConnect";
 import Checklist from "../Checklist";
 import { g } from "../ProductFields";
 import { GrowthOverview } from "../MarketingWorkspace";
@@ -40,6 +41,8 @@ function Today({ ctx }: { ctx: Ctx }) {
   const [days, setDays] = useState(30);
   return (
     <div className="space-y-6">
+      {/* 谷歌数据、AI 搜索检测在这里连；都连好了收成一行 */}
+      <DataConnect ctx={ctx} />
       {/* 今天要做的事 + 90 天增长计划，内容区够 560px 就并排一行（计划那栏窄，三个目标改成上下排） */}
       <div className="grid gap-4 @min-[560px]/overview:grid-cols-[minmax(0,1fr)_minmax(220px,280px)]">
         <TodayCard ctx={ctx} />

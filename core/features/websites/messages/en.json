@@ -695,5 +695,31 @@
     "save": "Save",
     "term_ph": "Term in the original, e.g. sintered stone",
     "title": "Glossary"
+  },
+  "connect": {
+    "title": "Connect your data",
+    "desc": "Once connected, your growth plan gets a starting point, and clicks, impressions, visits and AI search results for \"{site}\" update on their own.",
+    "collapse": "Collapse",
+    "all_done": "All data connected",
+    "google": "Google account",
+    "google_on": "Connected",
+    "google_off": "Connect once; Search Console and GA4 both use it (read-only)",
+    "google_offline": "Open this in Annulo to connect",
+    "google_btn": "Connect Google",
+    "google_waiting": "Authorizing in your browser…",
+    "google_timeout": "Didn't see the authorization finish: authorize in your browser, then click again",
+    "gsc_off": "Impressions, clicks and rankings on Google Search",
+    "gsc_numbers": "{clicks} clicks, {impressions} impressions in the last 28 days",
+    "linked": "Linked to {name}",
+    "ga4_off": "Visits, sources and conversions on your site",
+    "geo": "AI search check",
+    "geo_off": "See whether AI like ChatGPT recommends you when answering questions; uses a model in Annulo that can search the web",
+    "geo_on": "On, not checked yet",
+    "geo_last": "Last check visibility {n}%",
+    "geo_btn": "Turn on",
+    "geo_go": "Run a check",
+    "auto": "Link automatically",
+    "pick": "Pick a property",
+    "link": "Link"
   }
 }

@@ -695,5 +695,31 @@
     "save": "保存",
     "term_ph": "原文里的词，比如 sintered stone",
     "title": "术语表"
+  },
+  "connect": {
+    "title": "连接数据",
+    "desc": "连上以后，增长计划有了起点数据，「{site}」的点击、展示、访问和 AI 搜索里的表现都会自动更新。",
+    "collapse": "收起",
+    "all_done": "数据都连上了",
+    "google": "Google 账号",
+    "google_on": "已连接",
+    "google_off": "连一次，Search Console 和 GA4 都用它（只读）",
+    "google_offline": "在 Annulo 里打开才能连",
+    "google_btn": "连接 Google",
+    "google_waiting": "在浏览器里授权…",
+    "google_timeout": "没等到授权完成：在浏览器里授权后再点一次",
+    "gsc_off": "谷歌搜索的展示、点击、排名",
+    "gsc_numbers": "近 28 天 {clicks} 次点击、{impressions} 次展示",
+    "linked": "已关联 {name}",
+    "ga4_off": "网站的访问、来源、转化",
+    "geo": "AI 搜索检测",
+    "geo_off": "看 ChatGPT 这类 AI 回答问题时会不会推荐你；用 Annulo 里能联网搜索的模型",
+    "geo_on": "已开启，还没检测过",
+    "geo_last": "上次检测可见度 {n}%",
+    "geo_btn": "开启",
+    "geo_go": "去检测",
+    "auto": "自动关联",
+    "pick": "选一个属性",
+    "link": "关联"
   }
 }

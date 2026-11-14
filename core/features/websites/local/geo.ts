@@ -5,7 +5,7 @@ import { L } from './_i18n'
 import { ask as aichatAsk, sites as aichatSites } from './aichat'
 
 // 要电脑的（浏览器、本机授权、密钥、外部接口）：手机上点了转给电脑上开着的 Shuttle 跑（设置 → 远程访问）
-export const remote = ['check', 'brandQuestions']
+export const remote = ['check', 'brandQuestions', 'autoEngine']
 
 // AI 搜索检测（本机函数，Shuttle 在用户电脑上直接跑，不经过助手）。拿问题逐条问 ChatGPT（联网搜索），按问题类型看三件事：
 //
@@ -21,6 +21,8 @@ export const remote = ['check', 'brandQuestions']
 //   geo.check({ channel_id, retry_run_id })       只重问那次检测里失败的问题，结果并进那次检测
 //   geo.brandQuestions({ channel_id, preview?, keys? })  按公司资料和产品套常见问法补品牌问题（不用 AI；source=auto，已有的不重复）；preview 只列不写，keys 只加勾选的
 //   geo.engines() / geo.saveEngine({ engine, enabled?, provider?, model? })   检测设置：用 Shuttle 设置 → 模型 里的哪个服务商、哪个模型（存 geo_engines）
+//   geo.autoEngine()                              一键开检测（总览的连接数据卡片、分析网站任务用）：已经有能用的引擎就不动；
+//                                                 否则打开接口引擎，服务商挑第一个能用、能联网搜索的（creght 平台优先，再本机 agent）。返回 { ready, engine, provider, reason }
 //   geo.askContext({ result_id })                 用户就一条回答问助手（为什么没引用、怎么优化、说错了…）要的上下文（任务 tasks/geo-ask.md）；老名字 factsContext
 //   geo.saveFix({ result_id, note })              存助手的分析或修正建议（geo_results.fix_note，页面上显示在这条回答下面）
 //   geo.questionsContext({ channel_id })          生成推荐类问题要的上下文（任务 tasks/geo-questions.md）
@@ -742,6 +744,26 @@ export async function saveEngine(input: { engine: string; enabled?: boolean; pro
   }
   saveConf(e.key, patch, ctx)
   return (await engines(null, ctx)).engines.find((x) => x.engine === e.key)
+}
+
+/** 一键开检测：只用接口引擎（模型 + 联网搜索），不用网页版（要装插件、要登录，自动跑容易卡住） */
+export function autoEngine(_: unknown, ctx: any) {
+  const confs = engineConfs(ctx)
+  const providers = llmProviders(ctx)
+  // 已经开着、能用的引擎（接口的；网页版开着也算用户自己选过）：不动
+  for (const e of ENGINES) {
+    const c = confs[e.key]
+    if (!isEnabled(e, c, ctx)) continue
+    if (e.kind === 'web' || resolveEngine(e, c, providers, ctx).via) return { ready: true, engine: e.key, provider: c?.provider ?? '', reason: '' }
+  }
+  const e = ENGINES.find((x) => x.kind === 'api')!
+  // 能联网搜索的服务商：creght 平台、本机 agent 按标的；自己加的不知道能不能搜，排在后面
+  const rank = (p: any) => (searchModels(p) === null ? 1 : 0)
+  const usable = providers.filter((p) => p.ready && searchModels(p)?.length !== 0).sort((a, b) => rank(a) - rank(b))
+  const p = usable[0]
+  if (!p) return { ready: false, engine: e.key, provider: '', reason: L(ctx, 'Annulo 里还没有能联网搜索的模型：到 设置 → 模型 里加一个（creght 平台的模型、本机的 Codex / Claude Code 都行）', 'Annulo has no model that can search the web yet: add one in Settings → Models (creght models, or Codex / Claude Code on this computer)') }
+  saveConf(e.key, { enabled: true, provider: p.id, model: '' }, ctx)
+  return { ready: true, engine: e.key, provider: p.name || p.id, reason: '' }
 }
 
 function saveConf(engine: string, patch: Record<string, unknown>, ctx: any) {
