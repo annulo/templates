@@ -633,6 +633,8 @@ function mapRows(ctx: any) {
       page, stage, best_position: best === 999 ? null : Math.round(best * 10) / 10, page_position: pagePos ? Math.round(pagePos * 10) / 10 : null, impressions, clicks,
       topic_id: topicIds[0] || '', article_id: (arts.find((a) => !live.some((p) => p.article_id === a.id)) ?? arts[0])?.id || '',
       search_page_id: sp?.id || list.find((k) => k.search_page_id)?.search_page_id || '',
+      // 还没转选题的词：没页面的主题在地图上直接转成选题（keywords.toTopic）
+      untopiced: list.filter((k) => !k.topic_id).map((k) => k.id),
       words: list.map((k) => ({ keyword: k.keyword, status: k.status, position: pos(k) || null, impressions: imp(k) })).sort((a, b) => b.impressions - a.impressions).slice(0, 12),
     })
   }

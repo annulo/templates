@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { Badge, Button, Notice, Skeleton, cx, type Tone } from './ui'
+import RunButton from './RunButton'
 import { runLocal } from '../lib/shuttle'
 import { tr } from '../lib/i18n'
 import type { Ctx, View } from './views/types'
@@ -10,6 +11,7 @@ type Row = {
   cluster: string; keywords: number; targeting: number; main: string; page: string; stage: Stage
   best_position: number | null; page_position: number | null; impressions: number; clicks: number; leads: number | null
   words: { keyword: string; status: string; position: number | null; impressions: number }[]
+  untopiced: string[]
   next: { text: string; action: { kind: 'go'; view: View; params?: Record<string, string> } }
 }
 type Data = { rows: Row[]; by_stage: Record<Stage, number>; leads_since: string }
@@ -75,7 +77,7 @@ export default function KeywordMap({ ctx }: { ctx: Ctx }) {
             <col className="w-[72px]" />
             <col className="w-[72px]" />
             {hasLeads && <col className="w-[52px]" />}
-            <col className="w-[76px]" />
+            <col className="w-[96px]" />
           </colgroup>
           <thead className="border-b border-border text-left text-xs whitespace-nowrap text-muted-foreground">
             <tr>
@@ -119,9 +121,16 @@ export default function KeywordMap({ ctx }: { ctx: Ctx }) {
                   <td className="px-3 py-3 text-right text-xs tabular-nums">{fmt(r.impressions)} / {fmt(r.clicks)}</td>
                   {hasLeads && <td className="px-3 py-3 text-right tabular-nums">{r.leads ?? '—'}</td>}
                   <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="outline" feedback={false} onClick={() => ctx.go(r.next.action.view, r.next.action.params)}>
-                      {tr('plan.go')}
-                    </Button>
+                    {/* 没页面的主题：直接转成选题，留在地图上（转完这一行走到「有选题」，下一步去写） */}
+                    {r.stage === 'none' && r.untopiced?.length ? (
+                      <RunButton inline fn="keywords.toTopic" input={{ ids: r.untopiced }} size="sm" variant="outline" onDone={load}>
+                        {tr('plan.map_to_topic')}
+                      </RunButton>
+                    ) : (
+                      <Button size="sm" variant="outline" feedback={false} onClick={() => ctx.go(r.next.action.view, r.next.action.params)}>
+                        {tr('plan.go')}
+                      </Button>
+                    )}
                   </td>
                 </tr>
                 {open === r.cluster && (

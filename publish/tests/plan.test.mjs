@@ -150,6 +150,8 @@ test('关键词地图：按主题走到哪一步，询盘按落地页算', () =>
   assert.equal(by.chair.stage, 'draft')
   assert.equal(by.chair.next.action.params.article, 'a1')
   assert.equal(by.bed.stage, 'none')
+  assert.deepEqual(by.bed.untopiced, ['k5']) // 没页面的主题能直接转选题
+  assert.deepEqual(by.table.untopiced, [])
   assert.equal(m.rows[0].cluster, 'sofa') // 走得最远的在前
   assert.equal(plan.compute(ctx).clusters_live, 1)
 })
