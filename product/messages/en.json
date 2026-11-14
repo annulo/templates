@@ -1724,6 +1724,7 @@
     "map_next": "Next step",
     "map_words": "{n} keywords, {t} targeted",
     "map_no_page": "No page yet",
+    "map_to_topic": "Make topic",
     "map_note": "Impressions and clicks are Google's last 28 days; inquiries count the page the form was submitted on.",
     "map_note_since": "Impressions and clicks are Google's last 28 days; inquiries were submitted on the page since the plan started ({date}).",
     "stage_none": "No page",
