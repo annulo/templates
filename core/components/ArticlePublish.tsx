@@ -24,7 +24,7 @@ function JobLine({ job }: { job?: PublishJob }) {
 }
 import { CHANNEL_TYPES, type ChannelMeta } from '../lib/channels'
 import { tr } from '../lib/i18n'
-import { dbDelete, dbPatch, isSite, openChat, runLocal, runTask, shuttleImage, type Article, type Channel, type Publication, type SocialPost } from '../lib/shuttle'
+import { dbDelete, dbPatch, isPublishSite, isSite, openChat, runLocal, runTask, shuttleImage, type Article, type Channel, type Publication, type SocialPost } from '../lib/shuttle'
 import { SOCIAL, loggedInElsewhere, useElsewhere } from '../lib/social'
 import { FIELDS } from '../plugins/social/local/_fields'
 import { lengthOn, supports } from '../local/_types'
@@ -108,7 +108,7 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
   const t = typeOf(article)
   const machine = useElsewhere(ctx.channels)
   // 网站在前，社媒账号在后
-  const accounts = [...ctx.channels.filter(isSite), ...ctx.channels.filter((ch) => !!SOCIAL[ch.type])].filter(ch => !scope || (scope === 'website' ? isSite(ch) : !isSite(ch)))
+  const accounts = [...ctx.channels.filter(isPublishSite), ...ctx.channels.filter((ch) => !!SOCIAL[ch.type])].filter(ch => !scope || (scope === 'website' ? isSite(ch) : !isSite(ch)))
   const targetAccountId = String((article as any).target_account_id || '')
   const targetAccount = accounts.find(ch => ch.id === targetAccountId)
   const takes = (ch: Channel) => (isSite(ch) ? t === 'article' : supports(FIELDS[ch.type], t))

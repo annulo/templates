@@ -96,7 +96,7 @@ function bump(map: Map<string, any>, key: string, fields: Record<string, number>
 export async function summary(input: { days?: number; channel_id?: string }, ctx: any) {
   const days = Math.min(Math.max(Math.floor(Number(input?.days) || 30), 7), 180)
   const p = periods(days)
-  const allSites = read(ctx, 'channels').filter((c) => c.type === 'creght_site' || c.type === 'wordpress')
+  const allSites = read(ctx, 'channels').filter((c) => ['creght_site', 'wordpress', 'website'].includes(c.type))
   const sites = input?.channel_id ? allSites.filter((c) => c.id === input.channel_id) : allSites
   const siteIds = new Set(sites.map((c) => c.id))
 
@@ -125,7 +125,7 @@ export async function summary(input: { days?: number; channel_id?: string }, ctx
         for (const r of cur?.breakdowns?.referrer_host ?? []) bump(sources, r.key || L(ctx, '直接访问', 'Direct'), { visitors: Number(r.uv_count) || 0 })
         for (const r of cur?.breakdowns?.url ?? []) bump(pages, path(r.key), { visitors: Number(r.uv_count) || 0 })
         visitSites++
-      } else if (c.type === 'wordpress' && c.ga4_property) {
+      } else if ((c.type === 'wordpress' || c.type === 'website') && c.ga4_property) {
         const g = await ga4Overview({ channel_id: c.id, days }, ctx)
         for (const d of g?.trend ?? []) visitRows.push({ day: normDay(d.day), n: Number(d.users) || 0 })
         visitCur += Number(g?.current?.users) || 0

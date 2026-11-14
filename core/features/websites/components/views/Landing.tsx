@@ -7,7 +7,7 @@ import { Badge, Button, Dialog, Field, Notice, PageHeader, Skeleton, cx, fmtTime
 import { CHANNEL_TYPES } from '../../lib/channels'
 import { tr } from '../../lib/i18n'
 import { useTables } from '../../lib/useTables'
-import { dbDelete, dbList, dbPatch, isSite, openChat, runLocal, runTask, type Channel, type LandingPage, type Product } from '../../lib/shuttle'
+import { dbDelete, dbList, dbPatch, isPublishSite, openChat, runLocal, runTask, type Channel, type LandingPage, type Product } from '../../lib/shuttle'
 import type { Ctx } from './types'
 import { localeName } from '../ArticleLanguages'
 
@@ -44,7 +44,7 @@ function parseIds(s?: string): string[] {
 }
 
 export default function Landing({ ctx, params, setParam }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void }) {
-  const sites = ctx.channels.filter(isSite)
+  const sites = ctx.channels.filter(isPublishSite)
   const [list, setList] = useState<LandingPage[] | null>(null)
   const [products, setProducts] = useState<Product[] | null>(null) // null：这个模板没有产品表
   const [error, setError] = useState('')
@@ -318,12 +318,14 @@ export function LandingDialog({ open, sites, products, preset, onClose, onStarte
 
 /**
  * 「做落地页」按钮：放在产品、关键词、选题这些地方，点了在原地弹出新建框（来源和建议的目标预先填好），交给助手后在右侧打开对话。
- * sites 是能选的网站（一般是 ctx.channels.filter(isSite)；关键词这种属于某个网站的只给那一个）。没有网站时不显示（落地页做在网站上）。
+ * sites 是能选的网站（一般是 ctx.channels.filter(isPublishSite)；关键词这种属于某个网站的只给那一个）。没有网站时不显示（落地页做在网站上）。
  */
-export function LandingButton({ sites, preset, onStarted, variant = 'ghost', size = 'sm', className }: { sites: Channel[]; preset: () => LandingPreset; onStarted?: () => void; variant?: 'default' | 'outline' | 'ghost'; size?: 'default' | 'sm'; className?: string }) {
+export function LandingButton({ sites: given, preset, onStarted, variant = 'ghost', size = 'sm', className }: { sites: Channel[]; preset: () => LandingPreset; onStarted?: () => void; variant?: 'default' | 'outline' | 'ghost'; size?: 'default' | 'sm'; className?: string }) {
   const [open, setOpen] = useState(false)
   const [current, setCurrent] = useState<LandingPreset>({})
   const [products, setProducts] = useState<Product[] | null>(null)
+  // 只填了网址的网站（website）不能做落地页
+  const sites = given.filter(isPublishSite)
   if (!sites.length) return null
   const show = () => {
     setCurrent(preset())

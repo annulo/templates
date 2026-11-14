@@ -69,7 +69,7 @@ function rowsOf(ctx: any, channelId?: string): Keyword[] {
 }
 
 function channelOf(ctx: any, id?: string): Channel {
-  const list: Channel[] = ctx.db.query('channels', { where: { type: 'creght_site' }, limit: 500 }).list
+  const list: Channel[] = (ctx.db.query('channels', { limit: 500 }).list as Channel[]).filter((c) => c.type === 'creght_site' || c.type === 'website')
   const ch = id ? list.find((c) => c.id === id) : list[0]
   if (!ch) throw new Error(L(ctx, '找不到这个独立站渠道', 'Site channel not found'))
   return ch
@@ -257,7 +257,7 @@ async function refreshChannel(ch: Channel, ctx: any) {
 }
 
 export async function refresh(input: { channel_id?: string; manual?: boolean }, ctx: any) {
-  let chs: Channel[] = ctx.db.query('channels', { where: { type: 'creght_site' }, limit: 500 }).list
+  let chs: Channel[] = (ctx.db.query('channels', { limit: 500 }).list as Channel[]).filter((c) => c.type === 'creght_site' || c.type === 'website')
   if (input?.channel_id) chs = chs.filter((c) => c.id === input.channel_id)
   const used = new Set(rowsOf(ctx).map((k) => k.channel_id))
   chs = chs.filter((c) => gscReady(c) && used.has(c.id))

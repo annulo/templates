@@ -176,6 +176,10 @@
         "label": "Creght site",
         "hint": "Pick one of your creght sites"
       },
+      "website": {
+        "label": "Website",
+        "hint": "URL only: site checks and Google data work; connect creght or WordPress to publish"
+      },
       "wordpress": {
         "label": "WordPress site",
         "hint": "Enter the site URL and connect with an application password"
@@ -366,6 +370,7 @@
     "add": "Add account",
     "empty": "No accounts yet. Add X, Xiaohongshu, LinkedIn or another social account to post and see engagement; add your own website here too.",
     "remove_confirm": "Remove \"{name}\" from this project? You just stop running it here; the account itself is unaffected and can be added back later.",
+    "web_no_stats": "This site isn't on creght, so there are no visit stats here. Link GA4 to see visits under Google rankings → GA4.",
     "wp_no_stats": "WordPress sites have no traffic stats here. Audits, GEO checks and publishing articles all work.",
     "not_enabled_desc": "The account is added, but publishing and data collection for this platform aren't set up. Let the assistant set it up; then you can sign in here, publish from Content center and see data in Social media.",
     "creght_no_mcp": "The creght MCP is turned off, so this site's traffic and publishing aren't available. Turn creght on in Settings → MCP."

@@ -87,7 +87,7 @@ export default function Backlinks({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
       )}
-      <AddDialog open={adding} sites={ctx.channels.filter((c) => c.type === 'creght_site' || c.type === 'wordpress')} onClose={() => setAdding(false)} onDone={() => (setAdding(false), load())} />
+      <AddDialog open={adding} sites={ctx.channels.filter((c) => ['creght_site', 'wordpress', 'website'].includes(c.type))} onClose={() => setAdding(false)} onDone={() => (setAdding(false), load())} />
     </div>
   )
 }

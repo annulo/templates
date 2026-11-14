@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowUpRight, Check, Loader2, MessageSquareText, RefreshCw, Send, Sparkles } from 'lucide-react'
 import { Badge, Button, cx } from './ui'
-import { dbList, isSite, openChat, runLocal, runTask, type Channel, type Publication } from '../lib/shuttle'
+import { dbList, isPublishSite, openChat, runLocal, runTask, type Channel, type Publication } from '../lib/shuttle'
 import { useTaskRuns } from './Task'
 import SiteLanguages from './SiteLanguages'
 import { useCanRunAll } from '../lib/useShuttle'
@@ -24,7 +24,7 @@ export async function setupPublish(channelId: string, note?: string) {
  * 发布就是执行那个网站的发布脚本 <publisher>.publish（本机函数，不经过助手）；再发一次就是更新。
  */
 export default function PublishTargets({ ctx, articleId, disabled, onChanged }: { ctx: Ctx; articleId: string; disabled?: boolean; onChanged: () => void }) {
-  const sites = ctx.channels.filter(isSite)
+  const sites = ctx.channels.filter(isPublishSite)
   const [pubs, setPubs] = useState<Publication[]>([])
   const [picked, setPicked] = useState<string[]>([])
   const [busy, setBusy] = useState('') // 正在发的网站 id

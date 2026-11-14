@@ -49,7 +49,7 @@ const norm = (u: string) => String(u || '').trim().replace(/#.*$/, '').replace(/
 /** 我们自己的网站：域名 → 网站 id */
 function ownSites(ctx: any) {
   const m = new Map<string, string>()
-  for (const c of all(ctx, 'channels').filter((c) => c.type === 'creght_site' || c.type === 'wordpress'))
+  for (const c of all(ctx, 'channels').filter((c) => ['creght_site', 'wordpress', 'website'].includes(c.type)))
     for (const u of [c.live_url, c.url, c.preview_url, c.domain && 'https://' + c.domain]) if (u && host(u)) m.set(host(u), c.id)
   return m
 }

@@ -532,7 +532,7 @@ export function suggestContext(_: unknown, ctx: any) {
       return []
     }
   }
-  const sites = all('channels').filter((c) => c.type === 'creght_site' || c.type === 'wordpress')
+  const sites = all('channels').filter((c) => ['creght_site', 'wordpress', 'website'].includes(c.type))
   // 自己的网站：预览地址、正式地址、Search Console 属性、起步向导里填的网址
   const own = new Set([...sites.flatMap((c) => [c.preview_url, c.live_url, c.gsc_property?.replace(/^sc-domain:/, '')]), ...all('onboarding').map((o) => o.website_url)].filter(Boolean).map((u: string) => hostOf(u)).filter(Boolean))
   const rows = all('competitors') as Competitor[]

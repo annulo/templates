@@ -6,7 +6,7 @@ export const remote = ["context"];
 export async function context(input: { url?: string; channel_id?: string }, ctx: any) {
   const p = profile(ctx);
   const channel = input?.channel_id ? ctx.db.get("channels", input.channel_id) : null;
-  if (input?.channel_id && (!channel || !["creght_site", "wordpress"].includes(channel.type)))
+  if (input?.channel_id && (!channel || !["creght_site", "wordpress", "website"].includes(channel.type)))
     throw new Error(L(ctx, "所选网站不存在，请重新选择", "The selected website is missing. Select it again."));
   const address = url(ctx, input?.url || (channel ? await siteBase(channel, ctx) : (p as any).website_url));
   if (!address)

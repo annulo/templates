@@ -67,7 +67,7 @@ export function signals(ctx: any, now = Date.now()): Item[] {
     const { weight = 0, ...rest } = it
     out.push({ ...rest, score: score(it.priority, weight) })
   }
-  const sites = all(ctx, 'channels').filter((c) => c.type === 'creght_site' || c.type === 'wordpress')
+  const sites = all(ctx, 'channels').filter((c) => ['creght_site', 'wordpress', 'website'].includes(c.type))
   const siteName = (id: string) => sites.find((c) => c.id === id)?.name ?? ''
 
   // 询盘：高意向的新询盘没处理、联系后 3 天没进展
@@ -269,7 +269,7 @@ export function signals(ctx: any, now = Date.now()): Item[] {
     })
 
   // 数据没接上：这些都算不出来
-  const gsc = sites.filter((c) => c.type === 'creght_site')
+  const gsc = sites.filter((c) => c.type === 'creght_site' || c.type === 'website')
   if (gsc.length && !gsc.some((c) => c.gsc_property && !c.gsc_link_disabled))
     add({
       key: 'setup_gsc', kind: 'setup', area: 'setup', priority: 'low', value: 1, weight: 20,

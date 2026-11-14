@@ -176,6 +176,10 @@
         "label": "Creght 网站",
         "hint": "从你的 creght 网站里选一个"
       },
+      "website": {
+        "label": "网站",
+        "hint": "只填了网址：能检查网站、连谷歌数据；接入 creght 或 WordPress 后才能发布"
+      },
       "wordpress": {
         "label": "WordPress 网站",
         "hint": "填网站地址，用应用密码连接"
@@ -366,6 +370,7 @@
     "add": "添加账号",
     "empty": "还没有账号。添加 X、小红书、LinkedIn 等社媒账号，就能发帖、看互动；有自己的网站也加在这里。",
     "remove_confirm": "从这个项目移除「{name}」？只是不再在这里运营它，账号本身不受影响，之后还能再添加回来。",
+    "web_no_stats": "这个网站没有接入 creght，这里没有访问统计。关联 GA4 后在「谷歌排名 → GA4」看访问量。",
     "wp_no_stats": "WordPress 网站没有访问统计，这里不显示访问量。检查、AI 搜索检测、发文章都能用。",
     "not_enabled_desc": "账号已经加上了，但这个平台的发布和采集还没接进来。交给助手接入，接好后就能在这里登录、在内容中心发布、在社交媒体里看数据。",
     "creght_no_mcp": "creght MCP 停用了：这个站点的访问数据和发布暂时读不到。到 设置 → MCP 启用 creght。"

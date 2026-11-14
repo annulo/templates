@@ -42,6 +42,9 @@ export async function properties(_: unknown, ctx: any) {
   return { list: await sites(ctx) }
 }
 
+/** 能关联 Search Console 的网站：creght 站点和只填了网址的网站（website）；WordPress 走 GA4 */
+const GSC_TYPES = ['creght_site', 'website']
+
 async function resolveProperty(ch: Channel, ctx: any, props?: { siteUrl: string }[]): Promise<string> {
   if (ch.gsc_link_disabled) return ''
   if (ch.gsc_property) return ch.gsc_property
@@ -53,7 +56,7 @@ async function resolveProperty(ch: Channel, ctx: any, props?: { siteUrl: string 
 export async function link(input: { channel_id: string; property?: string }, ctx: any) {
   const ch: Channel | null = ctx.db.get('channels', input?.channel_id)
   if (!ch) throw new Error(L(ctx, '没有这个渠道：', 'No such channel: ') + input?.channel_id)
-  if (ch.type !== 'creght_site') throw new Error(L(ctx, '只有独立站渠道能关联 Search Console', 'Only site channels can link Search Console'))
+  if (!GSC_TYPES.includes(ch.type)) throw new Error(L(ctx, '只有独立站渠道能关联 Search Console', 'Only site channels can link Search Console'))
   const list = await sites(ctx)
   let property = input.property ?? ''
   if (property && !list.some((p) => p.siteUrl === property)) throw new Error(L(ctx, `连着的 Google 账号都看不到属性 ${property}`, `None of the connected Google accounts can see property ${property}`))
@@ -72,7 +75,7 @@ export async function link(input: { channel_id: string; property?: string }, ctx
 /** 只解除本网站的关联；保留历史数据，阻止定时任务重新自动匹配。 */
 export function unlink(input: { channel_id: string }, ctx: any) {
   const ch: Channel | null = ctx.db.get('channels', input?.channel_id)
-  if (!ch || ch.type !== 'creght_site') throw new Error(L(ctx, '请选择一个独立站渠道', 'Choose a site channel'))
+  if (!ch || !GSC_TYPES.includes(ch.type)) throw new Error(L(ctx, '请选择一个独立站渠道', 'Choose a site channel'))
   ctx.db.update('channels', ch.id, { gsc_property: '', gsc_synced_at: '', gsc_link_disabled: true })
   return { unlinked: true }
 }
@@ -84,7 +87,7 @@ const round = (n: number, d = 4) => Math.round(n * 10 ** d) / 10 ** d
 /** 页面日期筛选：包含起止日，和前一段等长的区间比较。只读，不覆盖自动同步的 28 天机会数据。 */
 export async function range(input: { channel_id: string; start: string; end: string }, ctx: any) {
   const ch: Channel | null = ctx.db.get('channels', input?.channel_id)
-  if (!ch || ch.type !== 'creght_site') throw new Error(L(ctx, '请选择一个独立站渠道', 'Choose a site channel'))
+  if (!ch || !GSC_TYPES.includes(ch.type)) throw new Error(L(ctx, '请选择一个独立站渠道', 'Choose a site channel'))
   const valid = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) && ymd(Date.parse(v)) === v
   const start = String(input?.start ?? ''), end = String(input?.end ?? '')
   const latest = ymd(Date.now() - LAG * DAY)
@@ -223,7 +226,7 @@ function writeQueryTopics(rows: Row[], brands: string[], ctx: any) {
 }
 
 export async function sync(input: { channel_id?: string; manual?: boolean }, ctx: any) {
-  let chs: Channel[] = ctx.db.query('channels', { where: { type: 'creght_site' }, limit: 500 }).list
+  let chs: Channel[] = (ctx.db.query('channels', { limit: 500 }).list as Channel[]).filter((c) => GSC_TYPES.includes(c.type))
   if (input?.channel_id) chs = chs.filter((c) => c.id === input.channel_id)
   if (!chs.length) return { skipped: L(ctx, '没有独立站渠道', 'No site channels') }
   chs = chs.filter((ch) => !ch.gsc_link_disabled)

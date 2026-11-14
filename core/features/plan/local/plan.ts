@@ -86,7 +86,7 @@ export const METRICS: Record<string, { tier: Tier; better: 'up' | 'down'; zh: st
 }
 const PIPE = ['contacted', 'quoted', 'negotiating', 'qualified']
 
-const sites = (ctx: any) => all(ctx, 'channels').filter((c) => c.type === 'creght_site' || c.type === 'wordpress')
+const sites = (ctx: any) => all(ctx, 'channels').filter((c) => ['creght_site', 'wordpress', 'website'].includes(c.type))
 
 /** GSC 的数据有多久了：连没连上、有几天的数、最早哪天 */
 function gscHistory(ctx: any) {

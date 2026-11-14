@@ -169,6 +169,10 @@
         "label": "Creght site",
         "hint": "Pick one of your creght sites"
       },
+      "website": {
+        "label": "Website",
+        "hint": "URL only: site checks and Google data work; connect creght or WordPress to publish"
+      },
       "wordpress": {
         "label": "WordPress site",
         "hint": "Enter the site URL and connect with an application password"
@@ -359,6 +363,7 @@
     "add": "Add site or account",
     "empty": "No sites or accounts yet. Add your trade website (Creght or WordPress) to see its traffic, run site checks and publish articles; add social accounts such as X to post and track engagement.",
     "remove_confirm": "Remove \"{name}\" from this project? It just stops being managed here; the site or account itself is untouched and can be added back later.",
+    "web_no_stats": "This site isn't on creght, so there are no visit stats here. Link GA4 to see visits under Google rankings → GA4.",
     "wp_no_stats": "WordPress sites have no traffic stats here. Site checks, AI search checks and publishing articles all work.",
     "creght_no_mcp": "The creght MCP is turned off, so this site's traffic, publishing and inquiry sync aren't available. Turn creght on in Settings → MCP."
   },

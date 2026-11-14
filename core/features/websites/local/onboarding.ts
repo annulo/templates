@@ -36,7 +36,7 @@ function checked(input: { revision: number }, ctx: any) {
 function requireSite(row: Onboarding, ctx: any) {
   if (row.website_url) return null
   const ch = row.channel_id ? ctx.db.get('channels', row.channel_id) : null
-  if (!ch || ch.type !== 'creght_site') fail(ctx, '请先输入网站地址或选择站点', 'Enter a website URL or select a site first')
+  if (!ch || !['creght_site', 'wordpress', 'website'].includes(ch.type)) fail(ctx, '请先输入网站地址或选择站点', 'Enter a website URL or select a site first')
   return ch
 }
 export function get(_input: {}, ctx: any) {
@@ -73,9 +73,9 @@ export async function selectSite(input: { project_id: string; site_id: string; r
   }
   return get({}, ctx)
 }
-// 普通网址不需要账号授权，也不伪装成可发布或同步询盘的渠道。
-// 认得出是 creght 站点的（channels.fromURL）直接加进网站和账号、记在 channel_id；读资料、检查仍用输入的网址。
-// 没连 creght MCP、站点不在账号下也照加，渠道页再提示。WordPress 不自动加，渠道页顶部提示接入。
+// 输入的网址都加进网站（channels.fromURL）、记在 channel_id：认得出是 creght 站点的加成 creght 站点；
+// 别的加成只读的网站（website：能检查、连谷歌、做 AI 搜索检测，不能发布，也不同步询盘），之后在渠道页接入 creght / WordPress 时原地升级。
+// 读资料仍用输入的网址。没连 creght MCP、站点不在账号下也照加，渠道页再提示。
 export async function selectURL(input: { url: string; refresh?: boolean }, ctx: any) {
   const value = websiteURL(String(input?.url || ''))
   if (!value) fail(ctx, '请输入有效的网站地址（HTTP 或 HTTPS）', 'Enter a valid HTTP or HTTPS website URL')
@@ -155,7 +155,9 @@ export async function audit(input: { revision: number }, ctx: any) {
   const row = checked(input, ctx), ch = requireSite(row, ctx)
   write(ctx, { audit_status: 'running', audit_note: '' })
   try {
-    const result = row.website_url ? await inspectAudit({ url: row.website_url }, ctx) : await runAudit({ channel_id: ch!.id }, ctx)
+    // 有渠道就跑正式检查（结果进 site_issues，网站检查页和增长计划的指标都看得到）；老数据只有网址的照旧只看首页附近
+    const chId = ch?.id ?? (row.channel_id && ctx.db.get('channels', row.channel_id) ? row.channel_id : '')
+    const result = chId ? await runAudit({ channel_id: chId }, ctx) : await inspectAudit({ url: row.website_url }, ctx)
     checked(input, ctx)
     write(ctx, { audit_status: 'done', audit_result: JSON.stringify(result) })
   } catch (e) {

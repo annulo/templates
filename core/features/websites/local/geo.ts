@@ -305,7 +305,7 @@ function askerOf(p: any, ctx: any): string {
 export async function check(input: Input, ctx: any) {
   if (input?.channel_id) return checkOne(input, ctx)
   // 不指定渠道（每周定时就是这样调）：有启用问题的独立站逐个测，一个失败不影响别的
-  const sites: Channel[] = (ctx.db.query('channels', { limit: 200 }).list as Channel[]).filter((c) => c.type === 'creght_site' || c.type === 'wordpress')
+  const sites: Channel[] = (ctx.db.query('channels', { limit: 200 }).list as Channel[]).filter((c) => ['creght_site', 'wordpress', 'website'].includes(c.type))
   const out: any[] = []
   for (const ch of sites) {
     if (!ctx.db.query('geo_questions', { where: { channel_id: ch.id, status: 'active' }, limit: 1 }).list.length) continue

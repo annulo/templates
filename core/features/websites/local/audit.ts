@@ -77,7 +77,7 @@ const DEFAULT_MAX = 40
 /** 渠道体检抓全站：sitemap 里的页面都抓，最多这么多 */
 const FULL_MAX = 300
 /** 能体检的网站渠道：creght 站点、WordPress（「确认上线」只有 creght 站点有） */
-const SITE_TYPES = ['creght_site', 'wordpress']
+const SITE_TYPES = ['creght_site', 'wordpress', 'website']
 const FILE_EXT = /\.(png|jpe?g|gif|webp|svg|pdf|zip|mp4|mp3|css|js|xml|txt|json|ico)$/i
 
 const hostOf = (u: string) => (/^[a-z][a-z0-9+.-]*:\/\/([^/:?#]+)/i.exec(u)?.[1] ?? '').toLowerCase()
@@ -102,8 +102,8 @@ const chars = (s: string) => [...s].length
 
 /** 体检的目标地址：发布过就用正式域名（自定义域名优先），没发布过用预览地址（预览会带 noindex，那不算问题） */
 async function target(ch: Channel, ctx: any): Promise<{ url: string; preview: boolean }> {
-  // WordPress 没有预览环境：填的地址就是线上站点
-  if (ch.type === 'wordpress') {
+  // WordPress、只填了网址的网站（website）没有预览环境：填的地址就是线上站点
+  if (ch.type === 'wordpress' || ch.type === 'website') {
     if (!ch.preview_url) throw new Error(L(ctx, `渠道「${ch.name}」没有站点地址`, `Channel "${ch.name}" has no site URL`))
     return { url: ch.preview_url.replace(/\/$/, ''), preview: false }
   }

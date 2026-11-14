@@ -22,6 +22,7 @@ const meta = (type: ChannelType, icon: ChannelMeta['icon'], ready: boolean): Cha
 export const CHANNEL_TYPES: Record<ChannelType, ChannelMeta> = {
   creght_site: meta('creght_site', CreghtLogo, true),
   wordpress: meta('wordpress', Globe, true),
+  website: meta('website', Globe, false),
   xiaohongshu: meta('xiaohongshu', XiaohongshuLogo, true),
   douyin: meta('douyin', DouyinLogo, true),
   wechat_mp: meta('wechat_mp', WechatLogo, false),

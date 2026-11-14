@@ -187,7 +187,7 @@ function write(ch: Channel, found: Omit<Decay, 'id'>[], ctx: any) {
 }
 
 export async function scan(input: { channel_id?: string; manual?: boolean }, ctx: any) {
-  let chs: Channel[] = ctx.db.query('channels', { where: { type: 'creght_site' }, limit: 500 }).list
+  let chs: Channel[] = (ctx.db.query('channels', { limit: 500 }).list as Channel[]).filter((c) => c.type === 'creght_site' || c.type === 'website')
   if (input?.channel_id) chs = chs.filter((c) => c.id === input.channel_id)
   chs = chs.filter((c) => c.gsc_property && !c.gsc_link_disabled)
   if (!chs.length) {
