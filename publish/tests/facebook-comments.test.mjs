@@ -5,9 +5,11 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+// 没全局装 esbuild 时用 ESBUILD_MODULE（esbuild 包目录）里的命令，和别的测试一样
+const ESBUILD_BIN = process.env.ESBUILD_MODULE ? process.env.ESBUILD_MODULE + '/bin/esbuild' : 'esbuild'
 
 const temp = mkdtempSync(join(tmpdir(), 'facebook-comment-ui-test-'))
-execFileSync('esbuild', ['core/lib/facebookComments.ts', '--bundle', '--platform=node', '--format=esm', `--outfile=${join(temp, 'comments.mjs')}`], { stdio: 'pipe' })
+execFileSync(ESBUILD_BIN, ['core/lib/facebookComments.ts', '--bundle', '--platform=node', '--format=esm', `--outfile=${join(temp, 'comments.mjs')}`], { stdio: 'pipe' })
 const { canViewFacebookComments: enabled, mergeFacebookComments: merge } = await import(pathToFileURL(join(temp, 'comments.mjs')))
 after(() => rmSync(temp, { recursive: true, force: true }))
 

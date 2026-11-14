@@ -12,10 +12,10 @@ for(const template of ['creator','product']) {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),`${template}-cover-`));temps.push(dir)
   fs.cpSync(path.join(root,template),dir,{recursive:true})
   fs.cpSync(path.join(root,'core/local'),path.join(dir,'local'),{recursive:true})
-  if(template==='product') for(const f of JSON.parse(fs.readFileSync(path.join(root, 'publish/targets.json'), 'utf8')).product.features) fs.cpSync(path.join(root,'core/features',f),dir,{recursive:true})
+  for(const f of JSON.parse(fs.readFileSync(path.join(root, 'publish/targets.json'), 'utf8'))[template].features ?? []) fs.cpSync(path.join(root,'core/features',f),dir,{recursive:true})
   await build({stdin:{contents:"export * as content from './local/content';export * as convert from './local/convert';",resolveDir:dir},bundle:true,platform:'node',format:'esm',outfile:path.join(dir,'test.mjs'),logLevel:'silent',plugins:[{name:'social-fixture',setup(b){
     b.onResolve({filter:/plugins\/social\//},a=>({path:a.path,namespace:'fixture'}))
-    b.onLoad({filter:/.*/,namespace:'fixture'},()=>({loader:'ts',contents:"export const FIELDS={};export const CONTENT_TYPES=['article','post','video'];export const contentType=c=>c?.type||'article';export const parseList=v=>Array.isArray(v)?v:JSON.parse(v||'[]');export const platformsFor=()=>[];export const htmlImages=()=>[];export const lengthOn=()=>0;export const supports=()=>false;export const fromContent=c=>c;export const summary=()=>[];"}))
+    b.onLoad({filter:/.*/,namespace:'fixture'},()=>({loader:'ts',contents:"export const FIELDS={};export const CONTENT_TYPES=['article','post','video'];export const contentType=c=>c?.type||'article';export const parseList=v=>Array.isArray(v)?v:JSON.parse(v||'[]');export const platformsFor=()=>[];export const htmlImages=()=>[];export const lengthOn=()=>0;export const supports=()=>false;export const fromContent=c=>c;export const summary=()=>[];;export const fieldsFor=()=>({});export const userIdOf=()=>'';export async function creatorNotes(){return []}"}))
   }}]})
   const {content,convert}=await import(pathToFileURL(path.join(dir,'test.mjs')))
   prepared.push({template,content,convert})
@@ -48,6 +48,6 @@ for(const {template,content,convert} of prepared) {
     const {article_id:id}=content.save({type:'post',title:'Title',body:'Body',images:['https://assets.test/first.png'],video_cover:'https://assets.test/cover.png'},ctx)
     assert.equal(ctx.db.get('articles',id).video_cover,undefined)
     assert.deepEqual(JSON.parse(ctx.db.get('articles',id).images),['https://assets.test/first.png'])
-    assert.equal(JSON.parse(fs.readFileSync(path.join(root,template,'tables/articles.json'),'utf8')).json_schema.properties.video_cover.type,'string')
+    assert.equal(JSON.parse(fs.readFileSync([path.join(root,template,'tables/articles.json'),path.join(root,'core/features/business/tables/articles.json')].find((f)=>fs.existsSync(f)),'utf8')).json_schema.properties.video_cover.type,'string')
   })
 }

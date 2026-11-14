@@ -19,7 +19,7 @@ await build({ stdin: { contents: "export * as topics from './local/topics'; expo
   bundle: true, platform: 'node', format: 'esm', outfile: path.join(temp, 'test.mjs'), logLevel: 'silent',
   plugins: [{ name: 'social-fixture', setup(b) {
     b.onResolve({ filter: /plugins\/social\// }, (a) => ({ path: a.path, namespace: 'social-fixture' }))
-    b.onLoad({ filter: /.*/, namespace: 'social-fixture' }, () => ({ loader: 'ts', contents: "export const FIELDS={}; export const CONTENT_TYPES=['article','post','video']; export const contentType=c=>c?.type || 'article'; export const parseList=v=>Array.isArray(v)?v:JSON.parse(v || '[]'); export const lengthOn=c=>String(c.body || '').length; export const platformsFor=()=>[]; export const htmlImages=()=>[]; export const supports=()=>false; export const fromContent=c=>c; export async function summary(){return []}" }))
+    b.onLoad({ filter: /.*/, namespace: 'social-fixture' }, () => ({ loader: 'ts', contents: "export const FIELDS={}; export const CONTENT_TYPES=['article','post','video']; export const contentType=c=>c?.type || 'article'; export const parseList=v=>Array.isArray(v)?v:JSON.parse(v || '[]'); export const lengthOn=c=>String(c.body || '').length; export const platformsFor=()=>[]; export const htmlImages=()=>[]; export const supports=()=>false; export const fromContent=c=>c; export async function summary(){return []} export const fieldsFor=()=>({}); export const userIdOf=()=>''; export async function creatorNotes(){return []}" }))
   } }] })
 const { topics, originsOf, topicsFrom } = await import(pathToFileURL(path.join(temp, 'test.mjs')))
 
@@ -38,6 +38,7 @@ function fakeCtx(tables) {
   }
 }
 const geoTables = () => ({
+  channels: [{ id: 'c1', type: 'creght_site', name: 'Site' }],
   geo_questions: [
     { id: 'q1', channel_id: 'c1', question: 'best sofa factory in china', intent: 'commercial', status: 'active' },
     { id: 'q2', channel_id: 'c1', question: 'Pofung reviews', intent: 'brand', status: 'active' },
@@ -53,32 +54,32 @@ const geoTables = () => ({
   topics: [],
 })
 
-test('context gives the uncited recommendation questions, same rule as the AI search page', () => {
+test('context gives the uncited recommendation questions, same rule as the AI search page', async () => {
   const ctx = fakeCtx(geoTables())
-  const r = topics.context({ channel_id: 'c1' }, ctx)
+  const r = await topics.context({ channel_id: 'c1' }, ctx)
   assert.deepEqual(r.geo_questions.map((q) => q.id), ['q1']) // q2 是品牌问题，q3 最新一次引用了
 })
 
-test('geo topics must name their questions, and record question, label and chat', () => {
+test('geo topics must name their questions, and record question, label and chat', async () => {
   const tables = geoTables()
   const ctx = fakeCtx(tables)
-  assert.throws(() => topics.save({ source: 'geo', ideas: [{ title: 'How to pick a sofa factory' }] }, ctx), /question_ids/)
-  assert.throws(() => topics.save({ source: 'geo', ideas: [{ title: 'x', question_ids: ['nope'] }] }, ctx), /nope/)
-  const r = topics.save({ source: 'geo', workspace: 'website', ideas: [{ title: 'How to pick a sofa factory', question_ids: ['q1'] }] }, ctx)
+  await assert.rejects(async () => topics.save({ source: 'geo', ideas: [{ title: 'How to pick a sofa factory' }] }, ctx), /question_ids/)
+  await assert.rejects(async () => topics.save({ source: 'geo', ideas: [{ title: 'x', question_ids: ['nope'] }] }, ctx), /nope/)
+  const r = await topics.save({ source: 'geo', workspace: 'website', ideas: [{ title: 'How to pick a sofa factory', question_ids: ['q1'] }] }, ctx)
   const t = tables.topics[0]
   assert.deepEqual(r.saved, ['How to pick a sofa factory'])
   assert.deepEqual(originsOf(t), [{ type: 'geo_question', id: 'q1', label: 'best sofa factory in china', channel_id: 'c1' }])
   assert.equal(t.chat_id, 'chat-1')
   assert.deepEqual(topicsFrom(tables.topics, 'geo_question', 'q1').map((x) => x.id), [t.id])
   // 再出选题时，写成过的问题带上选题标题
-  assert.deepEqual(topics.context({ channel_id: 'c1' }, ctx).geo_questions[0].topic_titles, ['How to pick a sofa factory'])
+  assert.deepEqual((await topics.context({ channel_id: 'c1' }, ctx)).geo_questions[0].topic_titles, ['How to pick a sofa factory'])
 })
 
-test('a duplicate title links the new question to the existing topic instead of being dropped', () => {
+test('a duplicate title links the new question to the existing topic instead of being dropped', async () => {
   const tables = geoTables()
   const ctx = fakeCtx(tables)
-  topics.save({ source: 'geo', workspace: 'website', ideas: [{ title: 'Sofa factory guide', question_ids: ['q1'] }] }, ctx)
-  const r = topics.save({ source: 'geo', workspace: 'website', ideas: [{ title: 'sofa factory guide', question_ids: ['q3'] }] }, ctx)
+  await topics.save({ source: 'geo', workspace: 'website', ideas: [{ title: 'Sofa factory guide', question_ids: ['q1'] }] }, ctx)
+  const r = await topics.save({ source: 'geo', workspace: 'website', ideas: [{ title: 'sofa factory guide', question_ids: ['q3'] }] }, ctx)
   assert.deepEqual(r.linked, ['sofa factory guide'])
   assert.equal(tables.topics.length, 1)
   assert.deepEqual(originsOf(tables.topics[0]).map((o) => o.id), ['q1', 'q3'])

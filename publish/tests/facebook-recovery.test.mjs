@@ -6,10 +6,12 @@ import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+// 没全局装 esbuild 时用 ESBUILD_MODULE（esbuild 包目录）里的命令，和别的测试一样
+const ESBUILD_BIN = process.env.ESBUILD_MODULE ? process.env.ESBUILD_MODULE + '/bin/esbuild' : 'esbuild'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const temp = mkdtempSync(join(tmpdir(), 'facebook-recovery-test-'))
-const build = (entry, output, extra = []) => execFileSync('esbuild', [entry, '--bundle', '--platform=node', '--format=esm', `--outfile=${join(temp, output)}`, ...extra], { stdio: 'pipe' })
+const build = (entry, output, extra = []) => execFileSync(ESBUILD_BIN, [entry, '--bundle', '--platform=node', '--format=esm', `--outfile=${join(temp, output)}`, ...extra], { stdio: 'pipe' })
 build(join(root, 'core/lib/facebookPublishRecovery.ts'), 'recovery.mjs')
 const { facebookPublishRecovery: recovery } = await import(pathToFileURL(join(temp, 'recovery.mjs')))
 copyFileSync(join(root, 'core/lib/publishQueue.ts'), join(temp, 'publishQueue.ts'))

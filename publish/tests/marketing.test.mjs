@@ -22,7 +22,7 @@ for (const f of JSON.parse(fs.readFileSync(path.join(root, 'publish/targets.json
 await build({
   stdin: {
     contents:
-      "export * as marketing from './local/marketing'; export * as growth from './local/campaigns'; export * as content from './local/content';",
+      "export * as marketing from './local/marketing'; export * as campaigns from './local/campaigns'; export * as content from './local/content';",
     resolveDir: temp,
   },
   outfile: path.join(temp, "test.mjs"),
@@ -38,7 +38,7 @@ await build({
           namespace: "social-stub",
         }));
         b.onLoad({ filter: /.*/, namespace: "social-stub" }, () => ({
-          contents: `export const FIELDS={}; export const CONTENT_TYPES=['article','post','video']; export const contentType=c=>c?.type || 'article'; export const parseList=v=>Array.isArray(v)?v:JSON.parse(v || '[]'); export const lengthOn=c=>String(c.body || '').length; export const platformsFor=()=>[]; export const htmlImages=()=>[]; export const supports=()=>false; export const fromContent=c=>c; export async function summary(){return []}`,
+          contents: `export const FIELDS={}; export const CONTENT_TYPES=['article','post','video']; export const contentType=c=>c?.type || 'article'; export const parseList=v=>Array.isArray(v)?v:JSON.parse(v || '[]'); export const lengthOn=c=>String(c.body || '').length; export const platformsFor=()=>[]; export const htmlImages=()=>[]; export const supports=()=>false; export const fromContent=c=>c; export async function summary(){return []} export const fieldsFor=()=>({}); export const userIdOf=()=>''; export async function creatorNotes(){return []}`,
           loader: "ts",
         }));
       },
@@ -47,7 +47,7 @@ await build({
 });
 const {
   marketing: m,
-  growth,
+  campaigns,
   content,
 } = await import(pathToFileURL(path.join(temp, "test.mjs")));
 process.on("exit", () => fs.rmSync(temp, { recursive: true, force: true }));

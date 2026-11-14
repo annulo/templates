@@ -13,7 +13,7 @@ fs.cpSync(path.join(root, 'core/local'), path.join(temp, 'local'), { recursive: 
 fs.cpSync(path.join(root, 'core/lib'), path.join(temp, 'lib'), { recursive: true })
 // 产品运营启用的共用模块（publish/targets.json 的 features），同 publish.py 的组装
 for (const f of JSON.parse(fs.readFileSync(path.join(root, 'publish/targets.json'), 'utf8')).product.features) fs.cpSync(path.join(root, 'core/features', f), temp, { recursive: true })
-await build({ stdin: { contents: "export * as inspiration from './local/inspiration'; export * as topics from './local/topics'; export * as content from './local/content';", resolveDir: temp }, outfile: path.join(temp, 'test.mjs'), bundle: true, platform: 'node', format: 'esm', plugins: [{ name: 'social-stub', setup(b) { b.onResolve({ filter: /plugins\/social\// }, (a) => ({ path: a.path, namespace: 'social-stub' })); b.onLoad({ filter: /.*/, namespace: 'social-stub' }, () => ({ contents: `export const FIELDS = {}; export async function summary() { return [] }
+await build({ stdin: { contents: "export * as inspiration from './local/inspiration'; export * as topics from './local/topics'; export * as content from './local/content';", resolveDir: temp }, outfile: path.join(temp, 'test.mjs'), bundle: true, platform: 'node', format: 'esm', plugins: [{ name: 'social-stub', setup(b) { b.onResolve({ filter: /plugins\/social\// }, (a) => ({ path: a.path, namespace: 'social-stub' })); b.onLoad({ filter: /.*/, namespace: 'social-stub' }, () => ({ contents: `export const FIELDS = {}; export async function summary() { return [] } export const fieldsFor=()=>({}); export const userIdOf=()=>''; export async function creatorNotes(){return []}
 export const CONTENT_TYPES = ['article', 'post', 'video'];
 export const contentType = c => c?.type === 'post' || c?.type === 'video' ? c.type : 'article';
 export const parseList = v => Array.isArray(v) ? v : JSON.parse(v || '[]');
@@ -23,10 +23,12 @@ export const htmlImages = () => [];
 export const supports = () => false;
 export const fromContent = c => c;`, loader: 'ts' })) } }] })
 const { inspiration: lib, topics, content } = await import(pathToFileURL(path.join(temp, 'test.mjs')))
+// 本机函数的运行时有 require：选题按「有就用」取灵感库模块（topics.ts 的 optional）
+globalThis.require = (p) => { if (/\/inspiration\.ts$/.test(p)) return lib; throw new Error('not found ' + p) }
 process.on('exit', () => fs.rmSync(temp, { recursive: true, force: true }))
 function fixture() {
   const tables = {}, counts = {}
-  const ctx = { locale: 'zh', db: {
+  const ctx = { locale: 'zh', progress() {}, db: {
     query(table, opt = {}) { let out = tables[table] || []; if (opt.where) out = out.filter((r) => Object.entries(opt.where).every(([k, v]) => r[k] === v)); return { list: out.slice(opt.offset || 0, (opt.offset || 0) + (opt.limit || 1000)).map((r) => ({ ...r })) } },
     get(table, id) { const r = tables[table]?.find((r) => r.id === id); return r ? { ...r } : null },
     insert(table, data) { const row = { ...data, id: `${table}-${counts[table] = (counts[table] || 0) + 1}` }; (tables[table] ||= []).push(row); return { ...row } },
@@ -63,11 +65,11 @@ test('selected sources become topic references, writing snapshots and article us
   const { ctx, tables } = fixture()
   const c = lib.saveCreator(creator, ctx)
   const s = lib.saveSource({ ...source, creator_id: c.id }, ctx)
-  const saved = topics.save({ ideas: [{ title: 'Our original topic', angle: 'Real product workflow' }], source_ids: [s.id] }, ctx)
+  const saved = await topics.save({ ideas: [{ title: 'Our original topic', angle: 'Real product workflow' }], source_ids: [s.id] }, ctx)
   const topicId = saved.topic_ids[0]
   lib.link({ source_id: s.id, target_type: 'topic', target_id: topicId }, ctx)
   assert.equal(tables.content_references.length, 1)
-  assert.equal(topics.context({ source_ids: [s.id] }, ctx).sources[0].creator.nickname, c.nickname)
+  assert.equal((await topics.context({ source_ids: [s.id] }, ctx)).sources[0].creator.nickname, c.nickname)
   const writing = await content.context({ topic_id: topicId, type: 'post' }, ctx)
   assert.ok(writing.evidence_id)
   assert.equal(writing.research.sources[0].summary, source.summary)
@@ -86,9 +88,9 @@ test('selected sources become topic references, writing snapshots and article us
   lib.archive({ kind: 'source', id: s.id }, ctx)
   assert.equal(lib.references({ target_type: 'article', target_id: article.article_id }, ctx).sources[0].summary, source.summary)
 })
-test('invalid source references are rejected before topics are created', () => {
+test('invalid source references are rejected before topics are created', async () => {
   const { ctx, tables } = fixture()
-  assert.throws(() => topics.save({ ideas: [{ title: 'Topic' }], source_ids: ['missing'] }, ctx))
+  await assert.rejects(async () => topics.save({ ideas: [{ title: 'Topic' }], source_ids: ['missing'] }, ctx))
   assert.equal(tables.topics, undefined)
 })
 test('legacy import validates before writes, maps author IDs, preserves media and retries safely', () => {

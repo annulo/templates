@@ -18,7 +18,7 @@ await build({ stdin: { contents: "export * from './lib/contentWorkspace'; export
   // These read/classification tests never invoke the installed social transport or format adapters.
   plugins: [{ name: 'social-fixture', setup(b) {
     b.onResolve({ filter: /plugins\/social\// }, a => ({ path: a.path, namespace: 'social-fixture' }));
-    b.onLoad({ filter: /.*/, namespace: 'social-fixture' }, () => ({ loader: 'ts', contents: "export const FIELDS={}; export const CONTENT_TYPES=['article','post','video']; export const contentType=c=>c?.type || 'article'; export const parseList=v=>Array.isArray(v)?v:JSON.parse(v || '[]'); export const lengthOn=c=>String(c.body || '').length; export const platformsFor=()=>[]; export const htmlImages=()=>[]; export const supports=()=>false; export const fromContent=c=>c; export async function summary(){return []}" }));
+    b.onLoad({ filter: /.*/, namespace: 'social-fixture' }, () => ({ loader: 'ts', contents: "export const FIELDS={}; export const CONTENT_TYPES=['article','post','video']; export const contentType=c=>c?.type || 'article'; export const parseList=v=>Array.isArray(v)?v:JSON.parse(v || '[]'); export const lengthOn=c=>String(c.body || '').length; export const platformsFor=()=>[]; export const htmlImages=()=>[]; export const supports=()=>false; export const fromContent=c=>c; export async function summary(){return []} export const fieldsFor=()=>({}); export const userIdOf=()=>''; export async function creatorNotes(){return []}" }));
   } }] });
 const { contentEntries, entryAccountIds, entryMetrics, legacyContentWorkspace, reviewWorkspace, publishedUrl, workspace, topics } = await import(pathToFileURL(path.join(temp, 'test.mjs')));
 const empty = () => ({ articles: [], topics: [], plans: [], posts: [], publications: [], channels: [] });
@@ -93,7 +93,7 @@ test('historical claims, completed topics and prepared media do not fabricate su
 function fixture() {
   const tables = { products: [], channels: [], social_accounts: [], articles: [{ id: 'article', topic_id: 'topic', body: '<p>Original body</p>', images: '["asset"]', status: 'draft' }], topics: [{ id: 'topic', status: 'done', article_id: 'article' }], marketing_plans: [], social_posts: [], publications: [], channel_strategies: [], search_pages: [], seo_targets: [], growth_reviews: [] };
   const updates = [];
-  const ctx = { db: { query: table => ({ list: tables[table] || [] }), get: (table, id) => (tables[table] || []).find(r => r.id === id),
+  const ctx = { progress() {}, db: { query: table => ({ list: tables[table] || [] }), get: (table, id) => (tables[table] || []).find(r => r.id === id),
     insert: (table, value) => { const row = { ...value, id: 'new-' + (tables[table] || []).length }; (tables[table] ||= []).push(row); return row; },
     update: (table, id, patch) => { updates.push({ table, id, patch }); const row = tables[table].find(r => r.id === id); Object.assign(row, patch); return row; } } };
   return { ctx, tables, updates };
@@ -111,12 +111,12 @@ test('explicit classification only updates ownership, preserves content and publ
   assert.ok(updates.every(u => Object.keys(u.patch).join() === 'workspace'));
   const n = updates.length; workspace.assign({ key: 'topic:topic', workspace: 'social' }, ctx); assert.equal(updates.length, n);
 });
-test('new topic generation keeps its workspace and allows a different channel treatment of the same title', () => {
+test('new topic generation keeps its workspace and allows a different channel treatment of the same title', async () => {
   const { ctx, tables } = fixture();
   tables.topics = [{ id: 'site', title: 'Same subject', workspace: 'website' }];
-  topics.save({ workspace: 'social', ideas: [{ title: 'Same subject', angle: 'An account-specific treatment' }] }, ctx);
+  await topics.save({ workspace: 'social', ideas: [{ title: 'Same subject', angle: 'An account-specific treatment' }] }, ctx);
   assert.equal(tables.topics.length, 2); assert.equal(tables.topics[1].workspace, 'social');
-  assert.throws(() => topics.save({ workspace: 'social', ideas: [{ title: 'Same subject' }] }, ctx));
+  await assert.rejects(async () => topics.save({ workspace: 'social', ideas: [{ title: 'Same subject' }] }, ctx));
   assert.equal(tables.topics.length, 2);
 });
 test('ownership assignment cannot relocate content that already has another destination', () => {
@@ -378,7 +378,7 @@ test('collected posts behind a confirmed link count toward that content by platf
   assert.deepEqual(entryAccountIds(plan, data, 'social', true), ['xhs']);
   assert.deepEqual(rows.filter(r => r.post).map(r => r.post.id), ['partial']);
 });
-test('ranking compares content within each platform, only recent posts, and topics.context carries it for social topics', () => {
+test('ranking compares content within each platform, only recent posts, and topics.context carries it for social topics', async () => {
   const { ctx, tables } = fixture();
   const ago = d => new Date(Date.now() - d * 86400000).toISOString();
   tables.social_accounts = [{ id: 'xhs', name: 'XHS', type: 'xiaohongshu' }, { id: 'dy', name: 'DY', type: 'douyin' }];
@@ -395,8 +395,8 @@ test('ranking compares content within each platform, only recent posts, and topi
   assert.equal(r.platforms.xiaohongshu.top[0].engagement_rate, 10);
   assert.equal(r.platforms.douyin.top[0].views, 50000);
   assert.equal(r.platforms.xiaohongshu.top[1].excerpt, 'Quiet post');
-  assert.ok(topics.context({ workspace: 'social' }, ctx).performance.platforms.douyin);
-  assert.equal(topics.context({ workspace: 'website' }, ctx).performance, undefined);
+  assert.ok((await topics.context({ workspace: 'social' }, ctx)).performance.platforms.douyin);
+  assert.equal((await topics.context({ workspace: 'website' }, ctx)).performance, undefined);
 });
 test('performance returns each post\'s daily totals in date order, capped and de-duplicated', () => {
   const { ctx } = fixture(); const asked = [];
