@@ -4,7 +4,7 @@ description: 填完网址、确认资料后自动跑：网站检查、挖关键�
 thinking: low
 ---
 
-参数：`id`（必填）是这次分析的 id（`diagnosis.start` 建的）。系统流程，没有可编辑的写法文件。
+参数：`id`（可选）是这次分析的 id（页面开任务前用 `diagnosis.start` 建好的）；没给就先开一次：`annulo run diagnosis.start --input '{}'`，用它返回的 `id`。系统流程，没有可编辑的写法文件。
 
 用户这时不在对话里等，在总览上看进度：**每一步开始和结束都要用 `diagnosis.step` 报**（网站检查、AI 搜索检测由本机函数自己报），一步失败了记下原因接着做下一步，不停下来问用户。只有最后的起草计划失败才算这次分析失败。
 
@@ -16,7 +16,7 @@ thinking: low
 annulo run diagnosis.get --input '{}'
 ```
 
-`run.id` 要和参数里的一样；`run.channel_id` 是要分析的网站，下面都用它。`run.steps` 里已经是 `done` / `failed` / `skipped` 的步骤不重做（任务中断后重跑时会这样），只做 `pending` / `running` 的。
+`run.id` 要和上面的 id 一样；`run.channel_id` 是要分析的网站，下面都用它。`run.steps` 里已经是 `done` / `failed` / `skipped` 的步骤不重做（任务中断后重跑时会这样），只做 `pending` / `running` 的。
 
 ## 1. 网站检查（几分钟）
 
@@ -69,6 +69,7 @@ annulo run diagnosis.geoRun --input '{"id":"<id>"}'
 - AI 搜索检测里没推荐你、推荐了别家的问题，排成要写的内容；
 - 推荐的竞品，第 1 周排一件「确认竞品」（`who: you`）；
 - 没连谷歌数据的，第 1 周排「连接谷歌数据」（`who: you`，动作去总览 `{"kind":"go","view":"overview"}`）。
+- 起步清单只剩输入网址、确认资料和这次分析，别的设置都排进第 1 周：`catalog.views` 里有询盘（`leads`）的，排「验证网站留言能收到」（`who: you`）；产品运营（`profile` 里没有 `goal` 或 `activation_event`）排「写清增长目标：注册、激活、付费分别是什么事件」（`who: you`，去 `company`）。
 
 存好、开始执行后报 `done`，`summary` 写按哪档目标开始、第 1 周你要做和 AI 要做的各几件。起草失败报 `failed`。
 

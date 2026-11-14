@@ -10,10 +10,12 @@
 //   diagnosis.finish({ id })                  收尾：计划起草成功算 done，否则 failed
 //   diagnosis.attach({ id, chat_id })         页面开了任务后记下是哪段对话（「看过程」打开它）
 //   diagnosis.seen({ id })                    总览上看过结果了，进度卡片收起来
+//   setupItem(ctx)                            起步清单里的「分析网站」这一项（外贸、产品运营的 local/_checklist.ts 用）
 
 import { L } from './_i18n'
 import { run as auditRun } from './audit'
 import { autoEngine, brandQuestions, check as geoCheck } from './geo'
+import type { Item } from './today'
 
 export const cloud = ['get', 'seen', 'attach']
 export const remote = ['start', 'audit', 'geoPrep', 'geoRun']
@@ -163,4 +165,38 @@ export function seen(input: { id: string }, ctx: any) {
   const r = row(ctx, input?.id)
   ctx.db.update('site_diagnosis', r.id, { seen: true })
   return { ok: true }
+}
+
+/**
+ * 起步清单里的「分析网站」（起步只剩输入网址、确认资料和这一项；连谷歌、询盘接收、增长目标这些由分析排进计划第 1 周）。
+ * 起草出计划（或者已经有计划）就算做完；在跑时显示第几步；没配模型时退回只做网站检查。
+ */
+export function setupItem(ctx: any): Item {
+  const run = get({}, ctx).run
+  const sites = all(ctx, 'channels').filter((c) => SITE_TYPES.includes(c.type))
+  const planned = all(ctx, 'growth_plans').some((p) => p.status === 'active' || p.status === 'done') || (run?.status === 'done')
+  let ready = true
+  try { ready = ctx.agent.current().ready !== false } catch { /* 云端（手机上）没有 ctx.agent，按能跑算 */ }
+  if (!ready) {
+    const checked = all(ctx, 'audit_runs').length > 0
+    return {
+      key: 'analyze', title: L(ctx, '做一次网站检查', 'Run a site check'),
+      why: L(ctx, '还没配好模型，先检查网站的技术和 SEO 问题；在 设置 → 模型 里配好以后，可以在增长计划里分析网站、生成 90 天计划。', 'No model is set up yet, so start with a technical and SEO check of your site. After adding a model in Settings → Models, analyze your site and build a 90-day plan from the growth plan page.'),
+      minutes: 3, done: checked || planned,
+      action: sites[0] ? { kind: 'run', fn: 'audit.run', input: { channel_id: sites[0].id } } : { kind: 'go', view: 'channels' },
+      action_label: L(ctx, '检查网站', 'Check website'), page: { view: 'audit' },
+    }
+  }
+  const running = run?.status === 'running'
+  const n = run ? run.steps.filter((x: Step) => x.status !== 'pending' && x.status !== 'running').length : 0
+  return {
+    key: 'analyze',
+    title: L(ctx, '分析网站，生成 90 天计划', 'Analyze your site and build a 90-day plan'),
+    why: L(ctx, '一次跑完网站检查、关键词、AI 搜索检测和竞品，按结果排出 90 天要做的事：哪些你来做、哪些交给 AI。大约 15~20 分钟，在后台跑。', 'One pass over site checks, keywords, AI search and competitors, then a 90-day plan from the results: what you do and what AI does. About 15–20 minutes, in the background.'),
+    minutes: 20, done: planned, running,
+    summary: running ? L(ctx, `正在分析：第 ${n}/${run!.steps.length} 步，可以先去做别的`, `Analyzing: step ${n}/${run!.steps.length}. Feel free to do something else`) : run?.status === 'failed' ? L(ctx, '上次没跑完，可以再分析一次', "Last run didn't finish; you can analyze again") : undefined,
+    action: { kind: 'task', task: 'site-diagnosis', input: {} },
+    action_label: L(ctx, run ? '重新分析' : '开始分析', run ? 'Analyze again' : 'Start analysis'),
+    page: { view: 'plan' },
+  }
 }

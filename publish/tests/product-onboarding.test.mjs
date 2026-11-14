@@ -29,7 +29,9 @@ function fixture() {
 const facts = (revision) => ({ revision, profile: { name: 'Selected product', business: 'Solve a real problem', customer_types: 'Website users' }, products: [{ name: 'Website feature', features: 'Verified feature', source_url: 'https://selected.example/features' }], use_cases: [{ title: 'Supported task', product_name: 'Website feature', problem: 'A real user problem' }] })
 test('a new product project starts with website selection, then review', () => {
   const { ctx } = fixture(), list = today.list({}, ctx)
-  assert.equal(list.total, 7)
+  // 起步只剩输入网址、确认资料、分析网站（其余排进 90 天计划第 1 周）
+  assert.equal(list.total, 3)
+  assert.deepEqual(list.setup.map((s) => s.key), ['site', 'company-details', 'analyze'])
   assert.deepEqual(list.wizard.steps.map((s) => s.key), ['site', 'company-details'])
   assert.equal(list.wizard.current, 'site')
   assert.equal(today.closeWizard({}, ctx).wizard.closed, true)

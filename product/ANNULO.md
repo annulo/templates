@@ -9,7 +9,7 @@
 | 模块 | 数据与函数 |
 |---|---|
 | 产品与用户 | profile、products、use_cases；profile.context/save、products.list/save/saveUseCase |
-| 增长计划（90 天目标、基线、每周要做的事、Day 30 / 60 / 90 检查点） | growth_plans、plan_items；plan.get/context/saveDraft（任务 draft-plan）/activate（用户选目标）/mark/checkpointContext/saveCheckpoint（任务 plan-checkpoint）；today.list 带这周的计划项；关键词地图 plan.keywordMap；外链 backlinks（backlinks.list/add/sync/check）；周报的 reports.data 带 plan |
+| 增长计划（90 天目标、基线、每周要做的事、Day 30 / 60 / 90 检查点；分析网站） | growth_plans、plan_items（who 你 / AI、scope 按周 / 按月）；分析网站 site_diagnosis（任务 site-diagnosis，确认资料后自动跑）；plan.get/context/saveDraft（任务 draft-plan，起草完按推荐档开始）/activate/setLevel（换档）/mark/checkpointContext/saveCheckpoint（任务 plan-checkpoint）；today.list 带这周的计划项；关键词地图 plan.keywordMap；外链 backlinks（backlinks.list/add/sync/check）；周报的 reports.data 带 plan |
 | 增长机会 | growth_opportunities；campaigns.context/saveOpportunity/savePagePlan |
 | 运营主题 | campaigns、topics、articles；campaigns.createCampaign/saveCampaign/campaignContext/savePlan/review |
 | 转化数据 | product_metrics_daily；metrics.importDaily/context/summary |

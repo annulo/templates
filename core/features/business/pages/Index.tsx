@@ -220,9 +220,10 @@ export default function Index() {
   const startAudit = async () => {
     try {
       const list = await runLocal<ChecklistData>('today.list', {})
-      const step = list.setup.find((s) => s.key === 'audit')
-      if (!step || step.done || step.running || step.action.kind !== 'run' || step.action.fn !== 'onboarding.audit') return
-      checklist.setData({ ...list, setup: list.setup.map((s) => s.key === 'audit' ? { ...s, running: true } : s) })
+      // 没配模型时起步的「分析网站」退回成网站检查（plan 模块的 diagnosis.setupItem）；老项目的起步还叫 audit
+      const step = list.setup.find((s) => s.key === 'audit' || s.key === 'analyze')
+      if (!step || step.done || step.running || step.action.kind !== 'run' || !['onboarding.audit', 'audit.run'].includes(step.action.fn)) return
+      checklist.setData({ ...list, setup: list.setup.map((s) => s.key === step.key ? { ...s, running: true } : s) })
       setAuditing(true)
       runLocal('onboarding.audit', step.action.input ?? {}).catch(() => {}).finally(() => { setAuditing(false); checklist.load() })
     } catch { /* 起不来就留给用户在清单上点 */ }
