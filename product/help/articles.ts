@@ -40,6 +40,18 @@ export const ARTICLES: Article[] = [
     },
   },
   {
+    id: "competitors",
+    title: { zh: "竞品监控", en: "Competitors" },
+    summary: {
+      zh: "盯同类产品的网站：新上的功能页、文章、落地页提醒你，能转成选题。",
+      en: "Watch similar products' sites: new feature pages, posts and landing pages flagged and turned into topics.",
+    },
+    body: {
+      zh: "左侧「网站运营 → 体检 → 竞品监控」。还没有竞品时点「AI 推荐竞品」：助手按用户找同类产品的方式搜（alternative、vs、best），核实官网后推荐几家，你确认了才盯。\n\n每天读一遍竞品网站，新上的功能页、文章、落地页列出来；勾几条交给助手，按用户的问题出我们自己的选题。还能点「AI 竞对总览」「AI 规格对比」，对比功能和价格。增长计划的「分析网站」也会顺带找竞品。",
+      en: "Website → Health checks → Competitors in the sidebar. With no competitors yet, click AI suggests competitors: the assistant searches the way users look for similar products (alternative, vs, best), checks their sites and suggests a few to watch once you confirm.\n\nCompetitor sites are read daily and new feature pages, posts and landing pages are listed; pick some and the assistant turns them into our own topics based on users' questions. AI competitor overview and AI spec comparison compare features and prices. Analyze site in the growth plan also looks for competitors.",
+    },
+  },
+  {
     id: "metrics",
     title: { zh: "导入转化数据", en: "Import conversion data" },
     summary: {

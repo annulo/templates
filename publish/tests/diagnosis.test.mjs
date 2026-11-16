@@ -19,7 +19,7 @@ fs.writeFileSync(path.join(temp, 'local/geo.ts'), 'export function autoEngine() 
 await build({ stdin: { contents: "export * as diagnosis from './local/diagnosis'", resolveDir: temp }, outfile: path.join(temp, 'test.mjs'), bundle: true, platform: 'node', format: 'esm', logLevel: 'silent' })
 const { diagnosis } = await import(pathToFileURL(path.join(temp, 'test.mjs')))
 process.on('exit', () => fs.rmSync(temp, { recursive: true, force: true }))
-// 有竞品模块的模板（外贸）多一步
+// 有竞品模块的模板（外贸、产品运营）多一步
 let hasCompetitors = false
 globalThis.require = (p) => { if (hasCompetitors && /\/competitors\.ts$/.test(p)) return {}; throw new Error('not found ' + p) }
 
@@ -38,7 +38,7 @@ function fixture(seed = {}) {
   return { ctx, tables }
 }
 
-test('开一次：网站用向导里选的；在跑的不重复开；产品运营没有竞品这一步，外贸有', () => {
+test('开一次：网站用向导里选的；在跑的不重复开；没有竞品模块的模板没有竞品这一步，有的（外贸、产品运营）有', () => {
   const { ctx, tables } = fixture()
   const r = diagnosis.start({}, ctx)
   assert.equal(r.channel_id, 'c2')

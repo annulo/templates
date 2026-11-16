@@ -15,6 +15,7 @@ import {
   Target,
   Share2,
   BookOpen,
+  Crosshair,
 } from "lucide-react";
 import type { View } from "../components/views/types";
 import type { ChannelType } from "./shuttle";
@@ -36,6 +37,7 @@ export const NAV: NavGroup[] = [
       { view: "geo", icon: Radar },
       { view: "site", icon: Activity },
       { view: "audit", icon: ShieldCheck, section: "s_health" },
+      { view: "competitors", icon: Crosshair },
     ],
   },
   {

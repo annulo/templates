@@ -27,7 +27,9 @@
     "g_library": "产品资料",
     "plan": "增长计划",
     "plan_sub": "90 天目标、每周要做的事、检查效果",
-    "conversions": "转化数据"
+    "conversions": "转化数据",
+    "competitors": "竞品监控",
+    "competitors_sub": "同类产品新上了什么、怎么讲的"
   },
   "channels": {
     "not_enabled_desc": "账号已经加上了，但这个平台的发布和采集还没接进来。交给助手接入，接好后就能在这里登录、在内容中心发布、在社交媒体里看数据。"

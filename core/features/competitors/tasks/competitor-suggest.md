@@ -37,6 +37,12 @@ annulo run competitors.suggestContext --input '{}'
 
 推荐 5~8 家，`direct` 优先，最多一两家 `brand`、`channel`。
 
+**项目里有 skills/product-growth/SKILL.md 时（产品运营：卖的是产品或软件，不是工厂找买家）**，换成用户找同类产品的方式搜和分：
+
+- 搜：产品名 / 品类 + alternative、vs、best、review，用户场景里的问题，`geo_domains` 里被 AI 推荐的同类产品；
+- 分：`direct` 解决同一个问题、抢同一批用户的产品（最该盯）；`brand` 品类里的大品牌或平台（用户拿来比功能、比价格）；`channel` 应用市场、模板市场、集成伙伴这类分发渠道；
+- 核实看官网：是不是同类产品、面向同样的用户、还在更新；只是测评站、导航站、媒体的不推荐。
+
 ## 3. 存
 
 ```bash

@@ -13,6 +13,7 @@
 | 页面机会（并在「关键词」的主题卡片里） | growth_opportunities、seo_targets 由 seomap.sync 并进 keywords；campaigns.context/saveOpportunity/savePagePlan，seomap.opportunity |
 | 运营主题 | campaigns、topics、articles；campaigns.createCampaign/saveCampaign/campaignContext/savePlan/review |
 | 转化数据 | product_metrics_daily；metrics.importDaily/context/summary |
+| 竞品监控（每天读同类产品网站的 sitemap，新上的功能页、文章、落地页；转选题；竞对总览、规格对比；没有竞品时 AI 推荐，按用户找同类产品的方式搜） | competitors、competitor_pages、research_findings；competitors.scan（每天）、list / add / pages / toTopic / saveReport、suggestContext / saveSuggestions / accept / reject；任务 competitor-suggest / competitor-overview / competitor-compare |
 | 灵感库 | research_sources、reference_creators、content_references；inspiration.list/saveSource/saveCreator/link/importLegacy；整理任务 review-inspiration，出选题传 source_ids |
 | 内容中心、素材、日历 | topics、articles、assets、publications；content.*、publish.prepare |
 | 网站运营 | channels、search_pages、site_issues、site_changes；channels.*、gsc.*、ga4.*、audit.*、review.* |

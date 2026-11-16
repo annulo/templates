@@ -21,6 +21,7 @@ import Audit from '../components/views/Audit'
 import Geo from '../components/views/Geo'
 import SiteVisits from '../components/views/SiteVisits'
 import Landing from '../components/views/Landing'
+import Competitors from '../components/views/Competitors'
 import Help from '../components/views/Help'
 import Assistant from '../components/views/Assistant'
 import { Notice } from '../components/ui'
@@ -32,7 +33,7 @@ import type { Ctx, View } from '../components/views/types'
 export const NAV_COLLAPSED = 'annulo:product-nav-collapsed'
 
 /** 地址栏 view= 认的页面；别的都当总览 */
-export const VIEWS: View[] = ['overview', 'plan', 'company', 'campaigns', 'content', 'website-content', 'landing', 'social-content', 'inspiration', 'social-metrics', 'calendar', 'assets', 'search', 'geo', 'audit', 'social', 'channels', 'site', 'help', 'assistant', 'settings']
+export const VIEWS: View[] = ['overview', 'plan', 'company', 'campaigns', 'content', 'website-content', 'landing', 'social-content', 'inspiration', 'social-metrics', 'calendar', 'assets', 'search', 'geo', 'audit', 'social', 'channels', 'site', 'competitors', 'help', 'assistant', 'settings']
 
 /**
  * 并掉的老页面换成现在的位置（外壳打开地址、跳转时都过一遍）：
@@ -57,7 +58,7 @@ export const REFRESH_ON_DB_CHANGE = true
 /** 老的「内容中心」（view=content）拆成了网站文章、社媒内容和灵感库：按要去的工作区、当前在哪一边跳过去 */
 export function contentView(extra: Record<string, string>, current: View): View {
   if (extra.tab === 'inspiration') return 'inspiration'
-  if (extra.workspace === 'website' || (!extra.workspace && ['website-content', 'landing', 'search', 'geo', 'audit', 'site'].includes(current))) return 'website-content'
+  if (extra.workspace === 'website' || (!extra.workspace && ['website-content', 'landing', 'search', 'geo', 'audit', 'site', 'competitors'].includes(current))) return 'website-content'
   if (extra.workspace === 'social' || (!extra.workspace && ['social', 'social-content', 'inspiration', 'social-metrics', 'calendar'].includes(current))) return 'social-content'
   return 'content'
 }
@@ -100,6 +101,7 @@ export function renderView(view: View, { ctx, params, setParam, bumpRev }: PageP
         ]} />
     case 'audit': return <Audit {...p} />
     case 'geo': return <Geo {...p} />
+    case 'competitors': return <Competitors ctx={ctx} />
     case 'site': return <SiteVisits {...p} extraTabs={[{ value: 'conversions', label: tr('nav.conversions'), render: () => <ProductMetrics {...p} embedded /> }]} />
     case 'help': return <Help {...p} />
     case 'assistant': return <Assistant {...p} />
