@@ -1,3 +1,6 @@
+- version: 0.24.0
+  zh: "输入网址后自动分析网站：检查、关键词和 AI 搜索，直接排出 90 天计划看板，分清你做和 AI 做；总览可一键连接谷歌数据。"
+  en: "Enter your URL and we analyze the site\u2014checks, keywords, AI search\u2014then build a 90-day plan board split into your tasks and AI's. Connect Google data in one click from the overview."
 - version: 0.23.1
   zh: "关键词地图里没页面的主题能直接转成选题，不用再去关键词页。"
   en: "Topics without a page can now be turned into content topics right from the keyword map."
