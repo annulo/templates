@@ -1194,6 +1194,8 @@
     "sg_onpage": "补全页面的标题、描述和分享信息",
     "sg_review": "AI 审查发现的问题",
     "sg_speed": "加快页面速度",
+    "sg_trust": "让买家信得过",
+    "sg_trust_do": "网站上公开的联系方式就是买家对你的第一印象：联系邮箱用公司域名，不用 gmail、qq 这类免费邮箱。",
     "st_fixed": "已解决",
     "st_fixing": "已修，待上线",
     "st_ignored": "已忽略",

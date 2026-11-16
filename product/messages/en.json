@@ -1194,6 +1194,8 @@
     "sg_onpage": "Complete page titles, descriptions and share info",
     "sg_review": "Found by AI review",
     "sg_speed": "Speed up pages",
+    "sg_trust": "Look trustworthy to buyers",
+    "sg_trust_do": "Your public contact details are a buyer's first impression: use an email on your own domain, not a free mailbox like Gmail.",
     "st_fixed": "Resolved",
     "st_fixing": "Fixed, not live",
     "st_ignored": "Ignored",
