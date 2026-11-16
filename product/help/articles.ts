@@ -23,8 +23,8 @@ export const ARTICLES: Article[] = [
     title: { zh: "研究 SEO 机会", en: "Research SEO opportunities" },
     summary: { zh: "将用户需求映射到页面。", en: "Map user demand to pages." },
     body: {
-      zh: "在「网站运营 → SEO 与关键词」的「SEO 规划」标签（页头也有）点击「研究 SEO 机会」，研究关键词、搜索意图、竞争和已有页面。无真实指标时保留「待验证」。\n\n点击「规划 SEO 页面」生成简报，或从机会创建运营主题。优先改善已有页，新增案例、模板、工具要有独立价值。\n\n方法参考 [Danny Postma 官方公开大纲](https://www.dannypostma.com/seo-course)。",
-      en: "Research SEO opportunities examines keywords, intent, competition and existing pages. Metrics remain unverified without measured data.\n\nPlan SEO page creates a brief. You can also create a campaign from the opportunity. Improve existing pages first; new case, template and tool pages need independent value.\n\nThe method references [Danny Postma’s public outline](https://www.dannypostma.com/seo-course).",
+      zh: "在「网站运营 → SEO 与关键词 → 关键词」点「挖一批关键词」：助手按产品和用户场景挖买家会搜的词、筛掉不相关的、归成主题。导入的 SEO 页面地图、以前研究的页面机会也按主题并在这里。无真实指标时保留「待验证」。\n\n每个主题一张卡片，写着现在怎么样和一个下一步按钮：没有页面就「写新内容」（写之前按页面机会出简报），已有页面排在 4~30 位就「改现有页面」，上线后「看排名」。卡片上还能「创建运营主题」，做成多平台内容。优先改善已有页，新增案例、模板、工具要有独立价值。\n\n方法参考 [Danny Postma 官方公开大纲](https://www.dannypostma.com/seo-course)。",
+      en: "Under Website → SEO & keywords → Keywords, click Find keywords: the assistant finds what buyers search for based on your product and use cases, drops irrelevant ones and groups them into topics. Imported SEO page maps and earlier page opportunities are merged in by topic too. Metrics remain unverified without measured data.\n\nEach topic is a card with its status and one next step: Write new content when there is no page (with a brief from the page opportunity), Improve page when an existing page ranks 4–30, and See rankings once live. You can also Create campaign from a card for multi-platform content. Improve existing pages first; new case, template and tool pages need independent value.\n\nThe method references [Danny Postma’s public outline](https://www.dannypostma.com/seo-course).",
     },
   },
   {

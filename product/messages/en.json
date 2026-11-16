@@ -27,8 +27,7 @@
     "g_library": "Product library",
     "plan": "Growth plan",
     "plan_sub": "90-day targets, weekly work and checkpoints",
-    "conversions": "Conversions",
-    "seo_plan": "SEO planning"
+    "conversions": "Conversions"
   },
   "channels": {
     "not_enabled_desc": "The account is added, but publishing and data collection for this platform aren't set up. Let the assistant set it up; then you can sign in here, publish from Content center and see data in Social media."

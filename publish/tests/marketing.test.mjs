@@ -22,7 +22,7 @@ for (const f of JSON.parse(fs.readFileSync(path.join(root, 'publish/targets.json
 await build({
   stdin: {
     contents:
-      "export * as marketing from './local/marketing'; export * as campaigns from './local/campaigns'; export * as content from './local/content';",
+      "export * as marketing from './local/marketing'; export * as campaigns from './local/campaigns'; export * as content from './local/content'; export * as seomap from './local/seomap';",
     resolveDir: temp,
   },
   outfile: path.join(temp, "test.mjs"),
@@ -49,6 +49,7 @@ const {
   marketing: m,
   campaigns,
   content,
+  seomap,
 } = await import(pathToFileURL(path.join(temp, "test.mjs")));
 process.on("exit", () => fs.rmSync(temp, { recursive: true, force: true }));
 function fixture() {
@@ -418,4 +419,41 @@ test("native social publishing supplies receipts while historical collection and
     ctx,
   );
   assert.equal(tables.growth_reviews.length, 3);
+});
+
+test("SEO page map and opportunities merge into the keyword table once, waiting for a site and keeping screened clusters", () => {
+  const { ctx, tables } = fixture();
+  // 没有网站：导入先留着，不并
+  const first = m.importPack(pack, ctx);
+  assert.equal(first.keywords.reason, "no_site");
+  assert.equal((tables.keywords || []).length, 0);
+  tables.channels = [{ id: "site", type: "creght_site" }];
+  // 已经筛过、归了主题的词：只补空着的目标页面，主题不改
+  tables.keywords = [{ id: "kw-old", channel_id: "site", keyword: "product website builder", status: "idea", cluster: "Builder", sources: "suggest" }];
+  const r = seomap.sync({}, ctx);
+  assert.deepEqual([r.added, r.updated], [0, 1]);
+  const kw = tables.keywords[0];
+  assert.equal(kw.cluster, "Builder");
+  assert.equal(kw.target_page, "https://example.com/tool");
+  assert.equal(kw.sources, "suggest,import");
+  assert.equal(tables.seo_targets[0].keyword_id, "kw-old");
+  // 页面机会：目标页面对上已有主题，整个主题挂上它；能重复跑
+  tables.growth_opportunities = [{ id: "opp", product_id: "product", title: "Tool page", keyword: "ai site maker", target_url: "https://example.com/tool/", status: "candidate", intent: "commercial" }];
+  seomap.sync({}, ctx);
+  seomap.sync({}, ctx);
+  const added = tables.keywords.find((k) => k.keyword === "ai site maker");
+  assert.equal(added.cluster, "Builder");
+  assert.equal(added.intent, "compare");
+  assert.equal(added.sources, "research");
+  assert.ok(tables.keywords.every((k) => k.opportunity_id === "opp"));
+  assert.equal(tables.keywords.length, 2);
+  assert.equal(seomap.opportunity({ cluster: "Builder" }, ctx).opportunity_id, "opp");
+  // 没挂机会的主题：按主题建一条候选机会，整个主题挂上
+  tables.keywords.push({ id: "kw-new", channel_id: "site", keyword: "landing page tool", status: "idea", cluster: "Landing" });
+  const made = seomap.opportunity({ cluster: "Landing" }, ctx);
+  const opp = tables.growth_opportunities.find((o) => o.id === made.opportunity_id);
+  assert.equal(opp.status, "candidate");
+  assert.equal(opp.title, "Landing");
+  assert.equal(tables.keywords.find((k) => k.id === "kw-new").opportunity_id, opp.id);
+  assert.equal(seomap.opportunity({ cluster: "Landing" }, ctx).opportunity_id, opp.id);
 });

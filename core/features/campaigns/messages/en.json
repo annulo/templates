@@ -303,5 +303,8 @@
     "stage_blocked": "Blocked",
     "stage_published": "Receipt verified",
     "search_period": "Google Search Console · {start} to {end} · Synced {synced} (Beijing time)"
+  },
+  "seomap": {
+    "waiting_site": "{n} imported or researched keywords are waiting: add a website under Sites & accounts and they will show up here."
   }
 }

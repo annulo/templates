@@ -209,13 +209,12 @@ function catalog(ctx: any) {
     { view: 'plan', params: { tab: 'growth' }, what: L(ctx, '新机会：每周按数据扫出来的信号', 'New opportunities: weekly signals from the data') },
     { view: 'company', what: L(ctx, '公司与产品资料', 'Company and products') },
     { view: 'overview', what: L(ctx, '总览：连接谷歌数据（Search Console、GA4）、开 AI 搜索检测', 'Overview: connect Google data (Search Console, GA4), turn on AI search checks') },
-    { view: 'search', params: { tab: 'map' }, what: L(ctx, '关键词地图：每个主题对应的页面、走到哪一步、带来的展示点击和询盘', 'Keyword map: page per topic, progress, impressions, clicks and inquiries') },
+    { view: 'search', params: { tab: 'keywords' }, what: L(ctx, '关键词（按主题）：每个主题对应的页面、走到哪一步、带来的展示点击和询盘，每个主题一个下一步', 'Keywords by topic: page per topic, progress, impressions, clicks and inquiries, one next step each') },
     { view: 'search', params: { tab: 'links' }, what: L(ctx, '外链：登记社媒、B2B 平台、行业目录上指向网站的链接，检查还在不在', 'Backlinks: record links from social, B2B platforms and directories; check they are live') },
   ]
   if (hasFn('competitors')) views.push({ view: 'competitors', what: L(ctx, '竞品监控：竞品新页面、竞对总览、规格对比', 'Competitors: new pages, overview, spec comparison') })
   if (hasFn('leads')) views.push({ view: 'leads', what: L(ctx, '询盘：回复、背调、跟进', 'Inquiries: reply, research, follow up') })
   if (hasFn('prospects')) views.push({ view: 'prospects', what: L(ctx, '主动获客', 'Prospecting') })
-  if (hasFn('campaigns')) views.push({ view: 'search', params: { tab: 'seo' }, what: L(ctx, 'SEO 规划：SEO 页面地图、页面机会', 'SEO planning: SEO page map, page opportunities') })
   if (hasFn('metrics')) views.push({ view: 'site', params: { tab: 'conversions' }, what: L(ctx, '转化数据：导入的注册、激活、付费', 'Conversions: imported signups, activations, payments') })
   if (!hasFn('growth')) views.splice(views.findIndex((v) => v.params?.tab === 'growth'), 1)
 
@@ -678,6 +677,8 @@ function mapRows(ctx: any) {
       search_page_id: sp?.id || list.find((k) => k.search_page_id)?.search_page_id || '',
       // 还没转选题的词：没页面的主题在地图上直接转成选题（keywords.toTopic）
       untopiced: list.filter((k) => !k.topic_id).map((k) => k.id),
+      // 产品运营：主题挂的页面机会（campaigns 模块的 growth_opportunities，seomap.ts 写在词上），地图上「规划 SEO 页面」「转成运营主题」用
+      opportunity_id: list.find((k) => k.opportunity_id)?.opportunity_id || '',
       words: list.map((k) => ({ keyword: k.keyword, status: k.status, position: pos(k) || null, impressions: imp(k) })).sort((a, b) => b.impressions - a.impressions).slice(0, 12),
     })
   }

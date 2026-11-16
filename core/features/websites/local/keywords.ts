@@ -36,7 +36,7 @@ export const remote = ['expand', 'refresh', 'serp']
 type Channel = { id: string; name: string; type: string; preview_url?: string; live_url?: string; gsc_property?: string; gsc_link_disabled?: boolean }
 type Keyword = {
   id: string; channel_id: string; keyword: string; lang?: string; country?: string; sources?: string; seed?: string; suggest_engine?: string
-  status?: string; intent?: string; cluster?: string; note?: string; target_page?: string
+  status?: string; intent?: string; cluster?: string; note?: string; target_page?: string; opportunity_id?: string; priority?: string; origin?: string
   gsc_impressions?: number; gsc_clicks?: number; gsc_position?: number; gsc_page?: string; search_page_id?: string; gsc_at?: string
   bucket?: Bucket; score?: number; topic_id?: string; chat_id?: string; seen?: boolean; created_at?: string; reviewed_at?: string
   onpage?: string; gsc_pages?: string
@@ -498,6 +498,8 @@ export function toTopic(input: { ids: string[] }, ctx: any) {
         source: 'keyword', status: 'idea', search_query: main.keyword,
         ...(main.gsc_impressions ? { search_impressions: main.gsc_impressions, search_position: main.gsc_position } : {}),
         workspace: 'website', content_type: 'article', created_at: now,
+        // 产品运营：主题挂着页面机会（seomap.ts）就带上，写文章时拿到机会的受众、问题、建议（content.ts 的 marketingOf）
+        ...(ks.find((k) => k.opportunity_id) ? { opportunity_id: ks.find((k) => k.opportunity_id)!.opportunity_id } : {}),
         origins: originsJson(ks.map((k) => ({ type: 'keyword', id: k.id, label: k.keyword, channel_id: k.channel_id }))),
         ...(ctx.chat_id ? { chat_id: String(ctx.chat_id) } : {}),
       })

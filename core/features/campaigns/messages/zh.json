@@ -303,5 +303,8 @@
     "stage_blocked": "有卡点",
     "stage_published": "回执已核对",
     "search_period": "Google Search Console · {start} 至 {end} · 同步于 {synced}（北京时间）"
+  },
+  "seomap": {
+    "waiting_site": "还有 {n} 条导入或研究出来的关键词没并进来：先到「网站和账号」添加网站，加好后会自动出现在这里。"
   }
 }

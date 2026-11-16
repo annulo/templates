@@ -1,19 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, EyeOff, FilePlus2, ListPlus, MessageCircle, Plus, RefreshCw, SearchCheck, ShieldCheck, Sparkles, Target, Undo2, X } from 'lucide-react'
-import { Badge, Button, Dialog, Notice, Panel, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from './ui'
+import { Badge, Button, Dialog, Notice, Skeleton, cx, fmtTime, inputCls, type Tone } from './ui'
 import RunButton from './RunButton'
 import { TaskButton, TaskLaunchButton } from './Task'
 import { LandingButton } from './views/Landing'
 import { openChat, runLocal, type Channel } from '../lib/shuttle'
 import { numLocale, tr } from '../lib/i18n'
 
-// SEO 与关键词 → 关键词（keywords.ts，设计见 docs/keywords.md「页面」）。
-// 按「下一步要做什么」分四类，每类一个主动作，每个词一行、一句理由，细节点开才看：
-//   - 改现有页面：已经排在 4~30 位，或者目标页面标题 / H1 没用上、几个页面在抢 → 按页面分组，「补内容」（search-expand）、页面问题去站点体检修；
-//   - 写新内容：还没排上、能做的（新机会、有竞争、竞品在排）→ 按主题分组，「转成选题」；
-//   - 在做：转了选题、标了在做的 → 排名变化、上线后的复查结论；
-//   - 其他：已排前 3、难、还没查过 Google 结果页、不要的。
-// 页面问题（标题 / H1 没用上、几个页面在抢）由站点体检查、记成体检问题（_audit_keywords.ts），这里只摆结论、链过去。
+// SEO 与关键词 → 关键词（keywords.ts，设计见 docs/keywords.md「页面」）：按主题组织，一个主题做一个页面，每个主题一个主按钮；
+// 每个词一行、一句理由，细节点开才看。页面问题（标题 / H1 没用上、几个页面在抢）由站点体检查、记成体检问题（_audit_keywords.ts），这里只摆结论、链过去。
 
 const RESEARCH_TASK = 'keyword-research'
 const EXPAND_TASK = 'search-expand'
@@ -35,7 +30,6 @@ type Data = { list: Keyword[]; raw: number; raw_sample: string[]; serp_pending: 
 type Tab = 'fix' | 'write' | 'doing' | 'other'
 type Go = (view: string, params?: Record<string, string>) => void
 
-const TABS: Tab[] = ['fix', 'write', 'doing', 'other']
 const num = (x?: number) => (x ?? 0).toLocaleString(numLocale())
 const pathOf = (u: string) => u.replace(/^https?:\/\/[^/]+/, '') || '/'
 const KIND_TONE: Record<string, Tone> = { ours: 'ok', competitor: 'bad', b2b: 'primary', forum: 'primary', social: 'primary', marketplace: 'warn', reference: 'warn' }
@@ -61,16 +55,7 @@ const competing = (k: Keyword) => competingOf(k).length > 1
 const rivalOnly = (k: Keyword) => !!k.serp_at && !!k.serp_competitors && !k.serp_position && !(k.gsc_position && k.gsc_position <= 10)
 const pageOf = (k: Keyword) => k.target_page || k.gsc_page || ''
 
-function tabOf(k: Keyword): Tab {
-  if (k.status === 'targeting') return 'doing'
-  if (k.status !== 'idea') return 'other'
-  if (k.bucket === 'quick_win' || pageMissing(k) || competing(k)) return 'fix'
-  if (k.bucket === 'open' || k.bucket === 'mixed' || rivalOnly(k)) return 'write'
-  return 'other'
-}
 
-/** 其他里分小组：为什么不急着做 */
-const otherReason = (k: Keyword) => (k.status === 'dismissed' ? 'dismissed' : k.bucket === 'ranking' ? 'ranking' : k.bucket === 'hard' ? 'hard' : 'unchecked')
 
 const pos = (r: Rank) => (r.p ? String(r.p) : '10+')
 const day = (iso: string) => new Date(iso).toLocaleDateString(numLocale(), { month: 'numeric', day: 'numeric' })
@@ -98,84 +83,194 @@ function reasonOf(k: Keyword, tab: Tab): string {
   return parts.join(' · ')
 }
 
-export default function Keywords({ channel, rev, onGo }: { channel: Channel; rev?: number; onGo: Go }) {
+/** 关键词地图的一行（plan.keywordMap，有增长计划模块的模板才有：外贸、产品运营） */
+export type TopicRow = {
+  cluster: string; channel_id?: string; stage: Stage; page: string; best_position: number | null; impressions: number; clicks: number; leads?: number | null
+  topic_id?: string; article_id?: string; search_page_id?: string; untopiced?: string[]; opportunity_id?: string
+  next?: { text: string; action: { kind: 'go'; view: string; params?: Record<string, string> } }
+}
+type Stage = 'none' | 'topic' | 'draft' | 'live' | 'shown' | 'top30' | 'top10'
+type Act = 'write' | 'writing' | 'publish' | 'fix' | 'watch'
+type Filter = 'all' | 'todo' | 'doing' | 'live' | 'loose'
+type Topic = TopicRow & { words: Keyword[]; act: Act }
+const RANK: Record<Stage, number> = { none: 0, topic: 1, draft: 2, live: 3, shown: 4, top30: 4, top10: 5 }
+const STEPS = ['topic', 'draft', 'live', 'shown', 'top10'] as const
+const FILTER_OF: Record<Act, Filter> = { write: 'todo', fix: 'todo', writing: 'doing', publish: 'doing', watch: 'live' }
+
+/** 没有增长计划模块（自媒体）时按词自己的数据推算阶段：选题、上线、谷歌排名 */
+function guessRow(cluster: string, words: Keyword[]): TopicRow {
+  const best = Math.min(...words.map((k) => k.gsc_position || k.serp_position || 999))
+  const impressions = words.reduce((s, k) => s + (k.gsc_impressions ?? 0), 0)
+  const page = words.find((k) => k.target_page)?.target_page || words.find((k) => k.gsc_page)?.gsc_page || ''
+  const topic = words.find((k) => k.topic_id)?.topic_id || ''
+  const stage: Stage = best <= 10 ? 'top10' : best <= 30 ? 'top30' : impressions > 0 ? 'shown' : page || words.some((k) => k.live_at) ? 'live' : topic ? 'topic' : 'none'
+  return { cluster, stage, page, best_position: best === 999 ? null : best, impressions, clicks: words.reduce((s, k) => s + (k.gsc_clicks ?? 0), 0), topic_id: topic, search_page_id: words.find((k) => k.search_page_id)?.search_page_id, untopiced: words.filter((k) => !k.topic_id).map((k) => k.id) }
+}
+
+/** 这个主题下一步做什么：没页面写新的；在写、写好了去写 / 发布；有页面但排在 4~30、标题没用上主词的改现有页面；其余看排名 */
+function actOf(r: TopicRow, words: Keyword[]): Act {
+  if (r.stage === 'none') return 'write'
+  if (r.stage === 'topic') return 'writing'
+  if (r.stage === 'draft') return 'publish'
+  const best = r.best_position ?? 999
+  if (r.page && (words.some((k) => k.bucket === 'quick_win' || pageMissing(k)) || (best > 3 && best <= 30))) return 'fix'
+  return 'watch'
+}
+
+/** 卡片上一句话：现在怎么样 */
+function statusOf(t: Topic): string {
+  const parts: string[] = [tr('keywords.words_n', { n: t.words.length })]
+  const best = t.best_position
+  if (t.stage === 'none') {
+    parts.push(tr('keywords.s_none'))
+    const rival = t.words.find(rivalOnly), open = t.words.find((k) => k.bucket === 'open' || k.bucket === 'mixed')
+    if (open) parts.push(tr(open.bucket === 'open' ? 'keywords.r_open' : 'keywords.r_mixed', { n: open.serp_weak ?? 0 }))
+    else if (rival) parts.push(tr('keywords.r_rival', { d: (rival.serp_competitors ?? '').split(',').join('、') }))
+  } else if (t.stage === 'topic') parts.push(tr('keywords.s_topic'))
+  else if (t.stage === 'draft') parts.push(tr('keywords.s_draft'))
+  else {
+    if (t.page) parts.push(pathOf(t.page) + (best ? ' ' + tr('keywords.s_rank', { pos: Math.round(best * 10) / 10 }) : ''))
+    const review = t.words.find((k) => k.review_verdict)
+    const live = t.words.map((k) => k.live_at).filter(Boolean).sort().pop()
+    if (review) parts.push(`${tr(`keywords.verdict_${review.review_verdict}`)} · ${review.review_summary ?? ''}`)
+    else if (live && !t.impressions) parts.push(tr('keywords.live_wait', { live: day(live), review: day(new Date(Date.parse(live) + REVIEW_DAYS * 86400_000).toISOString()) }))
+    else if (t.impressions) parts.push(tr('keywords.s_shown', { imp: num(t.impressions), clicks: num(t.clicks) }))
+    if (t.words.some(pageMissing)) parts.push(tr('keywords.r_missing'))
+  }
+  if (t.leads) parts.push(tr('keywords.s_leads', { n: t.leads }))
+  return parts.join(' · ')
+}
+
+/**
+ * 关键词：按主题组织，一个主题做一个页面（docs/keywords.md「页面」）。上面三步说明（找词 → 一个主题做一个页面 → 看排名涨没涨），
+ * 下面每个主题一张卡片：现在怎么样、五格进度、一个主按钮（写新内容 / 去写文章 / 去发布 / 改现有页面 / 看排名），点开看主题里的词。
+ * 还没归主题、不要的、已经排前 3 的词收在「不急的词」。外贸、产品运营、自媒体一个样；
+ * beforeLoad：读之前先做的事（产品运营把导入的 SEO 页面地图、研究出的页面机会并进关键词表）；topicActions：模板在卡片上加的次要操作（产品运营的「创建运营主题」）。
+ */
+export default function Keywords({ channel, rev, onGo, beforeLoad, topicActions }: { channel: Channel; rev?: number; onGo: Go; beforeLoad?: () => Promise<unknown>; topicActions?: (t: TopicRow, reload: () => void) => ReactNode }) {
   const [data, setData] = useState<Data | null>(null)
+  const [map, setMap] = useState<TopicRow[] | null>(null)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<Tab | ''>('')
+  const [filter, setFilter] = useState<Filter>('all')
+  const [open, setOpen] = useState<string | null>(null)
   // 「新」：打开这一页时还没看过的，这次还标着（markSeen 之后下次就不标）
   const fresh = useRef<Set<string> | null>(null)
   const gsc = !!channel.gsc_property && !channel.gsc_link_disabled
 
-  const load = useCallback(() => {
-    runLocal<Data>('keywords.list', { channel_id: channel.id })
-      .then((d) => {
-        if (!fresh.current) {
-          fresh.current = new Set(d.list.filter((k) => k.seen === false).map((k) => k.id))
-          if (fresh.current.size) runLocal('keywords.markSeen', { channel_id: channel.id }).catch(() => {})
-        }
-        setData(d)
-        setError('')
-      })
-      .catch((e) => setError((e as Error).message))
+  const load = useCallback(async () => {
+    try {
+      if (beforeLoad) await beforeLoad().catch(() => {})
+      const [d, m] = await Promise.all([
+        runLocal<Data>('keywords.list', { channel_id: channel.id }),
+        // 增长计划模块的关键词地图：阶段、页面、询盘、下一步；没有这个模块（自媒体）就按词推算
+        runLocal<{ rows: TopicRow[] }>('plan.keywordMap', {}).then((r) => r.rows, () => null),
+      ])
+      if (!fresh.current) {
+        fresh.current = new Set(d.list.filter((k) => k.seen === false).map((k) => k.id))
+        if (fresh.current.size) runLocal('keywords.markSeen', { channel_id: channel.id }).catch(() => {})
+      }
+      setData(d)
+      setMap(m)
+      setError('')
+    } catch (e) {
+      setError((e as Error).message)
+    }
   }, [channel.id])
   useEffect(() => {
     fresh.current = null
     setData(null)
-    setTab('')
-    load()
+    setFilter('all')
+    void load()
   }, [load])
   useEffect(() => {
-    if (rev) load()
+    if (rev) void load()
   }, [rev])
 
-  const byTab = useMemo(() => {
-    const m: Record<Tab, Keyword[]> = { fix: [], write: [], doing: [], other: [] }
-    for (const k of data?.list ?? []) m[tabOf(k)].push(k)
-    return m
-  }, [data])
-  const active: Tab = tab || (TABS.find((t) => byTab[t].length) ?? 'fix')
-
-  // 分组：改现有页面按页面，其他按原因，别的按主题
-  const groups = useMemo(() => {
-    const m = new Map<string, Keyword[]>()
-    for (const k of byTab[active]) {
-      const g = active === 'fix' ? pageOf(k) || tr('keywords.no_cluster') : active === 'other' ? otherReason(k) : k.cluster || tr('keywords.no_cluster')
-      m.set(g, [...(m.get(g) ?? []), k])
+  const { topics, loose } = useMemo(() => {
+    const byCluster = new Map<string, Keyword[]>()
+    const loose: Keyword[] = []
+    for (const k of data?.list ?? []) {
+      if (k.cluster && (k.status === 'idea' || k.status === 'targeting')) byCluster.set(k.cluster, [...(byCluster.get(k.cluster) ?? []), k])
+      else loose.push(k)
     }
-    return [...m]
-  }, [byTab, active])
+    const topics: Topic[] = [...byCluster].map(([cluster, words]) => {
+      const row = map?.find((r) => r.cluster === cluster) ?? guessRow(cluster, words)
+      return { ...row, words, act: actOf(row, words) }
+    })
+    // 要做的在前：待做 → 进行中 → 已上线；同一类里阶段靠后、曝光多的在前
+    const order: Act[] = ['fix', 'write', 'publish', 'writing', 'watch']
+    topics.sort((a, b) => order.indexOf(a.act) - order.indexOf(b.act) || RANK[b.stage] - RANK[a.stage] || b.impressions - a.impressions)
+    return { topics, loose }
+  }, [data, map])
 
   if (error) return <Notice tone="error">{error}</Notice>
   if (!data) return <Skeleton className="h-40 rounded-xl" />
 
+  const count = (f: Filter) => (f === 'all' ? topics.length : f === 'loose' ? loose.length : topics.filter((t) => FILTER_OF[t.act] === f).length)
+  const shown = filter === 'loose' ? [] : topics.filter((t) => filter === 'all' || FILTER_OF[t.act] === filter)
+  const live = topics.filter((t) => RANK[t.stage] >= RANK.live).length
+  const top10 = topics.filter((t) => t.stage === 'top10').length
+  const step = (n: number, title: string, desc: string, body: ReactNode) => (
+    <div className="flex flex-col gap-2 rounded-xl border border-border bg-background p-4">
+      <p className="flex items-center gap-2 text-sm font-semibold"><span className="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] text-primary-foreground">{n}</span>{title}</p>
+      <p className="flex-1 text-xs leading-relaxed text-muted-foreground">{desc}</p>
+      {body}
+    </div>
+  )
+  const big = (a: number, aLabel: string, b: number, bLabel: string) => (
+    <p className="text-xl font-semibold tabular-nums">{a}<span className="ml-1 text-xs font-normal text-muted-foreground">{aLabel}</span><span className="mx-2 text-muted-foreground">·</span>{b}<span className="ml-1 text-xs font-normal text-muted-foreground">{bLabel}</span></p>
+  )
+
   return (
     <div className="space-y-4">
-      <Panel
-        title={tr('keywords.title')}
-        aside={
-          <TaskLaunchButton
-            task={RESEARCH_TASK}
-            input={{ channel_id: channel.id }}
-            match={(r) => r.input?.channel_id === channel.id}
-            reqKey="keyword_requirements"
-            onFinished={load}
-            title={tr('keywords.launch_title')}
-            desc={tr('keywords.launch_desc')}
-            reqTitle={tr('keywords.req_title')}
-            reqHint={tr('keywords.req_hint')}
-            startLabel={tr('keywords.launch_start')}
-            icon={Sparkles}
-            variant={data.list.length ? 'outline' : 'default'}
-          >
-            {tr('keywords.launch')}
-          </TaskLaunchButton>
-        }
-      >
-        <p className="text-xs leading-relaxed text-muted-foreground">{tr('keywords.desc')}</p>
-        {/* 次要的操作：排名每周自动更新、页面问题由站点体检每周查，平时不用点 */}
-        {data.list.length > 0 && (
-          <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-[11px] text-muted-foreground/80">
-            {data.gsc_at && <span className="mr-2">{tr('keywords.gsc_at', { t: fmtTime(data.gsc_at) })}</span>}
+      {/* 三步：这一页在做什么、做到哪了 */}
+      <div className="grid gap-3 md:grid-cols-3">
+        {step(1, tr('keywords.step1'), tr('keywords.step1_desc'), (
+          <div className="flex flex-wrap items-center gap-2">
+            <TaskLaunchButton
+              task={RESEARCH_TASK}
+              input={{ channel_id: channel.id }}
+              match={(r) => r.input?.channel_id === channel.id}
+              reqKey="keyword_requirements"
+              onFinished={load}
+              title={tr('keywords.launch_title')}
+              desc={tr('keywords.launch_desc')}
+              reqTitle={tr('keywords.req_title')}
+              reqHint={tr('keywords.req_hint')}
+              startLabel={tr('keywords.launch_start')}
+              icon={Sparkles}
+              variant={data.list.length ? 'outline' : 'default'}
+            >
+              {tr('keywords.launch')}
+            </TaskLaunchButton>
+            {data.chat_id && (
+              <Button variant="ghost" size="sm" onClick={() => openChat(data.chat_id)}>
+                <MessageCircle /> {tr('keywords.continue_chat')}
+              </Button>
+            )}
+          </div>
+        ))}
+        {step(2, tr('keywords.step2'), tr('keywords.step2_desc'), big(topics.length, tr('keywords.u_topics'), count('todo'), tr('keywords.u_todo')))}
+        {step(3, tr('keywords.step3'), tr('keywords.step3_desc'), big(live, tr('keywords.u_live'), top10, tr('keywords.u_top10')))}
+      </div>
+
+      {!gsc && <Notice>{tr('keywords.no_gsc')}</Notice>}
+      {data.raw > 0 && <Notice>{tr('keywords.raw_left', { n: data.raw })}</Notice>}
+
+      {data.list.length === 0 ? (
+        <Notice>{tr('keywords.empty')}</Notice>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            {(['all', 'todo', 'doing', 'live', 'loose'] as Filter[]).map((f) => (
+              <button key={f} type="button" onClick={() => setFilter(f)} aria-pressed={filter === f}
+                className={cx('cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors', filter === f ? 'border-primary/40 bg-primary/10 font-semibold text-primary-text' : 'border-border bg-background text-muted-foreground hover:text-foreground')}>
+                {tr(`keywords.f_${f}`)} <span className="tabular-nums">{count(f)}</span>
+              </button>
+            ))}
+            <span className="flex-1" />
+            {/* 次要的操作：排名每周自动更新，平时不用点 */}
+            {data.gsc_at && <span className="text-[11px] text-muted-foreground/80">{tr('keywords.gsc_at', { t: fmtTime(data.gsc_at) })}</span>}
             {gsc && (
               <RunButton inline fn="keywords.refresh" input={{ channel_id: channel.id, manual: true }} onDone={load} variant="ghost" icon={RefreshCw}>
                 {tr('keywords.refresh')}
@@ -186,76 +281,74 @@ export default function Keywords({ channel, rev, onGo }: { channel: Channel; rev
                 {tr('keywords.serp_run', { n: Math.min(20, data.serp_pending) })}
               </RunButton>
             )}
-            {data.chat_id && (
-              <Button variant="ghost" size="sm" onClick={() => openChat(data.chat_id)}>
-                <MessageCircle /> {tr('keywords.continue_chat')}
-              </Button>
-            )}
           </div>
-        )}
-      </Panel>
-
-      {!gsc && <Notice>{tr('keywords.no_gsc')}</Notice>}
-      {data.raw > 0 && <Notice>{tr('keywords.raw_left', { n: data.raw })}</Notice>}
-
-      {data.list.length === 0 ? (
-        <Notice>{tr('keywords.empty')}</Notice>
-      ) : (
-        <>
-          <Segmented value={active} onChange={(v) => setTab(v)} options={TABS.map((t) => ({ value: t, label: `${tr(`keywords.tab_${t}`)} ${byTab[t].length}` }))} />
-          <p className="text-xs text-muted-foreground">{tr(`keywords.tab_${active}_hint`)}</p>
-          {byTab[active].length === 0 ? (
-            <Notice>{tr('keywords.filter_empty')}</Notice>
+          <p className="text-xs text-muted-foreground">{tr(`keywords.f_${filter}_hint`)}</p>
+          {filter === 'loose' ? (
+            <>
+              <div className="overflow-hidden rounded-xl border border-border bg-background">
+                {loose.length ? loose.map((k) => <Row key={k.id} k={k} channel={channel} tab="other" isNew={!!fresh.current?.has(k.id)} onChanged={load} />) : <p className="p-4 text-sm text-muted-foreground">{tr('keywords.filter_empty')}</p>}
+              </div>
+              <AddKeywords channel={channel} onAdded={load} />
+            </>
+          ) : shown.length === 0 ? (
+            <Notice>{tr(topics.length ? 'keywords.filter_empty' : 'keywords.no_topics')}</Notice>
           ) : (
-            groups.map(([g, ks]) => <Group key={g} name={g} tab={active} list={ks} fresh={fresh.current} channel={channel} onChanged={load} onGo={onGo} />)
+            shown.map((t) => <TopicCard key={t.cluster} t={t} open={open === t.cluster} onToggle={() => setOpen(open === t.cluster ? null : t.cluster)} fresh={fresh.current} channel={channel} onChanged={load} onGo={onGo} extra={topicActions?.(t, load)} />)
           )}
-          {active === 'other' && <AddKeywords channel={channel} onAdded={load} />}
         </>
       )}
     </div>
   )
 }
 
-/** 一组：标题 + 这一组的主动作 */
-function Group({ name, tab, list, fresh, channel, onChanged, onGo }: { name: string; tab: Tab; list: Keyword[]; fresh: Set<string> | null; channel: Channel; onChanged: () => void; onGo: Go }) {
-  const spId = list.find((k) => k.search_page_id)?.search_page_id
-  const notTopic = list.filter((k) => !k.topic_id)
-  const isPage = tab === 'fix' && /^https?:\/\//.test(name)
-  const title = isPage ? pathOf(name) : tab === 'other' ? tr(`keywords.other_${name}`) : name
+/** 一个主题一张卡片：名字、一句现状、五格进度、主按钮；点开看主题里的词（每个词再点开看细节、改状态） */
+function TopicCard({ t, open, onToggle, fresh, channel, onChanged, onGo, extra }: { t: Topic; open: boolean; onToggle: () => void; fresh: Set<string> | null; channel: Channel; onChanged: () => void; onGo: Go; extra?: ReactNode }) {
+  const isNew = t.words.some((k) => fresh?.has(k.id))
+  const done = RANK[t.stage]
+  const go = (fallback: [string, Record<string, string>?]) => () => (t.next?.action ? onGo(t.next.action.view, t.next.action.params) : onGo(...fallback))
+  const primary = (() => {
+    switch (t.act) {
+      case 'write':
+        return t.untopiced?.length ? (
+          <RunButton inline fn="keywords.toTopic" input={{ ids: t.untopiced }} onDone={() => onGo('website-content', {})} size="sm" icon={ListPlus}>{tr('keywords.act_write')}</RunButton>
+        ) : <Button size="sm" onClick={() => onGo('website-content', {})}>{tr('keywords.act_write')}</Button>
+      case 'writing':
+        return <Button size="sm" onClick={go(['website-content', t.topic_id ? { topic: t.topic_id } : {}])}>{tr('keywords.act_writing')} <ArrowUpRight /></Button>
+      case 'publish':
+        return <Button size="sm" onClick={go(['website-content', t.article_id ? { article: t.article_id } : {}])}>{tr('keywords.act_publish')} <ArrowUpRight /></Button>
+      case 'fix':
+        return t.search_page_id ? (
+          <TaskButton task={EXPAND_TASK} input={{ id: t.search_page_id }} match={(r) => r.input?.id === t.search_page_id} onFinished={onChanged} icon={FilePlus2}>{tr('keywords.act_fix')}</TaskButton>
+        ) : <Button size="sm" onClick={() => onGo('audit', { channel: channel.id })}><ShieldCheck /> {tr('keywords.act_fix')}</Button>
+      default:
+        return <Button size="sm" variant="outline" onClick={() => onGo('search', { channel: channel.id })}>{tr('keywords.act_watch')}</Button>
+    }
+  })()
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-background">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 px-4 py-2">
-        {isPage ? (
-          <a href={name} target="_blank" rel="noreferrer" className="truncate font-mono text-[13px] font-semibold hover:text-primary-text" title={name}>{title}</a>
-        ) : (
-          <span className="text-[13px] font-semibold">{title}</span>
-        )}
-        <span className="text-[11px] text-muted-foreground tabular-nums">{tr('keywords.group_n', { n: list.length })}</span>
-        <span className="flex-1" />
-        {tab === 'fix' && list.some((k) => pageMissing(k) || competing(k)) && (
-          <Button variant="ghost" size="sm" onClick={() => onGo('audit', { channel: channel.id })}>
-            <ShieldCheck /> {tr('keywords.go_audit')} <ArrowUpRight />
-          </Button>
-        )}
-        {tab === 'fix' && spId && (
-          <TaskButton task={EXPAND_TASK} input={{ id: spId }} match={(r) => r.input?.id === spId} onFinished={onChanged} variant="outline" icon={FilePlus2}>
-            {tr('keywords.expand_page')}
-          </TaskButton>
-        )}
-        {tab === 'write' && notTopic.length > 0 && (
-          <RunButton inline fn="keywords.toTopic" input={{ ids: notTopic.map((k) => k.id) }} onDone={onChanged} variant="outline" icon={ListPlus}>
-            {tr('keywords.to_topic')}
-          </RunButton>
-        )}
-        {(tab === 'write' || tab === 'doing') && list.some((k) => k.topic_id) && (
-          <Button variant="ghost" size="sm" onClick={() => onGo('content', { tab: 'topics' })}>
-            {tr('keywords.go_topics')} <ArrowUpRight />
-          </Button>
-        )}
+    <div className={cx('rounded-xl border border-border bg-background', isNew && 'bg-primary/5 shadow-[inset_3px_0_0_var(--color-primary)]')}>
+      <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center">
+        <button type="button" onClick={onToggle} aria-expanded={open} className="flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-left">
+          <ChevronDown className={cx('mt-1 size-4 shrink-0 text-muted-foreground transition-transform', !open && '-rotate-90')} />
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              {isNew && <span className="inline-flex h-4 items-center rounded bg-primary px-1 text-[10px] font-bold text-primary-foreground">{tr('article.new_badge')}</span>}
+              <span className="font-semibold [overflow-wrap:anywhere]">{t.cluster}</span>
+            </span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground tabular-nums [overflow-wrap:anywhere]">{statusOf(t)}</span>
+          </span>
+        </button>
+        {/* 五格进度：选题 → 写好 → 上线 → 有展示 → 前 10 */}
+        <div className="w-full shrink-0 md:w-56" aria-label={tr(`keywords.p_${t.stage === 'top30' ? 'shown' : t.stage === 'none' ? 'topic' : t.stage}`)}>
+          <div className="flex gap-1">{STEPS.map((s) => <i key={s} className={cx('h-1.5 flex-1 rounded-full', RANK[s as Stage] <= done && done > 0 ? 'bg-primary' : 'bg-muted')} />)}</div>
+          <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">{STEPS.map((s) => <span key={s}>{tr(`keywords.p_${s}`)}</span>)}</div>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 md:justify-end">{extra}{primary}</div>
       </div>
-      {list.map((k) => (
-        <Row key={k.id} k={k} channel={channel} tab={tab} isNew={!!fresh?.has(k.id)} onChanged={onChanged} />
-      ))}
+      {open && (
+        <div className="border-t border-dashed border-border">
+          {t.words.map((k) => <Row key={k.id} k={k} channel={channel} tab={k.status === 'targeting' ? 'doing' : 'other'} isNew={!!fresh?.has(k.id)} onChanged={onChanged} />)}
+        </div>
+      )}
     </div>
   )
 }

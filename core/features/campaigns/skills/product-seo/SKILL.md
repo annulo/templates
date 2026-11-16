@@ -5,6 +5,8 @@ description: 围绕产品与使用场景执行 SEO 机会研究、页面规划�
 
 方法参考官方公开大纲：https://www.dannypostma.com/seo-course 。这是面向产品运营的独立执行指南，不包含付费课程内容。
 
+页面：没有单独的「SEO 规划」页。导入的 SEO 页面地图（seo_targets）和研究出的页面机会（growth_opportunities）由 `seomap.sync` 并进关键词表（keywords，主题 cluster、目标页面 target_page、opportunity_id），和挖词、筛词的结果一起按主题显示在「SEO 与关键词 → 关键词」（和外贸同一个页面）；主题卡片的「写新内容」转成选题时带上主题挂的机会（写文章拿到受众、问题、建议），卡片上还能创建运营主题。要单独出页面简报用任务 seo-page-plan（参数 opportunity_id）。某个主题还没有机会时 `seomap.opportunity --input '{"cluster":"…"}'` 按主题建一条候选。
+
 先跑 campaigns.context，明确产品能力、用户场景、市场语言和转化目标。研究主词、搜索意图、竞品排名页面与内容缺口，再将机会映射到已有页或新页。搜索量与竞争度来自真实关键词工具，保留工具、地区/语言和日期；GSC 展示不能代替全市场搜索量。没有数据标记待验证。
 
 优先级考虑产品相关性、转化意图、竞争与投入。资料不足存 candidate；有可核实需求与竞争证据、来源和时间才存 validated。用 campaigns.saveOpportunity 校验并去重，同产品/语言/意图/主词只维护一个活跃机会。

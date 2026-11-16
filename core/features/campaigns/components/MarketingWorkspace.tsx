@@ -546,171 +546,6 @@ export function MarketingPlans({
     </div>
   );
 }
-export function SeoMap({
-  ctx,
-  params,
-}: {
-  ctx: Ctx;
-  params: Record<string, string>;
-}) {
-  const { data, error, reload } = useMarketing(ctx);
-  const [selected, setSelected] = useState(params.target || ""),
-    [language, setLanguage] = useState("all");
-  const list = (data?.seo_targets || []).filter(
-    (s: any) => language === "all" || s.language === language,
-  );
-  const active = data?.seo_targets.find((s: any) => s.id === selected);
-  const grouped: any[] = [];
-  for (const s of list) {
-    let group = grouped.find(
-      (g) => g.url === s.primary_url && g.language === s.language,
-    );
-    if (!group) {
-      group = { url: s.primary_url, language: s.language, items: [] };
-      grouped.push(group);
-    }
-    group.items.push(s);
-  }
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">{m("seo_desc")}</p>
-        <MarketingImport data={data} onDone={reload} />
-      </div>
-      <DataState loading={!data} error={error} />
-      <div className="flex flex-wrap gap-3">
-        <Select
-          ariaLabel={m("language")}
-          value={language}
-          options={[
-            { value: "all", label: m("all_languages") },
-            { value: "zh", label: m("zh") },
-            { value: "en", label: m("en") },
-          ]}
-          onChange={setLanguage}
-        />
-        <Badge>{m("keyword_count", { n: data ? list.length : "—" })}</Badge>
-        <Badge>{m("page_count", { n: data ? grouped.length : "—" })}</Badge>
-      </div>
-      {data && !list.length && <Notice>{m("seo_empty")}</Notice>}
-      <div className="grid gap-3 lg:grid-cols-2">
-        {grouped.map((group) => (
-          <Panel
-            key={group.language + group.url}
-            title={
-              <a
-                href={group.url}
-                target="_blank"
-                rel="noreferrer"
-                className="break-all text-sm"
-              >
-                {group.url.replace(/^https?:\/\//, "")}{" "}
-                <ExternalLink className="inline size-3" />
-              </a>
-            }
-            aside={<Badge>{group.language}</Badge>}
-          >
-            <div className="flex flex-wrap gap-2">
-              {group.items.map((s: any) => (
-                <button
-                  key={s.id}
-                  className="rounded-md border border-border px-2 py-1 text-left text-xs hover:bg-muted"
-                  onClick={() => setSelected(s.id)}
-                >
-                  {s.keyword}
-                </button>
-              ))}
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              {group.items[0].search_page
-                ? m("search_available")
-                : m("search_unknown")}
-            </p>
-          </Panel>
-        ))}
-      </div>
-      <Dialog
-        open={!!active}
-        onClose={() => setSelected("")}
-        title={active?.keyword || ""}
-        width={800}
-      >
-        {active && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <Badge>{active.intent}</Badge>
-              <Badge>{active.priority}</Badge>
-              <Badge>{active.language}</Badge>
-            </div>
-            <Panel title={m("primary_page")}>
-              <a
-                href={active.primary_url}
-                className="break-all text-sm text-primary-text"
-                target="_blank"
-                rel="noreferrer"
-              >
-                {active.primary_url}
-              </a>
-            </Panel>
-            <p className="text-sm">{active.next_action}</p>
-            <Panel title={m("supporting")}>
-              <p className="text-sm">{active.supporting}</p>
-            </Panel>
-            <Notice>
-              {m("difficulty_note", {
-                n: active.serp_difficulty || "—",
-                date: active.checked_at || "—",
-              })}
-            </Notice>
-            {active.search_page && (
-              <p className="text-xs text-muted-foreground">
-                {m("search_period", {
-                  start: active.search_page.period_start || "—",
-                  end: active.search_page.period_end || "—",
-                  synced: active.search_page.synced_at
-                    ? new Date(active.search_page.synced_at).toLocaleString(
-                        "zh-CN",
-                        { timeZone: "Asia/Shanghai" },
-                      )
-                    : "—",
-                })}
-              </p>
-            )}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {["impressions", "clicks", "ctr", "position"].map((k) => (
-                <MetricCard
-                  key={k}
-                  label={m("metric_" + k)}
-                  value={
-                    k === "ctr" && active.search_page?.ctr != null
-                      ? active.search_page.ctr * 100
-                      : active.search_page?.[k]
-                  }
-                />
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {m("page_metrics_note")}
-            </p>
-            <TaskTools
-              task="seo-page-plan"
-              label="plan_page"
-              beforeRun={() =>
-                runLocal("marketing.prepareOpportunity", {
-                  target_id: active.id,
-                })
-              }
-              onFinished={reload}
-            />
-            <Button variant="outline" onClick={() => ctx.go("search")}>
-              {m("view_search")}
-            </Button>
-          </div>
-        )}
-      </Dialog>
-    </div>
-  );
-}
 export function GrowthOverview({ ctx }: { ctx: Ctx }) {
   const { data, error, reload } = useProductData<ContentData>('content-workspace.context', {}, ctx.rev);
   const entries = data ? contentEntries(data) : [];
@@ -771,8 +606,8 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
       key: "seo",
       title: m("advance_seo"),
       why: m("advance_seo_why"),
-      view: "opportunities",
-      extra: {},
+      view: "search",
+      extra: { tab: "map" },
       label: m("view_map"),
     });
   return (
@@ -806,7 +641,7 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
         <MetricCard
           label={m("seo_targets")}
           value={data?.counts.seo}
-          onClick={() => ctx.go("opportunities", { tab: "map" })}
+          onClick={() => ctx.go("search", { tab: "map" })}
         />
         <MetricCard
           label={cw('website_content')}

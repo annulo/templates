@@ -4,8 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import ProductOverview from '../components/views/ProductOverview'
 import PlanView from '../components/views/Plan'
 import ProductFacts from '../components/views/ProductFacts'
-import GrowthPlanning from '../components/views/GrowthPlanning'
-import KeywordMap from '../components/KeywordMap'
+import { seoKeywords } from '../components/SeoKeywords'
 import Backlinks from '../components/Backlinks'
 import { AccountStrategies, GrowthReviews, MarketingImport, MarketingPlans, useMarketing } from '../components/MarketingWorkspace'
 import Campaigns from '../components/views/Campaigns'
@@ -25,7 +24,6 @@ import Landing from '../components/views/Landing'
 import Help from '../components/views/Help'
 import Assistant from '../components/views/Assistant'
 import { Notice } from '../components/ui'
-import { g, TaskTools } from '../components/ProductFields'
 import { runLocal } from './shuttle'
 import { tr } from './i18n'
 import type { Ctx, View } from '../components/views/types'
@@ -38,14 +36,17 @@ export const VIEWS: View[] = ['overview', 'plan', 'company', 'campaigns', 'conte
 
 /**
  * 并掉的老页面换成现在的位置（外壳打开地址、跳转时都过一遍）：
- * 每周总结在增长计划的标签里；SEO 规划在「SEO 与关键词」的标签里；网站效果复盘是网站访问的「转化数据」；
+ * 每周总结在增长计划的标签里；SEO 规划（页面地图、页面机会）并进了「SEO 与关键词 → 关键词」；网站效果复盘是网站访问的「转化数据」；
  * 关键词地图、外链从增长计划挪到「SEO 与关键词」；GA4 从谷歌排名挪到网站访问
  */
 export function redirectOf(p: Record<string, string>): Record<string, string> | null {
   if (p.view === 'reports') return { ...p, view: 'plan', tab: 'reports' }
-  if (p.view === 'opportunities') return { ...p, view: 'search', tab: 'seo', seo_tab: p.tab === 'opportunities' ? 'opportunities' : '' }
+  // SEO 规划（页面地图、页面机会）并进了关键词地图（campaigns 模块的 seomap.ts）
+  if (p.view === 'opportunities' || (p.view === 'search' && (p.tab === 'seo' || p.tab === 'map'))) return { ...p, view: 'search', tab: 'keywords', seo_tab: '' }
   if (p.view === 'metrics') return { ...p, view: 'site', tab: 'conversions' }
-  if (p.view === 'plan' && (p.tab === 'map' || p.tab === 'links')) return { ...p, view: 'search' }
+  // 关键词地图并进了「关键词」标签（按主题看）
+  if (p.view === 'plan' && p.tab === 'map') return { ...p, view: 'search', tab: 'keywords' }
+  if (p.view === 'plan' && p.tab === 'links') return { ...p, view: 'search' }
   if (p.view === 'search' && p.tab === 'ga4') return { ...p, view: 'site' }
   return null
 }
@@ -92,11 +93,9 @@ export function renderView(view: View, { ctx, params, setParam, bumpRev }: PageP
     case 'channels': return <Channels ctx={ctx} current={params.channel || ''} setCurrent={(v) => setParam('channel', v)} />
     case 'search':
       return <Search {...p}
-        // 页头上面：交给助手做 SEO 研究（产品运营才有，共用的「SEO 与关键词」页留了这个位置）
-        headerActions={(channel) => <TaskTools task="seo-research" label="research" input={{ channel_id: channel.id }} />}
+        // 关键词和外贸一个样；产品运营多两件事：读之前把导入的 SEO 页面地图、研究出的页面机会并进关键词表，卡片上能「创建运营主题」
+        keywords={seoKeywords(ctx)}
         extraTabs={[
-          { value: 'map', label: tr('plan.tab_map'), render: () => <KeywordMap ctx={ctx} /> },
-          { value: 'seo', label: tr('nav.seo_plan'), render: () => <GrowthPlanning {...p} embedded /> },
           { value: 'links', label: tr('plan.tab_links'), render: () => <Backlinks ctx={ctx} /> },
         ]} />
     case 'audit': return <Audit {...p} />

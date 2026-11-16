@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ComponentProps, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, ExternalLink, EyeOff, FilePlus2, Link2, Loader2, RefreshCw, SearchCheck, Sparkles, Undo2, Unlink } from 'lucide-react'
 import AskButton from '../AskButton'
 import { TaskButton, TaskRequirements, useTask } from '../Task'
@@ -81,14 +81,14 @@ const OPP: Record<string, { label: string; tone: Tone; hint: string }> = {
   striking_distance: { get label() { return tr('search.opp_striking') }, tone: 'primary', get hint() { return tr('search.opp_striking_hint') } },
 }
 
-/** 页面上模板加的标签（外贸、产品运营的关键词地图、外链，产品运营的 SEO 规划），放在「关键词」后面；拿到当前选中的网站 */
+/** 页面上模板加的标签（外贸、产品运营的外链），放在「关键词」后面；拿到当前选中的网站 */
 export type SearchTab = { value: string; label: string; render: (channel: Channel) => ReactNode }
 
 /**
  * headerActions：模板放在页头上面的按钮，拿到当前选中的网站（产品运营的 SEO 研究任务）。
  * GA4 访问数据在「网站访问」页（SiteVisits），老链接 search?tab=ga4 由外壳转过去。
  */
-export default function Search({ ctx, params, setParam, headerActions, extraTabs = [] }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; headerActions?: (channel: Channel) => ReactNode; extraTabs?: SearchTab[] }) {
+export default function Search({ ctx, params, setParam, headerActions, extraTabs = [], keywords }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; headerActions?: (channel: Channel) => ReactNode; extraTabs?: SearchTab[]; /** 关键词标签的插槽（产品运营：读之前并 SEO 页面地图、卡片上的「创建运营主题」） */ keywords?: Pick<ComponentProps<typeof Keywords>, 'beforeLoad' | 'topicActions'> }) {
   const sites = ctx.channels.filter(isSite)
   const channel = sites.find((c) => c.id === params.channel) ?? sites[0]
   const extra = extraTabs.find((t) => t.value === params.tab)
@@ -205,7 +205,7 @@ export default function Search({ ctx, params, setParam, headerActions, extraTabs
       ) : tab === 'review' ? (
         <Review changes={changes} channel={channel} onChanged={load} />
       ) : tab === 'keywords' ? (
-        <Keywords key={channel.id} channel={channel} rev={ctx.rev} onGo={(v, p) => ctx.go(v as View, p)} />
+        <Keywords key={channel.id} channel={channel} rev={ctx.rev} onGo={(v, p) => ctx.go(v as View, p)} {...keywords} />
       ) : !channel.gsc_property || channel.gsc_link_disabled ? (
         <LinkProperty channel={channel} onLinked={() => ctx.reloadChannels()} />
       ) : tab === 'decay' ? (

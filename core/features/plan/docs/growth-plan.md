@@ -116,7 +116,7 @@ AI 起草（任务 draft-plan）：判断从哪个阶段开始、三档目标、
 - 起草和检查点都存 `ctx.chat_id`，页面上「继续对话」回到那段对话改。
 - 测试：`publish/tests/plan.test.mjs`、`diagnosis.test.mjs`、`channels-website.test.mjs`。
 
-## 关键词地图（SEO 与关键词 → 关键词地图，`plan.keywordMap`）
+## 关键词地图（`plan.keywordMap`，显示在「SEO 与关键词 → 关键词」的主题卡片上）
 
 不新建表，按主题现算：关键词表里筛过、没放弃的词按 `cluster` 分，一个主题一个目标页面（词的 `target_page` → 选题写成的文章发布后的网址 → 词的 `gsc_page`）。
 阶段 `none` 没页面 → `topic` 有选题 → `draft` 写好没发 → `live` 已上线 → `shown` 谷歌有展示 → `top30` → `top10`。

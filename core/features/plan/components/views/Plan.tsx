@@ -42,7 +42,7 @@ export type PlanTab = { value: string; label: string; render: () => ReactNode }
 /**
  * 增长计划：90 天的目标、基线、阶段和每周要做的事（docs/growth-plan.md）。
  * 没有计划时让 AI 起草；草稿选一档目标开始执行；执行中看进度、做这周的事、到了 Day 30 / 60 / 90 做检查点。
- * 关键词地图、外链在「SEO 与关键词」页（模板经 Search 的 extraTabs 放进去）。
+ * 关键词（按主题，含关键词地图的阶段）、外链在「SEO 与关键词」页（外链由模板经 Search 的 extraTabs 放进去）。
  */
 export default function PlanView({ ctx, params = {}, setParam, tabs = [] }: { ctx: Ctx; params?: Record<string, string>; setParam?: (k: string, v: string) => void; tabs?: PlanTab[] }) {
   const extra = tabs.find((t) => t.value === params.tab)
@@ -434,7 +434,7 @@ function Rhythm({ ctx, list }: { ctx: Ctx; list: { who: string; title: string; a
 const METRIC_VIEW: Record<string, [View, Record<string, string>?]> = {
   pages_published: ['website-content'], social_published: ['social-content'], keywords_targeting: ['search', { tab: 'keywords' }], competitors_watched: ['competitors'],
   issues_high_open: ['audit'], pages_with_impressions: ['search'], impressions_28d: ['search'], keywords_top30: ['search', { tab: 'keywords' }], keywords_top10: ['search', { tab: 'keywords' }],
-  geo_visibility: ['geo'], clicks_28d: ['search'], leads_28d: ['leads'], deals_open: ['leads', { mode: 'board' }], clusters_live: ['search', { tab: 'map' }], backlinks_live: ['search', { tab: 'links' }],
+  geo_visibility: ['geo'], clicks_28d: ['search'], leads_28d: ['leads'], deals_open: ['leads', { mode: 'board' }], clusters_live: ['search', { tab: 'keywords' }], backlinks_live: ['search', { tab: 'links' }],
 }
 
 /** 怎么衡量：每个指标一行，开始时、现在、第 30 天该到（按目标线性算）、90 天目标、去哪看 */
@@ -517,7 +517,7 @@ function Links({ ctx }: { ctx: Ctx }) {
     ['Google Search Console', site?.gsc_property ? `https://search.google.com/search-console?resource_id=${encodeURIComponent(site.gsc_property)}` : 'https://search.google.com/search-console'],
     ['Google Analytics', 'https://analytics.google.com/'],
   ]
-  const inner: [string, View, Record<string, string>?][] = [[tr('plan.tab_map'), 'search', { tab: 'map' }], [tr('plan.tab_links'), 'search', { tab: 'links' }], [tr('plan.link_audit'), 'audit'], [tr('plan.link_geo'), 'geo']]
+  const inner: [string, View, Record<string, string>?][] = [[tr('plan.tab_keywords'), 'search', { tab: 'keywords' }], [tr('plan.tab_links'), 'search', { tab: 'links' }], [tr('plan.link_audit'), 'audit'], [tr('plan.link_geo'), 'geo']]
   return (
     <section className="space-y-3">
       <h3 className="text-base font-semibold">{tr('plan.links')}</h3>

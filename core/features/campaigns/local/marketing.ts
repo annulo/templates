@@ -2,6 +2,7 @@ import { all, row, error, url } from "./_growth";
 import { json } from "./_research";
 import { canonical, importLegacy } from "./inspiration";
 import { saveOpportunity } from "./campaigns";
+import { sync as syncKeywords } from "./seomap";
 import { save as saveContent } from "./content";
 import { L } from "./_i18n";
 
@@ -396,6 +397,8 @@ export function importPack(input: any, ctx: any) {
     data.inspirations.creators.length
   )
     result.references = importLegacy(data.inspirations, ctx);
+  // 导入的 SEO 页面地图并进关键词表，显示在「SEO 与关键词 → 关键词」（seomap.ts）
+  if (data.seo.length) result.keywords = syncKeywords({}, ctx);
   return result;
 }
 export function bindRole(input: { id: string; account_id: string }, ctx: any) {
