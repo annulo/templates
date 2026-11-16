@@ -5,6 +5,8 @@ import ProductOverview from '../components/views/ProductOverview'
 import PlanView from '../components/views/Plan'
 import ProductFacts from '../components/views/ProductFacts'
 import GrowthPlanning from '../components/views/GrowthPlanning'
+import KeywordMap from '../components/KeywordMap'
+import Backlinks from '../components/Backlinks'
 import { AccountStrategies, GrowthReviews, MarketingImport, MarketingPlans, useMarketing } from '../components/MarketingWorkspace'
 import Campaigns from '../components/views/Campaigns'
 import ProductMetrics from '../components/views/ProductMetrics'
@@ -22,7 +24,7 @@ import SiteVisits from '../components/views/SiteVisits'
 import Landing from '../components/views/Landing'
 import Help from '../components/views/Help'
 import Assistant from '../components/views/Assistant'
-import { Button, Notice } from '../components/ui'
+import { Notice } from '../components/ui'
 import { g, TaskTools } from '../components/ProductFields'
 import { runLocal } from './shuttle'
 import { tr } from './i18n'
@@ -32,7 +34,21 @@ import type { Ctx, View } from '../components/views/types'
 export const NAV_COLLAPSED = 'annulo:product-nav-collapsed'
 
 /** 地址栏 view= 认的页面；别的都当总览 */
-export const VIEWS: View[] = ['overview', 'plan', 'reports', 'company', 'opportunities', 'campaigns', 'metrics', 'content', 'website-content', 'landing', 'social-content', 'inspiration', 'social-metrics', 'calendar', 'assets', 'search', 'geo', 'audit', 'social', 'channels', 'site', 'help', 'assistant', 'settings']
+export const VIEWS: View[] = ['overview', 'plan', 'company', 'campaigns', 'content', 'website-content', 'landing', 'social-content', 'inspiration', 'social-metrics', 'calendar', 'assets', 'search', 'geo', 'audit', 'social', 'channels', 'site', 'help', 'assistant', 'settings']
+
+/**
+ * 并掉的老页面换成现在的位置（外壳打开地址、跳转时都过一遍）：
+ * 每周总结在增长计划的标签里；SEO 规划在「SEO 与关键词」的标签里；网站效果复盘是网站访问的「转化数据」；
+ * 关键词地图、外链从增长计划挪到「SEO 与关键词」；GA4 从谷歌排名挪到网站访问
+ */
+export function redirectOf(p: Record<string, string>): Record<string, string> | null {
+  if (p.view === 'reports') return { ...p, view: 'plan', tab: 'reports' }
+  if (p.view === 'opportunities') return { ...p, view: 'search', tab: 'seo', seo_tab: p.tab === 'opportunities' ? 'opportunities' : '' }
+  if (p.view === 'metrics') return { ...p, view: 'site', tab: 'conversions' }
+  if (p.view === 'plan' && (p.tab === 'map' || p.tab === 'links')) return { ...p, view: 'search' }
+  if (p.view === 'search' && p.tab === 'ga4') return { ...p, view: 'site' }
+  return null
+}
 
 /** 页面写了表（db:changed）时整个后台重拉一遍：产品运营的几个页面（增长机会、运营主题、灵感库）靠它刷新 */
 export const REFRESH_ON_DB_CHANGE = true
@@ -40,7 +56,7 @@ export const REFRESH_ON_DB_CHANGE = true
 /** 老的「内容中心」（view=content）拆成了网站文章、社媒内容和灵感库：按要去的工作区、当前在哪一边跳过去 */
 export function contentView(extra: Record<string, string>, current: View): View {
   if (extra.tab === 'inspiration') return 'inspiration'
-  if (extra.workspace === 'website' || (!extra.workspace && ['website-content', 'landing', 'opportunities', 'search', 'geo', 'audit', 'site', 'metrics'].includes(current))) return 'website-content'
+  if (extra.workspace === 'website' || (!extra.workspace && ['website-content', 'landing', 'search', 'geo', 'audit', 'site'].includes(current))) return 'website-content'
   if (extra.workspace === 'social' || (!extra.workspace && ['social', 'social-content', 'inspiration', 'social-metrics', 'calendar'].includes(current))) return 'social-content'
   return 'content'
 }
@@ -59,11 +75,9 @@ export type PageProps = { ctx: Ctx; params: Record<string, string>; setParam: (k
 export function renderView(view: View, { ctx, params, setParam, bumpRev }: PageProps): ReactNode {
   const p = { ctx, params, setParam }
   switch (view) {
-    case 'plan': return <PlanView {...p} />
+    case 'plan': return <PlanView {...p} tabs={[{ value: 'reports', label: tr('nav.reports'), render: () => <Reports {...p} embedded /> }]} />
     case 'company': case 'settings': return <ProductFacts {...p} />
-    case 'opportunities': return <GrowthPlanning {...p} />
     case 'campaigns': return <Campaigns {...p} />
-    case 'metrics': return <ProductMetrics {...p} />
     case 'inspiration': return <InspirationLibrary {...p} workspace="social" onChanged={bumpRev} />
     case 'content':
       if (params.tab === 'inspiration') return <InspirationLibrary {...p} workspace="social" onChanged={bumpRev} />
@@ -73,20 +87,21 @@ export function renderView(view: View, { ctx, params, setParam, bumpRev }: PageP
     case 'landing': return <Landing {...p} />
     case 'calendar': return <Calendar {...p} scope="social" />
     case 'assets': return <Assets {...p} />
-    case 'reports': return <Reports {...p} />
     // 老的「自媒体数据与复盘」并进了账号页的「数据」（复盘在自媒体内容的「待复盘」），旧链接打开账号数据
     case 'social': case 'social-metrics': return <SocialAccounts ctx={ctx} params={view === 'social-metrics' ? { ...params, section: 'data' } : params} setParam={setParam} />
     case 'channels': return <Channels ctx={ctx} current={params.channel || ''} setCurrent={(v) => setParam('channel', v)} />
     case 'search':
       return <Search {...p}
-        // 页头上面：去「增长机会」，交给助手做 SEO 研究（产品运营才有，共用的谷歌排名页留了这个位置）
-        headerActions={(channel) => <>
-          <Button variant="outline" onClick={() => ctx.go('opportunities')}>{g('opportunities_title')}</Button>
-          <TaskTools task="seo-research" label="research" input={{ channel_id: channel.id }} />
-        </>} />
+        // 页头上面：交给助手做 SEO 研究（产品运营才有，共用的「SEO 与关键词」页留了这个位置）
+        headerActions={(channel) => <TaskTools task="seo-research" label="research" input={{ channel_id: channel.id }} />}
+        extraTabs={[
+          { value: 'map', label: tr('plan.tab_map'), render: () => <KeywordMap ctx={ctx} /> },
+          { value: 'seo', label: tr('nav.seo_plan'), render: () => <GrowthPlanning {...p} embedded /> },
+          { value: 'links', label: tr('plan.tab_links'), render: () => <Backlinks ctx={ctx} /> },
+        ]} />
     case 'audit': return <Audit {...p} />
     case 'geo': return <Geo {...p} />
-    case 'site': return <SiteVisits {...p} />
+    case 'site': return <SiteVisits {...p} extraTabs={[{ value: 'conversions', label: tr('nav.conversions'), render: () => <ProductMetrics {...p} embedded /> }]} />
     case 'help': return <Help {...p} />
     case 'assistant': return <Assistant {...p} />
     default: return <ProductOverview ctx={ctx} />

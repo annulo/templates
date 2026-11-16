@@ -3,7 +3,6 @@ import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown, ExternalLink, EyeOff, Fi
 import AskButton from '../AskButton'
 import { TaskButton, TaskRequirements, useTask } from '../Task'
 import RunButton from '../RunButton'
-import Ga4Panel from '../Ga4Panel'
 import TrendChart from '../charts/TrendChart'
 import { Badge, Button, Dialog, Notice, PageHeader, Panel, RangeToggle, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
 import Reloading from '../Reloading'
@@ -43,15 +42,15 @@ const REFRESH_TASK = 'refresh-page' // 流量下滑的页面：写刷新内容�
 const pct = (x?: number) => `${((x ?? 0) * 100).toFixed(1)}%`
 const num = (x?: number) => (x ?? 0).toLocaleString(numLocale())
 const pathOf = (u: string) => u.replace(/^https?:\/\/[^/]+/, '') || '/'
-const DAY = 86400_000
+export const DAY = 86400_000
 const dateOf = (time: number) => new Date(time).toISOString().slice(0, 10)
 /** 本地日期 YYYY-MM-DD（GA4 当天就有数据，按电脑所在的日子算「今天」） */
-const localDate = (time: number) => {
+export const localDate = (time: number) => {
   const d = new Date(time)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-const RANGES = ['7', '30', '90', 'custom']
-const rangeOptions = () => [7, 30, 90].map((days) => ({ value: String(days), label: tr('common.last_days', { n: days }) })).concat([{ value: 'custom', label: tr('search.custom_range') }])
+export const RANGES = ['7', '30', '90', 'custom']
+export const rangeOptions = () => [7, 30, 90].map((days) => ({ value: String(days), label: tr('common.last_days', { n: days }) })).concat([{ value: 'custom', label: tr('search.custom_range') }])
 
 type RangePage = { page: string; clicks: number; impressions: number; ctr: number; position: number }
 type RangeDaily = { date: string; clicks: number; impressions: number }
@@ -82,17 +81,18 @@ const OPP: Record<string, { label: string; tone: Tone; hint: string }> = {
   striking_distance: { get label() { return tr('search.opp_striking') }, tone: 'primary', get hint() { return tr('search.opp_striking_hint') } },
 }
 
-/** headerActions：模板放在页头上面的按钮，拿到当前选中的网站（产品运营的「增长机会」、SEO 研究任务） */
-export default function Search({ ctx, params, setParam, headerActions }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; headerActions?: (channel: Channel) => ReactNode }) {
+/** 页面上模板加的标签（外贸、产品运营的关键词地图、外链，产品运营的 SEO 规划），放在「关键词」后面；拿到当前选中的网站 */
+export type SearchTab = { value: string; label: string; render: (channel: Channel) => ReactNode }
+
+/**
+ * headerActions：模板放在页头上面的按钮，拿到当前选中的网站（产品运营的 SEO 研究任务）。
+ * GA4 访问数据在「网站访问」页（SiteVisits），老链接 search?tab=ga4 由外壳转过去。
+ */
+export default function Search({ ctx, params, setParam, headerActions, extraTabs = [] }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; headerActions?: (channel: Channel) => ReactNode; extraTabs?: SearchTab[] }) {
   const sites = ctx.channels.filter(isSite)
   const channel = sites.find((c) => c.id === params.channel) ?? sites[0]
-  const tab = params.tab === 'review' ? 'review' : params.tab === 'ga4' ? 'ga4' : params.tab === 'decay' ? 'decay' : params.tab === 'keywords' ? 'keywords' : 'pages'
-  // GA4：近 7/30/90 天或自定义（ga4_days 是老链接里的参数）
-  const ga4Choice = RANGES.includes(params.ga4_range) ? params.ga4_range : ['7', '30', '90'].includes(params.ga4_days) ? params.ga4_days : '30'
-  const ga4Days = ga4Choice === 'custom' ? 30 : Number(ga4Choice)
-  const today = localDate(Date.now())
-  const ga4Start = params.ga4_start || localDate(Date.now() - 29 * DAY)
-  const ga4End = params.ga4_end || today
+  const extra = extraTabs.find((t) => t.value === params.tab)
+  const tab = extra ? extra.value : params.tab === 'review' ? 'review' : params.tab === 'decay' ? 'decay' : params.tab === 'keywords' ? 'keywords' : 'pages'
   // 谷歌排名（GSC）：数据晚两三天，最晚只能看到 3 天前
   const rangeChoice = RANGES.includes(params.gsc_range) ? params.gsc_range : '30'
   const latest = dateOf(Date.now() - 3 * DAY)
@@ -110,7 +110,7 @@ export default function Search({ ctx, params, setParam, headerActions }: { ctx: 
   const [error, setError] = useState('')
 
   const load = useCallback(() => {
-    if (!channel || tab === 'ga4' || channel.type === 'wordpress') return
+    if (!channel || extra || channel.type === 'wordpress') return
     Promise.all([dbList('search_pages'), dbList('site_changes')])
       .then(([p, c]) => {
         setPages(p.filter((x) => x.channel_id === channel.id))
@@ -160,10 +160,6 @@ export default function Search({ ctx, params, setParam, headerActions }: { ctx: 
     setParam('gsc_end', end)
     setRangeRevision((n) => n + 1)
   }
-  const applyGa4 = (start: string, end: string) => {
-    setParam('ga4_start', start)
-    setParam('ga4_end', end)
-  }
   const refresh = () => { load(); setRangeRevision((n) => n + 1) }
 
   if (!channel)
@@ -181,7 +177,7 @@ export default function Search({ ctx, params, setParam, headerActions }: { ctx: 
       {headerActions && <div className="flex flex-wrap justify-between gap-3">{headerActions(channel)}</div>}
       <PageHeader
         title={tr('search.title')}
-        desc={tr(tab === 'ga4' ? 'search.ga4_desc' : 'search.desc')}
+        desc={tr('search.desc')}
         actions={
           <Segmented
             value={tab}
@@ -189,8 +185,8 @@ export default function Search({ ctx, params, setParam, headerActions }: { ctx: 
             options={[
               { value: 'pages', label: tr('search.tab_pages') },
               { value: 'keywords', label: tr('search.tab_keywords') },
+              ...extraTabs.map((t) => ({ value: t.value, label: t.label })),
               { value: 'decay', label: declining ? tr('search.tab_decay_n', { n: declining }) : tr('search.tab_decay') },
-              { value: 'ga4', label: tr('search.tab_ga4') },
               { value: 'review', label: waiting ? tr('search.tab_review_waiting', { n: waiting }) : tr('search.tab_review') },
             ]}
           />
@@ -198,16 +194,14 @@ export default function Search({ ctx, params, setParam, headerActions }: { ctx: 
       />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SitePicker sites={sites} value={channel.id} onChange={(v) => setParam('channel', v)} />
-        {tab === 'ga4' && channel.ga4_property && <RangeToggle value={ga4Choice} onChange={(value) => setParam('ga4_range', value)} options={rangeOptions()} />}
         {tab === 'pages' && channel.type !== 'wordpress' && <RangeToggle value={rangeChoice} onChange={(value) => setParam('gsc_range', value)} options={rangeOptions()} />}
       </div>
-      {tab === 'ga4' && channel.ga4_property && ga4Choice === 'custom' && <CustomRange key="ga4" start={ga4Start} end={ga4End} max={today} onApply={applyGa4} />}
       {tab === 'pages' && channel.type !== 'wordpress' && rangeChoice === 'custom' && <CustomRange key="gsc" start={params.gsc_start || defaultStart} end={params.gsc_end || latest} max={latest} onApply={applyGsc} />}
       {error && <Notice tone="error">{error}</Notice>}
-      {tab === 'ga4' ? (
-        <Ga4Panel key={channel.id} channel={channel} days={ga4Days} start={ga4Choice === 'custom' ? ga4Start : undefined} end={ga4Choice === 'custom' ? ga4End : undefined} onLinked={() => ctx.reloadChannels()} />
+      {extra ? (
+        <div key={`${extra.value}-${channel.id}`}>{extra.render(channel)}</div>
       ) : channel.type === 'wordpress' ? (
-        <Notice><p>{tr('search.wordpress_ga4')}</p><Button variant="outline" size="sm" onClick={() => setParam('tab', 'ga4')}>{tr('search.tab_ga4')}</Button></Notice>
+        <Notice><p>{tr('search.wordpress_ga4')}</p><Button variant="outline" size="sm" onClick={() => ctx.go('site', { channel: channel.id, tab: 'ga4' })}>{tr('search.tab_ga4')}</Button></Notice>
       ) : tab === 'review' ? (
         <Review changes={changes} channel={channel} onChanged={load} />
       ) : tab === 'keywords' ? (
@@ -234,7 +228,7 @@ export default function Search({ ctx, params, setParam, headerActions }: { ctx: 
 }
 
 /** 自定义时间段：选好开始、结束日期点「应用时间」才生效（日期框改一下就查一次太频繁）；max 是最晚能选到的日子 */
-function CustomRange({ start, end, max, onApply }: { start: string; end: string; max: string; onApply: (start: string, end: string) => void }) {
+export function CustomRange({ start, end, max, onApply }: { start: string; end: string; max: string; onApply: (start: string, end: string) => void }) {
   const [draftStart, setDraftStart] = useState(start)
   const [draftEnd, setDraftEnd] = useState(end)
   const [error, setError] = useState('')

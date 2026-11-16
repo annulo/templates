@@ -14,7 +14,7 @@ import type { Ctx, View } from "./types";
 
 /**
  * 工作台：最上面「今天要做的事」和 90 天增长计划并排（一件一行，占位小），下面是数据看板、起步清单、增长概览。
- * 每周总结是单独的一页（侧栏「每周总结」，view=reports）。
+ * 每周总结在增长计划页的「每周总结」标签（view=plan&tab=reports）。
  */
 export default function ProductOverview({ ctx }: { ctx: Ctx }) {
   return (

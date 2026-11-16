@@ -1,6 +1,6 @@
 {
   "knowledge": {
-    "title": "Company docs",
+    "title": "Knowledge base",
     "desc": "Product manuals, FAQs, certificates, pricing rules, case studies… keep them here. The assistant checks them first when writing articles, replying to inquiries and researching buyers, and tells you which document it relied on.",
     "upload": "Upload files",
     "add_url": "Add a web page",
@@ -18,7 +18,7 @@
     "no_hits": "No matching passages.",
     "f_active": "In use {n}",
     "f_archived": "Archived {n}",
-    "empty_title": "No company docs yet",
+    "empty_title": "Your knowledge base is empty",
     "empty": "Upload product manuals, spec sheets, FAQs, certificates, pricing rules or your company profile (PDF, Word, txt…), or add your site's product and About pages. The more complete they are, the more accurate the AI's content and replies; it won't invent what isn't there.",
     "empty_archived": "No archived docs.",
     "no_summary": "Not summarized yet. Click \"AI summary\" to have the assistant write a summary and tags.",

@@ -66,7 +66,7 @@
     "geo_done_failed": "，{n} 个没问成",
     "calendar_sub": "哪天发什么",
     "assets_sub": "图片、视频和文案",
-    "search_sub": "谷歌带来的访问",
+    "search_sub": "排名、关键词、关键词地图和外链",
     "geo_sub": "ChatGPT 等会不会推荐你",
     "audit_sub": "网站的问题和修复",
     "leads_sub": "客户留言和跟进",
@@ -101,7 +101,9 @@
     "geo_done_sep": "，",
     "landing": "落地页",
     "landing_sub": "为一个目标单独做的网站页面，AI 直接改网站做出来",
-    "s_content": "内容"
+    "s_content": "内容",
+    "s_traffic": "搜索与流量",
+    "s_health": "体检"
   },
   "ui": {
     "done": "已完成",
@@ -363,7 +365,7 @@
     "add": "添加网站或账号",
     "empty": "这个项目还没有网站和账号。添加你的外贸网站（Creght 或 WordPress），就能看访问数据、做网站检查、发文章；添加 X 等社媒账号，就能发帖、看互动。",
     "remove_confirm": "从这个项目移除「{name}」？只是不再在这里运营它，网站或账号本身不受影响，之后还能再添加回来。",
-    "web_no_stats": "这个网站没有接入 creght，这里没有访问统计。关联 GA4 后在「谷歌排名 → GA4」看访问量。",
+    "web_no_stats": "这个网站没有接入 creght，这里没有访问统计。关联 GA4 后在「网站访问 → GA4 访问数据」看访问量。",
     "wp_no_stats": "WordPress 网站没有访问统计，这里不显示访问量。检查、AI 搜索检测、发文章都能用。",
     "creght_no_mcp": "creght MCP 停用了：这个站点的访问数据、发布和询盘同步暂时读不到。到 设置 → MCP 启用 creght。"
   },
@@ -620,7 +622,7 @@
     "social_label": "社媒",
     "uncollected_accounts": "{n} 个账号尚未采集",
     "report_empty": "还没有每周总结",
-    "report_empty_desc": "连接网站和账号、积累数据后，在「每周总结」页生成第一期。",
+    "report_empty_desc": "连接网站和账号、积累数据后，在「增长计划 → 每周总结」生成第一期。",
     "no_visits": "暂无访问数据",
     "operations_details": "更多运营数据",
     "issue_hint": "{titles}等",
@@ -1040,9 +1042,9 @@
     "plugin_open": "打开设置"
   },
   "search": {
-    "title": "谷歌排名",
+    "title": "SEO 与关键词",
     "no_site": "这个项目还没有网站。去「网站和账号」添加一个，就可以看它在 Google 搜索里的表现了。",
-    "desc": "查看网站在 Google 搜索里的点击、展示次数和排名。找出点击率偏低的页面改标题和描述、差一点上首页的页面补内容；上线的改动过两周自动复查效果。",
+    "desc": "网站在 Google 搜索里的点击、展示次数和排名，要做的关键词和它们对应的页面。找出点击率偏低的页面改标题和描述、差一点上首页的页面补内容；上线的改动过两周自动复查效果。",
     "tab_pages": "谷歌排名",
     "daily": "每日{m} · {n} 天",
     "expand_prompt": "按下面的要点给渠道「{name}」（{site}）的页面 {page} 补内容（search_pages 表 id {id}）。这个页面在 Google 里平均排名 {pos}，差一点上首页，要把搜这些词的人想知道的答全。\n\n{brief}\n\n做法：按 site-audit / websites skill 的方式把渠道站点拉到 $HOME/.shuttle/sites/{site_id}（拉过就 creght pull 更新），按要点改这个页面的内容：加小节、FAQ，在「内链」列的页面里加指向它的链接。不改页面的 URL，不编造页面和项目资料里没有的事实（要点里写着需要我提供的，先问我或者留空标出来）。\n改完 creght push 推到预览，把 search_pages 这条的 status 改成 fixing，告诉我在预览里看哪里。不要 publish：我确认、上线后自己点「已上线，开始复查」。",

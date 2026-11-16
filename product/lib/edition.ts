@@ -9,36 +9,33 @@ import {
   Search,
   ShieldCheck,
   Lightbulb,
-  ChartNoAxesCombined,
   LayoutTemplate,
   UserRound,
   Activity,
   Target,
   Share2,
   BookOpen,
-  ClipboardList,
 } from "lucide-react";
 import type { View } from "../components/views/types";
 import type { ChannelType } from "./shuttle";
-/** 一项导航：页面和它的图标（侧栏里组内的页面不显示图标，图标给别处用） */
-export type NavItem = { view: View; icon: typeof Globe };
+/** 一项导航：页面和它的图标（侧栏里组内的页面不显示图标，图标给别处用）；section 是组里从这一项起的小标题（messages 的 nav.<section>） */
+export type NavItem = { view: View; icon: typeof Globe; section?: string };
 /** 左侧导航：一组一个标题（messages 的 nav.<group>，没写 group 是「工作台」）和图标，组能折叠；每项显示 nav.<view> 和 nav.<view>_sub。外壳（pages/Index.tsx）和外贸共用这个结构 */
 export type NavGroup = { group?: string; icon?: typeof Globe; items: NavItem[] };
-// 从上到下按使用频率：工作台 → 网站运营 → 自媒体运营 → 产品资料（不常改，放最下面）；组内常用的在前
+// 从上到下按使用频率：工作台 → 网站运营 → 自媒体运营 → 产品资料（不常改，放最下面）；组内常用的在前。
+// 「接下来做什么」只有增长计划一个入口（每周总结是它的标签）；网站运营分三段：内容、搜索流量、体检
 export const NAV: NavGroup[] = [
-  { items: [{ view: "overview", icon: LayoutDashboard }, { view: "plan", icon: Target }, { view: "reports", icon: ClipboardList }] },
+  { items: [{ view: "overview", icon: LayoutDashboard }, { view: "plan", icon: Target }] },
   {
     group: "g_site",
     icon: Globe,
     items: [
-      { view: "website-content", icon: FileText },
+      { view: "website-content", icon: FileText, section: "s_content" },
       { view: "landing", icon: LayoutTemplate },
-      { view: "opportunities", icon: Lightbulb },
-      { view: "search", icon: Search },
+      { view: "search", icon: Search, section: "s_traffic" },
       { view: "geo", icon: Radar },
       { view: "site", icon: Activity },
-      { view: "metrics", icon: ChartNoAxesCombined },
-      { view: "audit", icon: ShieldCheck },
+      { view: "audit", icon: ShieldCheck, section: "s_health" },
     ],
   },
   {

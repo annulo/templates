@@ -47,7 +47,7 @@
     "content": "内容中心",
     "calendar": "发布日历",
     "assets": "资料库",
-    "search": "谷歌排名",
+    "search": "SEO 与关键词",
     "geo": "AI 搜索推荐",
     "audit": "网站检查",
     "leads": "询盘",
@@ -980,7 +980,7 @@
     "mode_text": "纯文字"
   },
   "search": {
-    "title": "谷歌排名",
+    "title": "SEO 与关键词",
     "no_site": "这个项目还没有网站。去「网站和账号」添加一个，就可以看它在 Google 搜索里的表现了。",
     "desc": "网站在 Google 搜索里的点击、展示次数和排名（Search Console 最近 28 天）。找出点击率偏低的页面改标题和描述、差一点上首页的页面补内容；上线的改动过两周自动复查效果。",
     "tab_pages": "谷歌排名",

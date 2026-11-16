@@ -3,7 +3,7 @@
     "overview": "工作台",
     "content": "内容中心",
     "assets": "资料库",
-    "search": "搜索表现",
+    "search": "SEO 与关键词",
     "social": "账号与数据",
     "overview_sub": "今天要做的事和每周总结",
     "social_sub": "账号连接、定位与账号数据",
@@ -13,12 +13,8 @@
     "company_sub": "产品定位、真实功能与用户场景",
     "g_social": "自媒体运营",
     "g_knowledge": "知识库",
-    "opportunities": "SEO 规划",
-    "opportunities_sub": "研究关键词、需求与页面机会",
     "campaigns": "母题与内容",
     "campaigns_sub": "规划多平台内容与复盘",
-    "metrics": "网站效果复盘",
-    "metrics_sub": "访问、注册、激活与付费事件",
     "g_product": "产品增长",
     "website-content": "网站内容",
     "website-content_sub": "按目标页面管理选题、内容计划、草稿和已上线内容。",
@@ -29,11 +25,10 @@
     "social-metrics": "自媒体数据与复盘",
     "social-metrics_sub": "账号表现与发布后复盘",
     "g_library": "产品资料",
-    "s_performance": "表现与数据",
-    "s_health": "网站健康",
-    "s_accounts": "账号与数据",
     "plan": "增长计划",
-    "plan_sub": "90 天目标、每周要做的事、检查效果"
+    "plan_sub": "90 天目标、每周要做的事、检查效果",
+    "conversions": "转化数据",
+    "seo_plan": "SEO 规划"
   },
   "channels": {
     "not_enabled_desc": "账号已经加上了，但这个平台的发布和采集还没接进来。交给助手接入，接好后就能在这里登录、在内容中心发布、在社交媒体里看数据。"

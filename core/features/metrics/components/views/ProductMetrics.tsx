@@ -37,10 +37,13 @@ export default function ProductMetrics({
   ctx,
   params,
   setParam,
+  embedded = false,
 }: {
   ctx: Ctx;
   params: Record<string, string>;
   setParam: (k: string, v: string) => void;
+  /** 放在网站访问页的「转化数据」标签里，标题小一号 */
+  embedded?: boolean;
 }) {
   const [days, setDays] = useState(30),
     [open, setOpen] = useState(false),
@@ -66,6 +69,7 @@ export default function ProductMetrics({
   return (
     <div className="space-y-6">
       <PageHeader
+        level={embedded ? 2 : 1}
         title={g("metrics_title")}
         desc={g("metrics_desc")}
         actions={

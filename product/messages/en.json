@@ -3,7 +3,7 @@
     "overview": "Workbench",
     "content": "Content center",
     "assets": "Library",
-    "search": "Search performance",
+    "search": "SEO & keywords",
     "social": "Accounts and data",
     "overview_sub": "Today's tasks and the weekly summary",
     "social_sub": "Connections, positioning and account data",
@@ -13,12 +13,8 @@
     "company_sub": "Positioning, verified facts and use cases",
     "g_social": "Social operations",
     "g_knowledge": "Knowledge",
-    "opportunities": "SEO planning",
-    "opportunities_sub": "Research demand, keywords and page opportunities",
     "campaigns": "Themes and content",
     "campaigns_sub": "Plan channel content and reviews",
-    "metrics": "Website reviews",
-    "metrics_sub": "Visit, signup, activation and payment events",
     "g_product": "Product growth",
     "website-content": "Website content",
     "website-content_sub": "Manage topics, plans, drafts and live content by destination page.",
@@ -29,11 +25,10 @@
     "social-metrics": "Social data and reviews",
     "social-metrics_sub": "Account performance and publication reviews",
     "g_library": "Product library",
-    "s_performance": "Performance",
-    "s_health": "Site health",
-    "s_accounts": "Accounts and data",
     "plan": "Growth plan",
-    "plan_sub": "90-day targets, weekly work and checkpoints"
+    "plan_sub": "90-day targets, weekly work and checkpoints",
+    "conversions": "Conversions",
+    "seo_plan": "SEO planning"
   },
   "channels": {
     "not_enabled_desc": "The account is added, but publishing and data collection for this platform aren't set up. Let the assistant set it up; then you can sign in here, publish from Content center and see data in Social media."

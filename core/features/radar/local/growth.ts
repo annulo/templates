@@ -275,7 +275,7 @@ export function signals(ctx: any, now = Date.now()): Item[] {
       key: 'setup_gsc', kind: 'setup', area: 'setup', priority: 'low', value: 1, weight: 20,
       title: L(ctx, '还没连上 Google Search Console', 'Google Search Console is not connected'),
       why: L(ctx, '连上以后才能找出流量下滑的页面、差一点上首页的页面和有人搜没页面的词。', 'Without it there is no way to find declining pages, near-page-one pages or unmet searches.'),
-      next: L(ctx, '去「谷歌排名」关联', 'Link it on the Google rankings page'),
+      next: L(ctx, '去「SEO 与关键词」关联', 'Link it on the SEO & keywords page'),
       action: { kind: 'go', view: 'search' },
     })
   if (sites.length && !runs.some((r) => Date.parse(r.finished_at) > now - 30 * DAY))

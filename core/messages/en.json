@@ -441,7 +441,7 @@
     "continue_chat": "Continue chat",
     "refresh": "Update rankings",
     "gsc_at": "Rankings updated: {t}",
-    "no_gsc": "This site isn't linked to Search Console: you can find and review keywords, but there is no ranking data to spot quick wins. Link it on the Google rankings page and they update automatically.",
+    "no_gsc": "This site isn't linked to Search Console: you can find and review keywords, but there is no ranking data to spot quick wins. Link it on the SEO & keywords page and they update automatically.",
     "raw_left": "{n} keywords not reviewed yet. Click \"Find keywords\" and the assistant continues.",
     "empty": "No keywords yet. Click \"Find keywords\" and the assistant will collect a batch from your products, review them and group them into topics.",
     "filter_empty": "Nothing in this group right now.",

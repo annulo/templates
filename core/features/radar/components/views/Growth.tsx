@@ -22,7 +22,8 @@ const AREAS = ['all', 'site', 'content', 'customers'] as const
  * 增长机会（增长雷达）：growth.scan 每周把内容下滑、谷歌排名机会、竞品、AI 搜索、网站问题、询盘这些信号汇总成一份清单，
  * 每条带依据和下一步，点了去做；做完、不用管的标一下（docs/growth-radar.md）。
  */
-export default function Growth({ ctx }: { ctx: Ctx }) {
+/** embedded：放在增长计划页的「新机会」标签里（外贸），标题小一号 */
+export default function Growth({ ctx, embedded = false }: { ctx: Ctx; embedded?: boolean }) {
   const [data, setData] = useState<{ scanned_at: string; items: Item[] } | null>(null)
   const [error, setError] = useState('')
   const [area, setArea] = useState<(typeof AREAS)[number]>('all')
@@ -62,6 +63,7 @@ export default function Growth({ ctx }: { ctx: Ctx }) {
   return (
     <div className="space-y-6">
       <PageHeader
+        level={embedded ? 2 : 1}
         title={tr('growth.title')}
         desc={tr('growth.desc')}
         actions={

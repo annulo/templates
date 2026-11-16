@@ -104,7 +104,7 @@
     "report_empty": "This site hasn't been checked yet: click \"Start check\" first.",
     "rerun": "Re-run check",
     "restore": "Restore",
-    "review_hint": "17 days after going live, data before and after is compared — see Google rankings → Change reviews",
+    "review_hint": "17 days after going live, data before and after is compared — see SEO & keywords → Change reviews",
     "review_no_data": "Review: not enough data",
     "review_v": "Review: {v}",
     "reviewing": "Reviewing",
@@ -584,8 +584,9 @@
     "uv_hint": "Deduplicated by visitor cookie"
   },
   "site_visits": {
-    "desc": "Visits, sources, pages and regions of your Creght site.",
-    "no_site": "No site yet. Add your site in Sites & accounts to see its traffic here."
+    "desc": "Visits, sources, pages and regions (built in for Creght sites; connect GA4 for others).",
+    "no_site": "No site yet. Add your site in Sites & accounts to see its traffic here.",
+    "tab_visits": "Visits"
   },
   "landing": {
     "title": "Landing pages",

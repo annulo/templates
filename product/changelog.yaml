@@ -1,3 +1,6 @@
+- version: 0.25.0
+  zh: "侧栏理顺：每周总结并进增长计划；SEO 规划、关键词地图、外链收进「SEO 与关键词」，GA4 和转化数据收进「网站访问」；网站运营分成内容、搜索与流量、体检三段。"
+  en: "Cleaner sidebar: the weekly summary moves into Growth plan; SEO planning, keyword map and backlinks live in SEO & keywords; GA4 and conversions in Site visits; website pages are grouped into content, search & traffic, and health checks."
 - version: 0.24.1
   zh: "起步向导去掉了顶栏的「以后再说」。"
   en: "Removed \"Later\" from the setup wizard header."

@@ -47,7 +47,7 @@
     "content": "Content center",
     "calendar": "Publishing calendar",
     "assets": "Library",
-    "search": "Google rankings",
+    "search": "SEO & keywords",
     "geo": "AI search",
     "audit": "Site check",
     "leads": "Inquiries",
@@ -980,7 +980,7 @@
     "mode_text": "Text only"
   },
   "search": {
-    "title": "Search",
+    "title": "SEO & keywords",
     "no_site": "No website channels yet. Add one under Channels, then link Search Console or GA4 to view data.",
     "desc": "Clicks, impressions and positions in Google Search (Search Console, last 28 days). Rewrite titles and descriptions for low-CTR pages, add content to pages near page one; live changes are reviewed automatically after two weeks.",
     "tab_pages": "Search",

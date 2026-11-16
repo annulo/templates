@@ -66,7 +66,7 @@
     "geo_done_failed": ", {n} failed",
     "calendar_sub": "What goes out when",
     "assets_sub": "Images, videos, copy",
-    "search_sub": "Traffic from Google",
+    "search_sub": "Rankings, keywords, keyword map and backlinks",
     "geo_sub": "Does ChatGPT recommend you",
     "audit_sub": "Issues and fixes",
     "leads_sub": "Messages and follow-ups",
@@ -101,7 +101,9 @@
     "geo_done_sep": ", ",
     "landing": "Landing pages",
     "landing_sub": "Pages built for one goal; AI builds them right on your site",
-    "s_content": "Content"
+    "s_content": "Content",
+    "s_traffic": "Search & traffic",
+    "s_health": "Health checks"
   },
   "ui": {
     "done": "Done",
@@ -363,7 +365,7 @@
     "add": "Add site or account",
     "empty": "No sites or accounts yet. Add your trade website (Creght or WordPress) to see its traffic, run site checks and publish articles; add social accounts such as X to post and track engagement.",
     "remove_confirm": "Remove \"{name}\" from this project? It just stops being managed here; the site or account itself is untouched and can be added back later.",
-    "web_no_stats": "This site isn't on creght, so there are no visit stats here. Link GA4 to see visits under Google rankings → GA4.",
+    "web_no_stats": "This site isn't on creght, so there are no visit stats here. Link GA4 to see visits under Site visits → GA4.",
     "wp_no_stats": "WordPress sites have no traffic stats here. Site checks, AI search checks and publishing articles all work.",
     "creght_no_mcp": "The creght MCP is turned off, so this site's traffic, publishing and inquiry sync aren't available. Turn creght on in Settings → MCP."
   },
@@ -620,7 +622,7 @@
     "social_label": "Social",
     "uncollected_accounts": "{n} accounts not collected",
     "report_empty": "No weekly summary yet",
-    "report_empty_desc": "Connect your sites and accounts and collect data, then generate the first one on the Weekly summary page.",
+    "report_empty_desc": "Connect your sites and accounts and collect data, then generate the first one under Growth plan → Weekly summary.",
     "no_visits": "No visit data yet",
     "operations_details": "More operations data",
     "issue_hint": "{titles} and more",
@@ -1040,7 +1042,7 @@
     "plugin_open": "Open settings"
   },
   "search": {
-    "title": "Google rankings",
+    "title": "SEO & keywords",
     "no_site": "No website channels yet. Add one under Sites & accounts, then link Search Console or GA4 to view data.",
     "desc": "See clicks, impressions and positions in Google Search. Rewrite titles and descriptions for low-CTR pages, add content to pages near page one; live changes are reviewed automatically after two weeks.",
     "tab_pages": "Google rankings",

@@ -87,7 +87,7 @@ annulo run landing.save --input '{"id":"<id>","status":"preview","preview_url":"
   annulo run landing.save --input '{"id":"<id>","status":"live","url":"<线上完整网址>"}'
   ```
 
-  它会记一次上线的改动，过两周左右在「谷歌排名」里能看到前后对比。
+  它会记一次上线的改动，过两周左右在「SEO 与关键词」里能看到前后对比。
 - **不要了**：`landing.save` 把 `status` 标成 `archived`；网站上的页面要不要删问用户，删之前确认。
 
 ## 规则
