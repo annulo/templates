@@ -7,8 +7,10 @@
 //   channels.wpVerify({ id })             WordPress：用现在存的应用密码再验证一次（页面先 PUT local/secrets 写进本机密钥）
 //   channels.wpRequest({ id, path, method?, body? })   WordPress：用存好的应用密码调一次 REST（path 从 /wp-json 后面写起），返回 JSON。
 //                                         给助手修站用：密钥只给本机函数，助手的命令行里没有
-//   channels.fromURL({ url })             网址是 creght 站点（页面里有 window.__DATA__ 的 projectId、siteId）就加成独立站渠道，返回渠道；不是返回 null。
-//                                         没连 creght MCP、站点不在这个账号下也照样加，渠道页再提示（access）
+//   channels.fromURL({ url })             网址是 creght 站点（页面里有 window.__DATA__ 的 projectId、siteId）就加成独立站渠道；别的网址加成只读的网站（type website：
+//                                         能检查、能连 GSC / GA4、能做 AI 搜索检测，不能发布）。已经有同域名的渠道就返回它。是 Annulo 项目本身时返回 null。
+//                                         没连 creght MCP、站点不在这个账号下也照样加，渠道页再提示（access）。
+//                                         之后再接入 creght / WordPress（add）时，同域名的 website 渠道原地升级，GSC 关联、检查记录都留着
 //   channels.match({ url })              这个网址已经是哪个网站渠道（域名一样，或者是同一个 creght 站点、自定义域名也认得），返回渠道；没有返回 null。不写数据
 //   channels.access({ id })               creght 站点渠道现在能不能读写：ok / no_mcp（没加或关掉了）/ needs_auth / not_in_account / failed；
 //                                         ok 时带 live_url（正式地址，没发布过是空），并写回渠道表
@@ -35,7 +37,7 @@ export const remote = ['access', 'add', 'adminLink', 'fromURL', 'match', 'remove
 
 type Channel = { id: string; type: string; name: string; project_id?: string; site_id?: string; api_host?: string; preview_url?: string; live_url?: string; wp_user?: string; wp_secret?: string; created_at?: string }
 
-const CHANNEL_TYPES = ['creght_site', 'wordpress']
+const CHANNEL_TYPES = ['creght_site', 'wordpress', 'website']
 
 /** Shuttle 的项目（运营后台）不是要运营的网站：列站点、加渠道时排除（老版本 Shuttle 没有这个字段，就不排除） */
 const isShuttleProject = (ctx: any, projectID: string) => ((ctx.workspace?.shuttle_projects as string[] | undefined) ?? []).includes(projectID)
@@ -66,7 +68,7 @@ async function addWordPress(input: { url: string; username: string }, ctx: any) 
   } catch {
     // 站点名读不到就用域名
   }
-  return ctx.db.insert('channels', { ...ch, name: name || url.replace(/^https?:\/\//, '') })
+  return upsertSite(ctx, { ...ch, name: name || url.replace(/^https?:\/\//, '') }, [url])
 }
 
 /** 凭据对不对、这个用户能不能发文章：context=edit 只有登录后才给，能拿到 capabilities */
@@ -94,24 +96,46 @@ export async function add(input: { type?: string; project_id: string; site_id: s
   const cur = ctx.db.query('channels', { where: { type, project_id: site.project_id, site_id: site.site_id }, limit: 1 }).list
   if (cur.length) throw new Error(L(ctx, `「${site.site_name}」已经添加过了`, `"${site.site_name}" is already added`))
   // api_host：站点在哪个 creght 区域，之后读写都走那个区域的 MCP（_creght.ts）
-  const ch = ctx.db.insert('channels', { type, name: site.site_name, project_id: site.project_id, site_id: site.site_id, api_host: site.api_host, preview_url: previewURL(ctx, site.site_id, site.api_host) })
-  // 发布过的记下正式地址；读不到不要紧，渠道页检查权限（access）时会再补
-  try { return { ...ch, live_url: await liveURL(ctx, ch) } } catch { return ch }
+  const row = { type, name: site.site_name, project_id: site.project_id, site_id: site.site_id, api_host: site.api_host, preview_url: previewURL(ctx, site.site_id, site.api_host) }
+  let live = ''
+  try { live = (await liveURL(ctx, row)) || '' } catch { /* 读不到不要紧，渠道页检查权限（access）时会再补 */ }
+  const ch = upsertSite(ctx, live ? { ...row, live_url: live } : row, [row.preview_url, live])
+  // 发布过的记下正式地址
+  return live ? { ...ch, live_url: live } : ch
 }
 
-/** creght 渲染的页面里带 window.__DATA__ = { projectId, siteId, provider: { url } }：自定义域名也认得出，不用连 MCP */
-async function creghtPage(url: string) {
+/** 读网址的首页：标题，和是不是 creght 渲染的（页面里带 window.__DATA__ = { projectId, siteId, provider: { url } }：自定义域名也认得出，不用连 MCP） */
+async function pageInfo(url: string): Promise<{ title: string; creght: { project_id: string; site_id: string; host: string } | null }> {
   const res = await fetch(url, { redirect: 'follow' })
-  if (!res.ok) return null
+  if (!res.ok) return { title: '', creght: null }
   const html = String(await res.text())
-  const m = /window\.__DATA__\s*=\s*(\{[^<]*?\});?\s*<\/script>/.exec(html)
-  if (!m) return null
-  let data: any
-  try { data = JSON.parse(m[1]) } catch { return null }
-  if (!data?.projectId || !data?.siteId) return null
   const title = /<title[^>]*>([^<]*)<\/title>/i.exec(html)?.[1]?.trim() ?? ''
+  const m = /window\.__DATA__\s*=\s*(\{[^<]*?\});?\s*<\/script>/.exec(html)
+  let data: any = null
+  try { data = m ? JSON.parse(m[1]) : null } catch { data = null }
+  if (!data?.projectId || !data?.siteId) return { title, creght: null }
   const host = /^https?:\/\/(?:www\.)?([^/]+)/.exec(String(data.provider?.url ?? ''))?.[1] ?? ''
-  return { project_id: String(data.projectId), site_id: String(data.siteId), title, host }
+  return { title, creght: { project_id: String(data.projectId), site_id: String(data.siteId), host } }
+}
+
+async function creghtPage(url: string) {
+  const p = await pageInfo(url)
+  return p.creght ? { ...p.creght, title: p.title } : null
+}
+
+/** 同域名的只读网站渠道（website）：接入 creght / WordPress 时原地升级它，不另建一条 */
+function websiteOf(ctx: any, urls: (string | undefined)[]) {
+  const hosts = urls.map((u) => (u ? bareHost(u) : '')).filter(Boolean)
+  if (!hosts.length) return null
+  return (ctx.db.query('channels', { where: { type: 'website' }, limit: 1000 }).list as Channel[]).find((c) => [c.live_url, c.preview_url].some((u) => !!u && hosts.includes(bareHost(u)))) ?? null
+}
+
+/** 写进一条网站渠道：有同域名的 website 渠道就把它改成这个类型，否则新建 */
+function upsertSite(ctx: any, row: Record<string, any>, urls: (string | undefined)[]) {
+  const old = websiteOf(ctx, urls)
+  if (!old) return ctx.db.insert('channels', row)
+  ctx.db.update('channels', old.id, row)
+  return ctx.db.get('channels', old.id)
 }
 
 const bareHost = (url: string) => { try { return new URL(url).host.replace(/^www\./, '') } catch { return '' } }
@@ -127,9 +151,12 @@ export async function match(input: { url: string }, ctx: any) {
 }
 
 export async function fromURL(input: { url: string }, ctx: any) {
-  let page: Awaited<ReturnType<typeof creghtPage>> = null
-  try { page = await creghtPage(String(input?.url ?? '')) } catch { return null }
-  if (!page || isShuttleProject(ctx, page.project_id)) return null
+  const url = String(input?.url ?? '')
+  let info: Awaited<ReturnType<typeof pageInfo>> = { title: '', creght: null }
+  try { info = await pageInfo(url) } catch { /* 读不到首页：照样按网址加 */ }
+  const page = info.creght ? { ...info.creght, title: info.title } : null
+  if (page && isShuttleProject(ctx, page.project_id)) return null
+  if (!page) return addWebsite(url, ctx)
   const cur = ctx.db.query('channels', { where: { type: 'creght_site', project_id: page.project_id, site_id: page.site_id }, limit: 1 }).list[0]
   if (cur) return cur
   const apiHost = page.host ? `https://${page.host}` : ''
@@ -140,7 +167,19 @@ export async function fromURL(input: { url: string }, ctx: any) {
   const preview_url = previewURL(ctx, page.site_id, apiHost)
   // 用户给的网址不是预览地址，就是站点上线的地址：先记下，连上 MCP 后 access 会按发布状态更新
   const live_url = /\.preview\./.test(bareHost(input.url)) ? undefined : String(input.url).replace(/^(https?:\/\/[^/]+).*$/, '$1')
-  return ctx.db.insert('channels', { type: 'creght_site', name, project_id: page.project_id, site_id: page.site_id, api_host: apiHost || undefined, preview_url, live_url })
+  return upsertSite(ctx, { type: 'creght_site', name, project_id: page.project_id, site_id: page.site_id, api_host: apiHost || undefined, preview_url, live_url }, [input.url, live_url])
+}
+
+/** 不是 creght 的网址：加成只读的网站渠道，地址只留到域名（https://example.com）。
+ *  名字用域名：网页标题常是子页面的（「Pricing – …」）或一长串卖点 */
+async function addWebsite(url: string, ctx: any) {
+  let origin = ''
+  try { const u = new URL(url); if (u.protocol === 'http:' || u.protocol === 'https:') origin = u.origin } catch { /* 下面报错 */ }
+  if (!origin) throw new Error(L(ctx, '请输入有效的网站地址（HTTP 或 HTTPS）', 'Enter a valid HTTP or HTTPS website URL'))
+  const same = await match({ url: origin }, ctx)
+  if (same) return same
+  const name = bareHost(origin)
+  return ctx.db.insert('channels', { type: 'website', name, preview_url: origin, live_url: origin })
 }
 
 export async function access(input: { id: string }, ctx: any) {

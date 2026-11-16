@@ -1,0 +1,16 @@
+{
+  "name": "网站分析",
+  "desc": "填完网址后自动跑的一次「分析网站」（任务 site-diagnosis）：网站检查、关键词、AI 搜索、竞品、起草 90 天计划，每一步的状态和结论；总览页的进度卡片读它",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "channel_id": { "type": "string", "description": "分析的是哪个网站（channels）" },
+      "status": { "type": "string", "description": "running 在跑 / done 跑完了（有的步骤可能失败或跳过）/ failed 起草计划失败、没出计划" },
+      "steps": { "type": "string", "description": "每一步 JSON：[{ key: audit|keywords|geo|competitors|plan, status: pending|running|done|failed|skipped, summary, error, started_at, finished_at }]" },
+      "chat_id": { "type": "string", "description": "跑这次分析的那段对话：页面上「看过程」打开它" },
+      "seen": { "type": "boolean", "description": "用户在总览上看过跑完的结果了：看过就把进度卡片收起来" },
+      "started_at": { "type": "string" },
+      "finished_at": { "type": "string" }
+    }
+  }
+}

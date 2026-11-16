@@ -187,7 +187,7 @@ export async function sitePosts(ch: any, ctx: any): Promise<Existing[]> {
 export async function existingFor(ctx: any, ch: any, except: { topic_id?: string; article_id?: string } = {}): Promise<Existing[]> {
   const out = new Map<string, Existing>()
   const add = (e: Existing) => {
-    const k = e.title.trim().toLowerCase()
+    const k = String(e.title ?? '').trim().toLowerCase()
     if (k && !out.has(k)) out.set(k, e)
   }
   for (const e of await sitePosts(ch, ctx)) add(e)

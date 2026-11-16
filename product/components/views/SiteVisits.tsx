@@ -50,7 +50,7 @@ export default function SiteVisits({ ctx, params, setParam }: { ctx: Ctx; params
         <SiteOverview key={channel.id} site={`${channel.project_id}/${channel.site_id}`} days={days} base={url} />
       ) : (
         <Notice>
-          <p>{tr('channels.wp_no_stats')}</p>
+          <p>{tr(channel.type === 'website' ? 'channels.web_no_stats' : 'channels.wp_no_stats')}</p>
           <Button variant="outline" size="sm" onClick={() => ctx.go('search', { channel: channel.id, tab: 'ga4' })}>{tr('search.tab_ga4')}</Button>
         </Notice>
       )}

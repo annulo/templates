@@ -1,6 +1,7 @@
 import { L } from "./_i18n";
 import { profile } from "./_ai";
 import { onboarding } from "./_onboarding";
+import { setupItem as diagnosisItem } from "./diagnosis";
 // 共用清单引擎（today.ts）按 setupSteps(ctx, { all, has }) 调，这里用不到第二个参数
 export function setupSteps(ctx: any, _helpers?: Helpers): any[] {
   const p: any = profile(ctx);
@@ -43,51 +44,8 @@ export function setupSteps(ctx: any, _helpers?: Helpers): any[] {
       !!start.details_saved_at || (siteSelected && !!p.name && !!p.business && !!p.customer_types && has("products")),
       "company", true, "product-details",
     ),
-    step(
-      "channels",
-      "连接网站和账号",
-      "Connect websites and accounts",
-      "添加官网、小红书、抖音或 X 账号。",
-      "Add your website, Xiaohongshu, Douyin or X accounts.",
-      has("channels") || has("social_accounts"),
-      "channels",
-    ),
-    step(
-      "search",
-      "连接搜索数据",
-      "Connect search data",
-      "读取真实搜索表现，帮助判断机会。",
-      "Use measured search performance to identify opportunities.",
-      has("search_pages") || has("search_daily"),
-      "search",
-    ),
-    step(
-      "goal",
-      "定义增长目标",
-      "Define growth goals",
-      "在产品定位中写清注册、激活与付费事件。",
-      "Define signup, activation and payment events in your profile.",
-      !!p.goal && !!p.activation_event,
-      "company",
-    ),
-    step(
-      "opportunity",
-      "研究第一个增长机会",
-      "Research your first opportunity",
-      "从用户问题出发，记录关键词、页面类型和研究证据。",
-      "Start from a user problem and record keywords, page types and evidence.",
-      has("growth_opportunities"),
-      "opportunities",
-    ),
-    step(
-      "campaign",
-      "创建第一组内容",
-      "Create your first campaign content",
-      "为一个运营主题保存内容计划和第一篇草稿。",
-      "Save a campaign plan and its first draft.",
-      has("campaigns") && has("articles"),
-      "campaigns",
-    ),
+    // 连网站和账号、搜索数据、增长目标、第一个机会和内容都交给「分析网站」：跑完排进 90 天计划第 1 周
+    diagnosisItem(ctx),
   ];
 }
 

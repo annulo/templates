@@ -12,7 +12,7 @@ import { TaskFailed, TaskLaunchButton, TaskRequirements, TaskRunning, useTask } 
 import { Button, Dialog, Field, Notice, PageHeader, Skeleton, cx, inputCls, toast } from '../ui'
 import Select from '../Select'
 import { contentEntries, entryAccountIds, entryMetrics, legacyContentWorkspace, reviewWorkspace, type ContentData, type ContentEntry, type ContentStage, type ContentWorkspace } from '../../lib/contentWorkspace'
-import { dbCreate, dbPatch, isSite, runLocal } from '../../lib/shuttle'
+import { dbCreate, dbPatch, isPublishSite, isSite, runLocal } from '../../lib/shuttle'
 import { isEn, tr } from '../../lib/i18n'
 import { CONTENT_ORIGINS, contentOrigins, type ContentOrigin } from '../../lib/origins'
 import type { Ctx } from './types'
@@ -88,7 +88,7 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
   const [busy, setBusy] = useState(false), [saveError, setSaveError] = useState(''), [requirements, setRequirements] = useState(false)
   const [rewrite, setRewrite] = useState<any>(null), [assignment, setAssignment] = useState<ContentEntry | null>(null), [assignmentScope, setAssignmentScope] = useState<ContentWorkspace>(workspace)
   const writer = useTask('write-article', reload), rewriter = useTask(REWRITE_TASK, reload)
-  const accounts = ctx.channels.filter(c => workspace === 'website' ? isSite(c) : !isSite(c))
+  const accounts = ctx.channels.filter(c => workspace === 'website' ? isPublishSite(c) : !isSite(c))
   // 社媒内容的数据挂在每一行上（各账号累计 + 近 7 天涨了多少），可以按数据排
   const metrics = new Map(workspace === 'social' && data ? entries.map(e => [e.key, entryMetrics(e, data)] as const) : [])
   const sort = workspace === 'social' && ['views', 'gain'].includes(params.sort) ? params.sort : 'recent'

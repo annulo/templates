@@ -188,6 +188,8 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
                   prompt={
                     channel.type === 'wordpress'
                       ? tr('audit.fix_all_wp', { name: channel.name, id: channel.id, url: channel.preview_url ?? '' })
+                      : channel.type === 'website'
+                      ? tr('audit.fix_all_web', { name: channel.name, id: channel.id, url: channel.preview_url || channel.live_url || '' })
                       : tr('audit.fix_all', { name: channel.name, id: channel.id, ref: `${channel.project_id}/${channel.site_id}` })
                   }
                 >
@@ -240,8 +242,8 @@ export default function Audit({ ctx, params, setParam }: { ctx: Ctx; params: Rec
           ) : (
             <div className="overflow-hidden rounded-xl border border-border bg-background">
               {shown.map((i) => (
-                <IssueRow key={i.id} i={i} change={changes[i.id]} ctx={ctx} channelLabel={channel.type === 'wordpress' ? tr('audit.label_wp', { name: channel.name, url: channel.preview_url ?? '' }) : tr('audit.label', { name: channel.name, ref: `${channel.project_id}/${channel.site_id}` })}
-                  wordpress={channel.type === 'wordpress'} onChanged={load} />
+                <IssueRow key={i.id} i={i} change={changes[i.id]} ctx={ctx} channelLabel={channel.type === 'wordpress' ? tr('audit.label_wp', { name: channel.name, url: channel.preview_url ?? '' }) : channel.type === 'website' ? tr('audit.label_web', { name: channel.name, url: channel.preview_url || channel.live_url || '' }) : tr('audit.label', { name: channel.name, ref: `${channel.project_id}/${channel.site_id}` })}
+                  kind={channel.type} onChanged={load} />
               ))}
             </div>
           )}
@@ -296,7 +298,7 @@ function Score({ value }: { value: number }) {
   )
 }
 
-function IssueRow({ i, change, ctx, channelLabel, wordpress, onChanged }: { i: SiteIssue; change?: SiteChange; ctx: Ctx; channelLabel: string; wordpress?: boolean; onChanged: () => void }) {
+function IssueRow({ i, change, ctx, channelLabel, kind, onChanged }: { i: SiteIssue; change?: SiteChange; ctx: Ctx; channelLabel: string; kind: string; onChanged: () => void }) {
   const [open, setOpen] = useState(false)
   const pages = pagesOf(i)
   const sev = SEV[i.severity] ?? SEV.low
@@ -333,7 +335,7 @@ function IssueRow({ i, change, ctx, channelLabel, wordpress, onChanged }: { i: S
             <AskButton
               variant="ghost"
               className="text-primary-text"
-              prompt={tr('audit.fix_one', { label: channelLabel, title: i.title, id: i.id, check: i.check, pages: pages.slice(0, 10).join(', ') }) + tr(wordpress ? 'audit.fix_one_wp' : 'audit.fix_one_tail')}
+              prompt={tr('audit.fix_one', { label: channelLabel, title: i.title, id: i.id, check: i.check, pages: pages.slice(0, 10).join(', ') }) + tr(kind === 'wordpress' ? 'audit.fix_one_wp' : kind === 'website' ? 'audit.fix_one_web' : 'audit.fix_one_tail')}
             >
               {tr('audit.fix_one_btn')}
             </AskButton>

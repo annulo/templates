@@ -1,6 +1,6 @@
 ---
 name: 起草 90 天增长计划
-description: 按网站现在的数据、公司和产品资料，起草 90 天增长计划：判断从哪个阶段开始、给保守 / 正常 / 激进三档目标、三个阶段的重点、开始阶段每周要做的事，存成草稿等用户选目标
+description: 按网站现在的数据、公司和产品资料，起草 90 天增长计划：判断从哪个阶段开始、给保守 / 正常 / 激进三档目标、三个阶段的重点、开始阶段每周要做的事和后两个月的事、每周固定节奏，按推荐的那档开始执行
 prompt: draft-plan
 ---
 
@@ -42,8 +42,14 @@ annulo run plan.context --input '{}'
 ## 4. 排计划
 
 - `phases`：三个阶段，每个 `title`、`focus`（这一阶段的重点，一两句）、`goals`（两三条阶段目标）；
-- `items`：**只排开始阶段这几周**（第 1 阶段是第 1~4 周，第 2 阶段第 5~8 周，第 3 阶段第 9~13 周），每周 3~5 件。后面的阶段到了检查点再按数据排；
-- 每件事：`week`、`area`（keywords / competitors / site / content / links / data / leads）、`title`、`why`（为什么这周做，带上数据）、`action`（`{"kind":"go","view":"…","params":{…}}` 或 `{"kind":"task","task":"…","input":{}}`）；
+- `items`：
+  - **开始阶段按周排**（第 1 阶段是第 1~4 周，第 2 阶段第 5~8 周，第 3 阶段第 9~13 周），每周 3~5 件；
+  - **后面的阶段按月先排粗的**：每个月 3~5 件，`scope` 写 `"month"`，`week` 写那个月的第一周（第 2 个月 5、第 3 个月 9）。到了检查点再按数据换成每周的。这样用户一开始就能看到完整的 90 天；
+- 每件事：`week`、`area`（keywords / competitors / site / content / links / data / leads）、`who`、`title`、`why`（为什么做，带上数据）、`action`（`{"kind":"go","view":"…","params":{…}}` 或 `{"kind":"task","task":"…","input":{}}`）；
+- `who` 是谁来做，看板上分两栏：
+  - `"you"`：要用户本人的，比如要登录用户自己的账号（Search Console 里提交网址、B2B 平台、社媒主页）、要付费、要对外发言（发帖、回复、外联邮件）、要拍板（选哪几个主题、要不要改价格）；
+  - `"ai"`：助手能自己做完的，比如挖词筛词、写文章和落地页、改标题描述、跑检测、写竞品分析。动作一般是交给助手的任务（`kind: task`）；
+- `weekly`：每周固定节奏，3~4 件每周都做的事（比如「周一看谷歌数据，改展示多点击少的页面标题」「周三发 1 篇文章」「周五跟进询盘」），每件 `who`、`title`，能对应页面或任务的加 `action`；
 - 能按数据判断做完的加 `check`：`{"metric":"pages_published","gte":4,"delta":true}` 是比开始时多发 4 篇；`{"metric":"issues_high_open","gte":0}` 是严重问题清零。判断不了的（比如「看一遍竞对总览」）不加，用户手动标；
 - 第 1 阶段一定要有：关键词布局（挖词 → 筛词归主题 → 每个主题定一个要做的页面，进度在「增长计划 → 关键词地图」看，`{"kind":"go","view":"plan","params":{"tab":"map"}}`）、竞品分析（没竞品先让 AI 推荐）、修严重网站问题、连上谷歌数据（没连的话放第 1 周）、写核心页面、外链起步（社媒主页填上网站链接、每篇文章发社媒带链接；B2B 平台店铺、行业目录里的公司介绍写上网站，做好了在「增长计划 → 外链」登记，`{"kind":"go","view":"plan","params":{"tab":"links"}}`）；
 - 可以用的自动判断：`clusters_live`（已有页面的关键词主题数）、`backlinks_live`（在线外链数），比如「再做 3 个主题的页面」写 `{"metric":"clusters_live","gte":3,"delta":true}`。
@@ -62,14 +68,25 @@ cat > /tmp/plan.json <<'JSON'
     { "level": "aggressive", … }
   ],
   "recommended": "normal",
-  "items": [ { "week": 1, "area": "keywords", "title": "…", "why": "…", "action": { "kind": "go", "view": "search", "params": { "tab": "keywords" } } } ]
+  "items": [
+    { "week": 1, "area": "keywords", "who": "ai", "title": "…", "why": "…", "action": { "kind": "task", "task": "keyword-research", "input": {} } },
+    { "week": 1, "area": "data", "who": "you", "title": "…", "why": "…", "action": { "kind": "go", "view": "overview" } },
+    { "week": 5, "scope": "month", "area": "content", "who": "ai", "title": "…", "why": "…" }
+  ],
+  "weekly": [ { "who": "you", "title": "周一：看谷歌数据，改展示多、点击少的页面标题", "action": { "kind": "go", "view": "search" } } ]
 }
 JSON
 annulo run plan.saveDraft --input @/tmp/plan.json
 ```
 
-报错就按报错改了再存。存完回复用户：从哪个阶段开始、为什么，三档目标各是什么、推荐哪档，第 1 周做哪几件事；请用户到「增长计划」页选一档目标、点「开始执行」。**不要替用户选目标**（不调 `plan.activate`）。
-用户在这段对话里接着提意见（「目标再低点」「第 2 周加上做落地页」），改好再存一次 `plan.saveDraft`（会替换掉这份草稿）；已经开始执行的计划要改，告诉用户在检查点调整，或者重新起草一份。
+报错就按报错改了再存。存完**按推荐的那档开始执行**（用户在看板顶部随时能换档）：
+
+```bash
+annulo run plan.activate --input '{"level":"<recommended>"}'
+```
+
+回复用户：从哪个阶段开始、为什么，按哪档目标开始的、三档各是什么，第 1 周你要做的和 AI 要做的各有哪几件；计划在「增长计划」页，想换一档目标在看板顶部换。
+用户在这段对话里接着提意见：只换目标档位用 `plan.setLevel`；要改计划项（「第 2 周加上做落地页」），重新存一份 `plan.saveDraft` 再 `plan.activate`（会替换执行中的这份，第 1 天从今天算），或者告诉用户到检查点再调。
 
 ## 规则
 

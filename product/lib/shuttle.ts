@@ -11,8 +11,8 @@ import { ShuttleUnavailable, MemberLoginRequired, memberLoginURL, isNeedsShuttle
 import { uploadAsset } from 'talizen/assets'
 export { ShuttleUnavailable, MemberLoginRequired, memberLoginURL, isNeedsShuttle, shuttleMissing, inShuttle, fnManifest, computerStatus, watchComputer, assistantOnline, type FnManifest, type ComputerStatus } from './remote'
 
-/** 渠道类型。creght_site、wordpress 是网站；其余是社媒。 */
-export type ChannelType = 'creght_site' | 'wordpress' | 'xiaohongshu' | 'douyin' | 'x' | 'wechat_mp' | 'linkedin' | 'facebook' | 'instagram' | 'youtube' | 'bilibili' | 'zhihu'
+/** 渠道类型。creght_site、wordpress、website 是网站（website 只填了网址：能检查、能连谷歌，不能发布）；其余是社媒。 */
+export type ChannelType = 'creght_site' | 'wordpress' | 'website' | 'xiaohongshu' | 'douyin' | 'x' | 'wechat_mp' | 'linkedin' | 'facebook' | 'instagram' | 'youtube' | 'bilibili' | 'zhihu'
 
 export type Channel = {
   id: string
@@ -126,7 +126,9 @@ export const channelStats = (days: number) =>
   runLocal<{ list: (ChannelStats & { id: string })[] }>('channels.stats', { days }).then((r) => Object.fromEntries(r.list.map((c) => [c.id, c])) as Record<string, ChannelStats>)
 
 /** 能做体检、GEO、发文章的网站渠道 */
-export const isSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress')
+export const isSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress' || c.type === 'website')
+/** 能发文章、做落地页的网站：creght 和 WordPress。只填了网址的网站（website）不能发 */
+export const isPublishSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress')
 
 export const removeChannel = (id: string) => runLocal<{ ok: boolean }>('channels.remove', { id })
 

@@ -12,7 +12,8 @@ export async function siteBase(ch: { id?: string; project_id?: string; site_id?:
       // 读不到发布状态就用预览地址
     }
   }
-  return (ch.preview_url ?? '').replace(/\/$/, '')
+  // WordPress、只填了网址的网站（website）：填的地址就是线上站点
+  return (ch.preview_url || ch.live_url || '').replace(/\/$/, '')
 }
 
 /** 读站点首页和几个站内页面的标题、描述、正文开头：给模型了解「这个站讲什么」用 */

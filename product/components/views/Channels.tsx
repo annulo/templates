@@ -26,6 +26,7 @@ function connection(c: Channel, health: PlatformHealth[], posts: SocialPost[], m
     if (brokenOf(health, c.id).length || posts.some((p) => p.channel_id === c.id && p.status === 'failed')) return { label: tr('meta.social_status.failed'), tone: 'bad' }
     return c.login_status === 'ok' ? { label: tr('social.connected'), tone: 'ok' } : { label: tr('social.not_connected'), tone: 'default' }
   }
+  if (c.type === 'website') return { label: tr('channels.website_readonly'), tone: 'default' }
   if (isSite(c)) {
     if (c.publish_status === 'broken') return { label: tr('channels.publish_broken'), tone: 'bad' }
     return c.publish_status === 'ready' && c.publisher ? { label: tr('channels.publish_ready'), tone: 'ok' } : { label: tr('channels.publish_unset'), tone: 'default' }
@@ -126,7 +127,7 @@ export default function Channels({ ctx, current, setCurrent, siteExtra }: { ctx:
             <div className="space-y-4">
               {/* 每个渠道一张卡片：头部是头像/图标、名字、状态和操作（看数据、移除），下面分隔线隔开的是这个渠道的设置——网站是文章发布，社媒是上次发布、采集成没成 */}
               {isSite(selected) ? (
-                <SiteCard ctx={ctx} ch={selected} confirm={confirmBox} actions={<>{selected.type === 'creght_site' && <EditSiteButton channelId={selected.id} />}{selected.type === 'creght_site' && <Button variant="outline" size="sm" onClick={() => ctx.go('site', { channel: selected.id })}><BarChart3 />{tr('channels.view_visits')}</Button>}{removeBtn}</>} />
+                <SiteCard ctx={ctx} ch={selected} confirm={confirmBox} onConnect={(url) => { setAddURL(url); setAdding(true) }} actions={<>{selected.type === 'creght_site' && <EditSiteButton channelId={selected.id} />}{selected.type === 'creght_site' && <Button variant="outline" size="sm" onClick={() => ctx.go('site', { channel: selected.id })}><BarChart3 />{tr('channels.view_visits')}</Button>}{removeBtn}</>} />
               ) : confirmBox}
               {selected.type === 'wordpress' ? (
                 <div className="space-y-3">
@@ -160,7 +161,7 @@ export default function Channels({ ctx, current, setCurrent, siteExtra }: { ctx:
 }
 
 /** 网站的卡片：和社媒账号卡片（AccountConnection）同一个样子，分隔线下面是文章发布设置 */
-function SiteCard({ ctx, ch, actions, confirm }: { ctx: Ctx; ch: Channel; actions: ReactNode; confirm: ReactNode }) {
+function SiteCard({ ctx, ch, actions, confirm, onConnect }: { ctx: Ctx; ch: Channel; actions: ReactNode; confirm: ReactNode; onConnect: (url: string) => void }) {
   const Icon = CHANNEL_TYPES[ch.type]?.icon
   const url = siteURL(ch)
   return (
@@ -178,7 +179,15 @@ function SiteCard({ ctx, ch, actions, confirm }: { ctx: Ctx; ch: Channel; action
       </div>
       {confirm}
       {ch.type === 'creght_site' && <CreghtAccess ch={ch} onLive={ctx.reloadChannels} />}
-      <div className="border-t border-border pt-3"><PublishSetup ctx={ctx} channel={ch} bare /></div>
+      {ch.type === 'website' ? (
+        // 只填了网址的网站：能检查、连谷歌，不能发布；接入 creght / WordPress 后这条原地升级（channels.add），数据都留着
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+          <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted-foreground">{tr('channels.website_hint')}</p>
+          <Button variant="outline" size="sm" disabled={ctx.offline} onClick={() => onConnect(url)}>{tr('channels.website_connect')}</Button>
+        </div>
+      ) : (
+        <div className="border-t border-border pt-3"><PublishSetup ctx={ctx} channel={ch} bare /></div>
+      )}
     </div>
   )
 }

@@ -9,6 +9,7 @@ import { Badge, Button, Dialog, Notice, PageHeader, Panel, RangeToggle, Segmente
 import Reloading from '../Reloading'
 import {
   dbList,
+  isSite,
   openShuttleSettings,
   runLocal,
   type Channel,
@@ -83,7 +84,7 @@ const OPP: Record<string, { label: string; tone: Tone; hint: string }> = {
 
 /** headerActions：模板放在页头上面的按钮，拿到当前选中的网站（产品运营的「增长机会」、SEO 研究任务） */
 export default function Search({ ctx, params, setParam, headerActions }: { ctx: Ctx; params: Record<string, string>; setParam: (k: string, v: string) => void; headerActions?: (channel: Channel) => ReactNode }) {
-  const sites = ctx.channels.filter((c) => c.type === 'creght_site' || c.type === 'wordpress')
+  const sites = ctx.channels.filter(isSite)
   const channel = sites.find((c) => c.id === params.channel) ?? sites[0]
   const tab = params.tab === 'review' ? 'review' : params.tab === 'ga4' ? 'ga4' : params.tab === 'decay' ? 'decay' : params.tab === 'keywords' ? 'keywords' : 'pages'
   // GA4：近 7/30/90 天或自定义（ga4_days 是老链接里的参数）
@@ -138,7 +139,7 @@ export default function Search({ ctx, params, setParam, headerActions }: { ctx: 
   // 换网站才清掉旧数据；只换时间段时旧数据留着、盖一层「加载中」，新数据回来再换
   useEffect(() => setRangeData(null), [channel?.id])
   useEffect(() => {
-    if (!channel || channel.type !== 'creght_site' || tab !== 'pages' || !channel.gsc_property || channel.gsc_link_disabled || !rangeStart || !rangeEnd) {
+    if (!channel || channel.type === 'wordpress' || tab !== 'pages' || !channel.gsc_property || channel.gsc_link_disabled || !rangeStart || !rangeEnd) {
       setRangeData(null)
       setRangeLoading(false)
       setRangeError('')
@@ -198,10 +199,10 @@ export default function Search({ ctx, params, setParam, headerActions }: { ctx: 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SitePicker sites={sites} value={channel.id} onChange={(v) => setParam('channel', v)} />
         {tab === 'ga4' && channel.ga4_property && <RangeToggle value={ga4Choice} onChange={(value) => setParam('ga4_range', value)} options={rangeOptions()} />}
-        {tab === 'pages' && channel.type === 'creght_site' && <RangeToggle value={rangeChoice} onChange={(value) => setParam('gsc_range', value)} options={rangeOptions()} />}
+        {tab === 'pages' && channel.type !== 'wordpress' && <RangeToggle value={rangeChoice} onChange={(value) => setParam('gsc_range', value)} options={rangeOptions()} />}
       </div>
       {tab === 'ga4' && channel.ga4_property && ga4Choice === 'custom' && <CustomRange key="ga4" start={ga4Start} end={ga4End} max={today} onApply={applyGa4} />}
-      {tab === 'pages' && channel.type === 'creght_site' && rangeChoice === 'custom' && <CustomRange key="gsc" start={params.gsc_start || defaultStart} end={params.gsc_end || latest} max={latest} onApply={applyGsc} />}
+      {tab === 'pages' && channel.type !== 'wordpress' && rangeChoice === 'custom' && <CustomRange key="gsc" start={params.gsc_start || defaultStart} end={params.gsc_end || latest} max={latest} onApply={applyGsc} />}
       {error && <Notice tone="error">{error}</Notice>}
       {tab === 'ga4' ? (
         <Ga4Panel key={channel.id} channel={channel} days={ga4Days} start={ga4Choice === 'custom' ? ga4Start : undefined} end={ga4Choice === 'custom' ? ga4End : undefined} onLinked={() => ctx.reloadChannels()} />
