@@ -10,7 +10,7 @@
 |---|---|
 | 产品与用户 | profile、products、use_cases；profile.context/save、products.list/save/saveUseCase |
 | 增长计划（90 天目标、基线、每周要做的事、Day 30 / 60 / 90 检查点；分析网站） | growth_plans、plan_items（who 你 / AI、scope 按周 / 按月）；分析网站 site_diagnosis（任务 site-diagnosis，确认资料后自动跑）；plan.get/context/saveDraft（任务 draft-plan，起草完按推荐档开始）/activate/setLevel（换档）/mark/checkpointContext/saveCheckpoint（任务 plan-checkpoint）；today.list 带这周的计划项；关键词地图 plan.keywordMap；外链 backlinks（backlinks.list/add/sync/check）；周报的 reports.data 带 plan |
-| 增长机会 | growth_opportunities；campaigns.context/saveOpportunity/savePagePlan |
+| 页面机会（并在「关键词」的主题卡片里） | growth_opportunities、seo_targets 由 seomap.sync 并进 keywords；campaigns.context/saveOpportunity/savePagePlan，seomap.opportunity |
 | 运营主题 | campaigns、topics、articles；campaigns.createCampaign/saveCampaign/campaignContext/savePlan/review |
 | 转化数据 | product_metrics_daily；metrics.importDaily/context/summary |
 | 灵感库 | research_sources、reference_creators、content_references；inspiration.list/saveSource/saveCreator/link/importLegacy；整理任务 review-inspiration，出选题传 source_ids |
@@ -20,7 +20,7 @@
 | 自媒体 | 插件 social 的账号、帖子、采集与健康数据；social/social.* |
 | 总览与复盘 | today.list、reports.data/save |
 
-入口 pages/Index.tsx 使用 /?view=。工作台 overview 包含今日任务；增长计划 plan 带「每周总结」标签（tab=reports）；网站运营使用 website-content、landing、search（标签：谷歌排名、关键词、关键词地图 map、SEO 规划 seo、外链 links、流量下滑、效果追踪）、geo、site（标签：访问统计、GA4 ga4、转化数据 conversions）、audit，自媒体运营使用 social-content、inspiration、calendar、social、social-metrics，产品资料使用 company、assets。channels 管理连接，help 查看帮助。旧 content、campaigns、reports、opportunities、metrics 链接继续可用（lib/views.tsx 的 redirectOf 换到新位置）；内容详情带 article，运营主题详情带 campaign。
+入口 pages/Index.tsx 使用 /?view=。工作台 overview 包含今日任务；增长计划 plan 带「每周总结」标签（tab=reports）；网站运营使用 website-content、landing、search（标签：谷歌排名、关键词 keywords（按主题，一个主题一个页面；含导入的 SEO 页面地图和页面机会）、外链 links、流量下滑、效果追踪，和外贸一样）、geo、site（标签：访问统计、GA4 ga4、转化数据 conversions）、audit，自媒体运营使用 social-content、inspiration、calendar、social、social-metrics，产品资料使用 company、assets。channels 管理连接，help 查看帮助。旧 content、campaigns、reports、opportunities、metrics 链接继续可用（lib/views.tsx 的 redirectOf 换到新位置）；内容详情带 article，运营主题详情带 campaign。
 
 网站和账号管理在 channels；真实社媒操作使用本机浏览器登录状态与插件，需要电脑运行。视频草稿没有实际素材时提示补录屏，不声称成片。
 

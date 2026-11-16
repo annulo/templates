@@ -1,3 +1,6 @@
+- version: 0.26.0
+  zh: "关键词和外贸一样按主题看：一个主题做一个页面，每个主题一张卡片、一个下一步按钮；SEO 规划并了进来。"
+  en: "Keywords now work like the trade template: one page per topic, each topic a card with one next step; SEO planning is merged in."
 - version: 0.25.0
   zh: "侧栏理顺：每周总结并进增长计划；SEO 规划、关键词地图、外链收进「SEO 与关键词」，GA4 和转化数据收进「网站访问」；网站运营分成内容、搜索与流量、体检三段。"
   en: "Cleaner sidebar: the weekly summary moves into Growth plan; SEO planning, keyword map and backlinks live in SEO & keywords; GA4 and conversions in Site visits; website pages are grouped into content, search & traffic, and health checks."

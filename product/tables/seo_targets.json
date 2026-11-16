@@ -1,6 +1,6 @@
 {
   "name": "关键词与主页面",
-  "desc": "关键词与主页面",
+  "desc": "关键词与主页面（导入的原始记录；页面上显示在「SEO 与关键词 → 关键词」，由 seomap.sync 并进关键词表）",
   "json_schema": {
     "type": "object",
     "properties": {
@@ -87,6 +87,10 @@
       "serp_difficulty": {
         "type": "number",
         "description": "人工 SERP 相对难度 1–5，未知留空；不是工具 KD"
+      },
+      "keyword_id": {
+        "type": "string",
+        "description": "并进关键词表后对应的 keywords 行（seomap.sync 写，写了就不再并）"
       }
     },
     "required": [

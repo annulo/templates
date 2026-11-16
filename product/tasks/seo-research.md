@@ -12,4 +12,4 @@ prompt: seo-research
 
 搜索量和竞争度只使用关键词工具实际返回的指标，带 data_source 和 checked_at；GSC 展示次数不能当作全市场搜索量。没有数据就省略 search_volume 和 difficulty。证据不足时保存 candidate；证据充分才保存 validated，并说明优先级依据。
 
-逐条写入 `campaigns.saveOpportunity`（用 JSON 文件传参），同产品同语言同意图同主词已有机会时更新其 id，不能重复。先保存最值得执行的一小组，并汇报页面建议与下一步。不自动建大批页面或发布内容。
+逐条写入 `campaigns.saveOpportunity`（用 JSON 文件传参），同产品同语言同意图同主词已有机会时更新其 id，不能重复。存完跑一次 `annulo run seomap.sync`：机会并进关键词表，按主题出现在「SEO 与关键词 → 关键词」（每个主题一张卡片，能写新内容、创建运营主题），回复里让用户去那里看。先保存最值得执行的一小组，并汇报页面建议与下一步。不自动建大批页面或发布内容。
