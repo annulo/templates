@@ -1,7 +1,37 @@
 import { L } from "./_i18n";
 import { json, requireRow, evidenceFor } from "./_research";
-import { context as growthContext } from "./campaigns";
-import { all } from "./_growth";
+import { profile } from "./_ai";
+
+// 运营主题模块（campaigns.ts，只有产品运营有）：有就用它的产品、用户场景、运营主题当整理灵感的资料；
+// 没有（外贸）用项目资料和产品表
+declare const require: (path: string) => any
+function campaignsModule(): any {
+  try {
+    return require("./campa" + "igns.ts"); // 拼出来的路径：没有这个文件的模板打包不报错
+  } catch {
+    return null;
+  }
+}
+function all(ctx: any, table: string): any[] {
+  const list: any[] = [];
+  let cursor = "";
+  try {
+    do {
+      const res = ctx.db.query(table, { limit: 1000, cursor });
+      list.push(...(res.list || []));
+      cursor = res.next_cursor || "";
+    } while (cursor);
+  } catch (e) {
+    if (/table not found|没有这张表/i.test(String(e))) return [];
+    throw e;
+  }
+  return list;
+}
+function growthContext(ctx: any) {
+  const campaigns = campaignsModule();
+  if (campaigns?.context) return campaigns.context({}, ctx);
+  return { project: profile(ctx), products: all(ctx, "products").filter((p) => p.status !== "hidden") };
+}
 import { creatorNotes, userIdOf } from "../plugins/social/local/_xhs_web";
 
 const text = (v: unknown) => String(v ?? "").trim();
@@ -444,7 +474,7 @@ export function context(input: { source_ids: string[] }, ctx: any) {
   const sources = [...new Set(input.source_ids)].map((id) =>
     sourceSnapshot(ctx, id),
   );
-  return { ...growthContext({}, ctx), sources };
+  return { ...growthContext(ctx), sources };
 }
 export function saveReview(input: any, ctx: any) {
   const s = requireRow(ctx, "research_sources", input.source_id);

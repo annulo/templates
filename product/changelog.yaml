@@ -1,3 +1,6 @@
+- version: 0.27.0
+  zh: "新增竞品监控：盯同类产品的网站，新上的页面能转成选题，没有竞品时 AI 帮你找。"
+  en: "New Competitors page: watch similar products' sites, turn their new pages into topics, and let AI suggest competitors."
 - version: 0.26.0
   zh: "关键词和外贸一样按主题看：一个主题做一个页面，每个主题一张卡片、一个下一步按钮；SEO 规划并了进来。"
   en: "Keywords now work like the trade template: one page per topic, each topic a card with one next step; SEO planning is merged in."

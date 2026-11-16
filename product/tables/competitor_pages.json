@@ -1,0 +1,61 @@
+{
+  "name": "竞品页面",
+  "desc": "竞品网站 sitemap 里的页面：第一次读到的时间、类型；基线之后出现的是新发现",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "competitor_id": {
+        "type": "string",
+        "description": "competitors 表的 id"
+      },
+      "url": {
+        "type": "string",
+        "description": "页面地址"
+      },
+      "kind": {
+        "type": "string",
+        "description": "product / blog / landing / other（按网址猜）"
+      },
+      "title": {
+        "type": "string",
+        "description": "页面标题（转选题、看详情时才去读）"
+      },
+      "lastmod": {
+        "type": "string",
+        "description": "sitemap 里的 lastmod"
+      },
+      "first_seen": {
+        "type": "string",
+        "description": "第一次读到的时间"
+      },
+      "last_seen": {
+        "type": "string",
+        "description": "最近一次还在 sitemap 里的时间"
+      },
+      "removed_at": {
+        "type": "string",
+        "description": "从 sitemap 里消失的时间"
+      },
+      "is_new": {
+        "type": "boolean",
+        "description": "基线之后新出现的"
+      },
+      "seen": {
+        "type": "boolean",
+        "description": "用户在页面上看过了（去掉「新」标识）"
+      },
+      "topic_id": {
+        "type": "string",
+        "description": "转成的选题 id"
+      },
+      "description": {
+        "type": "string",
+        "description": "页面的描述（meta description；新页面读的时候顺便读）"
+      }
+    },
+    "required": [
+      "competitor_id",
+      "url"
+    ]
+  }
+}
