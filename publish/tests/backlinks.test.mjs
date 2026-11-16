@@ -10,6 +10,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'backlinks-test-'))
 fs.cpSync(path.join(root, 'core/local'), path.join(temp, 'local'), { recursive: true })
 fs.cpSync(path.join(root, 'core/features/plan'), temp, { recursive: true })
+// backlinks.context 用 business 模块 _ai 的 profile / projectBrief（它还依赖网站模块和模板的行业文件），这里给一份最小的替身
+fs.writeFileSync(path.join(temp, 'local/_ai.ts'), "export const profile = (ctx) => ctx.db.query('profile').list[0] ?? { name: '' }\nexport const projectBrief = (p) => `公司：${p.name}\\n主营：${p.business ?? ''}`\n")
 await build({ stdin: { contents: "export * as backlinks from './local/backlinks'", resolveDir: temp }, outfile: path.join(temp, 'test.mjs'), bundle: true, platform: 'node', format: 'esm' })
 const { backlinks } = await import(pathToFileURL(path.join(temp, 'test.mjs')))
 process.on('exit', () => fs.rmSync(temp, { recursive: true, force: true }))
@@ -70,4 +72,52 @@ test('检查：找到链接是在线，找不到是丢了，社媒读不到不�
   assert.deepEqual(st, { b1: 'live', b2: 'lost', b3: 'live', b4: 'lost' })
   assert.equal(tables.backlinks[0].nofollow, true)
   assert.equal(r.checked, 4)
+})
+
+test('AI 找的机会：存成打算做、同一网站跳过；已申请记时间，14 天没上线提醒跟进', () => {
+  const { ctx, tables } = fixture({ channels: [site], profile: [{ id: 'p', name: 'Pofung', business: '家具', markets: '欧洲' }], backlinks: [{ id: 'b0', source_url: 'https://www.houzz.com/pro/x', status: 'live' }] })
+  ctx.chat_id = 'chat-1'
+  const c = backlinks.context({}, ctx)
+  assert.match(c.project, /主营：家具/)
+  assert.deepEqual(c.own_sites, ['pofung.com'])
+  assert.equal(c.existing[0].domain, 'houzz.com')
+  const r = backlinks.saveSuggestions({ items: [
+    { source_url: 'https://www.europages.co.uk/', kind: 'directory', how_to: '注册免费公司页', effort: 'easy', paid: false },
+    { source_url: 'https://houzz.com/', kind: 'directory' },
+    { source_url: 'https://www.pofung.com/blog', kind: 'other' },
+    { source_url: 'https://europages.co.uk/another', kind: 'directory' },
+    { source_url: 'https://www.archiproducts.com/', kind: 'nonsense' },
+  ] }, ctx)
+  assert.equal(r.added, 2)
+  assert.equal(r.skipped.length, 3)
+  const ep = tables.backlinks.find((b) => b.platform === 'europages.co.uk')
+  assert.equal(ep.status, 'planned')
+  assert.equal(ep.ai, true)
+  assert.equal(ep.chat_id, 'chat-1')
+  assert.equal(tables.backlinks.find((b) => b.platform === 'archiproducts.com').kind, 'other')
+  assert.throws(() => backlinks.saveSuggestions({ items: [{ source_url: 'https://a.com', effort: 'trivial' }] }, ctx), /effort/)
+
+  backlinks.update({ id: ep.id, status: 'applied' }, ctx)
+  assert.ok(ep.applied_at)
+  ep.applied_at = new Date(Date.now() - 15 * 86400000).toISOString()
+  const row = backlinks.list({}, ctx).list.find((b) => b.id === ep.id)
+  assert.equal(row.days_applied, 15)
+  assert.equal(row.follow_up, true)
+  backlinks.update({ id: ep.id, status: 'live', source_url: 'https://www.europages.co.uk/en/company/pofung' }, ctx)
+  assert.ok(ep.live_at)
+  assert.equal(ep.source_url, 'https://www.europages.co.uk/en/company/pofung')
+})
+
+test('检查：已申请的读到链接自动标在线，读不到保持已申请', async () => {
+  const { ctx, tables } = fixture({ channels: [site], backlinks: [
+    { id: 'a1', source_url: 'https://dir.com/ok', status: 'applied', applied_at: '2026-11-01T00:00:00Z' },
+    { id: 'a2', source_url: 'https://dir.com/wait', status: 'applied', applied_at: '2026-11-01T00:00:00Z' },
+    { id: 'p1', source_url: 'https://dir.com/plan', status: 'planned' },
+  ] })
+  globalThis.fetch = async (u) => ({ ok: true, status: 200, text: async () => u.endsWith('/ok') ? '<a href="https://pofung.com/">Pofung</a>' : '<p>nothing</p>' })
+  await backlinks.check({}, ctx)
+  const st = Object.fromEntries(tables.backlinks.map((b) => [b.id, b.status]))
+  assert.deepEqual(st, { a1: 'live', a2: 'applied', p1: 'planned' })
+  assert.ok(tables.backlinks[0].live_at)
+  assert.equal(tables.backlinks[2].checked_at, undefined)
 })

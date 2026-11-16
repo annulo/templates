@@ -1,7 +1,8 @@
 import { L } from './_i18n'
+import { profile, projectBrief } from './_ai'
 
 // 只读写业务表的能在手机上用；检查要出网读别人的页面，只在电脑上
-export const cloud = ['list', 'add', 'update', 'remove', 'sync']
+export const cloud = ['list', 'add', 'update', 'remove', 'sync', 'context', 'saveSuggestions']
 export const remote = ['check']
 
 // 外链（设计见 docs/growth-plan.md「外链」）：别的网站上指向我们网站的链接。先简单做：登记、从社媒帖子自动登记、检查还在不在、看带来了几条询盘。
@@ -10,14 +11,21 @@ export const remote = ['check']
 //   backlinks.add({ source_url, kind?, platform?, target_url?, anchor?, nofollow?, status?, note? })   手动登记（同一地址只登记一次）
 //   backlinks.update({ id, ...字段 })  /  backlinks.remove({ id })
 //   backlinks.sync({})                                  从社媒帖子自动登记：发出去了、正文里有本站链接的帖子
-//   backlinks.check({ ids? })                           读来源页面看链接还在不在（每 7 天定时）；社媒要登录、反爬的标 unknown，不算丢了
+//   backlinks.check({ ids? })                           读来源页面看链接还在不在（每 7 天定时）；社媒要登录、反爬的标 unknown，不算丢了；已申请的读到链接就自动标在线
+//   backlinks.context({})                               找外链机会（任务 tasks/backlink-opportunities.md）用：项目定位、产品、自己的网站和重要页面、已有外链、在盯的竞品
+//   backlinks.saveSuggestions({ items })                存 AI 找到的外链机会：状态「打算做」，同一个域名已经有的跳过
+//
+// 机会的流程：打算做（planned）→ 已申请 / 已联系（applied，记 applied_at，14 天还没上线提醒跟进）→ 在线（live，记 live_at）。
 //
 // 社媒和大多数 B2B 平台的链接是 nofollow：对谷歌排名直接帮助有限，价值是品牌、引流、让谷歌更快发现新页面；真正提排名的是行业目录、行业网站、媒体的引用。
 
 declare const fetch: (url: string, init?: any) => Promise<any>
 
 const KINDS = ['social', 'b2b', 'directory', 'article', 'forum', 'other']
-const STATUSES = ['planned', 'live', 'lost', 'unknown']
+const STATUSES = ['planned', 'applied', 'live', 'lost', 'unknown']
+const EFFORTS = ['easy', 'medium', 'hard']
+/** 已申请多少天还没上线就提醒跟进 */
+const FOLLOW_UP_DAYS = 14
 // 这些平台要登录或反爬，读不到页面内容：检查不了，标 unknown
 const UNCHECKABLE = /(^|\.)(instagram\.com|facebook\.com|fb\.com|linkedin\.com|x\.com|twitter\.com|tiktok\.com|xiaohongshu\.com|douyin\.com)$/i
 const NOFOLLOW_BY_DEFAULT = /(^|\.)(instagram\.com|facebook\.com|linkedin\.com|x\.com|twitter\.com|youtube\.com|tiktok\.com|pinterest\.com|reddit\.com|quora\.com|medium\.com)$/i
@@ -81,7 +89,8 @@ export function list(_input: {}, ctx: any) {
     const h = host(b.source_url)
     const p = String(b.platform || '').toLowerCase()
     const n = refs.filter((r) => (r.ref && (r.ref === h || r.ref.endsWith('.' + h))) || (p && r.src && (r.src === p || r.src.includes(p)))).length
-    return { ...b, domain: h, leads: n }
+    const days = b.status === 'applied' && b.applied_at ? Math.floor((Date.now() - Date.parse(b.applied_at)) / 86400000) : null
+    return { ...b, domain: h, leads: n, ...(days !== null ? { days_applied: days, follow_up: days >= FOLLOW_UP_DAYS } : {}) }
   })
   const by: Record<string, number> = {}
   for (const b of out) by[b.status || 'live'] = (by[b.status || 'live'] ?? 0) + 1
@@ -103,9 +112,20 @@ function clean(ctx: any, input: any, partial = false) {
     if (!STATUSES.includes(input.status)) throw new Error(L(ctx, `status 只能是 ${STATUSES.join(' / ')}`, `status must be one of ${STATUSES.join(' / ')}`))
     out.status = input.status
   }
-  for (const k of ['platform', 'target_url', 'anchor', 'note', 'channel_id']) if (input[k] !== undefined) out[k] = String(input[k] ?? '')
-  if (input.nofollow !== undefined) out.nofollow = !!input.nofollow
+  if (input.effort !== undefined && input.effort !== '') {
+    if (!EFFORTS.includes(input.effort)) throw new Error(L(ctx, `effort 只能是 ${EFFORTS.join(' / ')}`, `effort must be one of ${EFFORTS.join(' / ')}`))
+    out.effort = input.effort
+  }
+  for (const k of ['platform', 'target_url', 'anchor', 'note', 'channel_id', 'reason', 'how_to']) if (input[k] !== undefined) out[k] = String(input[k] ?? '')
+  for (const k of ['nofollow', 'paid']) if (input[k] !== undefined) out[k] = !!input[k]
   return out
+}
+
+/** 进了某个状态时记时间：已申请记 applied_at、在线记 live_at（已经记过的不改） */
+function stamp(row: Record<string, unknown>, old: any = {}) {
+  if (row.status === 'applied' && !old.applied_at) row.applied_at = nowISO()
+  if (row.status === 'live' && !old.live_at) row.live_at = nowISO()
+  return row
 }
 
 export function add(input: any, ctx: any) {
@@ -117,7 +137,7 @@ export function add(input: any, ctx: any) {
   const created = ctx.db.insert('backlinks', {
     kind: 'other', platform: h, status: 'live', nofollow: NOFOLLOW_BY_DEFAULT.test(h),
     ...(row.target_url && sites.has(host(row.target_url as string)) ? { channel_id: sites.get(host(row.target_url as string)) } : {}),
-    ...row, created_at: nowISO(),
+    ...stamp(row), created_at: nowISO(),
   })
   return { id: created.id }
 }
@@ -125,7 +145,7 @@ export function add(input: any, ctx: any) {
 export function update(input: any, ctx: any) {
   const b = ctx.db.get('backlinks', input?.id)
   if (!b) throw new Error(L(ctx, '找不到这条外链', 'Backlink not found'))
-  ctx.db.update('backlinks', b.id, clean(ctx, input, true))
+  ctx.db.update('backlinks', b.id, stamp(clean(ctx, input, true), b))
   return { ok: true }
 }
 
@@ -163,6 +183,7 @@ export async function check(input: { ids?: string[] }, ctx: any) {
   sync({}, ctx)
   const sites = ownSites(ctx)
   const ids = input?.ids?.length ? new Set(input.ids) : null
+  // 打算做的不查（还没去做）；已申请的查：读到链接就是对方上线了，读不到不算丢
   const rows = all(ctx, 'backlinks').filter((b) => (ids ? ids.has(b.id) : b.status !== 'planned'))
   const res = { live: 0, lost: 0, unknown: 0 }
   for (const b of rows) {
@@ -198,8 +219,71 @@ export async function check(input: { ids?: string[] }, ctx: any) {
         error = String((e as Error)?.message ?? e).slice(0, 200)
       }
     }
+    if ((b.status === 'applied' || b.status === 'planned') && status !== 'live') {
+      // 还没上线：保持原状态，只记检查时间
+      ctx.db.update('backlinks', b.id, { checked_at: nowISO(), check_error: '' })
+      continue
+    }
     res[status as keyof typeof res]++
-    ctx.db.update('backlinks', b.id, { status, check_error: error, checked_at: nowISO(), ...(nofollow !== undefined ? { nofollow } : {}) })
+    ctx.db.update('backlinks', b.id, stamp({ status, check_error: error, checked_at: nowISO(), ...(nofollow !== undefined ? { nofollow } : {}) }, b))
   }
   return { checked: rows.length, ...res }
+}
+
+/** 找外链机会用的上下文（任务 tasks/backlink-opportunities.md） */
+export function context(_input: {}, ctx: any) {
+  const me = profile(ctx)
+  const sites = ownSites(ctx)
+  // 自己网站上值得被链接的页面：谷歌上有曝光的页面在前（落地页、分类、指南），给机会挑指向哪一页
+  const pages = all(ctx, 'search_pages')
+    .sort((a, b) => (b.impressions ?? 0) - (a.impressions ?? 0))
+    .slice(0, 15)
+    .map((p) => ({ url: p.page || p.url, impressions: p.impressions ?? 0 }))
+    .filter((p) => p.url)
+  return {
+    project: projectBrief(me),
+    markets: me.markets ?? '',
+    customer_types: me.customer_types ?? '',
+    products: all(ctx, 'products').slice(0, 30).map((p) => ({ name: p.name, category: p.category, keywords: p.keywords })),
+    own_sites: [...sites.keys()],
+    pages,
+    existing: all(ctx, 'backlinks').map((b) => ({ domain: host(b.source_url), platform: b.platform, kind: b.kind, status: b.status })),
+    competitors: all(ctx, 'competitors').filter((c) => c.status !== 'rejected' && c.status !== 'suggested').slice(0, 10).map((c) => ({ name: c.name, host: c.host || host(c.url) })),
+  }
+}
+
+type Suggestion = { source_url: string; platform?: string; kind?: string; reason?: string; how_to?: string; effort?: string; paid?: boolean; nofollow?: boolean; target_url?: string }
+
+/** 存 AI 找到的外链机会：状态「打算做」、标 ai，记下这段对话；同一个域名已经登记过的（不管什么状态）跳过 */
+export function saveSuggestions(input: { items: Suggestion[] }, ctx: any) {
+  const items = Array.isArray(input?.items) ? input.items : []
+  if (!items.length) throw new Error(L(ctx, 'items 是空的', 'items is empty'))
+  const have = new Set(all(ctx, 'backlinks').map((b) => host(b.source_url)))
+  const own = ownSites(ctx)
+  const added: string[] = []
+  const skipped: { source_url: string; why: string }[] = []
+  for (const it of items) {
+    const h = host(it?.source_url)
+    if (!h) {
+      skipped.push({ source_url: it?.source_url, why: L(ctx, '不是完整网址', 'not a full URL') })
+      continue
+    }
+    if (own.has(h)) {
+      skipped.push({ source_url: it.source_url, why: L(ctx, '是自己的网站', 'your own site') })
+      continue
+    }
+    if (have.has(h)) {
+      skipped.push({ source_url: it.source_url, why: L(ctx, '这个网站已经登记过', 'already recorded') })
+      continue
+    }
+    const row = clean(ctx, { ...it, kind: KINDS.includes(it.kind as string) ? it.kind : 'other', status: 'planned' })
+    const created = ctx.db.insert('backlinks', {
+      platform: h, nofollow: NOFOLLOW_BY_DEFAULT.test(h),
+      ...(row.target_url && own.has(host(row.target_url as string)) ? { channel_id: own.get(host(row.target_url as string)) } : {}),
+      ...row, ai: true, ...(ctx.chat_id ? { chat_id: ctx.chat_id } : {}), created_at: nowISO(),
+    })
+    have.add(h)
+    added.push(created.id)
+  }
+  return { added: added.length, skipped }
 }

@@ -455,7 +455,11 @@ export function actionDone(ctx: any, it: { action: Action | null; title?: string
   if (task === 'suggest-topics') return n(since(all(ctx, 'topics'), 'created_at', from).length, '这周出了 {n} 个选题', '{n} topics this week')
   if (view === 'landing') return n(since(all(ctx, 'landing_pages').filter((l) => l.status === 'live'), 'live_at', from).length, '这周上线了 {n} 个落地页', '{n} landing pages live this week')
   if (view === 'social-content' || view === 'calendar') return n(since(all(ctx, 'social_posts').filter((p) => p.status === 'published'), 'published_at', from).length, '这周社媒发了 {n} 条', '{n} social posts this week')
-  if ((view === 'plan' && tab === 'links') || (view === 'social' && /链接|link/i.test(it.title ?? ''))) return n(since(all(ctx, 'backlinks'), 'created_at', from).length, '这周登记了 {n} 条外链', '{n} backlinks recorded this week')
+  if ((view === 'plan' && tab === 'links') || (view === 'social' && /链接|link/i.test(it.title ?? ''))) {
+    // AI 找出来、还没去做的机会不算；这周去申请了、上线了、手动登记的才算
+    const done = all(ctx, 'backlinks').filter((x) => x.status !== 'planned')
+    return n(since(done, ['applied_at', 'live_at', 'created_at'], from).length, '这周申请或上线了 {n} 条外链', '{n} backlinks applied for or live this week')
+  }
   if (view === 'leads') {
     const leads = all(ctx, 'leads').filter((l) => l.is_real !== false && l.status !== 'spam')
     const moved = since(leads.filter((l) => l.status && l.status !== 'new'), 'updated_at', from).length
@@ -595,7 +599,7 @@ export function checkpointContext(input: { day?: number }, ctx: any) {
     })(),
     backlinks: (() => {
       const b = all(ctx, 'backlinks')
-      return { total: b.length, live: b.filter((x) => x.status === 'live').length, lost: b.filter((x) => x.status === 'lost').length, by_kind: countBy(b, 'kind') }
+      return { total: b.length, live: b.filter((x) => x.status === 'live').length, applied: b.filter((x) => x.status === 'applied').length, planned: b.filter((x) => x.status === 'planned').length, lost: b.filter((x) => x.status === 'lost').length, by_kind: countBy(b, 'kind') }
     })(),
     changes: all(ctx, 'site_changes').filter((c) => c.status === 'reviewed').slice(-15).map((c) => ({ title: c.title, verdict: c.verdict, summary: c.summary })),
     growth: all(ctx, 'growth_items').filter((x) => !x.status).sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 10).map((x) => ({ kind: x.kind, title: x.title, next: x.next })),

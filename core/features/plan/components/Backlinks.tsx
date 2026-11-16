@@ -1,33 +1,41 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, RefreshCw, Share2, Trash2 } from 'lucide-react'
+import { Check, MessageSquareText, Plus, RefreshCw, ScanSearch, Send, Share2, Trash2 } from 'lucide-react'
 import RunButton from './RunButton'
 import Select from './Select'
+import { TaskButton, TaskRequirements, useTask } from './Task'
 import { Badge, Button, Dialog, Field, Notice, Skeleton, cx, inputCls, type Tone } from './ui'
-import { runLocal } from '../lib/shuttle'
+import { openChat, runLocal } from '../lib/shuttle'
 import { tr } from '../lib/i18n'
 import type { Ctx } from './views/types'
 
 type Kind = 'social' | 'b2b' | 'directory' | 'article' | 'forum' | 'other'
-type Status = 'planned' | 'live' | 'lost' | 'unknown'
+type Status = 'planned' | 'applied' | 'live' | 'lost' | 'unknown'
 type Link = {
   id: string; kind: Kind; platform: string; source_url: string; target_url: string; anchor?: string; nofollow?: boolean
   status: Status; auto?: boolean; note?: string; checked_at?: string; check_error?: string; created_at: string; domain: string; leads: number
+  ai?: boolean; reason?: string; how_to?: string; effort?: 'easy' | 'medium' | 'hard'; paid?: boolean; chat_id?: string
+  days_applied?: number; follow_up?: boolean
 }
 type Data = { list: Link[]; by_status: Partial<Record<Status, number>>; leads_tracked: boolean }
 
 const KINDS: Kind[] = ['b2b', 'directory', 'article', 'social', 'forum', 'other']
-const STATUSES: Status[] = ['live', 'planned', 'lost', 'unknown']
-const TONE: Record<Status, Tone> = { live: 'ok', planned: 'default', lost: 'bad', unknown: 'warn' }
+const STATUSES: Status[] = ['live', 'applied', 'planned', 'lost', 'unknown']
+const TONE: Record<Status, Tone> = { live: 'ok', applied: 'primary', planned: 'default', lost: 'bad', unknown: 'warn' }
+/** tasks/backlink-opportunities.md：AI 联网找能拿到外链的具体地方，存成「打算做」；写法（找多少、偏重哪类）用户可改 */
+const IDEAS_TASK = 'backlink-opportunities'
 
 /**
  * 外链（增长计划 → 外链）：先简单做，登记别的网站上指向我们网站的链接，社媒帖子里带了网站链接的自动登记，
  * 每 7 天读一次来源页面看还在不在，按询盘的来源网址看带来了几条询盘（docs/growth-plan.md「外链」）。
+ * 「AI 找外链机会」把能拿到外链的地方存成「打算做」，用户去申请了点「已申请」，上线了点「上线了」填上外链所在的页面。
  */
 export default function Backlinks({ ctx }: { ctx: Ctx }) {
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState('')
   const [adding, setAdding] = useState(false)
   const [filter, setFilter] = useState<Status | ''>('')
+  const [going, setGoing] = useState<Link | null>(null)
+  const { task, setTask } = useTask(IDEAS_TASK)
   const load = useCallback(() => {
     runLocal<Data>('backlinks.list', {})
       .then((d) => (setData(d), setError('')))
@@ -48,6 +56,8 @@ export default function Backlinks({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <TaskRequirements task={task} onSaved={setTask} title={tr('plan.links_req_title')} hint={tr('plan.links_req_hint')} />
+          <TaskButton task={IDEAS_TASK} input={{}} onFinished={load} variant="outline" icon={ScanSearch}>{tr('plan.links_find')}</TaskButton>
           <RunButton inline variant="outline" fn="backlinks.sync" input={{}} icon={Share2} onDone={load}>{tr('plan.links_sync')}</RunButton>
           <RunButton inline variant="outline" fn="backlinks.check" input={{}} icon={RefreshCw} onDone={load}>{tr('plan.links_check')}</RunButton>
           <Button size="sm" feedback={false} onClick={() => setAdding(true)}><Plus /> {tr('plan.links_add')}</Button>
@@ -69,17 +79,35 @@ export default function Backlinks({ ctx }: { ctx: Ctx }) {
                   <a href={b.source_url} target="_blank" rel="noreferrer" className="text-sm font-medium text-primary hover:underline [overflow-wrap:anywhere]">{b.platform || b.domain}</a>
                   {b.nofollow && <span className="text-[11px] text-muted-foreground">nofollow</span>}
                   {b.auto && <span className="text-[11px] text-muted-foreground">{tr('plan.links_auto')}</span>}
+                  {b.ai && <span className="text-[11px] text-muted-foreground">{tr('plan.links_ai')}</span>}
+                  {b.effort && <Badge>{tr(`plan.le_${b.effort}`)}</Badge>}
+                  {b.paid && <Badge tone="warn">{tr('plan.links_paid')}</Badge>}
                   {b.leads > 0 && <Badge tone="ok">{tr('plan.links_leads', { n: b.leads })}</Badge>}
                 </div>
                 <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
                   {b.source_url}
                   {b.target_url && <> → {b.target_url.replace(/^https?:\/\//, '')}</>}
                 </p>
+                {b.reason && <p className="text-xs text-muted-foreground">{b.reason}</p>}
+                {b.how_to && (b.status === 'planned' || b.status === 'applied') && (
+                  <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs leading-relaxed whitespace-pre-line">{b.how_to}</p>
+                )}
+                {b.status === 'applied' && b.days_applied !== undefined && (
+                  <p className={cx('text-xs', b.follow_up ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground')}>
+                    {tr(b.follow_up ? 'plan.links_follow_up' : 'plan.links_applied_days', { n: b.days_applied })}
+                  </p>
+                )}
                 {(b.check_error || b.note) && <p className="text-xs text-muted-foreground">{b.check_error || b.note}</p>}
               </div>
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                {b.chat_id && (
+                  <Button variant="ghost" size="sm" onClick={() => openChat(b.chat_id!)}><MessageSquareText /> {tr('plan.links_chat')}</Button>
+                )}
                 {b.status === 'planned' && (
-                  <RunButton inline variant="ghost" fn="backlinks.update" input={{ id: b.id, status: 'live' }} onDone={load}>{tr('plan.links_mark_live')}</RunButton>
+                  <RunButton inline variant="ghost" fn="backlinks.update" input={{ id: b.id, status: 'applied' }} icon={Send} onDone={load}>{tr('plan.links_mark_applied')}</RunButton>
+                )}
+                {(b.status === 'planned' || b.status === 'applied') && (
+                  <Button variant="ghost" size="sm" onClick={() => setGoing(b)}><Check /> {tr('plan.links_mark_live')}</Button>
                 )}
                 <RunButton inline variant="ghost" fn="backlinks.remove" input={{ id: b.id }} icon={Trash2} onDone={load}>{tr('plan.links_remove')}</RunButton>
               </div>
@@ -87,6 +115,7 @@ export default function Backlinks({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
       )}
+      <LiveDialog link={going} onClose={() => setGoing(null)} onDone={() => (setGoing(null), load())} />
       <AddDialog open={adding} sites={ctx.channels.filter((c) => ['creght_site', 'wordpress', 'website'].includes(c.type))} onClose={() => setAdding(false)} onDone={() => (setAdding(false), load())} />
     </div>
   )
@@ -123,7 +152,7 @@ function AddDialog({ open, sites, onClose, onDone }: { open: boolean; sites: { i
             <Select value={form.kind} onChange={(v) => set('kind', v)} options={KINDS.map((k) => ({ value: k, label: tr(`plan.lk_${k}`), sub: tr(`plan.lk_${k}_sub`) }))} />
           </Field>
           <Field label={tr('plan.lf_status')}>
-            <Select value={form.status} onChange={(v) => set('status', v)} options={(['live', 'planned'] as Status[]).map((s) => ({ value: s, label: tr(`plan.ls_${s}`) }))} />
+            <Select value={form.status} onChange={(v) => set('status', v)} options={(['live', 'applied', 'planned'] as Status[]).map((s) => ({ value: s, label: tr(`plan.ls_${s}`) }))} />
           </Field>
         </div>
         <Field label={tr('plan.lf_platform')}>
@@ -135,6 +164,45 @@ function AddDialog({ open, sites, onClose, onDone }: { open: boolean; sites: { i
         <Field label={tr('plan.lf_note')}>
           <input value={form.note} onChange={(e) => set('note', e.target.value)} className={inputCls} />
         </Field>
+      </div>
+    </Dialog>
+  )
+}
+
+/** 「上线了」：填上外链实际所在的页面（申请时记的多半是申请页、目录首页），之后每周检查读的是它 */
+function LiveDialog({ link, onClose, onDone }: { link: Link | null; onClose: () => void; onDone: () => void }) {
+  const [url, setUrl] = useState('')
+  const [error, setError] = useState('')
+  useEffect(() => {
+    setUrl(link?.source_url ?? '')
+    setError('')
+  }, [link])
+  const save = async () => {
+    try {
+      await runLocal('backlinks.update', { id: link!.id, status: 'live', source_url: url.trim() })
+      onDone()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+  return (
+    <Dialog
+      open={!!link}
+      onClose={onClose}
+      title={tr('plan.links_live_title', { name: link?.platform || link?.domain || '' })}
+      width={520}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>{tr('common.cancel')}</Button>
+          <Button onClick={save} disabled={!/^https?:\/\//.test(url.trim())}>{tr('plan.links_save')}</Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Field label={tr('plan.lf_source')} hint={tr('plan.links_live_hint')}>
+          <input autoFocus value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" className={inputCls} />
+        </Field>
+        {error && <Notice tone="error">{error}</Notice>}
       </div>
     </Dialog>
   )
