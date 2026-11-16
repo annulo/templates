@@ -1260,7 +1260,6 @@
     "products_tab": "产品目录"
   },
   "wizard": {
-    "later": "以后再说",
     "open": "打开起步向导",
     "progress": "第 {n} 步，共 {total} 步",
     "back": "上一步",

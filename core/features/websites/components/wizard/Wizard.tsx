@@ -30,15 +30,15 @@ export default function Wizard({ ctx, onExit, initialStep }: { ctx: Ctx; onExit:
     ctx.reloadProfile()
     onExit(true)
   }
-  const call = async (fn: string, input: unknown, exit = false) => {
+  const call = async (fn: string, input: unknown) => {
     setBusy(true)
     setError('')
     try {
       const result = await runLocal<ChecklistData>(fn, input)
       setData(result)
       setPicked(null)
-      if (exit || (fn === 'today.skip' && !result.wizard?.current)) {
-        if (!exit) setData(await runLocal<ChecklistData>('today.closeWizard', {}))
+      if (fn === 'today.skip' && !result.wizard?.current) {
+        setData(await runLocal<ChecklistData>('today.closeWizard', {}))
         onExit()
       }
     } catch (e) { setError((e as Error).message) }
@@ -54,7 +54,6 @@ export default function Wizard({ ctx, onExit, initialStep }: { ctx: Ctx; onExit:
     <main className="relative flex h-dvh min-w-0 flex-col overflow-hidden bg-background text-foreground">
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-8">
         <span className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="size-4 text-primary-text" />{tr('wizard.title')}</span>
-        <Button variant="ghost" size="sm" disabled={busy || stepBusy} onClick={() => call('today.closeWizard', {}, true)}>{tr('wizard.later')}</Button>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-8 sm:py-12">
         <div className="mx-auto w-full max-w-xl space-y-6">

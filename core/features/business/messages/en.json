@@ -1260,7 +1260,6 @@
     "products_tab": "Product directory"
   },
   "wizard": {
-    "later": "Later",
     "open": "Open setup wizard",
     "progress": "Step {n} of {total}",
     "back": "Back",
