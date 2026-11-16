@@ -79,8 +79,8 @@ export function dailyItems(ctx: any, { all }: Helpers) {
   add(
     "d_opportunity_review",
     all(ctx, "growth_opportunities").filter((o) => o.review_at && o.review_at <= today && !["done", "parked"].includes(o.status)).length,
-    "有增长机会需要复查",
-    "Growth opportunities are due for review",
+    "有页面机会需要复查",
+    "Page opportunities are due for review",
     "核对搜索意图、页面表现与需求证据是否变化。",
     "Recheck search intent, page performance and demand evidence.",
     "opportunities",

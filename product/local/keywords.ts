@@ -262,7 +262,7 @@ export async function refresh(input: { channel_id?: string; manual?: boolean }, 
   const used = new Set(rowsOf(ctx).map((k) => k.channel_id))
   chs = chs.filter((c) => gscReady(c) && used.has(c.id))
   if (!chs.length) {
-    if (input?.manual) throw new Error(L(ctx, '这个网站还没关联 Search Console：先在「谷歌排名」里关联，才有排名数据', 'This site is not linked to Search Console yet: link it on the Google rankings page first'))
+    if (input?.manual) throw new Error(L(ctx, '这个网站还没关联 Search Console：先在「SEO 与关键词」里关联，才有排名数据', 'This site is not linked to Search Console yet: link it on the Google rankings page first'))
     return { skipped: L(ctx, '没有关联了 Search Console 且挖过关键词的网站', 'No site with Search Console linked and keywords collected') }
   }
   const list: any[] = []

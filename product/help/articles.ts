@@ -23,7 +23,7 @@ export const ARTICLES: Article[] = [
     title: { zh: "研究 SEO 机会", en: "Research SEO opportunities" },
     summary: { zh: "将用户需求映射到页面。", en: "Map user demand to pages." },
     body: {
-      zh: "在「增长机会」点击「研究 SEO 机会」，研究关键词、搜索意图、竞争和已有页面。无真实指标时保留「待验证」。\n\n点击「规划 SEO 页面」生成简报，或从机会创建运营主题。优先改善已有页，新增案例、模板、工具要有独立价值。\n\n方法参考 [Danny Postma 官方公开大纲](https://www.dannypostma.com/seo-course)。",
+      zh: "在「网站运营 → SEO 与关键词」的「SEO 规划」标签（页头也有）点击「研究 SEO 机会」，研究关键词、搜索意图、竞争和已有页面。无真实指标时保留「待验证」。\n\n点击「规划 SEO 页面」生成简报，或从机会创建运营主题。优先改善已有页，新增案例、模板、工具要有独立价值。\n\n方法参考 [Danny Postma 官方公开大纲](https://www.dannypostma.com/seo-course)。",
       en: "Research SEO opportunities examines keywords, intent, competition and existing pages. Metrics remain unverified without measured data.\n\nPlan SEO page creates a brief. You can also create a campaign from the opportunity. Improve existing pages first; new case, template and tool pages need independent value.\n\nThe method references [Danny Postma’s public outline](https://www.dannypostma.com/seo-course).",
     },
   },
@@ -59,7 +59,7 @@ export const ARTICLES: Article[] = [
       en: "Choose next actions from measured results.",
     },
     body: {
-      zh: "主题详情中查看草稿和转化并发起复盘。结论写回主题，复查到期后出现在总览。\n\n「每周总结」分别解释网站、社媒与产品数据，明确各自日期窗口；缺少数据时先安排补数据。",
+      zh: "主题详情中查看草稿和转化并发起复盘。结论写回主题，复查到期后出现在总览。\n\n「增长计划 → 每周总结」分别解释网站、社媒与产品数据，明确各自日期窗口；缺少数据时先安排补数据。",
       en: "Campaign details show drafts and conversions and start a review. Conclusions are saved to campaigns; due dates appear on the overview.\n\nWeekly reviews explain website, social and product metrics with their respective date windows; fill data gaps before drawing conclusions.",
     },
   },

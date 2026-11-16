@@ -7,7 +7,7 @@ import { LandingButton } from './views/Landing'
 import { openChat, runLocal, type Channel } from '../lib/shuttle'
 import { numLocale, tr } from '../lib/i18n'
 
-// 谷歌排名 → 关键词（keywords.ts，设计见 docs/keywords.md「页面」）。
+// SEO 与关键词 → 关键词（keywords.ts，设计见 docs/keywords.md「页面」）。
 // 按「下一步要做什么」分四类，每类一个主动作，每个词一行、一句理由，细节点开才看：
 //   - 改现有页面：已经排在 4~30 位，或者目标页面标题 / H1 没用上、几个页面在抢 → 按页面分组，「补内容」（search-expand）、页面问题去站点体检修；
 //   - 写新内容：还没排上、能做的（新机会、有竞争、竞品在排）→ 按主题分组，「转成选题」；

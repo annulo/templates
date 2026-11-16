@@ -22,7 +22,7 @@ const fmt = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g
 const pathOf = (u: string) => String(u || '').replace(/^https?:\/\/[^/]+/, '') || '/'
 
 /**
- * 关键词地图（增长计划 → 关键词地图）：关键词按主题分，每个主题一个目标页面，看它走到了哪一步、带来了多少展示、点击和询盘，
+ * 关键词地图（SEO 与关键词 → 关键词地图）：关键词按主题分，每个主题一个目标页面，看它走到了哪一步、带来了多少展示、点击和询盘，
  * 下一步去哪做。数据是 plan.keywordMap 现算的（关键词、选题、文章、发布记录、谷歌数据、询盘的落地页），不另存表。
  */
 export default function KeywordMap({ ctx }: { ctx: Ctx }) {

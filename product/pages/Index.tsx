@@ -11,7 +11,7 @@ import { tr, useT } from '../lib/i18n'
 import { useInShuttle } from '../lib/useShuttle'
 import { NAV } from '../lib/edition'
 // 行业文件：有哪些页面、每个页面渲染什么、老链接怎么认、侧栏上额外的数字
-import { NAV_COLLAPSED, REFRESH_ON_DB_CHANGE, VIEWS, contentView as contentViewOf, navViewOf, renderView, useNavBadges } from '../lib/views'
+import { NAV_COLLAPSED, REFRESH_ON_DB_CHANGE, VIEWS, contentView as contentViewOf, navViewOf, redirectOf, renderView, useNavBadges } from '../lib/views'
 import { useChecklist } from '../lib/useChecklist'
 import PublishProgress from '../components/PublishProgress'
 
@@ -27,6 +27,18 @@ function readParams(): Record<string, string> {
   delete p.project // 以前多项目时的参数，现在不用了
   return p
 }
+// 一组的导航项按 section 切成几段（没写 section 的整组是一段、没有段名）
+type NavEntry = (typeof NAV)[number]['items'][number]
+function segments(items: NavEntry[]): { title?: string; items: NavEntry[] }[] {
+  const out: { title?: string; items: NavEntry[] }[] = []
+  for (const n of items) {
+    if (n.section || !out.length) out.push({ title: n.section, items: [n] })
+    else out[out.length - 1].items.push(n)
+  }
+  return out
+}
+// 并掉的老页面（增长机会、每周总结、SEO 规划……）：地址换成现在的位置（lib/views.tsx 的 redirectOf），老链接、表里存的跳转都能用
+const route = (p: Record<string, string>) => redirectOf(p) ?? p
 function writeParams(p: Record<string, string>, replace = false) {
   if (typeof window === 'undefined' || !/^https?:/.test(window.location.protocol)) return
   try {
@@ -83,11 +95,11 @@ export default function Index() {
   const [auditing, setAuditing] = useState(false)
 
   useEffect(() => {
-    const initial = readParams()
+    const initial = route(readParams())
     writeParams(initial, true)
     setParams(initial)
     setRouteReady(true)
-    const onHistory = () => setParams(readParams())
+    const onHistory = () => setParams(route(readParams()))
     window.addEventListener('popstate', onHistory)
     window.addEventListener('hashchange', onHistory)
     return () => {
@@ -261,7 +273,7 @@ export default function Index() {
     return () => window.removeEventListener('keydown', close)
   }, [mobileOpen])
   // 老的「内容中心」（view=content）：按要去的工作区、当前在哪一边跳到对应的页面（lib/views.tsx）
-  const go = (v: View, extra: Record<string, string> = {}) => { setParams({ view: v === 'content' ? contentViewOf(extra, view) : v, ...extra }); setMobileOpen(false) }
+  const go = (v: View, extra: Record<string, string> = {}) => { setParams(route({ view: v === 'content' ? contentViewOf(extra, view) : v, ...extra })); setMobileOpen(false) }
   const goFromSetup = (v: View, extra: Record<string, string> = {}) => { setSetupAway(v !== 'overview'); go(v, extra) }
   const backToSetup = () => { setSetupAway(false); checklist.load(); go('overview'); showSetup(true) }
   useEffect(() => { if (view === 'overview') setSetupAway(false) }, [view])
@@ -405,14 +417,20 @@ export default function Index() {
                   {!!hidden?.length && <span className="shrink-0 rounded-md bg-primary/10 px-1.5 text-xs leading-5 font-semibold tabular-nums text-primary-text">{hiddenCount ? (hiddenCount > 99 ? '99+' : hiddenCount) : tr('article.new_badge')}</span>}
                   <ChevronDown className={cx('size-3.5 shrink-0 text-muted-foreground/70 transition-transform', !open && '-rotate-90')} />
                 </button>
-                {open && <div className="mt-0.5 mb-2 ml-[18px] space-y-0.5 border-l border-border pl-2">
-                  {g.items.map((n) => {
-                    const badge = n.view === navView ? null : navBadge(n.view)
-                    return <button type="button" key={n.view} onClick={(e) => goFrom(e, n.view)} disabled={!ctx} aria-current={n.view === navView ? 'page' : undefined} title={t(n.view + '_sub')} className={navClass(n.view === navView)}>
-                      <span className="truncate">{t(n.view)}</span>
-                      {badge && <span title={badge.title} aria-label={badge.title} className="ml-auto shrink-0 rounded-md bg-primary/10 px-1.5 text-xs leading-5 font-semibold tabular-nums text-primary-text">{badge.count == null ? tr('article.new_badge') : badge.count > 99 ? '99+' : badge.count}</span>}
-                    </button>
-                  })}
+                {/* 组里分了段（独立站运营：内容 / 搜索与流量 / 体检，导航项的 section 写在每段第一项上）：段名挂在竖线上、前面一个空心圆点，每段自己一截竖线 */}
+                {open && <div className="mt-0.5 mb-2 ml-[18px]">
+                  {segments(g.items).map((seg, si) => <div key={seg.items[0].view}>
+                    {seg.title && <p className={cx('flex items-center gap-2 pb-1 text-[13px] font-medium text-muted-foreground', si > 0 ? 'pt-1.5' : 'pt-0.5')}><span aria-hidden className="-ml-[3.5px] size-[7px] shrink-0 rounded-full border-[1.5px] border-muted-foreground/45 bg-canvas" />{t(seg.title)}</p>}
+                    <div className="space-y-0.5 border-l border-border pl-2">
+                      {seg.items.map((n) => {
+                        const badge = n.view === navView ? null : navBadge(n.view)
+                        return <button type="button" key={n.view} onClick={(e) => goFrom(e, n.view)} disabled={!ctx} aria-current={n.view === navView ? 'page' : undefined} title={t(n.view + '_sub')} className={navClass(n.view === navView)}>
+                          <span className="truncate">{t(n.view)}</span>
+                          {badge && <span title={badge.title} aria-label={badge.title} className="ml-auto shrink-0 rounded-md bg-primary/10 px-1.5 text-xs leading-5 font-semibold tabular-nums text-primary-text">{badge.count == null ? tr('article.new_badge') : badge.count > 99 ? '99+' : badge.count}</span>}
+                        </button>
+                      })}
+                    </div>
+                  </div>)}
                 </div>}
               </div>
             )
