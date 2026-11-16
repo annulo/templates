@@ -1,3 +1,6 @@
+- version: 0.28.0
+  zh: "网站检查会提示公开邮箱用了 gmail 这类免费邮箱；AI 全站审查会细看首页的标题、品牌介绍和信任信息。"
+  en: "Site checks now flag a free mailbox (like Gmail) as the public email, and the AI site review takes a close look at the homepage headline, brand intro and trust signals."
 - version: 0.27.0
   zh: "新增竞品监控：盯同类产品的网站，新上的页面能转成选题，没有竞品时 AI 帮你找。"
   en: "New Competitors page: watch similar products' sites, turn their new pages into topics, and let AI suggest competitors."

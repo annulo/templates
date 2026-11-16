@@ -70,7 +70,14 @@ type Page = {
   ld_foreign: string[]
   /** 结构化数据里 Product 写了哪些字段（没有 Product 是 null） */
   ld_product: string[] | null
+  /** H1~H3 按页面顺序（「H2 标题文字」，最多 40 个）：AI 审查看每段有没有自己的标题、H3 挂在哪个 H2 下 */
+  outline: string[]
+  /** 页面上公开的邮箱（mailto 链接和看得见的文字里的），小写 */
+  emails: string[]
 }
+
+/** 免费邮箱的域名：公开联系邮箱用它，B2B 买家常当成个人或小作坊，询盘也更容易进垃圾箱 */
+const FREE_MAIL = /^(gmail|googlemail|outlook|hotmail|live|msn|yahoo|ymail|aol|icloud|me|proton|protonmail|gmx|mail|yandex|zoho|qq|foxmail|163|126|yeah|sina|sohu|aliyun|139|189|tom)\.(com|net|cn|com\.cn|me|de|ru)$/
 
 /** 只读体检（任意网址、起步向导）抓几页 */
 const DEFAULT_MAX = 40
@@ -157,7 +164,7 @@ async function page(r: any, url: string, host: string, ctx: any, own: string[] =
     title: '', description: '', robots: '', canonical: '', lang: '', viewport: false, og_title: false, og_image: false,
     jsonld_types: [], h1: [], h2_count: 0, h2: [], images: 0, images_no_alt: [], text_chars: 0, internal_links: 0, links: [],
     final_url: normalize(r.url || url) || url, hreflang: 0, insecure: [],
-    text: '', images_empty_alt: [], images_big: [], other_host_links: [], ld_foreign: [], ld_product: null,
+    text: '', images_empty_alt: [], images_big: [], other_host_links: [], ld_foreign: [], ld_product: null, outline: [], emails: [],
   }
   if (r.error || !r.ok) return p
   p.html = /text\/html/.test(r.headers.get('content-type') ?? '') && p.status < 400
@@ -176,6 +183,8 @@ async function page(r: any, url: string, host: string, ctx: any, own: string[] =
   p.h1 = doc.find('h1').map((h: any) => h.text)
   p.h2_count = doc.find('h2').length
   p.h2 = doc.find('h2').slice(0, 15).map((h: any) => String(h.text ?? '').trim()).filter(Boolean)
+  // 选择器组按文档顺序返回，tag 是标签名
+  p.outline = doc.find('h1, h2, h3').slice(0, 40).map((h: any) => `${String(h.tag ?? 'h?').toUpperCase()} ${String(h.text ?? '').replace(/\s+/g, ' ').trim().slice(0, 80)}`)
   const imgs = doc.find('img')
   p.images = imgs.length
   p.images_no_alt = imgs.filter((i: any) => !('alt' in i.attrs)).slice(0, 10).map((i: any) => i.attrs.src ?? '')
@@ -195,6 +204,11 @@ async function page(r: any, url: string, host: string, ctx: any, own: string[] =
   if (url.startsWith('https:'))
     p.insecure = [...doc.find('img[src^="http:"], script[src^="http:"], iframe[src^="http:"]').map((x: any) => x.attrs.src), ...doc.find('link[rel="stylesheet" i][href^="http:"]').map((x: any) => x.attrs.href)].slice(0, 10)
   p.text = doc.text().replace(/\s+/g, ' ').trim().slice(0, 20000)
+  const mails = [
+    ...doc.find('a[href^="mailto:" i]').map((a: any) => String(a.attrs.href).slice(7).split('?')[0]),
+    ...(p.text.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g) ?? []),
+  ]
+  p.emails = [...new Set(mails.map((m) => decodeURIComponent(m).trim().toLowerCase()).filter((m) => /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(m)))]
   p.text_chars = p.text.replace(/\s+/g, '').length
   for (const a of doc.find('a[href]')) {
     let u: URL
@@ -494,6 +508,7 @@ const CHECK_NAMES: Record<string, [string, string]> = {
   desc_template: ['描述不套模板', 'Unique descriptions'], other_domain_links: ['不链到本站别的域名', 'Single domain links'], schema_domain: ['结构化数据的域名', 'Structured data domain'],
   image_size: ['图片大小', 'Image size'], image_many: ['图片数量', 'Image count'], img_alt_empty: ['alt 不为空', 'Non-empty alt'],
   product_schema: ['产品结构化数据', 'Product structured data'], article_schema: ['文章结构化数据', 'Article structured data'], mixed_content: ['没有 http 混合内容', 'No mixed content'],
+  free_email: ['联系邮箱用公司域名', 'Company-domain email'],
 }
 
 /** 没扣分的检查项（这次检查了、没发现问题）：存进体检记录，页面列成「已通过」，免得用户以为没查 */
@@ -690,6 +705,14 @@ function checks(site: Awaited<ReturnType<typeof crawl>>, preview: boolean, ctx: 
   add('mixed_content', 'medium', en ? 'Secure pages load insecure resources' : 'https 页面里用了 http 资源', mixed, en ? `${list(mixed)} load images or scripts over http:// (${mixed[0]?.insecure[0] ?? ''}). Browsers block or flag these; switch them to https.` : `${list(mixed)} 用 http:// 加载图片或脚本（比如 ${mixed[0]?.insecure[0] ?? ''}），浏览器会拦掉或标成不安全，改成 https。`)
 
   const home = html.find((p) => pathOf(p.url) === '/')
+  // 公开的联系邮箱是免费邮箱（gmail、qq、163…）：外贸买家常当成个人或小作坊，询盘也更容易进垃圾箱
+  const mails = [...new Set(html.flatMap((p) => p.emails))]
+  const free = mails.filter((m) => FREE_MAIL.test(m.split('@')[1]))
+  const siteHost = hostOf(site.root)
+  const ownMail = mails.filter((m) => { const d = m.split('@')[1]; return d === siteHost || d === twinHost(siteHost) || siteHost.endsWith('.' + d) })
+  site1('free_email', ownMail.length ? 'low' : 'medium', en ? 'Contact email is a free mailbox' : '公开的联系邮箱是免费邮箱', free.length > 0,
+    en ? `The site lists ${free.slice(0, 3).join(', ')}. B2B buyers often read a free mailbox as a one-person operation, and replies from it land in spam more often.${ownMail.length ? ` You also list ${ownMail[0]}; use that one everywhere.` : ` Use an address on your own domain (e.g. sales@${siteHost.replace(/^www\./, '')}) and forward it to the current mailbox if needed.`}`
+      : `网站上写的联系邮箱是 ${free.slice(0, 3).join('、')}。B2B 买家常把免费邮箱当成个人或小作坊，从它回的邮件也更容易进垃圾箱。${ownMail.length ? `网站上也有 ${ownMail[0]}，全站统一用它。` : `换成公司域名的邮箱（比如 sales@${siteHost.replace(/^www\./, '')}），收到的信可以转到现在的邮箱。`}`)
   site1('structured_data', 'low', en ? 'No structured data on the homepage' : '首页缺少结构化数据', !!home && !home.jsonld_types.length, en ? 'The homepage has no JSON-LD. Add Organization / WebSite structured data so search engines and AI understand the site.' : '首页没有 JSON-LD，建议加 Organization / WebSite 的结构化数据，便于搜索和 AI 理解站点。')
   for (const [check, name, file] of [['robots', 'robots.txt', site.robots], ['llms_txt', 'llms.txt', site.llms]] as const) {
     ran.push(check)
@@ -742,7 +765,7 @@ export const CATEGORY: Record<string, 'tech' | 'page' | 'content' | 'ai'> = {
   index_crawled: 'tech', index_discovered: 'tech', index_unknown: 'tech', index_canonical: 'tech', index_excluded: 'tech', sitemap_unsubmitted: 'tech', sitemap_errors: 'tech',
   title_missing: 'page', title_duplicate: 'page', title_length: 'page', desc_missing: 'page', desc_duplicate: 'page', desc_length: 'page', h1_missing: 'page', h1_multiple: 'page',
   img_alt: 'page', img_alt_empty: 'page', lang: 'page', og: 'page', keyword_missing: 'page', desc_template: 'page',
-  thin_content: 'content', content_template: 'content', keyword_cannibal: 'content', orphan: 'content',
+  thin_content: 'content', content_template: 'content', keyword_cannibal: 'content', orphan: 'content', free_email: 'content',
   ai_crawlers: 'ai', llms_txt: 'ai', structured_data: 'ai', product_schema: 'ai', article_schema: 'ai',
 }
 /** AI 审查记的问题 check 是 ai.<area>.<名字>，area 就是它的类 */
@@ -927,6 +950,7 @@ const GROUPS: { key: string; weight?: number; checks: string[]; prefix?: string 
   { key: 'onpage', checks: ['title_missing', 'desc_missing', 'h1_missing', 'keyword_missing', 'title_length', 'desc_length', 'h1_multiple', 'img_alt', 'img_alt_empty', 'og', 'canonical'] },
   { key: 'speed', checks: ['image_size', 'image_many', 'slow_page', 'viewport'] },
   { key: 'international', checks: ['hreflang', 'lang'] },
+  { key: 'trust', checks: ['free_email'] },
   { key: 'ai', checks: ['ai_crawlers', 'llms_txt', 'structured_data', 'product_schema', 'article_schema', 'robots', 'sitemap'] },
 ]
 
@@ -1049,7 +1073,7 @@ export async function samples(input: { channel_id: string }, ctx: any) {
       const c = content.get(p.url)
       const sp = shown.get(pathOf(p.url))
       return {
-        url: p.url, group: groupOf(p.url), status: p.status, title: p.title, description: p.description, h1: p.h1, h2: p.h2,
+        url: p.url, group: groupOf(p.url), status: p.status, title: p.title, description: p.description, h1: p.h1, h2: p.h2, outline: p.outline,
         own_words: c?.own ?? 0, repeated_share: Math.round((c?.template ?? 0) * 100) / 100, images: p.images, images_empty_alt: p.images_empty_alt.length,
         schema: [...new Set(p.jsonld_types)], internal_links: p.internal_links,
         text: p.text.slice(0, 2500),
