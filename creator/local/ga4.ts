@@ -98,7 +98,7 @@ const hostOf = (u: string) => (/^https?:\/\/([^/]+)/.exec(u)?.[1] ?? u).replace(
 export async function link(input: { channel_id: string; property?: string }, ctx: any) {
   const ch = ctx.db.get('channels', input?.channel_id)
   if (!ch) throw new Error(L(ctx, '没有这个渠道：', 'No such channel: ') + input?.channel_id)
-  if (!['creght_site', 'wordpress'].includes(ch.type)) throw new Error(L(ctx, '只有网站渠道能关联 GA4', 'Only website channels can link GA4'))
+  if (!['creght_site', 'wordpress', 'website'].includes(ch.type)) throw new Error(L(ctx, '只有网站渠道能关联 GA4', 'Only website channels can link GA4'))
   const { list } = await properties({}, ctx)
   let property = input.property ?? ''
   if (property && !list.some((p) => p.property === property)) throw new Error(L(ctx, `连着的 Google 账号都看不到 GA4 属性 ${property}`, `None of the connected Google accounts can see GA4 property ${property}`))

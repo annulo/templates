@@ -5,7 +5,7 @@ description: 搜索表现和改站复查：独立站在 Google 搜索里的点�
 
 # 搜索表现（GSC）和改站复查
 
-页面：后台左侧「搜索表现」（外贸、自媒体叫「谷歌排名」），里面几个 tab：搜索表现、关键词、GA4、改动复查（外贸还有流量下滑）。
+页面：后台左侧「SEO 与关键词」，里面几个 tab：谷歌排名、关键词（按主题：一个主题一个页面，阶段、下一步）、流量下滑、效果追踪（外贸、产品运营还有外链）。GA4 访问数据在「网站访问」页的「GA4 访问数据」tab。
 
 ## 连接和关联
 
@@ -37,7 +37,7 @@ description: 搜索表现和改站复查：独立站在 Google 搜索里的点�
 
 ## 关键词机会（挖词、筛词、分桶）
 
-页面：「谷歌排名」里的「关键词」tab。表 `keywords`，本机函数 `keywords.*`（`local/keywords.ts`），设计见 `docs/keywords.md`。
+页面：「SEO 与关键词」里的「关键词」tab。表 `keywords`，本机函数 `keywords.*`（`local/keywords.ts`），设计见 `docs/keywords.md`。
 
 - 用户要「挖关键词」「哪些词能做起来」「找长尾词」时，照任务 `tasks/keyword-research.md` 做（页面上的「挖一批关键词」就是它）：
   `keywords.expand` 扩词（下拉联想 + GSC 搜索词）→ `keywords.context` 拿待筛的词 → 你判断相关性、意图、主题 → `keywords.save` 存回。

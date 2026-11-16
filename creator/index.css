@@ -44,6 +44,7 @@
   --color-code-highlight: var(--code-highlight);
   --color-code-number: var(--code-number);
   --color-selection: var(--selection);
+  --color-canvas: var(--canvas);
   --color-selection-foreground: var(--selection-foreground);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -86,9 +87,12 @@
    * Button(outline) / TabsIndicator 这类亮色深色本就要两种不同底色的组件仍写
    * dark:bg-input-background；调用点若要让自己的颜色在深色也生效，得写成 bg-xxx!。
    */
-  --input-background: transparent;
+  --input-background: oklch(1 0 0);
   /* 发光边框颜色 focus-visible:border-ring */
   --ring: oklch(0.546 0.245 262.881);
+  /* 后台的画布（外贸、产品运营外壳的侧栏和页面底色）：比卡片深一档，卡片（白底 + 淡阴影）浮在上面，见下面的 .app-canvas */
+  --canvas: oklch(0.966 0.005 260);
+  --card-shadow: 0 1px 2px oklch(0.2 0.02 260 / 0.04), 0 2px 6px -2px oklch(0.2 0.02 260 / 0.05);
   --sidebar: oklch(0.976 0.002 260);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.546 0.245 262.881);
@@ -135,6 +139,8 @@
   /* 等价于原来各处写的 dark:bg-input/30（--input 的 15% 再取 30%） */
   --input-background: oklch(1 0 0 / 4.5%);
   --ring: oklch(0.546 0.245 262.881);
+  --canvas: oklch(0.12 0 0);
+  --card-shadow: 0 1px 2px oklch(0 0 0 / 0.3);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.546 0.245 262.881);
@@ -183,6 +189,20 @@
   body {
     @apply bg-background text-foreground font-sans text-base antialiased;
   }
+}
+
+/*
+  外贸和产品运营的外壳（core/features/business/pages/Index.tsx）把页面放在灰色画布上（.app-canvas）：
+  卡片（rounded-xl + border 的块）白底、带一层淡阴影，浮在画布上，分出「画布 → 卡片 → 卡片里的浅灰块」三层。
+  手写的卡片很多（rounded-xl border border-border …），在这里统一处理，不用每个页面改：
+  没写底色的卡片补上卡片底色；自己写了阴影的（弹层、浮动按钮）和虚线框（空状态）不动。
+  放在 components 层：页面上写的 utilities（hover 改边框色这类）仍然优先。
+  吸顶的条用 var(--page-bg) 当底色，和画布一样。
+*/
+@layer components {
+  .app-canvas { --page-bg: var(--canvas); background: var(--canvas); }
+  .app-canvas .rounded-xl.border:not(.border-dashed):not([class*="shadow"]) { box-shadow: var(--card-shadow); }
+  .app-canvas .rounded-xl.border:not(.border-dashed):not([class*="bg-"]) { background: var(--card); }
 }
 
 /* 滚动条：细、平时很淡，悬停才加深（深浅主题跟着 --border / --input 走） */

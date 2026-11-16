@@ -36,7 +36,7 @@ export const remote = ['expand', 'refresh', 'serp']
 type Channel = { id: string; name: string; type: string; preview_url?: string; live_url?: string; gsc_property?: string; gsc_link_disabled?: boolean }
 type Keyword = {
   id: string; channel_id: string; keyword: string; lang?: string; country?: string; sources?: string; seed?: string; suggest_engine?: string
-  status?: string; intent?: string; cluster?: string; note?: string; target_page?: string
+  status?: string; intent?: string; cluster?: string; note?: string; target_page?: string; opportunity_id?: string; priority?: string; origin?: string
   gsc_impressions?: number; gsc_clicks?: number; gsc_position?: number; gsc_page?: string; search_page_id?: string; gsc_at?: string
   bucket?: Bucket; score?: number; topic_id?: string; chat_id?: string; seen?: boolean; created_at?: string; reviewed_at?: string
   onpage?: string; gsc_pages?: string
@@ -69,7 +69,7 @@ function rowsOf(ctx: any, channelId?: string): Keyword[] {
 }
 
 function channelOf(ctx: any, id?: string): Channel {
-  const list: Channel[] = ctx.db.query('channels', { where: { type: 'creght_site' }, limit: 500 }).list
+  const list: Channel[] = (ctx.db.query('channels', { limit: 500 }).list as Channel[]).filter((c) => c.type === 'creght_site' || c.type === 'website')
   const ch = id ? list.find((c) => c.id === id) : list[0]
   if (!ch) throw new Error(L(ctx, '找不到这个独立站渠道', 'Site channel not found'))
   return ch
@@ -257,12 +257,12 @@ async function refreshChannel(ch: Channel, ctx: any) {
 }
 
 export async function refresh(input: { channel_id?: string; manual?: boolean }, ctx: any) {
-  let chs: Channel[] = ctx.db.query('channels', { where: { type: 'creght_site' }, limit: 500 }).list
+  let chs: Channel[] = (ctx.db.query('channels', { limit: 500 }).list as Channel[]).filter((c) => c.type === 'creght_site' || c.type === 'website')
   if (input?.channel_id) chs = chs.filter((c) => c.id === input.channel_id)
   const used = new Set(rowsOf(ctx).map((k) => k.channel_id))
   chs = chs.filter((c) => gscReady(c) && used.has(c.id))
   if (!chs.length) {
-    if (input?.manual) throw new Error(L(ctx, '这个网站还没关联 Search Console：先在「谷歌排名」里关联，才有排名数据', 'This site is not linked to Search Console yet: link it on the Google rankings page first'))
+    if (input?.manual) throw new Error(L(ctx, '这个网站还没关联 Search Console：先在「SEO 与关键词」里关联，才有排名数据', 'This site is not linked to Search Console yet: link it on the Google rankings page first'))
     return { skipped: L(ctx, '没有关联了 Search Console 且挖过关键词的网站', 'No site with Search Console linked and keywords collected') }
   }
   const list: any[] = []
@@ -498,6 +498,8 @@ export function toTopic(input: { ids: string[] }, ctx: any) {
         source: 'keyword', status: 'idea', search_query: main.keyword,
         ...(main.gsc_impressions ? { search_impressions: main.gsc_impressions, search_position: main.gsc_position } : {}),
         workspace: 'website', content_type: 'article', created_at: now,
+        // 产品运营：主题挂着页面机会（seomap.ts）就带上，写文章时拿到机会的受众、问题、建议（content.ts 的 marketingOf）
+        ...(ks.find((k) => k.opportunity_id) ? { opportunity_id: ks.find((k) => k.opportunity_id)!.opportunity_id } : {}),
         origins: originsJson(ks.map((k) => ({ type: 'keyword', id: k.id, label: k.keyword, channel_id: k.channel_id }))),
         ...(ctx.chat_id ? { chat_id: String(ctx.chat_id) } : {}),
       })

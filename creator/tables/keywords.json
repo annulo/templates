@@ -22,7 +22,7 @@
       },
       "sources": {
         "type": "string",
-        "description": "从哪来，逗号分隔：suggest（搜索引擎下拉联想）/ gsc（本站已有曝光的搜索词）/ agent（助手补的）/ competitor（从竞品的产品词扩出来的）/ manual（用户加的）"
+        "description": "从哪来，逗号分隔：suggest（搜索引擎下拉联想）/ gsc（本站已有曝光的搜索词）/ agent（助手补的）/ competitor（从竞品的产品词扩出来的）/ manual（用户加的）/ import（产品运营导入的 SEO 页面地图）/ research（产品运营的 AI 研究出的页面机会）"
       },
       "seed": {
         "type": "string",
@@ -51,6 +51,18 @@
       "target_page": {
         "type": "string",
         "description": "打算用哪个页面去做（站内已有页面的 URL）；空是要写新内容"
+      },
+      "opportunity_id": {
+        "type": "string",
+        "description": "这个主题挂着的页面机会（产品运营 growth_opportunities 的 id）：规划 SEO 页面、转成运营主题用它；同一主题的词写同一个"
+      },
+      "priority": {
+        "type": "string",
+        "description": "导入或研究时给的优先级（A/B/C 或 high/medium/low），只作参考显示"
+      },
+      "origin": {
+        "type": "string",
+        "description": "导入或研究的来源（资料地址、证据链接）"
       },
       "gsc_impressions": {
         "type": "number",

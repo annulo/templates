@@ -51,6 +51,17 @@ sitemap 比 300 多时各类页面（路径第一段：product、products、blog
 
 规则查不出来的（标题说没说清给谁、分类介绍对不对这个品类、产品文案和产品对不对得上、案例够不够具体、页面之间连没连起来）交给「AI 全站审查」，见下面「SEO 报告」。
 
+## 联系邮箱
+
+`free_email`（站点级，归「内容」类、建议组 `trust`）：页面上公开的邮箱（mailto 链接和看得见的文字）里有免费邮箱（gmail、outlook、qq、163…，`FREE_MAIL`）。外贸买家常把免费邮箱当成个人或小作坊，回信也更容易进垃圾箱。
+网站上同时也有公司域名的邮箱时只算 low（统一用它就行），只有免费邮箱是 medium。来源：Pofung 的站（2026-11-16）联系方式只有 gmail。
+
+## 首页（AI 审查）
+
+首页好不好规则查不出来，写在 AI 全站审查任务（`tasks/seo-review.md`「首页」）里：H1 写核心业务词、首屏一句以品牌为主语的定义句（GEO）、数字不重复堆、资料里的信任证据要露出（没有的列「待补资料」，不编）、主力品类单独一块、海外案例排前、链到指南和常见问题、标题大纲。
+`audit.samples` 给每页一个 `outline`（H1~H3 按页面顺序）：只看 H1、H2 列表看不出「某段没有 H2、它的 H3 挂到上一段下面」。
+来源：2026-11-16 给 Pofung 改首页时的诊断，改完的首屏是「Italian-Style Furniture Manufacturer in Foshan, China」+ 一句品牌定义句 + 两个按钮，数字条（创立年份、人数、款数、起订量、质保）紧接在首屏下面。
+
 ## 谷歌收录
 
 `_audit_index.ts`：关联了 Search Console（`channels.gsc_property`）的正式站点，体检时用网址检查（URL Inspection，`webmasters.readonly` 就能用）查页面有没有被 Google 收录，每页一条存 `index_status`。

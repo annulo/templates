@@ -8,7 +8,7 @@ import { uploadAsset } from 'talizen/assets'
 export { ShuttleUnavailable, MemberLoginRequired, memberLoginURL, isNeedsShuttle, shuttleMissing, inShuttle, fnManifest, computerStatus, watchComputer, assistantOnline, type FnManifest, type ComputerStatus } from './remote'
 
 /** 渠道类型。creght_site、wordpress 是网站；其余是社媒。 */
-export type ChannelType = 'creght_site' | 'wordpress' | 'xiaohongshu' | 'douyin' | 'x' | 'wechat_mp' | 'linkedin' | 'facebook' | 'instagram' | 'youtube' | 'bilibili' | 'zhihu'
+export type ChannelType = 'creght_site' | 'wordpress' | 'website' | 'xiaohongshu' | 'douyin' | 'x' | 'wechat_mp' | 'linkedin' | 'facebook' | 'instagram' | 'youtube' | 'bilibili' | 'zhihu'
 
 export type Channel = {
   id: string
@@ -337,7 +337,9 @@ export type Article = {
 /** 网站的发布记录（publications 表，有网站的模板才有）。共用的内容中心（core/）按它显示网站，这个模板没有网站时表不存在、读出来是空的 */
 export type Publication = { id: string; article_id: string; channel_id: string; status: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed'; scheduled_at?: string; title?: string; summary?: string; body?: string; video?: string; keywords?: string; slug?: string; cms_id?: string; url?: string; error?: string; warning?: string; published_at?: string; updated_at?: string }
 /** 网站渠道（creght 站点、WordPress）；这个模板没有网站，永远是 false */
-export const isSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress')
+export const isSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress' || c.type === 'website')
+/** 能发文章、做落地页的网站：creght 和 WordPress。只填了网址的网站（website）不能发 */
+export const isPublishSite = (c?: Pick<Channel, 'type'>) => !!c && (c.type === 'creght_site' || c.type === 'wordpress')
 
 /** AI 预设（rewrite_presets 表）：产出哪种类型 + 要求；名字、用在哪、模板自带的哪条见 core/lib/presets.ts */
 export type RewritePreset = { id: string; type: ArticleType; prompt: string; name?: string; builtin?: string; hidden?: boolean; created_at?: string; updated_at?: string }

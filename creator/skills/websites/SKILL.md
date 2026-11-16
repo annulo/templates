@@ -12,6 +12,7 @@ description: 网站渠道（外贸、产品、自媒体模板都有）：creght 
 渠道是用户要运营的地方，由用户在后台里主动添加，存在运营后台项目的 `channels` 表里：
 - `creght_site`：独立站，用户从自己 creght 账号下的站点里选一个；
 - `wordpress`：WordPress 独立站，用户填站点地址、用户名，应用密码存成本机密钥（名字 `WP_<域名>_APP_PASSWORD`，渠道上只记 `wp_user`、`wp_secret`），见下文；
+- `website`：只填了网址的网站（向导里输入的网址不是 creght 站点时自动加成这种），地址在 `preview_url` / `live_url`（同一个，只到域名）。能做网站检查、关联 Search Console 和 GA4、做 AI 搜索检测、挖关键词，**不能发文章、做落地页，也不能改站**：检查出的问题写清楚改哪个页面、改成什么，让用户自己去网站后台改。用户之后在渠道页「接入发布」接入 creght 或 WordPress 时，这条渠道原地改成那个类型（`channels.add` / `fromURL`），GSC 关联、检查记录都留着；
 - 社媒账号不在 `channels`，在社媒插件的 `social_accounts`（见 `plugins/social/PLUGIN.md`），这个模板能加哪些看 `lib/edition.ts` 的 CHANNELS；
 - `wechat_mp`：公众号，还没接入。
 

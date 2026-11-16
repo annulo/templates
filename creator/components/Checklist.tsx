@@ -196,15 +196,15 @@ export default function Checklist({ ctx, mode = 'all' }: { ctx: Ctx; mode?: 'all
 }
 
 /** 一项的主按钮：去页面 / 跑本机函数（按钮上带进度）/ 交给助手的任务（开一段对话，能查看对话） */
-export function ChecklistItemAction({ ctx, it, onDone, onChat, compact = false }: { ctx: Ctx; it: Item; onDone: () => void; onChat: (chatId: string) => void; compact?: boolean }) {
+export function ChecklistItemAction({ ctx, it, onDone, onChat, compact = false, variant = 'default' }: { ctx: Ctx; it: Item; onDone: () => void; onChat: (chatId: string) => void; compact?: boolean; variant?: 'default' | 'outline' }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const a = it.action
   if (it.running) return <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin" /> {tr('today.running')}</span>
-  if (it.wizard && it.screen) return <Button size="sm" onClick={() => ctx.openWizard(it.key)}>{it.action_label}</Button>
+  if (it.wizard && it.screen) return <Button size="sm" variant={variant} onClick={() => ctx.openWizard(it.key)}>{it.action_label}</Button>
   if (a.kind === 'run')
     return (
-      <RunButton inline fn={a.fn} input={a.input ?? {}} size="sm" onDone={onDone}>
+      <RunButton inline fn={a.fn} input={a.input ?? {}} size="sm" variant={variant} onDone={onDone}>
         {it.action_label}
       </RunButton>
     )
@@ -214,6 +214,7 @@ export function ChecklistItemAction({ ctx, it, onDone, onChat, compact = false }
         <Button
           needsShuttle
           size="sm"
+          variant={variant}
           disabled={busy}
           onClick={async () => {
             setBusy(true)
@@ -236,7 +237,7 @@ export function ChecklistItemAction({ ctx, it, onDone, onChat, compact = false }
       </span>
     )
   return (
-    <Button size={compact ? 'sm' : 'default'} className={compact ? undefined : 'h-10! text-base!'} onClick={() => ctx.go(a.view as View, a.params)}>
+    <Button size={compact ? 'sm' : 'default'} variant={variant} className={compact ? undefined : 'h-10! text-base!'} onClick={() => ctx.go(a.view as View, a.params)}>
       {it.action_label}
     </Button>
   )

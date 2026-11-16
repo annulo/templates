@@ -20,7 +20,7 @@ export const remote = ['scan']
 //   decay.markSeen({ ids? })               去掉「新」标识（不给 ids 就是全部）
 //   decay.dismiss({ id, undo? })           不用管（季节性、已经下线的页面）
 //
-// 刷新内容、改标题描述、上线复查都挂在 search_pages 同一个页面的记录上（search_page_id），和「谷歌排名」页的流程是一套。
+// 刷新内容、改标题描述、上线复查都挂在 search_pages 同一个页面的记录上（search_page_id），和「SEO 与关键词」页的流程是一套。
 
 const WINDOW = 28
 const WINDOWS = 6 // 最近 1 个 + 之前 5 个
@@ -187,11 +187,11 @@ function write(ch: Channel, found: Omit<Decay, 'id'>[], ctx: any) {
 }
 
 export async function scan(input: { channel_id?: string; manual?: boolean }, ctx: any) {
-  let chs: Channel[] = ctx.db.query('channels', { where: { type: 'creght_site' }, limit: 500 }).list
+  let chs: Channel[] = (ctx.db.query('channels', { limit: 500 }).list as Channel[]).filter((c) => c.type === 'creght_site' || c.type === 'website')
   if (input?.channel_id) chs = chs.filter((c) => c.id === input.channel_id)
   chs = chs.filter((c) => c.gsc_property && !c.gsc_link_disabled)
   if (!chs.length) {
-    if (input?.manual) throw new Error(L(ctx, '还没有网站关联 Search Console：先到「谷歌排名」关联并同步一次', 'No site is linked to Search Console yet: link and sync one on the Google rankings page first'))
+    if (input?.manual) throw new Error(L(ctx, '还没有网站关联 Search Console：先到「SEO 与关键词」关联并同步一次', 'No site is linked to Search Console yet: link and sync one on the Google rankings page first'))
     return { skipped: L(ctx, '没有关联 Search Console 的网站', 'No site linked to Search Console') }
   }
   const results: any[] = []
