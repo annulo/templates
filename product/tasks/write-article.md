@@ -110,6 +110,12 @@ annulo run aeo.article --input '{"article_id":"<content.save 返回的 article_i
 只改点名的段落和没过的项；补不了的（产品目录、企业资料里没有可写的数据，没有可链的页面）就不补，**不为凑分编数据、加无关链接**。改一轮就停，不反复刷分。
 回复里加一句分数（比如「AI 引用分 B 级，82 分」），还差的项说一下为什么没改。
 
+## 写完翻译
+
+长文，并且 `research.brief.translate_locales` 不是空的（用户在写作简报里选了「写完接着翻成」，网站开了多语言）：AI 引用分看完以后，**在这段对话里接着翻**，照任务 `tasks/translate-article.md` 做（`article_id` 是 `content.save` 返回的，`locales` 就是 `translate_locales`），规则照那份任务，写法用 `user/prompts/translate-article.md`（用户改过的），没有就用 `prompts/translate-article.md`，一种语言存一次。
+翻完再回复用户，回复里加一句翻成了哪几种语言、在文章页正文上面的语言标签里看和改。翻译出错（比如网站的语言还没读到）不影响文章本身：回复里说清楚哪种没翻成，用户之后在文章页点「翻译」再翻。
+`translate_locales` 是空的或者没有：不翻。
+
 ## 有运营主题时
 
 上下文里的 `campaign`、`opportunity`、`target_platform` 有值时（产品运营的运营主题、增长机会）：先读 skills/product-growth/SKILL.md。campaign 和 opportunity 提供运营目标；target_platform 指定平台表达，简报的语言优先。产品功能、边界、价格和案例只使用 products 与 research 的真实事实，use_cases 的空白成果不能补成数字。小红书、抖音需要的导流方式与限制按社媒插件的当前规格和任务处理；X 按账号定位和语言写。所有草稿保留 topic_id，content.save 会记录运营主题与产品关联。

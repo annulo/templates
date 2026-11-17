@@ -3386,7 +3386,14 @@
     "outline_empty_ai": "No outline yet. Click \"Draft outline with AI\" or add a section yourself. If you leave it empty, AI plans the structure when writing.",
     "save_first": "Add a title before asking AI for an outline",
     "view_grid": "Grid",
-    "view_list": "List"
+    "view_list": "List",
+    "lang_source": "Write the original in",
+    "translate_to": "Then translate into",
+    "translate_hint": "This site has several languages: AI translates right after writing, in the same chat, and publishing sends every language version",
+    "lang_row": "Languages",
+    "translate_after": "then translated into {langs}",
+    "translate_none": "no translation",
+    "after_translate": "Then it translates into {langs}, one version per language"
   },
   "onboarding": {
     "site_label": "Website URL",
