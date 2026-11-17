@@ -22,6 +22,9 @@ export function saveBrief(input: { topic_id: string; title: string; angle?: stri
   for (const key of ['outline_chat_id', 'proof', 'account_strategy', 'account_name', 'account_role_key', 'target_account_id', 'tracking_url', 'historical_notes', 'source_assets', 'source_snapshot'])
     if (original[key] !== undefined) brief[key] = original[key]
   for (const key of ['audience', 'buyer_question', 'outline', 'language', 'channels', 'cta', 'gaps']) brief[key] = String(b[key] || '').trim()
+  // 多语言网站：写完接着翻成哪几种语言（写文章任务读它，见 tasks/write-article.md「写完翻译」）；没传就不动原来的
+  if (Array.isArray(b.translate_locales)) brief.translate_locales = [...new Set<string>(b.translate_locales.map((x: unknown) => String(x).trim().toLowerCase()).filter(Boolean))].slice(0, 20)
+  else if (Array.isArray(original.translate_locales)) brief.translate_locales = original.translate_locales
   // 大纲按节存（页面上拖动排序、每节挂产品）；节上的产品只能是关联产品里的
   if (Array.isArray(b.sections)) brief.sections = b.sections.slice(0, 40).map((s: any) => ({
     heading: String(s?.heading || '').trim().slice(0, 300), note: String(s?.note || '').trim().slice(0, 1000),

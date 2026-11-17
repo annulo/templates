@@ -485,4 +485,11 @@ test("writing brief: sections save with picked products only; AI outline overwri
   // 页面上再存简报：对话记录留着
   content.saveBrief({ topic_id: topic.id, title: "T", brief: { ...brief } }, ctx);
   assert.equal(JSON.parse(tables.topics[0].brief).outline_chat_id, "chat-1");
+  // 写完接着翻的语言：存成小写去重；页面没传（单语言网站）就留着原来的
+  content.saveBrief({ topic_id: topic.id, title: "T", brief: { translate_locales: ["ZH", "ar", "zh"] } }, ctx);
+  assert.deepEqual(JSON.parse(tables.topics[0].brief).translate_locales, ["zh", "ar"]);
+  content.saveBrief({ topic_id: topic.id, title: "T", brief: {} }, ctx);
+  assert.deepEqual(JSON.parse(tables.topics[0].brief).translate_locales, ["zh", "ar"]);
+  content.saveBrief({ topic_id: topic.id, title: "T", brief: { translate_locales: [] } }, ctx);
+  assert.deepEqual(JSON.parse(tables.topics[0].brief).translate_locales, []);
 });

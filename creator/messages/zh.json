@@ -1273,7 +1273,14 @@
     "outline_empty_ai": "还没有大纲。点右上角「AI 出大纲初稿」，或者自己加一节；都不写的话，AI 写文章时自己安排结构",
     "save_first": "先填好标题再让 AI 出大纲",
     "view_grid": "网格",
-    "view_list": "列表"
+    "view_list": "列表",
+    "lang_source": "原文用什么语言写",
+    "translate_to": "写完接着翻成",
+    "translate_hint": "这个网站开了多语言：写完在同一段对话里接着翻，发布时一起发到各语言版本",
+    "lang_row": "语言",
+    "translate_after": "写完翻成 {langs}",
+    "translate_none": "不翻译",
+    "after_translate": "写完接着翻成 {langs}，每种语言存一份译文"
   },
   "onboarding": {
     "site_label": "网站地址",
