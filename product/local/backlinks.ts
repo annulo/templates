@@ -2,7 +2,7 @@ import { L } from './_i18n'
 import { profile, projectBrief } from './_ai'
 
 // 只读写业务表的能在手机上用；检查要出网读别人的页面，只在电脑上
-export const cloud = ['list', 'add', 'update', 'remove', 'sync', 'context', 'saveSuggestions']
+export const cloud = ['list', 'add', 'update', 'remove', 'sync', 'context', 'saveSuggestions', 'outreachContext', 'saveOutreach']
 export const remote = ['check']
 
 // 外链（设计见 docs/growth-plan.md「外链」）：别的网站上指向我们网站的链接。先简单做：登记、从社媒帖子自动登记、检查还在不在、看带来了几条询盘。
@@ -14,6 +14,8 @@ export const remote = ['check']
 //   backlinks.check({ ids? })                           读来源页面看链接还在不在（每 7 天定时）；社媒要登录、反爬的标 unknown，不算丢了；已申请的读到链接就自动标在线
 //   backlinks.context({})                               找外链机会（任务 tasks/backlink-opportunities.md）用：项目定位、产品、自己的网站和重要页面、已有外链、在盯的竞品
 //   backlinks.saveSuggestions({ items })                存 AI 找到的外链机会：状态「打算做」，同一个域名已经有的跳过
+//   backlinks.outreachContext({ id })                   写申请材料、邀请邮件（任务 tasks/backlink-outreach.md）用：这条外链、项目资料、产品、要指向的页面
+//   backlinks.saveOutreach({ id, text })                存写好的申请材料 / 邮件（Markdown），记下这段对话，「继续对话」回来接着改
 //
 // 机会的流程：打算做（planned）→ 已申请 / 已联系（applied，记 applied_at，14 天还没上线提醒跟进）→ 在线（live，记 live_at）。
 //
@@ -286,4 +288,36 @@ export function saveSuggestions(input: { items: Suggestion[] }, ctx: any) {
     added.push(created.id)
   }
   return { added: added.length, skipped }
+}
+
+/** 自己网站的首页（正式地址优先），外链没写指向哪页时用 */
+function homeURL(ctx: any) {
+  const c = all(ctx, 'channels').find((c) => ['creght_site', 'wordpress', 'website'].includes(c.type) && (c.live_url || c.url))
+  return c ? String(c.live_url || c.url).replace(/\/$/, '') : ''
+}
+
+/** 写申请材料、邀请邮件用的上下文（任务 tasks/backlink-outreach.md） */
+export function outreachContext(input: { id: string }, ctx: any) {
+  const b = ctx.db.get('backlinks', input?.id)
+  if (!b) throw new Error(L(ctx, '找不到这条外链', 'Backlink not found'))
+  const me = profile(ctx)
+  const sites = ownSites(ctx)
+  return {
+    link: { id: b.id, kind: b.kind, platform: b.platform, source_url: b.source_url, target_url: b.target_url || homeURL(ctx), reason: b.reason ?? '', how_to: b.how_to ?? '', status: b.status, note: b.note ?? '' },
+    previous: b.outreach ?? '',
+    project: projectBrief(me),
+    company: { name: me.name, markets: me.markets ?? '', customer_types: me.customer_types ?? '', advantages: me.advantages ?? '' },
+    products: all(ctx, 'products').slice(0, 20).map((p) => ({ name: p.name, category: p.category })),
+    own_sites: [...sites.keys()],
+  }
+}
+
+/** 存写好的申请材料 / 邀请邮件；再存一次就是覆盖成新版 */
+export function saveOutreach(input: { id: string; text: string }, ctx: any) {
+  const b = ctx.db.get('backlinks', input?.id)
+  if (!b) throw new Error(L(ctx, '找不到这条外链', 'Backlink not found'))
+  const text = String(input?.text ?? '').trim()
+  if (!text) throw new Error(L(ctx, 'text 是空的', 'text is empty'))
+  ctx.db.update('backlinks', b.id, { outreach: text, ...(ctx.chat_id ? { outreach_chat_id: ctx.chat_id } : {}) })
+  return { ok: true }
 }

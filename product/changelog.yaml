@@ -1,3 +1,6 @@
+- version: 0.30.0
+  zh: "外链能让 AI 写申请材料和邀请邮件（只写不发）；外链列表的排版更清爽，每条只留下一步要做的按钮。"
+  en: "AI can now draft backlink applications and outreach emails (it writes, you send); the backlink list is cleaner, with just the next step on each row."
 - version: 0.29.0
   zh: "外链页新增「AI 找外链机会」：按你的行业找能申请外链的地方并写清怎么做；外链多了「已申请」，超过两周没上线会提醒跟进。"
   en: "New \"Find backlink ideas with AI\" on the Backlinks tab: places in your industry to get a link, with how to apply; links can be marked Applied, with a reminder to follow up after two weeks."
