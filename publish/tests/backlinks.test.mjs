@@ -121,3 +121,21 @@ test('检查：已申请的读到链接自动标在线，读不到保持已申�
   assert.ok(tables.backlinks[0].live_at)
   assert.equal(tables.backlinks[2].checked_at, undefined)
 })
+
+test('申请材料：上下文带这条外链和资料，存了再存是覆盖，记下对话', () => {
+  const { ctx, tables } = fixture({ channels: [site], profile: [{ id: 'p', name: 'Pofung', business: '家具', markets: '欧洲' }], products: [{ id: 'x', name: 'Kylo Table', category: 'dining-table' }],
+    backlinks: [{ id: 'b1', source_url: 'https://www.europages.co.uk/', kind: 'directory', status: 'planned', how_to: '注册公司页' }] })
+  const c = backlinks.outreachContext({ id: 'b1' }, ctx)
+  assert.equal(c.link.kind, 'directory')
+  assert.equal(c.link.target_url, 'https://www.pofung.com')
+  assert.equal(c.products[0].name, 'Kylo Table')
+  assert.equal(c.previous, '')
+  ctx.chat_id = 'chat-9'
+  backlinks.saveOutreach({ id: 'b1', text: '# v1' }, ctx)
+  backlinks.saveOutreach({ id: 'b1', text: '# v2' }, ctx)
+  assert.equal(tables.backlinks[0].outreach, '# v2')
+  assert.equal(tables.backlinks[0].outreach_chat_id, 'chat-9')
+  assert.equal(backlinks.outreachContext({ id: 'b1' }, ctx).previous, '# v2')
+  assert.throws(() => backlinks.saveOutreach({ id: 'b1', text: ' ' }, ctx), /空/)
+  assert.throws(() => backlinks.outreachContext({ id: 'nope' }, ctx), /找不到/)
+})

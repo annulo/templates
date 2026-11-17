@@ -23,6 +23,8 @@
       "chat_id": { "type": "string", "description": "找出这条机会的那段对话，「继续对话」打开它" },
       "applied_at": { "type": "string", "description": "标成已申请的时间 ISO8601（超过 14 天还没上线提醒跟进）" },
       "live_at": { "type": "string", "description": "标成在线的时间 ISO8601" },
+      "outreach": { "type": "string", "description": "AI 写的申请材料或邀请邮件（Markdown，任务 backlink-outreach），用户复制去用" },
+      "outreach_chat_id": { "type": "string", "description": "写申请材料的那段对话，「继续对话」打开它接着改" },
       "checked_at": { "type": "string", "description": "上次检查时间 ISO8601" },
       "check_error": { "type": "string", "description": "上次检查出的问题" },
       "created_at": { "type": "string", "description": "登记时间 ISO8601" }

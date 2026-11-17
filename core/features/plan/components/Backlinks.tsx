@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Check, MessageSquareText, Plus, RefreshCw, ScanSearch, Send, Share2, Trash2 } from 'lucide-react'
+import { Check, MessageSquareText, PenLine, Plus, RefreshCw, ScanSearch, Send, Share2, Trash2 } from 'lucide-react'
+import Markdown from './Markdown'
 import RunButton from './RunButton'
 import Select from './Select'
 import { TaskButton, TaskRequirements, useTask } from './Task'
@@ -14,7 +15,7 @@ type Link = {
   id: string; kind: Kind; platform: string; source_url: string; target_url: string; anchor?: string; nofollow?: boolean
   status: Status; auto?: boolean; note?: string; checked_at?: string; check_error?: string; created_at: string; domain: string; leads: number
   ai?: boolean; reason?: string; how_to?: string; effort?: 'easy' | 'medium' | 'hard'; paid?: boolean; chat_id?: string
-  days_applied?: number; follow_up?: boolean
+  days_applied?: number; follow_up?: boolean; outreach?: string; outreach_chat_id?: string
 }
 type Data = { list: Link[]; by_status: Partial<Record<Status, number>>; leads_tracked: boolean }
 
@@ -23,6 +24,8 @@ const STATUSES: Status[] = ['live', 'applied', 'planned', 'lost', 'unknown']
 const TONE: Record<Status, Tone> = { live: 'ok', applied: 'primary', planned: 'default', lost: 'bad', unknown: 'warn' }
 /** tasks/backlink-opportunities.md：AI 联网找能拿到外链的具体地方，存成「打算做」；写法（找多少、偏重哪类）用户可改 */
 const IDEAS_TASK = 'backlink-opportunities'
+/** tasks/backlink-outreach.md：给一条机会写申请材料（目录、平台要填的介绍）或邀请邮件，只写不发；写好了回到那段对话接着改 */
+const OUTREACH_TASK = 'backlink-outreach'
 
 /**
  * 外链（增长计划 → 外链）：先简单做，登记别的网站上指向我们网站的链接，社媒帖子里带了网站链接的自动登记，
@@ -36,6 +39,7 @@ export default function Backlinks({ ctx }: { ctx: Ctx }) {
   const [filter, setFilter] = useState<Status | ''>('')
   const [going, setGoing] = useState<Link | null>(null)
   const { task, setTask } = useTask(IDEAS_TASK)
+  const outreach = useTask(OUTREACH_TASK)
   const load = useCallback(() => {
     runLocal<Data>('backlinks.list', {})
       .then((d) => (setData(d), setError('')))
@@ -56,7 +60,8 @@ export default function Backlinks({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <TaskRequirements task={task} onSaved={setTask} title={tr('plan.links_req_title')} hint={tr('plan.links_req_hint')} />
+          <TaskRequirements task={outreach.task} onSaved={outreach.setTask} label={tr('plan.links_outreach_req')} title={tr('plan.links_outreach_req_title')} hint={tr('plan.links_outreach_req_hint')} />
+          <TaskRequirements task={task} onSaved={setTask} label={tr('plan.links_req')} title={tr('plan.links_req_title')} hint={tr('plan.links_req_hint')} />
           <TaskButton task={IDEAS_TASK} input={{}} onFinished={load} variant="outline" icon={ScanSearch}>{tr('plan.links_find')}</TaskButton>
           <RunButton inline variant="outline" fn="backlinks.sync" input={{}} icon={Share2} onDone={load}>{tr('plan.links_sync')}</RunButton>
           <RunButton inline variant="outline" fn="backlinks.check" input={{}} icon={RefreshCw} onDone={load}>{tr('plan.links_check')}</RunButton>
@@ -98,11 +103,22 @@ export default function Backlinks({ ctx }: { ctx: Ctx }) {
                   </p>
                 )}
                 {(b.check_error || b.note) && <p className="text-xs text-muted-foreground">{b.check_error || b.note}</p>}
+                {b.outreach && (
+                  <details className="rounded-lg border border-border px-3 py-2">
+                    <summary className="cursor-pointer text-xs font-medium">{tr('plan.links_outreach_show')}</summary>
+                    <div className="mt-2 text-sm"><Markdown text={b.outreach} /></div>
+                  </details>
+                )}
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
                 {b.chat_id && (
                   <Button variant="ghost" size="sm" onClick={() => openChat(b.chat_id!)}><MessageSquareText /> {tr('plan.links_chat')}</Button>
                 )}
+                {(b.status === 'planned' || b.status === 'applied') && (b.outreach && b.outreach_chat_id ? (
+                  <Button variant="ghost" size="sm" onClick={() => openChat(b.outreach_chat_id!)}><PenLine /> {tr('plan.links_outreach_edit')}</Button>
+                ) : (
+                  <TaskButton task={OUTREACH_TASK} input={{ id: b.id }} match={(r) => (r.input as any)?.id === b.id} onFinished={load} variant="ghost" icon={PenLine}>{tr('plan.links_outreach')}</TaskButton>
+                ))}
                 {b.status === 'planned' && (
                   <RunButton inline variant="ghost" fn="backlinks.update" input={{ id: b.id, status: 'applied' }} icon={Send} onDone={load}>{tr('plan.links_mark_applied')}</RunButton>
                 )}
