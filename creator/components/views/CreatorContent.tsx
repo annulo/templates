@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { createPortal } from 'react-dom'
 import { ArrowLeft, AtSign, Boxes, Check, CheckCircle2, Copy, FilePenLine, Wand2, Download, Loader, MoreHorizontal, RefreshCw, Pencil, Plus, Repeat2, Send, Trash2, X, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import InspirationLibrary, { InspirationReferences } from '../InspirationLibrary'
-import { WritingBriefDialog } from '../ContentEvidence'
+import { WritingBriefPage } from '../ContentEvidence'
 import { NotionLogo } from '../BrandIcons'
 import { ArticleEditor, ArticleView, draftOf, patchOf, sameDraft, type ArticleDraft } from '../ArticleEditor'
 import ArticleStatusControl from '../ArticleStatus'
@@ -904,6 +904,8 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite, inspiration 
   if (!list) return <Skeleton className="h-40 rounded-xl" />
   const active = list.filter((t) => t.status === 'idea' || t.status === 'writing')
   const rest = list.filter((t) => t.status === 'done' || t.status === 'dropped')
+  // 点开选题：整页填写作简报，代替列表
+  if (briefTopic) return <WritingBriefPage key={briefTopic.id} ctx={ctx} topic={briefTopic} defaults={{ language: '', channels: '' }} onClose={() => { setBriefTopic(null); onTopicClose?.() }} onChanged={onChanged} onWrite={() => onWrite({ topic_id: briefTopic.id, channel_id: site?.id })} />
 
   return (
     <div className="space-y-4">
@@ -997,7 +999,6 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite, inspiration 
       )}
 
       {referenceTopic && <Dialog open onClose={() => setReferenceTopic(null)} title={`${tr('inspiration.references')} · ${referenceTopic.title}`} width={700}><InspirationReferences ctx={ctx} targetType="topic" targetId={referenceTopic.id} /></Dialog>}
-      {briefTopic && <WritingBriefDialog ctx={ctx} topic={briefTopic} defaults={{ language: '', channels: '' }} onClose={() => { setBriefTopic(null); onTopicClose?.() }} onChanged={onChanged} onWrite={() => onWrite({ topic_id: briefTopic.id, channel_id: site?.id })} />}
       <Dialog
         open={adding}
         onClose={() => setAdding(false)}

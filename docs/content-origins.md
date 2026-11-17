@@ -42,7 +42,7 @@
 
 ## 谁读
 
-- **选题详情**（`WritingBriefDialog`）和**文章详情**（`ArticleDetail` 底部）：「来源」一行（`core/components/Origins.tsx`），每个出处点了回到那一页（AI 搜索问题定位到那一行：`?view=geo&q=<问题 id>`），助手出的能打开对话；文章先显示「选题：xxx」，改写的顺着 `source_id` 往上找到选题。
+- **选题详情**（`WritingBriefPage`，整页分步）和**文章详情**（`ArticleDetail` 底部）：「来源」一行（`core/components/Origins.tsx`），每个出处点了回到那一页（AI 搜索问题定位到那一行：`?view=geo&q=<问题 id>`），助手出的能打开对话；文章先显示「选题：xxx」，改写的顺着 `source_id` 往上找到选题。
 - **AI 搜索页**每个推荐类问题下面：写成的选题 → 文章（草稿 / 已发布）→ 发布后几个 AI 引用了本站（发布时间之后的检测结果）。有链接就不再按关键词猜「相关文章」。
 - **出选题的上下文**（`topics.context` 的 `geo_questions`）：已经写成过选题的问题带 `topic_titles`，助手别再出重复的。
 
