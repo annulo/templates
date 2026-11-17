@@ -1,3 +1,6 @@
+- version: 0.33.0
+  zh: "新增「新建社媒内容」：填网址、说一句要做什么，AI 先出分镜和文案给你确认，再自动录网站做成视频，各平台存好待发的帖子。"
+  en: "New "New social content": enter a URL and say what you want; AI drafts the storyboard and copy for you to confirm, then records the site into a video and prepares a post for each platform."
 - version: 0.32.0
   zh: "多语言网站写文章时就能选好要翻的语言，AI 写完在同一段对话里接着翻好各语言版本。"
   en: "On multilingual sites, pick the languages in the brief and AI translates the article right after writing it, in the same chat."

@@ -19,7 +19,7 @@ export function saveBrief(input: { topic_id: string; title: string; angle?: stri
   const brief: any = { product_ids }
   const original = json<any>(topic.brief, {})
   // 营销计划、账号策略带进来的（产品运营）：用户不在这里改，原样留着
-  for (const key of ['outline_chat_id', 'proof', 'account_strategy', 'account_name', 'account_role_key', 'target_account_id', 'tracking_url', 'historical_notes', 'source_assets', 'source_snapshot'])
+  for (const key of ['social', 'outline_chat_id', 'proof', 'account_strategy', 'account_name', 'account_role_key', 'target_account_id', 'tracking_url', 'historical_notes', 'source_assets', 'source_snapshot'])
     if (original[key] !== undefined) brief[key] = original[key]
   for (const key of ['audience', 'buyer_question', 'outline', 'language', 'channels', 'cta', 'gaps']) brief[key] = String(b[key] || '').trim()
   // 多语言网站：写完接着翻成哪几种语言（写文章任务读它，见 tasks/write-article.md「写完翻译」）；没传就不动原来的
