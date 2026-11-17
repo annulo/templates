@@ -16,6 +16,12 @@ import { check } from '../plugins/social/local/social'
 // 文章本身就是要发的内容，不再有「各账号的版本」：帖子是发布记录，文章改了不影响已经发出去的。
 // 同一个账号还有这篇没发出去的记录（失败、排期、老的待审版本）就改它，不另起一条。
 
+/** 只有部分模板有的模块（拼出来的路径：没有这个文件的模板打包时不报错） */
+function optional(name: string): any {
+  try { return require('./' + name + '.ts') } catch { return null }
+}
+declare const require: (path: string) => any
+
 type Ready = { channel_id: string; post_id?: string; publisher?: string }
 
 const SITE_TYPES = ['creght_site', 'wordpress']
@@ -26,7 +32,7 @@ function siteOf(ctx: any, id: string) {
 /** 以前网站版本能单独改标题、正文…：发布脚本有就用它的（publishTo 里「空则继承文章」）。现在文章就是要发的内容，发之前清掉 */
 const OVERRIDES = { title: '', summary: '', body: '', video: '', keywords: '' }
 
-export function prepare(input: { article_id: string; channel_ids: string[]; scheduled_at?: string }, ctx: any) {
+export function prepare(input: { article_id: string; channel_ids: string[]; scheduled_at?: string; plan_item_id?: string }, ctx: any) {
   let a = ctx.db.get('articles', input?.article_id)
   if (!a) throw new Error(L(ctx, '没有这篇文章：', 'No such article: ') + input?.article_id)
   // 老文章补成插件认的格式再发（帖子按补好的生成）
@@ -38,6 +44,8 @@ export function prepare(input: { article_id: string; channel_ids: string[]; sche
   if (at && !(Date.parse(at) > Date.now() - 60_000)) throw new Error(L(ctx, '排期时间要选将来的时间', 'Pick a time in the future'))
   const t = typeOf(a)
   const ok = platformsFor(t)
+  // 增长计划：这批帖子算哪个计划项的（调用方没给就按这周还没做完的社媒计划项）；帖子里的本站链接带上来源参数，询盘才能对上
+  const planItem = String(input?.plan_item_id ?? '').trim() || optional('plan')?.socialItem?.({}, ctx)?.id || ''
   const ready: Ready[] = []
   const problems: { channel_id: string; problems: string[] }[] = []
   for (const id of ids) {
@@ -61,9 +69,14 @@ export function prepare(input: { article_id: string; channel_ids: string[]; sche
     if (!ch) { problems.push({ channel_id: id, problems: [L(ctx, '没有这个账号', 'No such account')] }); continue }
     if (!ok.includes(ch.type)) { problems.push({ channel_id: id, problems: [L(ctx, '这个平台不支持这种类型的文章，先改写成它支持的类型', "This platform doesn't take this type; rewrite it into a type it supports first")] }); continue }
     const now = new Date().toISOString()
-    const row = { ...fromContent(a, ch.type), status: at ? 'scheduled' : 'approved', scheduled_at: at, error: null, review_note: null, updated_at: now }
+    const post: any = fromContent(a, ch.type)
+    const tagged = optional('backlinks')?.tagLinks?.({ body: post.body, platform: ch.type, plan_item_id: planItem }, ctx)
+    if (tagged?.tagged) post.body = tagged.body
+    const row = { ...post, status: at ? 'scheduled' : 'approved', scheduled_at: at, error: null, review_note: null, updated_at: now }
     const old = ctx.db.query('social_posts', { where: { article_id: a.id, channel_id: id }, limit: 50 }).list.find((p: any) => !['published', 'publishing', 'removed'].includes(p.status))
-    const postId = old ? (ctx.db.update('social_posts', old.id, row), old.id) : ctx.db.insert('social_posts', { ...row, channel_id: id, article_id: a.id, source: 'shuttle', created_at: now }).id
+    // 计划项只在第一次记（同一条帖子再改、重发不换归属）
+    const attach = planItem && !old?.plan_item_id ? { plan_item_id: planItem } : {}
+    const postId = old ? (ctx.db.update('social_posts', old.id, { ...row, ...attach }), old.id) : ctx.db.insert('social_posts', { ...row, ...attach, channel_id: id, article_id: a.id, source: 'shuttle', created_at: now }).id
     let found: string[] = []
     try {
       found = check({ post_id: postId }, ctx)?.problems ?? []

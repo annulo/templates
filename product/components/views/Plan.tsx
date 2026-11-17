@@ -9,7 +9,7 @@ import { tr } from '../../lib/i18n'
 import type { Ctx, View } from './types'
 
 type Action = { kind: 'go'; view: View; params?: Record<string, string> } | { kind: 'task'; task: string; input?: unknown }
-type Item = { id: string; phase: number; week: number; area: string; title: string; why: string; action: Action | null; status: '' | 'done' | 'skipped'; auto?: boolean; done_by?: '' | 'auto' | 'ai' | 'user'; done_note?: string; done_at?: string; who?: 'you' | 'ai'; scope?: 'week' | 'month' }
+type Item = { id: string; phase: number; week: number; area: string; title: string; why: string; action: Action | null; status: '' | 'done' | 'skipped'; auto?: boolean; done_by?: '' | 'auto' | 'ai' | 'user'; done_note?: string; done_at?: string; who?: 'you' | 'ai'; scope?: 'week' | 'month'; posts?: { id: string; title: string; status: string; url: string; views: number; engagement: number }[] }
 type Progress = { metric: string; tier: 'process' | 'leading' | 'result'; better: 'up' | 'down'; label: string; baseline: number | null; current: number | null; target: number; pct: number | null }
 type Option = { level: 'conservative' | 'normal' | 'aggressive'; note: string; targets: Record<string, number> }
 type Phase = { phase: number; title: string; focus: string; goals: string[] }
@@ -679,6 +679,19 @@ function Row({ item: i, ctx, onChanged, readOnly, currentWeek, compact = false }
           <p className="flex items-start gap-1 text-xs text-emerald-700 dark:text-emerald-400 [overflow-wrap:anywhere]"><Check className="mt-0.5 size-3 shrink-0" />{i.done_note}</p>
         ) : (
           i.why && <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{i.why}</p>
+        )}
+        {!!i.posts?.length && (
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer hover:text-foreground">{tr('plan.item_posts', { n: i.posts.length })}</summary>
+            <ul className="mt-1 space-y-0.5 pl-4">
+              {i.posts.map((p) => (
+                <li key={p.id} className="[overflow-wrap:anywhere]">
+                  {p.url ? <a href={p.url} target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">{p.title}</a> : p.title}
+                  {' · '}{p.status === 'published' ? tr('plan.item_post_stat', { views: p.views, eng: p.engagement }) : tr('plan.item_post_unpub')}
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
       </div>
       {!readOnly && (

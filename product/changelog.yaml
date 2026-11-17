@@ -1,6 +1,10 @@
 - version: 0.33.1
   zh: "助手面板里的示例问题换成每天会用的：今天先做什么、做社媒视频、出选题、写周报。"
   en: "The assistant panel now suggests everyday tasks: what to do today, a social video, topic ideas and the weekly report."
+- version: 0.34.0
+  zh: "社媒发布记录和增长计划连起来：帖子记在计划项名下、算进计划指标，询盘能对上是哪个平台带来的，检查点和周报按社媒数据调整（要社媒插件 0.11.0）。"
+  en: "Social posts now tie into the growth plan: posts are recorded under plan items and counted in plan metrics, inquiries are traced to the platform that brought them, and checkpoints and weekly reports adjust from social data (needs the Social plugin 0.11.0)."
+
 - version: 0.33.0
   zh: "新增「新建社媒内容」：填网址、说一句要做什么，AI 先出分镜和文案给你确认，再自动录网站做成视频，各平台存好待发的帖子。"
   en: "New "New social content": enter a URL and say what you want; AI drafts the storyboard and copy for you to confirm, then records the site into a video and prepares a post for each platform."
