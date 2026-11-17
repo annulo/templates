@@ -1,3 +1,6 @@
+- version: 0.29.0
+  zh: "外链页新增「AI 找外链机会」：按你的行业找能申请外链的地方并写清怎么做；外链多了「已申请」，超过两周没上线会提醒跟进。"
+  en: "New \"Find backlink ideas with AI\" on the Backlinks tab: places in your industry to get a link, with how to apply; links can be marked Applied, with a reminder to follow up after two weeks."
 - version: 0.28.0
   zh: "网站检查会提示公开邮箱用了 gmail 这类免费邮箱；AI 全站审查会细看首页的标题、品牌介绍和信任信息。"
   en: "Site checks now flag a free mailbox (like Gmail) as the public email, and the AI site review takes a close look at the homepage headline, brand intro and trust signals."
