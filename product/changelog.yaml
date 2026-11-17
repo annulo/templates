@@ -1,3 +1,6 @@
+- version: 0.31.0
+  zh: "选题的写作简报改成整页分步填：挑产品能搜索、按分类看，大纲能让 AI 出初稿，改了自动保存。"
+  en: "Topic briefs are now a step-by-step page: search and filter products to feature, let AI draft the outline, and changes save automatically."
 - version: 0.30.0
   zh: "外链能让 AI 写申请材料和邀请邮件（只写不发）；外链列表的排版更清爽，每条只留下一步要做的按钮。"
   en: "AI can now draft backlink applications and outreach emails (it writes, you send); the backlink list is cleaner, with just the next step on each row."

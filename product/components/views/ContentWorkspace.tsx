@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ArrowUpRight, ClipboardList, Link2, Loader, NotebookPen, Plus, Search as SearchIcon, Sparkles } from 'lucide-react'
 import { ArticleDetail, RowMore, removeArticle } from './Content'
-import { WritingBriefDialog } from '../ContentEvidence'
+import { WritingBriefPage } from '../ContentEvidence'
 import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
 import { AiScoreTag, aiScoreOn } from '../AiScore'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
@@ -172,7 +172,17 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
       open={id => setParam('article', id)} onBack={() => { setParam('article', ''); setParam('version', '') }} onChanged={reload} />
       : null}
     {selectedArticle && workspace === 'social' && selectedEntry && <ContentPerformance ctx={ctx} entry={selectedEntry} data={data!} reviews={growthReviews} />}
-    {!selectedArticle && <>
+    {selectedTopic && <WritingBriefPage key={selectedTopic.id} ctx={ctx} topic={selectedTopic} header={topicEntry && entryHeader(topicEntry)} onClose={() => setParam('topic', '')} onChanged={reload} onWrite={async () => {
+      try {
+        // 网站文章：发到哪个网站定得下来就直接交给助手写；定不下来（几个网站、社媒要选账号）再弹新建内容选
+        const site = workspace === 'website' ? accounts.find(c => c.id === selectedTopic.target_account_id) || (accounts.length === 1 ? accounts[0] : undefined) : undefined
+        if (site) { await writer.run({ workspace, topic_id: selectedTopic.id, type: 'article', channel_id: site.id }); reload(); return }
+        const latest = await runLocal<ContentData>('content-workspace.context', {})
+        const topic = latest.topics.find(t => t.id === selectedTopic.id)
+        if (topic) openNew(topic)
+      } catch (e) { toast((e as Error).message, 'error') }
+    }} />}
+    {!selectedArticle && !selectedTopic && <>
       <PageHeader title={w(workspace + '_content')} desc={w(workspace + '_desc')} actions={<>
         <Button onClick={() => openNew()}><Plus />{w('new_content')}</Button>
         <TaskLaunchButton task="suggest-topics" input={{ workspace }} match={r => r.input?.workspace === workspace} reqKey="topic_requirements" onFinished={reload}
@@ -257,13 +267,6 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
       metrics={metrics.get('post:' + params.post)} account={destination(entries.find(e => e.post?.id === params.post)!)}
       articles={entries.filter(e => e.article && e.workspaces.includes('social')).map(e => e.article)}
       onClose={() => setParam('post', '')} onDone={id => { setParam('post', ''); reload(); setParam('article', id) }} />}
-    {selectedTopic && <WritingBriefDialog key={selectedTopic.id} ctx={ctx} topic={selectedTopic} header={topicEntry && entryHeader(topicEntry)} onClose={() => setParam('topic', '')} onChanged={reload} onWrite={async () => {
-      try {
-        const latest = await runLocal<ContentData>('content-workspace.context', {})
-        const topic = latest.topics.find(t => t.id === selectedTopic.id)
-        if (topic) { setParam('topic', ''); openNew(topic) }
-      } catch (e) { toast((e as Error).message, 'error') }
-    }} />}
     <Dialog open={!!form} onClose={() => !busy && setForm(null)} title={w('new_content')} width={680} footer={<>
       <Button variant="ghost" disabled={busy} onClick={() => setForm(null)}>{tr('common.cancel')}</Button>
       <Button variant="outline" disabled={busy || !form?.title.trim()} onClick={() => save('topic')}>{w('save_topic')}</Button>
