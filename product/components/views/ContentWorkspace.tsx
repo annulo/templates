@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ArrowUpRight, ClipboardList, Link2, Loader, NotebookPen, Plus, Search as SearchIcon, Sparkles } from 'lucide-react'
 import { ArticleDetail, RowMore, removeArticle } from './Content'
 import { WritingBriefPage } from '../ContentEvidence'
+import SocialCreate, { socialOf } from '../SocialCreate'
 import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
 import { AiScoreTag, aiScoreOn } from '../AiScore'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
@@ -146,7 +147,10 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
   }
   const selectedArticle = data?.articles.find(a => a.id === params.article)
   const selectedEntry = selectedArticle && entries.find(e => e.article?.id === selectedArticle.id)
-  const selectedTopic = !params.article && data?.topics.find(t => t.id === params.topic)
+  // 新建社媒内容（三步向导，components/SocialCreate.tsx）：?create=new 新的，?create=<选题 id> 接着做；向导做的选题点开也进向导
+  const creating = workspace === 'social' && !params.article && (params.create || (params.topic && socialOf(data?.topics.find(t => t.id === params.topic)) ? params.topic : ''))
+  const createTopic = creating && creating !== 'new' ? data?.topics.find(t => t.id === creating) || null : null
+  const selectedTopic = !params.article && !creating && data?.topics.find(t => t.id === params.topic)
   const topicEntry = selectedTopic ? entries.find(e => e.topic?.id === selectedTopic.id && !e.article && !e.plan) || entries.find(e => e.topic?.id === selectedTopic.id) : undefined
   // 计划和选题详情的顶上一条：状态（点了改状态和链接）+ 发布链接，和正文详情的顶栏、发布记录一个样子
   const entryHeader = (entry: ContentEntry) => <div className="space-y-3">
@@ -155,7 +159,7 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
   </div>
   const published = selectedArticle && entries.some(e => e.article?.id === selectedArticle.id && e.stage === 'published')
   // 每一行点标题都进它走得最远的那份记录：有成品进正文，没有成品进计划，只有选题进选题
-  const openEntry = (entry: ContentEntry) => entry.post ? setParam('post', entry.post.id) : entry.article ? setParam('article', entry.article.id) : entry.plan ? setParam('plan', entry.plan.id) : setParam('topic', entry.topic.id)
+  const openEntry = (entry: ContentEntry) => entry.post ? setParam('post', entry.post.id) : entry.article ? setParam('article', entry.article.id) : entry.plan ? setParam('plan', entry.plan.id) : socialOf(entry.topic) ? setParam('create', entry.topic.id) : setParam('topic', entry.topic.id)
   const destination = (entry: ContentEntry) => {
     const name = (id?: string) => ctx.channels.find(c => c.id === id)?.name || data?.channels.find(c => c.id === id)?.name
     const publishedIds = entryAccountIds(entry, data!, workspace, true)
@@ -182,9 +186,13 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
         if (topic) openNew(topic)
       } catch (e) { toast((e as Error).message, 'error') }
     }} />}
-    {!selectedArticle && !selectedTopic && <>
+    {creating && data && (creating === 'new' || createTopic) && <SocialCreate key={createTopic?.id || 'new'} ctx={ctx} topic={createTopic}
+      onCreated={id => updateParam('create', id)} onClose={() => { updateParam('create', ''); updateParam('topic', '') }} onChanged={reload}
+      openArticle={id => { updateParam('create', ''); updateParam('topic', ''); setParam('article', id) }} />}
+    {!selectedArticle && !selectedTopic && !creating && <>
       <PageHeader title={w(workspace + '_content')} desc={w(workspace + '_desc')} actions={<>
-        <Button onClick={() => openNew()}><Plus />{w('new_content')}</Button>
+        {workspace === 'social' && <Button onClick={() => setParam('create', 'new')}><Sparkles />{tr('social_create.new')}</Button>}
+        <Button variant={workspace === 'social' ? 'outline' : 'default'} onClick={() => openNew()}><Plus />{w('new_content')}</Button>
         <TaskLaunchButton task="suggest-topics" input={{ workspace }} match={r => r.input?.workspace === workspace} reqKey="topic_requirements" onFinished={reload}
           title={tr('content.gen_topics')} desc={w('suggest_desc')} reqTitle={tr('content.req_title')} reqHint={tr('content.req_hint')} startLabel={tr('content.start_topics')} variant="outline">{tr('content.gen_topics')}</TaskLaunchButton>
         {marketing && data && marketing.Import({ data, onDone: reload })}
@@ -249,7 +257,7 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
               {!entry.workspaces.length && <Button size="sm" variant="outline" onClick={() => { setAssignmentScope(workspace); setAssignment(entry) }}>{w('assign')}</Button>}
               {!entry.post && <RowMore items={[
                 ...(entry.plan ? [{ label: w('plan_details'), icon: <ClipboardList className="size-4" />, onSelect: () => setParam('plan', entry.plan.id) }] : []),
-                ...(entry.topic ? [{ label: w('brief'), icon: <NotebookPen className="size-4" />, onSelect: () => setParam('topic', entry.topic.id) }] : [])]}
+                ...(entry.topic ? [{ label: socialOf(entry.topic) ? tr('social_create.title') : w('brief'), icon: <NotebookPen className="size-4" />, onSelect: () => socialOf(entry.topic) ? setParam('create', entry.topic.id) : setParam('topic', entry.topic.id) }] : [])]}
                 {...(entry.article ? { onRewrite: () => setRewrite(entry.article), onCopy: () => copy(entry.article), onDelete: async () => { await removeArticle(entry.article, data.posts, data.publications); reload() } } : {})} />}
             </div>
           </div>)}
