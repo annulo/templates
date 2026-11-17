@@ -17,6 +17,8 @@ export function saveBrief(input: { topic_id: string; title: string; angle?: stri
   const b = input.brief || {}
   const brief: any = {}
   for (const key of ['audience', 'buyer_question', 'outline', 'language', 'channels', 'cta', 'gaps']) brief[key] = String(b[key] || '').trim()
+  // 大纲按节存（页面上拖动排序）
+  if (Array.isArray(b.sections)) brief.sections = b.sections.slice(0, 40).map((s: any) => ({ heading: String(s?.heading || '').trim().slice(0, 300), note: String(s?.note || '').trim().slice(0, 1000), product_ids: [] })).filter((s: any) => s.heading || s.note)
   ctx.db.update('topics', topic.id, { title: input.title.trim(), angle: String(input.angle || '').trim(), keywords: String(input.keywords || '').trim(), brief: JSON.stringify(brief) })
   return { topic_id: topic.id }
 }

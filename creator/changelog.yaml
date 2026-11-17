@@ -2,6 +2,9 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.24.0
+  zh: "选题的写作简报改成整页分步填，大纲一节一节排、能拖动顺序，改了自动保存。"
+  en: "Topic briefs are now a step-by-step page with a section-by-section outline you can reorder; changes save automatically."
 - version: 0.23.0
   zh: "关键词按主题组织；在页面上就能连 Google 数据，任何网址都能加成网站；网站检查会提示免费邮箱，AI 审查会细看首页。"
   en: "Keywords are organized by topic; connect Google data right on the page and add any URL as a website; site checks flag free mailboxes and the AI review looks closely at the homepage."
