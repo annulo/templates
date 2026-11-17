@@ -1,6 +1,6 @@
 {
   "name": "外链",
-  "desc": "别的网站上指向我们网站的链接：社媒主页和帖子、B2B 平台店铺、行业目录、客座文章……手动登记或从社媒帖子自动登记，定期检查还在不在",
+  "desc": "别的网站上指向我们网站的链接：社媒主页和帖子、B2B 平台店铺、行业目录、客座文章……手动登记、从社媒帖子自动登记，或者 AI 找出来的外链机会（打算做 → 已申请 → 在线），定期检查还在不在",
   "json_schema": {
     "type": "object",
     "properties": {
@@ -11,10 +11,18 @@
       "channel_id": { "type": "string", "description": "指向哪个网站（channels）" },
       "anchor": { "type": "string", "description": "链接文字" },
       "nofollow": { "type": "boolean", "description": "是不是 nofollow（社媒基本都是：对谷歌排名直接帮助有限，主要是引流和品牌）" },
-      "status": { "type": "string", "description": "planned 打算做 / live 在线 / lost 找不到了（页面没了或链接被删） / unknown 检查不了（要登录、反爬）" },
+      "status": { "type": "string", "description": "planned 打算做 / applied 已申请、已联系，等对方上线 / live 在线 / lost 找不到了（页面没了或链接被删） / unknown 检查不了（要登录、反爬）" },
       "auto": { "type": "boolean", "description": "从社媒帖子自动登记的" },
       "post_id": { "type": "string", "description": "自动登记时对应的社媒帖子（social_posts）" },
       "note": { "type": "string", "description": "备注" },
+      "ai": { "type": "boolean", "description": "AI 找出来的外链机会（任务 backlink-opportunities）" },
+      "reason": { "type": "string", "description": "为什么值得做：和我们的行业、市场对不对口，在哪里看到的（比如竞品也在上面）" },
+      "how_to": { "type": "string", "description": "怎么拿到：去哪个页面申请、要准备什么、联系谁、大概多久上线" },
+      "effort": { "type": "string", "description": "easy 填个表就行 / medium 要准备资料或等审核 / hard 要参展、谈合作、写稿" },
+      "paid": { "type": "boolean", "description": "要花钱（会员费、参展费、付费收录）" },
+      "chat_id": { "type": "string", "description": "找出这条机会的那段对话，「继续对话」打开它" },
+      "applied_at": { "type": "string", "description": "标成已申请的时间 ISO8601（超过 14 天还没上线提醒跟进）" },
+      "live_at": { "type": "string", "description": "标成在线的时间 ISO8601" },
       "checked_at": { "type": "string", "description": "上次检查时间 ISO8601" },
       "check_error": { "type": "string", "description": "上次检查出的问题" },
       "created_at": { "type": "string", "description": "登记时间 ISO8601" }
