@@ -1,3 +1,6 @@
+- version: 0.33.1
+  zh: "助手面板里的示例问题换成每天会用的：今天先做什么、做社媒视频、出选题、写周报。"
+  en: "The assistant panel now suggests everyday tasks: what to do today, a social video, topic ideas and the weekly report."
 - version: 0.33.0
   zh: "新增「新建社媒内容」：填网址、说一句要做什么，AI 先出分镜和文案给你确认，再自动录网站做成视频，各平台存好待发的帖子。"
   en: "New "New social content": enter a URL and say what you want; AI drafts the storyboard and copy for you to confirm, then records the site into a video and prepares a post for each platform."
