@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, Check, GripVertical, ListOrdered, Loader, Package, PenLine, Plus, Search, Sparkles, Trash2, TriangleAlert, Users, X } from 'lucide-react'
-import { dbList, isPublishSite, runLocal, shuttleImage, type BriefSection, type Product, type Topic, type WritingBrief } from '../lib/shuttle'
+import { ArrowLeft, ArrowRight, Check, GripVertical, ListOrdered, Loader, MessageSquareText, Package, PenLine, Plus, Search, Sparkles, Trash2, TriangleAlert, Users, X } from 'lucide-react'
+import { dbList, isPublishSite, openChat, runLocal, shuttleImage, type Task, type BriefSection, type Product, type Topic, type WritingBrief } from '../lib/shuttle'
 import { tr } from '../lib/i18n'
 import { Button, Notice, cx, inputCls } from './ui'
 import type { Ctx } from './views/types'
 import { TopicOrigins } from './Origins'
 import { LandingButton } from './views/Landing'
+import { TaskButton, TaskRequirements, useTask } from './Task'
+
+/** tasks/brief-outline.md：AI 出大纲初稿，存进简报；模板没有这个任务（自媒体）就不显示按钮 */
+const OUTLINE_TASK = 'brief-outline'
 
 // 选题的写作简报：整页分步填（写什么 → 关联产品 → 大纲 → 确认开写），改了自动存到选题上（content.saveBrief）。
 // 没有产品表的模板（自媒体）没有「关联产品」这一步。大纲按节存在 brief.sections，同时拼成 brief.outline 文字给写作任务读。
@@ -15,6 +19,7 @@ const parse = <T,>(value: string | undefined, fallback: T): T => { try { return 
 
 type StepId = 'what' | 'products' | 'outline' | 'review'
 type Draft = { title: string; angle: string; keywords: string }
+type OutlineAI = { task: Task; setTask: (t: Task) => void; input: () => Promise<unknown>; onFinished: () => void; chatId?: string }
 
 /** 老选题的大纲是一段文字：一行一节，缩进的行接在上一节后面当要点 */
 function sectionsFrom(brief: WritingBrief): BriefSection[] {
@@ -97,6 +102,21 @@ export function WritingBriefPage({ ctx, topic, onClose, onChanged, onWrite, head
     const timer = setTimeout(() => { save() }, 800)
     return () => clearTimeout(timer)
   }, [draft, brief, sections])
+  // AI 出大纲：先把页面上的存了（AI 要看到选中的产品），跑完从选题上读回新大纲
+  const outliner = useTask(OUTLINE_TASK)
+  const reloadOutline = async () => {
+    const t = (await dbList('topics')).find((x) => x.id === topic.id)
+    if (!t) return
+    const b = parse(t.brief, {} as WritingBrief)
+    const next: WritingBrief = { ...brief, sections: b.sections, outline: b.outline, cta: b.cta ?? brief.cta, gaps: b.gaps ?? brief.gaps, outline_chat_id: b.outline_chat_id }
+    const secs = sectionsFrom(b)
+    setBrief(next); setSections(secs)
+    lastSaved.current = JSON.stringify([draft, next, secs])
+  }
+  const outlineAI: OutlineAI | undefined = outliner.task ? {
+    task: outliner.task, setTask: outliner.setTask, onFinished: reloadOutline, chatId: brief.outline_chat_id,
+    input: async () => { if (!(await save())) throw new Error(r('save_first')); return { topic_id: topic.id } },
+  } : undefined
   const finish = async (write: boolean) => {
     setBusy(true)
     try {
@@ -160,7 +180,7 @@ export function WritingBriefPage({ ctx, topic, onClose, onChanged, onWrite, head
         <div className="min-w-0 space-y-4">
           {step === 'what' && <WhatStep ctx={ctx} topic={topic} draft={draft} setDraft={setDraft} brief={brief} setBrief={setBrief} />}
           {step === 'products' && products && <ProductsStep products={products} draft={draft} ids={brief.product_ids || []} setIds={(ids) => { setBrief({ ...brief, product_ids: ids }); setSections(sections.map((s) => ({ ...s, product_ids: (s.product_ids || []).filter((id) => ids.includes(id)) }))) }} />}
-          {step === 'outline' && <OutlineStep sections={sections} setSections={setSections} picked={picked} brief={brief} setBrief={setBrief} />}
+          {step === 'outline' && <OutlineStep ai={outlineAI} sections={sections} setSections={setSections} picked={picked} brief={brief} setBrief={setBrief} />}
           {step === 'review' && <ReviewStep draft={draft} brief={brief} sections={sections} picked={picked} hasProducts={!!products} go={go} />}
         </div>
         <aside className="space-y-3 @4xl:sticky @4xl:top-4">
@@ -343,7 +363,7 @@ function ProductsStep({ products, draft, ids, setIds }: { products: Product[]; d
   )
 }
 
-function OutlineStep({ sections, setSections, picked, brief, setBrief }: { sections: BriefSection[]; setSections: (s: BriefSection[]) => void; picked: Product[]; brief: WritingBrief; setBrief: (b: WritingBrief) => void }) {
+function OutlineStep({ ai, sections, setSections, picked, brief, setBrief }: { ai?: OutlineAI; sections: BriefSection[]; setSections: (s: BriefSection[]) => void; picked: Product[]; brief: WritingBrief; setBrief: (b: WritingBrief) => void }) {
   // 只有按住拖动把手时整行才能拖，不然在输入框里选字会变成拖动
   const [armed, setArmed] = useState<number | null>(null)
   const [dragging, setDragging] = useState<number | null>(null)
@@ -351,9 +371,15 @@ function OutlineStep({ sections, setSections, picked, brief, setBrief }: { secti
   const set = (i: number, patch: Partial<BriefSection>) => setSections(sections.map((s, j) => (j === i ? { ...s, ...patch } : s)))
   const move = (from: number, to: number) => { const next = [...sections]; const [x] = next.splice(from, 1); next.splice(to, 0, x); setSections(next) }
   return <>
-    <Card icon={ListOrdered} title={r('brief_outline')} desc={r('outline_desc')}>
+    <Card icon={ListOrdered} title={r('brief_outline')} desc={r('outline_desc')} action={ai && (
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+        <TaskRequirements task={ai.task} onSaved={ai.setTask} label={r('outline_req')} title={r('outline_req_title')} hint={r('outline_req_hint')} />
+        {ai.chatId && <Button variant="ghost" size="sm" feedback={false} onClick={() => openChat(ai.chatId!)}><MessageSquareText />{r('outline_chat')}</Button>}
+        <TaskButton task={OUTLINE_TASK} beforeRun={ai.input} onFinished={ai.onFinished} variant={sections.length ? 'outline' : 'default'} icon={Sparkles}>{r(sections.length ? 'ai_outline_again' : 'ai_outline')}</TaskButton>
+      </div>
+    )}>
       <div className="space-y-2">
-        {!sections.length && <p className="rounded-lg bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground">{r('outline_empty')}</p>}
+        {!sections.length && <p className="rounded-lg bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground">{r(ai ? 'outline_empty_ai' : 'outline_empty')}</p>}
         {sections.map((s, i) => (
           <div key={i} draggable={armed === i}
             onDragStart={(e) => { setDragging(i); e.dataTransfer.effectAllowed = 'move' }}

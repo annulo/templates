@@ -1263,7 +1263,15 @@
     "after_3": "To change something, say so in that same chat",
     "summary": "Brief",
     "kw_count": "{n} keywords",
-    "sum_no_products": "None yet"
+    "sum_no_products": "None yet",
+    "ai_outline": "Draft outline with AI",
+    "ai_outline_again": "Redo outline with AI",
+    "outline_chat": "Edit in chat",
+    "outline_req": "Outline style",
+    "outline_req_title": "How AI drafts outlines",
+    "outline_req_hint": "AI follows this when drafting an outline: how many sections, what structure, how detailed. Applies to every outline from now on.",
+    "outline_empty_ai": "No outline yet. Click \"Draft outline with AI\" or add a section yourself. If you leave it empty, AI plans the structure when writing.",
+    "save_first": "Add a title before asking AI for an outline"
   },
   "onboarding": {
     "site_label": "Website URL",

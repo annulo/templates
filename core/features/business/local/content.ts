@@ -19,7 +19,7 @@ export function saveBrief(input: { topic_id: string; title: string; angle?: stri
   const brief: any = { product_ids }
   const original = json<any>(topic.brief, {})
   // 营销计划、账号策略带进来的（产品运营）：用户不在这里改，原样留着
-  for (const key of ['proof', 'account_strategy', 'account_name', 'account_role_key', 'target_account_id', 'tracking_url', 'historical_notes', 'source_assets', 'source_snapshot'])
+  for (const key of ['outline_chat_id', 'proof', 'account_strategy', 'account_name', 'account_role_key', 'target_account_id', 'tracking_url', 'historical_notes', 'source_assets', 'source_snapshot'])
     if (original[key] !== undefined) brief[key] = original[key]
   for (const key of ['audience', 'buyer_question', 'outline', 'language', 'channels', 'cta', 'gaps']) brief[key] = String(b[key] || '').trim()
   // 大纲按节存（页面上拖动排序、每节挂产品）；节上的产品只能是关联产品里的
@@ -29,6 +29,50 @@ export function saveBrief(input: { topic_id: string; title: string; angle?: stri
   })).filter((s: any) => s.heading || s.note)
   ctx.db.update('topics', topic.id, { title: input.title.trim(), angle: String(input.angle || '').trim(), keywords: String(input.keywords || '').trim(), brief: JSON.stringify(brief) })
   return { topic_id: topic.id }
+}
+
+/** 出大纲初稿（任务 tasks/brief-outline.md）要的：选题和简报、选中的产品（全部事实）、别的相关产品、项目资料、网站上已有的同类文章 */
+export async function outlineContext(input: { topic_id: string }, ctx: any) {
+  const topic = requireRow(ctx, 'topics', input?.topic_id)
+  const brief = json<any>(topic.brief, {})
+  const picked = new Set<string>(Array.isArray(brief.product_ids) ? brief.product_ids : [])
+  const focus = [topic.title, topic.keywords].filter(Boolean).join(' ')
+  const others = productsOf(ctx, focus).filter((p: any) => !picked.has(p.id)).slice(0, 15)
+    .map((p: any) => present({ id: p.id, name: p.name, model: p.model, category: p.category, summary: p.summary }))
+  const ch = siteFor(ctx, topic.target_account_id)
+  const existing = ch ? await existingFor(ctx, ch, { topic_id: topic.id }).catch(() => []) : []
+  return {
+    topic: present({ id: topic.id, title: topic.title, angle: topic.angle, keywords: topic.keywords, search_query: topic.search_query, search_impressions: topic.search_impressions, search_position: topic.search_position }),
+    brief: { audience: brief.audience ?? '', buyer_question: brief.buyer_question ?? '', language: brief.language ?? '', cta: brief.cta ?? '', gaps: brief.gaps ?? '', sections: brief.sections ?? [], outline: brief.outline ?? '' },
+    products: evidenceFor(ctx, topic).products,
+    other_products: others,
+    project: projectBrief(profile(ctx)),
+    similar: overlapOf(topic.title, topic.keywords, existing).similar,
+  }
+}
+
+/** 存大纲初稿：覆盖简报里的大纲（brief.sections 和拼好的 brief.outline），记下这段对话，页面上「继续对话」回来接着改 */
+export function saveOutline(input: { topic_id: string; sections: { heading: string; note?: string; product_ids?: string[] }[]; cta?: string; gaps?: string }, ctx: any) {
+  const topic = requireRow(ctx, 'topics', input?.topic_id)
+  const brief = json<any>(topic.brief, {})
+  const picked: string[] = Array.isArray(brief.product_ids) ? brief.product_ids : []
+  const products = allProducts(ctx)
+  const sections = (Array.isArray(input?.sections) ? input.sections : []).slice(0, 40).map((s: any) => ({
+    heading: String(s?.heading || '').trim().slice(0, 300), note: String(s?.note || '').trim().slice(0, 1000),
+    product_ids: Array.isArray(s?.product_ids) ? [...new Set<string>(s.product_ids.map(String))].filter((id) => picked.includes(id)) : [],
+  })).filter((s: any) => s.heading)
+  if (!sections.length) throw new Error(L(ctx, 'sections 是空的：至少要有一节（heading）', 'sections is empty: give at least one section with a heading'))
+  const name = (id: string) => products.find((p: any) => p.id === id)?.name
+  brief.sections = sections
+  brief.outline = sections.map((s: any, i: number) => {
+    const names = s.product_ids.map(name).filter(Boolean)
+    return `${i + 1}. ${s.heading}${s.note ? ' — ' + s.note : ''}${names.length ? `（${L(ctx, '产品', 'Products')}: ${names.join(', ')}）` : ''}`
+  }).join('\n')
+  if (typeof input.cta === 'string' && input.cta.trim() && !String(brief.cta || '').trim()) brief.cta = input.cta.trim()
+  if (typeof input.gaps === 'string' && input.gaps.trim()) brief.gaps = [String(brief.gaps || '').trim(), input.gaps.trim()].filter(Boolean).join('\n')
+  if (ctx.chat_id) brief.outline_chat_id = ctx.chat_id
+  ctx.db.update('topics', topic.id, { brief: JSON.stringify(brief) })
+  return { topic_id: topic.id, sections: sections.length }
 }
 
 // 文章（本机函数，Annulo 在用户电脑上执行，不经过模型）。一篇文章一种类型（local/_types.ts）：
@@ -41,6 +85,8 @@ export function saveBrief(input: { topic_id: string; title: string; angle?: stri
 //   content.overlap({ title, keywords?, channel_id?, topic_id? })  这个标题和网站上、后台已有的文章、选题重没重（从选题池里挑完、换了标题时再查）
 //   content.images({})                           能配进文章的图（资料库的图片、产品图），改文章时配图用
 //   content.save({ type, topic_id?, source_id?, channel_id?, playbook_id?, workspace?, target_account_id?, title, body, … })
+//   content.outlineContext({ topic_id })         出大纲初稿要的上下文（任务 tasks/brief-outline.md）：选题和简报、选中产品的事实、别的相关产品、网站上已有的同类文章
+//   content.saveOutline({ topic_id, sections: [{ heading, note?, product_ids? }], cta?, gaps? })  存大纲初稿进选题简报，记下对话（「继续对话」接着改）
 //   content.rewriteContext({ article_id, type })  改写成另一种类型要的上下文（任务 tasks/rewrite-article.md）
 //                                                 存一篇写好的文章（待审），选题标成已写。写文章本身由助手按任务 tasks/write-article.md 做
 //   content.update({ article_id, title?, summary?, slug?, keywords?, body?, tags?, images?, … })

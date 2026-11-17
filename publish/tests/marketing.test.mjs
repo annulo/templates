@@ -457,3 +457,32 @@ test("SEO page map and opportunities merge into the keyword table once, waiting 
   assert.equal(tables.keywords.find((k) => k.id === "kw-new").opportunity_id, opp.id);
   assert.equal(seomap.opportunity({ cluster: "Landing" }, ctx).opportunity_id, opp.id);
 });
+
+test("writing brief: sections save with picked products only; AI outline overwrites sections and remembers the chat", async () => {
+  const { ctx, tables } = fixture();
+  m.importPack(pack, ctx);
+  m.prepareTopic({ plan_id: tables.marketing_plans[0].id }, ctx);
+  const topic = tables.topics[0];
+  content.saveBrief({ topic_id: topic.id, title: "T", brief: { product_ids: ["product"], sections: [
+    { heading: "A", note: "n", product_ids: ["product", "missing"] }, { heading: "", note: "" },
+  ] } }, ctx);
+  let brief = JSON.parse(tables.topics[0].brief);
+  assert.deepEqual(brief.sections, [{ heading: "A", note: "n", product_ids: ["product"] }]);
+  assert.equal(brief.source_assets.length, 1);
+
+  const c = await content.outlineContext({ topic_id: topic.id }, ctx);
+  assert.equal(c.products[0].id, "product");
+  assert.equal(c.brief.sections.length, 1);
+
+  assert.throws(() => content.saveOutline({ topic_id: topic.id, sections: [] }, ctx));
+  content.saveOutline({ topic_id: topic.id, sections: [{ heading: "One", product_ids: ["product"] }, { heading: "Two", note: "x", product_ids: ["other"] }], cta: "Ask", gaps: "Need a table" }, { ...ctx, chat_id: "chat-1" });
+  brief = JSON.parse(tables.topics[0].brief);
+  assert.equal(brief.sections.length, 2);
+  assert.deepEqual(brief.sections[1].product_ids, []);
+  assert.match(brief.outline, /^1\. One（.*Example）\n2\. Two — x$/);
+  assert.equal(brief.cta, "Ask");
+  assert.equal(brief.outline_chat_id, "chat-1");
+  // 页面上再存简报：对话记录留着
+  content.saveBrief({ topic_id: topic.id, title: "T", brief: { ...brief } }, ctx);
+  assert.equal(JSON.parse(tables.topics[0].brief).outline_chat_id, "chat-1");
+});

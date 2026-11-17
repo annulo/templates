@@ -10,7 +10,7 @@ description: 内容生产：出选题、按项目资料写文章（长文、图�
 数据在业务表里，读用 `db_query` / `db_aggregate`，写调本机函数（`annulo run <文件>.<函数> --input '<JSON>'`，见 ops-backend skill「读写业务表」）。
 
 - `profile`：项目资料（只有一行：定位、写给谁、语气、关键词……，字段含义见 ANNULO.md / SHUTTLE.md）。**写任何内容前先读它**，写出来的东西要符合它。
-- `topics`：选题，也是选题记忆。`status`：`idea` → `writing` → `done`（或 `dropped`）；选题的详情（读者、大纲、结尾引导……，界面上在「编辑选题」里）在 `brief`，用 `content.saveBrief` 更新。
+- `topics`：选题，也是选题记忆。`status`：`idea` → `writing` → `done`（或 `dropped`）；选题的详情（读者、关联产品、大纲、结尾引导……，界面上点选题打开的「写作简报」页，分步填）在 `brief`，用 `content.saveBrief` 更新。大纲按节存在 `brief.sections`（`heading`、`note`、这节讲的 `product_ids`），`brief.outline` 是拼好的文字；用户点「AI 出大纲初稿」按任务 `tasks/brief-outline.md` 出，`content.saveOutline` 存。
 - `articles`：文章，一篇一种类型（`type`：`article` 长文、`post` 图文笔记、`video` 视频；空的按长文看），字段见 ANNULO.md「文章类型」。`status` 只有 `draft` 和 `published`，老数据里的 `pending_review`、`rejected` 当 `draft`。`source_id` 是改写自哪篇。
 - `rewrite_presets`：用户存的改写预设（`type` + `prompt`）。
 - `social_posts`（社媒插件的表）：发布记录，一篇文章发到一个账号一条，`article_id` 指回文章，有状态、排期、链接和互动数据。内容是发布时从文章复制的。

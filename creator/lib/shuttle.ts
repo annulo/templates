@@ -272,7 +272,7 @@ export type ResearchFinding = { id: string; source_id: string; source_version: n
 /** 大纲的一节：小标题、要点、这一节讲的产品（关联产品里的） */
 export type BriefSection = { heading: string; note?: string; product_ids?: string[] }
 /** 选题的写作简报（topics.brief）。outline 是 sections 拼成的文字，写作任务读它 */
-export type WritingBrief = { audience?: string; buyer_question?: string; product_ids?: string[]; outline?: string; sections?: BriefSection[]; language?: string; channels?: string; cta?: string; gaps?: string }
+export type WritingBrief = { audience?: string; buyer_question?: string; product_ids?: string[]; outline?: string; sections?: BriefSection[]; outline_chat_id?: string; language?: string; channels?: string; cta?: string; gaps?: string }
 export type FindingEvidence = { finding_id: string; title: string; kind: string; fact?: string; quote?: string; interpretation?: string; suggestion?: string; source: { id: string; title: string; kind: string; url?: string; file_name?: string; collected_at?: string; version: number } }
 export type ContentEvidence = { captured_at: string; brief: WritingBrief; findings: FindingEvidence[]; products: Product[] }
 export type ContentReference = { id: string; kind: 'finding' | 'generation'; target_type: 'topic' | 'article'; target_id: string; finding_id?: string; snapshot: string; created_at?: string }
