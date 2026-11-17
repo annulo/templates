@@ -905,7 +905,7 @@ function Topics({ ctx, list, onChanged, writer, suggester, onWrite, inspiration 
   const active = list.filter((t) => t.status === 'idea' || t.status === 'writing')
   const rest = list.filter((t) => t.status === 'done' || t.status === 'dropped')
   // 点开选题：整页填写作简报，代替列表
-  if (briefTopic) return <WritingBriefPage key={briefTopic.id} ctx={ctx} topic={briefTopic} defaults={{ language: '', channels: '' }} onClose={() => { setBriefTopic(null); onTopicClose?.() }} onChanged={onChanged} onWrite={() => onWrite({ topic_id: briefTopic.id, channel_id: site?.id })} />
+  if (briefTopic) return <WritingBriefPage key={briefTopic.id} ctx={ctx} topic={briefTopic} defaults={{ language: '', channels: '' }} translate={false} onClose={() => { setBriefTopic(null); onTopicClose?.() }} onChanged={onChanged} onWrite={() => onWrite({ topic_id: briefTopic.id, channel_id: site?.id })} />
 
   return (
     <div className="space-y-4">

@@ -95,8 +95,9 @@ function relevance(p: Product, title: string, keywords: string[]) {
   return score
 }
 
-/** header：放在标题下面的东西（内容工作区放状态和发布链接）；defaults：没写过简报时的默认值（自媒体不默认英文、官网） */
-export function WritingBriefPage({ ctx, topic, onClose, onChanged, onWrite, header, defaults }: { ctx: Ctx; topic: Topic; onClose: () => void; onChanged: () => void; onWrite: () => void; header?: ReactNode; defaults?: Partial<WritingBrief> }) {
+/** header：放在标题下面的东西（内容工作区放状态和发布链接）；defaults：没写过简报时的默认值（自媒体不默认英文、官网）；
+ *  translate：写文章任务会不会「写完翻译」（自媒体的写文章任务没有这一步，传 false 就不显示语言选项） */
+export function WritingBriefPage({ ctx, topic, onClose, onChanged, onWrite, header, defaults, translate = true }: { ctx: Ctx; topic: Topic; onClose: () => void; onChanged: () => void; onWrite: () => void; header?: ReactNode; defaults?: Partial<WritingBrief>; translate?: boolean }) {
   const [draft, setDraft] = useState<Draft>({ title: topic.title, angle: topic.angle || '', keywords: topic.keywords || '' })
   const [brief, setBrief] = useState<WritingBrief>(() => parse(topic.brief, { language: 'English', channels: 'Website, LinkedIn', product_ids: [], ...defaults }))
   const [sections, setSections] = useState<BriefSection[]>(() => sectionsFrom(parse(topic.brief, {} as WritingBrief)))
@@ -109,6 +110,7 @@ export function WritingBriefPage({ ctx, topic, onClose, onChanged, onWrite, head
   // 多语言网站：选题定了发哪个网站用它，没定用第一个开了多语言的
   const [site, setSite] = useState<SiteLangs | null>(null)
   useEffect(() => {
+    if (!translate) return
     dbList('channels').then((list) => {
       const multi = (list as any[]).filter((c) => c.type === 'creght_site').map((c) => ({ c, l: parseLocs(c.locales) })).filter((x) => x.l.length > 1)
       const pick = multi.find((x) => x.c.id === (topic as { target_account_id?: string }).target_account_id) ?? multi[0]

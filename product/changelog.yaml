@@ -1,3 +1,6 @@
+- version: 0.32.0
+  zh: "多语言网站写文章时就能选好要翻的语言，AI 写完在同一段对话里接着翻好各语言版本。"
+  en: "On multilingual sites, pick the languages in the brief and AI translates the article right after writing it, in the same chat."
 - version: 0.31.0
   zh: "选题的写作简报改成整页分步填：挑产品能搜索、按分类看，大纲能让 AI 出初稿，改了自动保存。"
   en: "Topic briefs are now a step-by-step page: search and filter products to feature, let AI draft the outline, and changes save automatically."
