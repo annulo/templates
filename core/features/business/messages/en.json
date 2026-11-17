@@ -1370,7 +1370,9 @@
     "outline_req_title": "How AI drafts outlines",
     "outline_req_hint": "AI follows this when drafting an outline: how many sections, what structure, how detailed. Applies to every outline from now on.",
     "outline_empty_ai": "No outline yet. Click \"Draft outline with AI\" or add a section yourself. If you leave it empty, AI plans the structure when writing.",
-    "save_first": "Add a title before asking AI for an outline"
+    "save_first": "Add a title before asking AI for an outline",
+    "view_grid": "Grid",
+    "view_list": "List"
   },
   "onboarding": {
     "site_label": "Website URL",

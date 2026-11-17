@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, Check, GripVertical, ListOrdered, Loader, MessageSquareText, Package, PenLine, Plus, Search, Sparkles, Trash2, TriangleAlert, Users, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, GripVertical, LayoutGrid, List, ListOrdered, Loader, MessageSquareText, Package, PenLine, Plus, Search, Sparkles, Trash2, TriangleAlert, Users, X } from 'lucide-react'
 import { dbList, isPublishSite, openChat, runLocal, shuttleImage, type Task, type BriefSection, type Product, type Topic, type WritingBrief } from '../lib/shuttle'
 import { tr } from '../lib/i18n'
 import { Button, Notice, cx, inputCls } from './ui'
@@ -213,15 +213,16 @@ export function WritingBriefPage({ ctx, topic, onClose, onChanged, onWrite, head
   )
 }
 
-function Card({ icon: Icon, title, desc, action, children }: { icon: typeof PenLine; title: ReactNode; desc?: ReactNode; action?: ReactNode; children: ReactNode }) {
+/** compact：内容多的（产品）头部收紧，多留地方给内容 */
+function Card({ icon: Icon, title, desc, action, compact, children }: { icon: typeof PenLine; title: ReactNode; desc?: ReactNode; action?: ReactNode; compact?: boolean; children: ReactNode }) {
   return (
-    <section className="rounded-xl border border-border bg-background p-5 shadow-xs">
-      <div className="mb-4 flex items-start gap-3">
+    <section className={cx('rounded-xl border border-border bg-background shadow-xs', compact ? 'p-4' : 'p-5')}>
+      <div className={cx('flex items-start gap-3', compact ? 'mb-3' : 'mb-4')}>
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary-text"><Icon className="size-4" /></span>
         <div className="min-w-0 flex-1"><h2 className="text-sm font-semibold">{title}</h2>{desc && <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>}</div>
         {action}
       </div>
-      <div className="space-y-4">{children}</div>
+      <div className={compact ? 'space-y-3' : 'space-y-4'}>{children}</div>
     </section>
   )
 }
@@ -279,9 +280,14 @@ function Thumb({ p, className }: { p: Product; className?: string }) {
     : <span className={cx('flex shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-primary/10 to-muted text-primary-text/70', className)}><Package className="size-1/2" /></span>
 }
 
+/** 产品是网格还是列表，记在本浏览器 */
+const VIEW_KEY = 'brief.product_view'
+
 function ProductsStep({ products, draft, ids, setIds }: { products: Product[]; draft: Draft; ids: string[]; setIds: (ids: string[]) => void }) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('')
+  const [view, setViewState] = useState<'grid' | 'list'>(() => { try { return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid' } catch { return 'grid' } })
+  const setView = (v: 'grid' | 'list') => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v) } catch { /* 存不了就只这次 */ } }
   // 相关的排前面；只在打开这一步时排一次，勾选时卡片不跳
   const scored = useMemo(() => products.map((p) => ({ p, score: relevance(p, draft.title, keywordList(draft.keywords)) })).sort((a, b) => b.score - a.score), [products])
   const categories = [...new Set(products.map((p) => p.category?.trim()).filter(Boolean) as string[])]
@@ -296,19 +302,24 @@ function ProductsStep({ products, draft, ids, setIds }: { products: Product[]; d
     { v: '__picked', l: r('picked_only', { n: ids.length }) },
   ]
   return (
-    <Card icon={Package} title={r('brief_products')} desc={r('products_desc')}>
+    <Card icon={Package} title={r('brief_products')} desc={r('products_desc')} compact>
       {!products.length ? <Notice>{r('products_empty')}</Notice> : <>
         <div className="flex flex-wrap gap-2">
-          <div className="relative min-w-56 flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={r('search_ph')} aria-label={r('search_ph')} className={cx(inputCls, 'h-9 pl-9')} />
+          <div className="flex w-full gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={r('search_ph')} aria-label={r('search_ph')} className={cx(inputCls, 'h-9 pl-9')} />
+            </div>
+            <div className="flex shrink-0 gap-0.5 rounded-lg bg-muted p-0.5">
+              {([['grid', LayoutGrid], ['list', List]] as const).map(([v, Icon]) => <button key={v} type="button" aria-label={r('view_' + v)} title={r('view_' + v)} aria-pressed={view === v} onClick={() => setView(v)} className={cx('flex cursor-pointer items-center rounded-md px-2.5', view === v ? 'bg-background shadow-xs' : 'text-muted-foreground hover:text-foreground')}><Icon className="size-3.5" /></button>)}
+            </div>
           </div>
           <div className="flex max-w-full gap-0.5 overflow-x-auto rounded-lg bg-muted p-0.5">
             {tabs.map((t) => <button key={t.v} type="button" onClick={() => setCat(t.v)} className={cx('cursor-pointer rounded-md px-3 py-1.5 text-xs whitespace-nowrap', cat === t.v ? 'bg-background font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground')}>{t.l}</button>)}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-xs">
-          {picked.length ? <>
+        {!picked.length ? <p className="text-xs text-muted-foreground">{r('none_picked')} · {r('product_hint')}</p> : <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-xs">
+          {<>
             <span className="font-semibold text-primary-text">{r('picked_n', { n: picked.length })}</span>
             {picked.map((p) => (
               <span key={p.id} className="inline-flex items-center gap-1.5 rounded-md border border-primary/20 bg-background py-0.5 pr-1.5 pl-0.5 font-medium">
@@ -316,11 +327,32 @@ function ProductsStep({ products, draft, ids, setIds }: { products: Product[]; d
                 <button type="button" aria-label={tr('common.delete')} onClick={() => toggle(p.id)} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="size-3" /></button>
               </span>
             ))}
-          </> : <span className="text-muted-foreground">{r('none_picked')}</span>}
+          </>}
           <span className="ml-auto text-muted-foreground">{r('product_hint')}</span>
-        </div>
-        {!list.length ? <Notice>{r('no_match')}</Notice> : (
-          <div className="grid gap-3 @lg:grid-cols-2 @4xl:grid-cols-3">
+        </div>}
+        {!list.length ? <Notice>{r('no_match')}</Notice> : view === 'list' ? (
+          // 列表：一行一个，一屏能看十几个
+          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+            {list.map(({ p, score }) => {
+              const on = ids.includes(p.id)
+              const facts = factsOf(p)
+              return (
+                <button key={p.id} type="button" onClick={() => toggle(p.id)} aria-pressed={on} title={p.summary || p.name}
+                  className={cx('flex w-full cursor-pointer items-center gap-3 px-3 py-1.5 text-left transition', on ? 'bg-primary/5' : 'hover:bg-muted/50')}>
+                  <span className={cx('flex size-4 shrink-0 items-center justify-center rounded border', on ? 'border-primary bg-primary text-primary-foreground' : 'border-foreground/25')}>{on && <Check className="size-3" />}</span>
+                  <Thumb p={p} className="size-9" />
+                  <span className="w-48 min-w-0 shrink-0">
+                    <span className="flex items-center gap-1.5"><span className="truncate text-sm font-medium">{p.name}</span>{score >= 3 && <Sparkles aria-label={r('related')} className="size-3 shrink-0 text-violet-500" />}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{[p.model, p.category].filter(Boolean).join(' · ') || '\u00a0'}</span>
+                  </span>
+                  <span className="hidden min-w-0 flex-1 truncate text-xs text-muted-foreground @2xl:block">{facts.map((x) => `${x.k} ${x.v}`).join('  ·  ') || p.summary}</span>
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          // 网格：小卡片按宽度自动排，窄的时候也能一行放好几个
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(148px,1fr))] gap-2.5">
             {list.map(({ p, score }) => {
               const on = ids.includes(p.id)
               const facts = factsOf(p)
@@ -328,27 +360,24 @@ function ProductsStep({ products, draft, ids, setIds }: { products: Product[]; d
               return (
                 <div key={p.id} className="group relative">
                   <button type="button" onClick={() => toggle(p.id)} aria-pressed={on}
-                    className={cx('flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-xl border bg-background text-left transition', on ? 'border-primary ring-3 ring-primary/15' : 'border-border hover:border-foreground/20 hover:shadow-md')}>
-                    <span className="relative block h-28 w-full bg-muted/50">
-                      {img ? <img src={shuttleImage(img)} alt="" className="size-full object-cover" /> : <span className="flex size-full items-center justify-center bg-gradient-to-br from-primary/10 via-muted/60 to-background text-primary-text/50"><Package className="size-10" /></span>}
-                      {score >= 3 && <span title={r('related_hint')} className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-0.5 text-[11px] font-semibold text-violet-600 shadow-xs dark:text-violet-400"><Sparkles className="size-3" />{r('related')}</span>}
-                      <span className={cx('absolute top-2 right-2 flex size-6 items-center justify-center rounded-full border-2 shadow-xs', on ? 'border-primary bg-primary text-primary-foreground' : 'border-foreground/25 bg-background/90')}>{on && <Check className="size-3.5" />}</span>
+                    className={cx('flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-lg border bg-background text-left transition', on ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-foreground/20 hover:shadow-md')}>
+                    <span className="relative block aspect-[4/3] w-full bg-muted/50">
+                      {img ? <img src={shuttleImage(img)} alt="" loading="lazy" className="size-full object-cover" /> : <span className="flex size-full items-center justify-center bg-gradient-to-br from-primary/10 via-muted/60 to-background text-primary-text/50"><Package className="size-8" /></span>}
+                      {score >= 3 && <span title={r('related_hint')} className="absolute top-1.5 left-1.5 inline-flex items-center gap-0.5 rounded-full bg-background/90 px-1.5 py-px text-[10px] font-semibold text-violet-600 shadow-xs dark:text-violet-400"><Sparkles className="size-2.5" />{r('related')}</span>}
+                      <span className={cx('absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full border-2 shadow-xs', on ? 'border-primary bg-primary text-primary-foreground' : 'border-foreground/25 bg-background/90')}>{on && <Check className="size-3" />}</span>
                     </span>
-                    <span className="block flex-1 px-3.5 pt-3 pb-3.5">
-                      <span className="block truncate text-sm font-semibold">{p.name}</span>
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">{[p.model, p.category].filter(Boolean).join(' · ') || p.summary || ' '}</span>
-                      {facts.length > 0 && (
-                        <span className="mt-2.5 block space-y-1 border-t border-dashed border-border pt-2.5">
-                          {facts.map((f) => <span key={f.k} title={`${f.k}：${f.v}`} className="flex gap-2 text-xs"><span className="w-12 shrink-0 truncate text-muted-foreground">{f.k}</span><span className="min-w-0 truncate font-medium">{f.v}</span></span>)}
-                        </span>
-                      )}
+                    <span className="block px-2.5 pt-2 pb-2.5">
+                      <span className="block truncate text-[13px] leading-tight font-semibold">{p.name}</span>
+                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{p.model || p.category || '\u00a0'}</span>
+                      {facts.length > 0 && <span className="mt-1 block truncate text-[11px]" title={facts.map((x) => `${x.k}：${x.v}`).join('\n')}>{facts.slice(0, 2).map((x) => x.v).join(' · ')}</span>}
                     </span>
                   </button>
                   {/* 停一会儿看产品资料：确认写进文章的事实是对的 */}
-                  {(p.summary || p.price || p.lead_time || p.url) && (
-                    <div className="pointer-events-none invisible absolute inset-x-2 top-[calc(100%-6px)] z-20 rounded-xl border border-border bg-popover p-3.5 text-xs opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100 group-hover:delay-500">
+                  {(p.summary || p.price || p.lead_time || p.url || facts.length > 0) && (
+                    <div className="pointer-events-none invisible absolute top-[calc(100%-4px)] left-1/2 z-20 w-64 -translate-x-1/2 rounded-xl border border-border bg-popover p-3.5 text-xs opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100 group-hover:delay-500">
                       <div className="mb-1.5 text-sm font-semibold">{p.name}</div>
                       {p.summary && <p className="line-clamp-4 leading-relaxed text-muted-foreground">{p.summary}</p>}
+                      {facts.length > 0 && <div className="mt-2 space-y-0.5">{facts.map((x) => <div key={x.k} className="flex gap-2"><span className="w-12 shrink-0 text-muted-foreground">{x.k}</span><span className="min-w-0">{x.v}</span></div>)}</div>}
                       {(p.price || p.lead_time) && <p className="mt-1.5">{[p.price && `${r('spec_price')} ${p.price}`, p.lead_time && `${r('spec_lead')} ${p.lead_time}`].filter(Boolean).join(' · ')}</p>}
                       {p.url && <p className="mt-1.5 truncate text-primary-text">{p.url}</p>}
                     </div>

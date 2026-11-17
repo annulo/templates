@@ -1370,7 +1370,9 @@
     "outline_req_title": "AI 出大纲的写法",
     "outline_req_hint": "AI 出大纲时照这份写：几节、什么结构、要点写多细。改了以后每次出大纲都用。",
     "outline_empty_ai": "还没有大纲。点右上角「AI 出大纲初稿」，或者自己加一节；都不写的话，AI 写文章时自己安排结构",
-    "save_first": "先填好标题再让 AI 出大纲"
+    "save_first": "先填好标题再让 AI 出大纲",
+    "view_grid": "网格",
+    "view_list": "列表"
   },
   "onboarding": {
     "site_label": "网站地址",
