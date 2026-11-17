@@ -280,13 +280,13 @@ function Thumb({ p, className }: { p: Product; className?: string }) {
     : <span className={cx('flex shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-primary/10 to-muted text-primary-text/70', className)}><Package className="size-1/2" /></span>
 }
 
-/** 产品是网格还是列表，记在本浏览器 */
+/** 产品是网格还是列表（默认列表，一屏看得多），记在本浏览器 */
 const VIEW_KEY = 'brief.product_view'
 
 function ProductsStep({ products, draft, ids, setIds }: { products: Product[]; draft: Draft; ids: string[]; setIds: (ids: string[]) => void }) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('')
-  const [view, setViewState] = useState<'grid' | 'list'>(() => { try { return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid' } catch { return 'grid' } })
+  const [view, setViewState] = useState<'grid' | 'list'>(() => { try { return localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list' } catch { return 'list' } })
   const setView = (v: 'grid' | 'list') => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v) } catch { /* 存不了就只这次 */ } }
   // 相关的排前面；只在打开这一步时排一次，勾选时卡片不跳
   const scored = useMemo(() => products.map((p) => ({ p, score: relevance(p, draft.title, keywordList(draft.keywords)) })).sort((a, b) => b.score - a.score), [products])
@@ -311,7 +311,7 @@ function ProductsStep({ products, draft, ids, setIds }: { products: Product[]; d
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={r('search_ph')} aria-label={r('search_ph')} className={cx(inputCls, 'h-9 pl-9')} />
             </div>
             <div className="flex shrink-0 gap-0.5 rounded-lg bg-muted p-0.5">
-              {([['grid', LayoutGrid], ['list', List]] as const).map(([v, Icon]) => <button key={v} type="button" aria-label={r('view_' + v)} title={r('view_' + v)} aria-pressed={view === v} onClick={() => setView(v)} className={cx('flex cursor-pointer items-center rounded-md px-2.5', view === v ? 'bg-background shadow-xs' : 'text-muted-foreground hover:text-foreground')}><Icon className="size-3.5" /></button>)}
+              {([['list', List], ['grid', LayoutGrid]] as const).map(([v, Icon]) => <button key={v} type="button" aria-label={r('view_' + v)} title={r('view_' + v)} aria-pressed={view === v} onClick={() => setView(v)} className={cx('flex cursor-pointer items-center rounded-md px-2.5', view === v ? 'bg-background shadow-xs' : 'text-muted-foreground hover:text-foreground')}><Icon className="size-3.5" /></button>)}
             </div>
           </div>
           <div className="flex max-w-full gap-0.5 overflow-x-auto rounded-lg bg-muted p-0.5">
