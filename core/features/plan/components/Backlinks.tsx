@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Check, MessageSquareText, PenLine, Plus, RefreshCw, ScanSearch, Send, Share2, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Check, MessageSquareText, MoreHorizontal, PenLine, Plus, RefreshCw, ScanSearch, Send, Share2, Trash2 } from 'lucide-react'
 import Markdown from './Markdown'
 import RunButton from './RunButton'
 import Select from './Select'
@@ -76,63 +76,110 @@ export default function Backlinks({ ctx }: { ctx: Ctx }) {
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-background">
           {list.map((b) => (
-            <div key={b.id} className="flex flex-wrap items-start gap-3 border-b border-border px-4 py-3 last:border-b-0">
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={TONE[b.status] ?? 'default'}>{tr(`plan.ls_${b.status || 'live'}`)}</Badge>
-                  <Badge>{tr(`plan.lk_${b.kind || 'other'}`)}</Badge>
-                  <a href={b.source_url} target="_blank" rel="noreferrer" className="text-sm font-medium text-primary hover:underline [overflow-wrap:anywhere]">{b.platform || b.domain}</a>
-                  {b.nofollow && <span className="text-[11px] text-muted-foreground">nofollow</span>}
-                  {b.auto && <span className="text-[11px] text-muted-foreground">{tr('plan.links_auto')}</span>}
-                  {b.ai && <span className="text-[11px] text-muted-foreground">{tr('plan.links_ai')}</span>}
-                  {b.effort && <Badge>{tr(`plan.le_${b.effort}`)}</Badge>}
-                  {b.paid && <Badge tone="warn">{tr('plan.links_paid')}</Badge>}
-                  {b.leads > 0 && <Badge tone="ok">{tr('plan.links_leads', { n: b.leads })}</Badge>}
-                </div>
-                <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                  {b.source_url}
-                  {b.target_url && <> → {b.target_url.replace(/^https?:\/\//, '')}</>}
-                </p>
-                {b.reason && <p className="text-xs text-muted-foreground">{b.reason}</p>}
-                {b.how_to && (b.status === 'planned' || b.status === 'applied') && (
-                  <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs leading-relaxed whitespace-pre-line">{b.how_to}</p>
-                )}
-                {b.status === 'applied' && b.days_applied !== undefined && (
-                  <p className={cx('text-xs', b.follow_up ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground')}>
-                    {tr(b.follow_up ? 'plan.links_follow_up' : 'plan.links_applied_days', { n: b.days_applied })}
-                  </p>
-                )}
-                {(b.check_error || b.note) && <p className="text-xs text-muted-foreground">{b.check_error || b.note}</p>}
-                {b.outreach && (
-                  <details className="rounded-lg border border-border px-3 py-2">
-                    <summary className="cursor-pointer text-xs font-medium">{tr('plan.links_outreach_show')}</summary>
-                    <div className="mt-2 text-sm"><Markdown text={b.outreach} /></div>
-                  </details>
-                )}
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-                {b.chat_id && (
-                  <Button variant="ghost" size="sm" onClick={() => openChat(b.chat_id!)}><MessageSquareText /> {tr('plan.links_chat')}</Button>
-                )}
-                {(b.status === 'planned' || b.status === 'applied') && (b.outreach && b.outreach_chat_id ? (
-                  <Button variant="ghost" size="sm" onClick={() => openChat(b.outreach_chat_id!)}><PenLine /> {tr('plan.links_outreach_edit')}</Button>
-                ) : (
-                  <TaskButton task={OUTREACH_TASK} input={{ id: b.id }} match={(r) => (r.input as any)?.id === b.id} onFinished={load} variant="ghost" icon={PenLine}>{tr('plan.links_outreach')}</TaskButton>
-                ))}
-                {b.status === 'planned' && (
-                  <RunButton inline variant="ghost" fn="backlinks.update" input={{ id: b.id, status: 'applied' }} icon={Send} onDone={load}>{tr('plan.links_mark_applied')}</RunButton>
-                )}
-                {(b.status === 'planned' || b.status === 'applied') && (
-                  <Button variant="ghost" size="sm" onClick={() => setGoing(b)}><Check /> {tr('plan.links_mark_live')}</Button>
-                )}
-                <RunButton inline variant="ghost" fn="backlinks.remove" input={{ id: b.id }} icon={Trash2} onDone={load}>{tr('plan.links_remove')}</RunButton>
-              </div>
-            </div>
+            <Row key={b.id} b={b} onLive={() => setGoing(b)} onChanged={load} />
           ))}
         </div>
       )}
       <LiveDialog link={going} onClose={() => setGoing(null)} onDone={() => (setGoing(null), load())} />
       <AddDialog open={adding} sites={ctx.channels.filter((c) => ['creght_site', 'wordpress', 'website'].includes(c.type))} onClose={() => setAdding(false)} onDone={() => (setAdding(false), load())} />
+    </div>
+  )
+}
+
+/** 去掉协议和结尾的 /，长了留开头 */
+const short = (u: string, n = 48) => {
+  const t = u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+  return t.length > n ? t.slice(0, n - 1) + '…' : t
+}
+
+/**
+ * 一条外链：右上角只放「下一步」一个按钮（打算做：还没写申请材料就写，写了就标已申请；已申请：上线了），
+ * 其余（改申请材料、继续对话、上线了、删除）收进「···」，正文占满整行
+ */
+function Row({ b, onLive, onChanged }: { b: Link; onLive: () => void; onChanged: () => void }) {
+  const open = b.status === 'planned' || b.status === 'applied'
+  const set = (patch: Record<string, unknown>) => () => runLocal('backlinks.update', { id: b.id, ...patch }).then(onChanged)
+  const remove = () => runLocal('backlinks.remove', { id: b.id }).then(onChanged)
+  const writeTask = (variant: 'outline' | 'ghost') => (
+    <TaskButton task={OUTREACH_TASK} input={{ id: b.id }} match={(r) => (r.input as any)?.id === b.id} onFinished={onChanged} variant={variant} icon={PenLine}>{tr('plan.links_outreach')}</TaskButton>
+  )
+  const hasOutreach = !!(b.outreach && b.outreach_chat_id)
+  const primary = b.status === 'planned'
+    ? (b.outreach ? <RunButton inline variant="outline" fn="backlinks.update" input={{ id: b.id, status: 'applied' }} icon={Send} onDone={onChanged}>{tr('plan.links_mark_applied')}</RunButton> : writeTask('outline'))
+    : b.status === 'applied'
+      ? <Button variant="outline" size="sm" onClick={onLive}><Check /> {tr('plan.links_mark_live')}</Button>
+      : null
+  const items: { icon: typeof Check; label: string; onClick: () => void }[] = [
+    ...(open && hasOutreach ? [{ icon: PenLine, label: tr('plan.links_outreach_edit'), onClick: () => openChat(b.outreach_chat_id!) }] : []),
+    ...(b.status === 'planned' && !b.outreach ? [{ icon: Send, label: tr('plan.links_mark_applied'), onClick: set({ status: 'applied' }) }] : []),
+    ...(b.status === 'planned' ? [{ icon: Check, label: tr('plan.links_mark_live'), onClick: onLive }] : []),
+    ...(b.chat_id ? [{ icon: MessageSquareText, label: tr('plan.links_chat'), onClick: () => openChat(b.chat_id!) }] : []),
+    { icon: Trash2, label: tr('plan.links_remove'), onClick: remove },
+  ]
+  const meta = [b.ai && tr('plan.links_ai'), b.auto && tr('plan.links_auto'), b.effort && tr(`plan.le_${b.effort}`), b.nofollow && 'nofollow'].filter(Boolean) as string[]
+  return (
+    <div className="space-y-2 border-b border-border px-4 py-3 last:border-b-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <Badge tone={TONE[b.status] ?? 'default'}>{tr(`plan.ls_${b.status || 'live'}`)}</Badge>
+          <a href={b.source_url} target="_blank" rel="noreferrer" className="text-sm font-medium text-primary hover:underline [overflow-wrap:anywhere]">{b.platform || b.domain}</a>
+          <span className="text-xs text-muted-foreground">
+            {[tr(`plan.lk_${b.kind || 'other'}`), ...meta].join(' · ')}
+            {b.paid && <span className="text-amber-700 dark:text-amber-400"> · {tr('plan.links_paid')}</span>}
+          </span>
+          {b.leads > 0 && <Badge tone="ok">{tr('plan.links_leads', { n: b.leads })}</Badge>}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {primary}
+          <RowMenu items={items} />
+        </div>
+      </div>
+      <p className="truncate text-xs text-muted-foreground" title={`${b.source_url}${b.target_url ? ' → ' + b.target_url : ''}`}>
+        {short(b.source_url)}
+        {b.target_url && <> → {short(b.target_url, 40)}</>}
+      </p>
+      {b.reason && <p className="text-xs leading-relaxed text-muted-foreground">{b.reason}</p>}
+      {b.how_to && open && <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs leading-relaxed whitespace-pre-line">{b.how_to}</p>}
+      {b.status === 'applied' && b.days_applied !== undefined && (
+        <p className={cx('text-xs', b.follow_up ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground')}>
+          {tr(b.follow_up ? 'plan.links_follow_up' : 'plan.links_applied_days', { n: b.days_applied })}
+        </p>
+      )}
+      {(b.check_error || b.note) && <p className="text-xs text-muted-foreground">{b.check_error || b.note}</p>}
+      {b.outreach && (
+        <details className="rounded-lg border border-border px-3 py-2">
+          <summary className="cursor-pointer text-xs font-medium">{tr('plan.links_outreach_show')}</summary>
+          <div className="mt-2 text-sm"><Markdown text={b.outreach} /></div>
+        </details>
+      )}
+    </div>
+  )
+}
+
+/** 「···」菜单（照增长计划页的 RowMenu） */
+function RowMenu({ items }: { items: { icon: typeof Check; label: string; onClick: () => void }[] }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+  return (
+    <div ref={ref} className="relative">
+      <Button size="icon-sm" variant="ghost" feedback={false} aria-label={tr('plan.more')} onClick={() => setOpen((v) => !v)}>
+        <MoreHorizontal />
+      </Button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-lg border border-border bg-background p-1 shadow-lg">
+          {items.map(({ icon: Icon, label, onClick }) => (
+            <button key={label} type="button" className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-muted" onClick={() => (setOpen(false), onClick())}>
+              <Icon className="size-4" />{label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
