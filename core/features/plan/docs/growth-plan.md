@@ -150,6 +150,23 @@ AI 起草（任务 draft-plan）：判断从哪个阶段开始、三档目标、
 说清预期：社媒的链接基本是 nofollow，对排名直接帮助有限，价值是品牌、引流、让谷歌更快发现新页面；真正提排名的是行业目录、B2B 平台、行业网站和媒体。GSC 的链接报告没有 API，效果看询盘的来源。
 指标 `backlinks_live`。
 
+## 社媒发布记录和计划结合（2026-11-17）
+
+以前计划只数「发了几条」（`social_published`），不知道发出去的东西有没有用、算不算完成这周的事。现在三层接起来，代码在 `local/_social.ts`（只读 `social_*` 和 `leads`，不调模型）：
+
+1. **归属**：`social_posts.plan_item_id`（社媒插件 0.11.0 起的字段）记这条帖子是为哪个计划项发的。
+   - 助手用 `<平台>.save` 存帖子时带上（任务参数有 `plan_item_id` 就原样带；用户随口让发的、对得上这周社媒计划项也带，规则在 ANNULO.md / SHUTTLE.md）；
+   - 内容中心发布（`core/local/publish.ts` 的 `prepare`）自动记：`plan.socialItem` 取进行中计划里最早没做完的社媒计划项（去社媒内容 / 发布日历的，前几周挪过来的排前面），第一次记了就不换；
+   - 计划项的自动判断（`actionDone`）：挂在它名下已发布的帖子 ≥ 标题里写的数（「发 3 条」，没写是 1）算做完，不够再退回按这周所有已发布的帖子数；计划页每个社媒计划项展开能看到名下的帖子（状态、链接、阅读、互动）。
+2. **指标**（没有社媒账号就不出这几项；全从表里算）：`social_active_channels`（近 28 天有发帖的账号数）、`social_views_28d`、`social_engagement_28d`（点赞 + 评论 + 收藏 + 分享）、`social_leads_28d`。
+   阅读和互动的新增 = 期末累计 − 期初前一天累计（`social_post_daily`）；窗口里才发的帖子从 0 算，窗口前就发的拿窗口里第一次采集当起点，不把存量算成增量；一条数据都没采集过给 `null`，不当 0。
+   这样基线、三档目标、Day 30 / 60 / 90 检查点都自动覆盖社媒。
+3. **归因**（询盘 → 平台 → 计划项）：社媒插件发 X / LinkedIn / Facebook 时、内容中心发布时，正文里指向本站的链接带 `utm_source=<平台>&utm_medium=social&utm_campaign=<计划项 id>`（`backlinks.tagLinks`，已经带 `utm_source` 的、不是本站的不动）。
+   `leadSocial` 按询盘的 `utm`（source 的常见写法：twitter、xhs、ig…）和来源域名（t.co、lnkd.in、l.instagram.com…）算是哪个平台，`utm_campaign` 对上计划项。小红书、抖音正文里不放站外链接，这两个平台的询盘靠来源域名（多数拿不到）。
+4. **反过来指导计划**：`plan.checkpointContext` 带 `social`（按平台、按计划项、最好 / 最差的帖子、没挂计划项的帖子数、带来的询盘），检查点任务按它排下一阶段的社媒（互动高、带来询盘的加量，没动静的减量或换写法）；`plan.context`（起草）带近 90 天的 `social`，老项目据此定每周发多少；周报数据 `plan.social`（`plan.social({ since })`）给「社媒对计划的贡献」。
+
+模板依赖：`plugins_min.social` 要 ≥ 0.11.0（`social_posts` 才有 `plan_item_id`）。测试：`publish/tests/social-plan.test.mjs`。
+
 ## 每周总结
 
 `reports.data` 有进行中（或刚结束）的计划时带 `plan`：第几天、阶段、目标进度、这一期该做的计划项做没做、关键词地图各阶段的主题数、外链、到没到检查点、上一次检查点。外贸和产品运营的周报任务里写了先写一段「计划进度」，下周建议优先从计划项里来。

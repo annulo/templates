@@ -15,7 +15,7 @@ annulo run plan.context --input '{}'
 输出里：
 
 - `profile`、`products`：公司资料和产品（主营、市场、客户、关键词）。两个都是空的：告诉用户先到「公司与产品」把资料补上，不往下做；
-- `sites`、`social_accounts`：网站（`gsc` 是否连了谷歌数据）和社媒账号；
+- `sites`、`social_accounts`：网站（`gsc` 是否连了谷歌数据）和社媒账号；`social`（有社媒账号才有）近 90 天已经发了多少、按平台的阅读和互动、带来的询盘：老项目据此定每周发多少、哪个平台加量，没发过的从每周 1~2 条起步；
 - `metrics`：现在的各项指标，`metric_defs` 是每个指标的名字、属于哪一层（`process` 做了多少 / `leading` 先行指标 / `result` 结果）、越大越好还是越小越好。`null` 是拿不到（没连谷歌、没做过 AI 搜索检测），不是 0；
 - `stage`：按已有数据算的建议起点（`phase` 1/2/3、`reasons`、`facts`：谷歌数据有几天、发了几篇、多少展示和点击）；
 - `keywords`、`competitors`、`growth`：关键词做到哪了、在盯的竞品、这周的增长机会；

@@ -1,4 +1,5 @@
 import { L } from './_i18n'
+import { itemPosts, socialDigest, socialMetrics } from './_social'
 
 // 只读写业务表：手机上也能看计划、标做完
 export const cloud = ['get', 'mark', 'metrics', 'thisWeek', 'keywordMap', 'setLevel']
@@ -70,6 +71,7 @@ const hasFn = (name: string) => {
 export const METRICS: Record<string, { tier: Tier; better: 'up' | 'down'; zh: string; en: string; unit?: string }> = {
   pages_published: { tier: 'process', better: 'up', zh: '网站上发了的文章', en: 'Articles published on the site', unit: 'n' },
   social_published: { tier: 'process', better: 'up', zh: '社媒发了的帖子', en: 'Social posts published', unit: 'n' },
+  social_active_channels: { tier: 'process', better: 'up', zh: '这 28 天有发帖的社媒账号', en: 'Social accounts that posted (28 days)', unit: 'n' },
   keywords_targeting: { tier: 'process', better: 'up', zh: '在做的关键词', en: 'Keywords being targeted', unit: 'n' },
   competitors_watched: { tier: 'process', better: 'up', zh: '在盯的竞品', en: 'Competitors monitored', unit: 'n' },
   clusters_live: { tier: 'process', better: 'up', zh: '已有页面的关键词主题', en: 'Keyword topics with a live page', unit: 'n' },
@@ -79,8 +81,11 @@ export const METRICS: Record<string, { tier: Tier; better: 'up' | 'down'; zh: st
   impressions_28d: { tier: 'leading', better: 'up', zh: '近 28 天谷歌展示次数', en: 'Google impressions (28 days)', unit: 'n' },
   keywords_top30: { tier: 'leading', better: 'up', zh: '排进前 30 的关键词', en: 'Keywords in the top 30', unit: 'n' },
   keywords_top10: { tier: 'leading', better: 'up', zh: '排进前 10 的关键词', en: 'Keywords in the top 10', unit: 'n' },
+  social_views_28d: { tier: 'leading', better: 'up', zh: '近 28 天社媒帖子新增阅读', en: 'New social post views (28 days)', unit: 'n' },
+  social_engagement_28d: { tier: 'leading', better: 'up', zh: '近 28 天社媒帖子新增互动', en: 'New social post engagements (28 days)', unit: 'n' },
   geo_visibility: { tier: 'leading', better: 'up', zh: 'AI 搜索可见度', en: 'AI search visibility', unit: 'score' },
   clicks_28d: { tier: 'result', better: 'up', zh: '近 28 天谷歌点击', en: 'Google clicks (28 days)', unit: 'n' },
+  social_leads_28d: { tier: 'result', better: 'up', zh: '近 28 天社媒带来的询盘', en: 'Inquiries from social (28 days)', unit: 'n' },
   leads_28d: { tier: 'result', better: 'up', zh: '近 28 天真实询盘', en: 'Real inquiries (28 days)', unit: 'n' },
   deals_open: { tier: 'result', better: 'up', zh: '推进中的商机', en: 'Open deals', unit: 'n' },
 }
@@ -95,12 +100,20 @@ function gscHistory(ctx: any) {
   return { connected: rows.length > 0 || sites(ctx).some((c) => c.gsc_property && !c.gsc_link_disabled), days: dates.length, first: dates[0] ?? '', last: dates[dates.length - 1] ?? '' }
 }
 
+/** 社媒发布记录：账号、帖子、每日快照、询盘（没有这个插件的项目这几张表是空的） */
+function socialRows(ctx: any) {
+  return { accounts: all(ctx, 'social_accounts'), posts: all(ctx, 'social_posts'), daily: all(ctx, 'social_post_daily'), leads: all(ctx, 'leads').filter((l) => l.is_real !== false && l.status !== 'spam') }
+}
+
 /** 现在的各项指标；拿不到的是 null（GSC 没连、没做过 AI 搜索检测），不当成 0 */
 export function compute(ctx: any): Record<string, number | null> {
   const out: Record<string, number | null> = {}
   const pubs = all(ctx, 'publications').filter((p) => p.status === 'published' || p.published_at)
   out.pages_published = new Set(pubs.map((p) => p.article_id)).size
   out.social_published = all(ctx, 'social_posts').filter((p) => p.status === 'published').length
+  // 社媒的先行和结果指标：没有社媒账号就不出；采集没记过数的阅读、互动是 null，不当 0
+  const soc = socialMetrics(socialRows(ctx))
+  if (soc) Object.assign(out, soc)
   const kws = all(ctx, 'keywords')
   out.keywords_targeting = kws.filter((k) => k.status === 'targeting').length
   const comp = all(ctx, 'competitors')
@@ -256,6 +269,11 @@ export function context(_input: {}, ctx: any) {
     social_accounts: all(ctx, 'social_accounts').map((a) => ({ id: a.id, platform: a.platform || a.type, name: a.name })),
     metrics: m,
     metric_defs: defs(ctx),
+    // 老项目已经发过的社媒：近 90 天按平台的发布数、互动、带来的询盘（起草时据此定每周发多少、哪个平台加量）
+    social: (() => {
+      const r = socialRows(ctx)
+      return r.accounts.length ? socialDigest({ ...r, items: [] }, new Date(Date.now() - 90 * DAY).toISOString()) : null
+    })(),
     stage: judgeStage(ctx, m),
     keywords: {
       total: all(ctx, 'keywords').length,
@@ -422,7 +440,7 @@ const since = (rows: any[], field: string | string[], from: string) => rows.filt
  * 按计划项去的页面、交给的任务，用这一周的数据判断做没做（AI 不用另写条件）：做完了返回依据，判断不了或没做完返回 null。
  * 每一类认什么数据见 docs/growth-plan.md「自动判断做完」。
  */
-export function actionDone(ctx: any, it: { action: Action | null; title?: string }, from: string): string | null {
+export function actionDone(ctx: any, it: { id?: string; action: Action | null; title?: string }, from: string): string | null {
   const a = it.action
   if (!a) return null
   const view = a.kind === 'go' ? a.view : ''
@@ -454,7 +472,15 @@ export function actionDone(ctx: any, it: { action: Action | null; title?: string
   }
   if (task === 'suggest-topics') return n(since(all(ctx, 'topics'), 'created_at', from).length, '这周出了 {n} 个选题', '{n} topics this week')
   if (view === 'landing') return n(since(all(ctx, 'landing_pages').filter((l) => l.status === 'live'), 'live_at', from).length, '这周上线了 {n} 个落地页', '{n} landing pages live this week')
-  if (view === 'social-content' || view === 'calendar') return n(since(all(ctx, 'social_posts').filter((p) => p.status === 'published'), 'published_at', from).length, '这周社媒发了 {n} 条', '{n} social posts this week')
+  if (view === 'social-content' || view === 'calendar') {
+    // 标题里写了数（「发 3 条」）按数算，没写是 1。先看挂在这个计划项上的帖子（plan_item_id），不够再看这周所有已发布的
+    const want = Math.max(1, Number((it.title ?? '').match(/(\d+)\s*(条|篇|个|posts?)/i)?.[1]) || 1)
+    const pub = all(ctx, 'social_posts').filter((p) => p.status === 'published')
+    const mine = it.id ? pub.filter((p) => p.plan_item_id === it.id) : []
+    if (mine.length >= want) return L(ctx, `这个计划项下发了 ${mine.length} 条社媒帖子`, `${mine.length} social posts published for this item`)
+    const week = since(pub, 'published_at', from).length
+    return week >= want ? L(ctx, `这周社媒发了 ${week} 条`, `${week} social posts this week`) : null
+  }
   if ((view === 'plan' && tab === 'links') || (view === 'social' && /链接|link/i.test(it.title ?? ''))) {
     // AI 找出来、还没去做的机会不算；这周去申请了、上线了、手动登记的才算
     const done = all(ctx, 'backlinks').filter((x) => x.status !== 'planned')
@@ -499,6 +525,7 @@ export function get(_input: {}, ctx: any) {
   const targets = parse<Record<string, number>>(p.targets, {})
   const pos = p.status !== 'draft' && p.start_date ? position(p.start_date) : null
   const checkpoints = parse<any[]>(p.checkpoints, [])
+  const socialAll = { posts: all(ctx, 'social_posts').filter((x) => x.plan_item_id), daily: all(ctx, 'social_post_daily') }
   const items = all(ctx, 'plan_items')
     .filter((i) => i.plan_id === p.id)
     .map((i) => {
@@ -514,7 +541,8 @@ export function get(_input: {}, ctx: any) {
       }
       // 没做完、已经过了它那一周（按月的过了那个月）的，挪进本周显示
       const last = it.scope === 'month' ? it.week + 3 : it.week
-      return { ...it, auto: it.done_by === 'auto', carried: !it.status && !!pos && last < pos.week }
+      const posts = itemPosts(socialAll.posts, socialAll.daily, i.id)
+      return { ...it, ...(posts.length ? { posts } : {}), auto: it.done_by === 'auto', carried: !it.status && !!pos && last < pos.week }
     })
     .sort((a, b) => a.week - b.week || String(a.created_at).localeCompare(String(b.created_at)))
   const progress = Object.entries(targets).map(([k, target]) => {
@@ -593,6 +621,10 @@ export function checkpointContext(input: { day?: number }, ctx: any) {
     gsc: { ...gscHistory(ctx), top_pages: pages },
     keywords: kws.slice(0, 40).map((k) => ({ keyword: k.keyword, cluster: k.cluster, status: k.status, bucket: k.bucket, position: k.gsc_position || k.serp_position || null, impressions: k.gsc_impressions, page: k.gsc_page ? path(k.gsc_page) : k.target_page ? path(k.target_page) : '', review: k.review_verdict || '' })),
     leads: { since_start: leads.length, by_landing_page: byPage, by_source: byRef },
+    social: (() => {
+      const r = socialRows(ctx)
+      return r.accounts.length ? socialDigest({ ...r, items: all(ctx, 'plan_items').filter((i) => i.plan_id === g.plan.id) }, g.plan.baseline?.at || g.plan.activated_at || '') : null
+    })(),
     keyword_map: (() => {
       const m = keywordMap({}, ctx)
       return { by_stage: m.by_stage, rows: m.rows.slice(0, 30).map((r: any) => ({ cluster: r.cluster, main: r.main, page: r.page ? path(r.page) : '', stage: r.stage, best_position: r.best_position, impressions: r.impressions, clicks: r.clicks, leads: r.leads })) }
@@ -605,6 +637,33 @@ export function checkpointContext(input: { day?: number }, ctx: any) {
     growth: all(ctx, 'growth_items').filter((x) => !x.status).sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 10).map((x) => ({ kind: x.kind, title: x.title, next: x.next })),
     catalog: catalog(ctx),
   }
+}
+
+/**
+ * 要发的社媒帖子对得上哪个计划项（发布时 publish.prepare 调它给帖子记 plan_item_id）：进行中的计划里最早那条
+ * 还没做完的社媒计划项（去社媒内容、发布日历的），挪过来的前几周的排前面；没有计划、没有这样的计划项返回 null。
+ */
+export function socialItem(_input: {}, ctx: any): { id: string; title: string } | null {
+  const p = activePlan(ctx)
+  if (!p || !p.start_date) return null
+  const week = position(p.start_date).week
+  const hit = all(ctx, 'plan_items')
+    .filter((i) => i.plan_id === p.id && !i.status && (Number(i.week) || 0) <= week)
+    .filter((i) => {
+      const a = parse<Action | null>(i.action, null)
+      return a?.kind === 'go' && (a.view === 'social-content' || a.view === 'calendar')
+    })
+    .sort((a, b) => a.week - b.week)[0]
+  return hit ? { id: hit.id, title: hit.title } : null
+}
+
+/** 这段时间（since 起，默认近 7 天）社媒对计划的贡献：按平台、按计划项、表现最好的帖子、带来的询盘。周报用 */
+export function social(input: { since?: string }, ctx: any) {
+  const r = socialRows(ctx)
+  if (!r.accounts.length) return null
+  const g = activePlan(ctx)
+  const since = input?.since || new Date(Date.now() - 7 * DAY).toISOString()
+  return socialDigest({ ...r, items: all(ctx, 'plan_items').filter((i) => !g || i.plan_id === g.id) }, since)
 }
 
 export function saveCheckpoint(input: any, ctx: any) {

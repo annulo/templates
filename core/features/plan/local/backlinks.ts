@@ -157,6 +157,35 @@ export function remove(input: { id: string }, ctx: any) {
   return { ok: true }
 }
 
+/**
+ * 帖子正文里指向本站的链接带上来源参数（utm_source=<平台>、utm_medium=social、utm_campaign=<计划项 id，有的话>），
+ * 询盘才能对上是哪个平台、哪个计划项带来的（plan 模块按询盘的 utm 归因）。已经带 utm_source 的、不是本站的链接不动。
+ */
+export function tagLinks(input: { body: string; platform: string; plan_item_id?: string }, ctx: any) {
+  const sites = ownSites(ctx)
+  const body = String(input?.body ?? '')
+  if (!sites.size || !body) return { body, tagged: 0 }
+  let tagged = 0
+  const out = body.replace(/https?:\/\/[^\s<>"')\]]+/g, (m) => {
+    const tail = (m.match(/[.,;!?]+$/) ?? [''])[0]
+    const url = m.slice(0, m.length - tail.length)
+    const h = host(url)
+    if (!sites.has(h)) return m
+    try {
+      const u = new URL(url)
+      if (u.searchParams.has('utm_source')) return m
+      u.searchParams.set('utm_source', input.platform)
+      u.searchParams.set('utm_medium', 'social')
+      if (input.plan_item_id) u.searchParams.set('utm_campaign', input.plan_item_id)
+      tagged++
+      return u.toString() + tail
+    } catch {
+      return m
+    }
+  })
+  return { body: out, tagged }
+}
+
 /** 从社媒帖子自动登记：发出去了、有帖子地址、正文里有本站链接的；同一帖子只登记一次 */
 export function sync(_input: {}, ctx: any) {
   const sites = ownSites(ctx)

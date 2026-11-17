@@ -173,6 +173,7 @@ export async function data(input: { days?: number }, ctx: any) {
         progress: g.progress, checkpoint_due: g.checkpoint_due, last_checkpoint: (g.plan.checkpoints ?? []).slice(-1)[0] ?? null,
         items: recent.map((i: any) => ({ week: i.week, title: i.title, status: i.status || 'todo', auto: !!i.auto })),
         keyword_map: map.by_stage,
+        social: planModule.social({ since: period_start }, ctx),
         backlinks: optional('backlinks') ? optional('backlinks').list({}, ctx).by_status : null,
       }
     }
