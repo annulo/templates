@@ -22,7 +22,7 @@ type Keyword = {
   serp_at?: string; serp_position?: number; serp_weak?: number; serp_strong?: number; serp_competitors?: string; serp_results?: string; serp_error?: string; rank_history?: string
   target_page?: string; live_at?: string; review_verdict?: string; review_summary?: string; onpage?: string; gsc_pages?: string
 }
-type OnPage = { page: string; title: boolean; h1: boolean; description: boolean; url: boolean; checked_at: string; error?: string; primary?: boolean; title_text?: string; h1_text?: string; desc_text?: string }
+type OnPage = { page: string; title: boolean; h1: boolean; description: boolean; url?: boolean; checked_at: string; error?: string; primary?: boolean; title_text?: string; h1_text?: string; desc_text?: string }
 type Competing = { page: string; impressions: number; position: number }
 type SerpRow = { p: number; domain: string; kind: string; title: string; url: string }
 type Rank = { d: string; p: number; s: 'gsc' | 'serp' }
@@ -90,12 +90,12 @@ export type TopicRow = {
   next?: { text: string; action: { kind: 'go'; view: string; params?: Record<string, string> } }
 }
 type Stage = 'none' | 'topic' | 'draft' | 'live' | 'shown' | 'top30' | 'top10'
-type Act = 'write' | 'writing' | 'publish' | 'fix' | 'watch'
+type Act = 'write' | 'writing' | 'publish' | 'fix' | 'reviewing' | 'watch'
 type Filter = 'all' | 'todo' | 'doing' | 'live' | 'loose'
 type Topic = TopicRow & { words: Keyword[]; act: Act }
 const RANK: Record<Stage, number> = { none: 0, topic: 1, draft: 2, live: 3, shown: 4, top30: 4, top10: 5 }
 const STEPS = ['topic', 'draft', 'live', 'shown', 'top10'] as const
-const FILTER_OF: Record<Act, Filter> = { write: 'todo', fix: 'todo', writing: 'doing', publish: 'doing', watch: 'live' }
+const FILTER_OF: Record<Act, Filter> = { write: 'todo', fix: 'todo', writing: 'doing', publish: 'doing', reviewing: 'doing', watch: 'live' }
 
 /** 没有增长计划模块（自媒体）时按词自己的数据推算阶段：选题、上线、谷歌排名 */
 function guessRow(cluster: string, words: Keyword[]): TopicRow {
@@ -113,7 +113,11 @@ function actOf(r: TopicRow, words: Keyword[]): Act {
   if (r.stage === 'topic') return 'writing'
   if (r.stage === 'draft') return 'publish'
   const best = r.best_position ?? 999
-  if (r.page && (words.some((k) => k.bucket === 'quick_win' || pageMissing(k)) || (best > 3 && best <= 30))) return 'fix'
+  if (r.page && (words.some((k) => k.bucket === 'quick_win' || pageMissing(k)) || (best > 3 && best <= 30))) {
+    // 已经改过页面、还在等复查（改动上线后 17 天内、这个词还没出结论）：不再催着改，到复查出了结论还没起色再回到待做
+    const waiting = words.some((k) => k.live_at && !k.review_verdict && Date.now() < Date.parse(k.live_at) + REVIEW_DAYS * 86400_000)
+    return waiting ? 'reviewing' : 'fix'
+  }
   return 'watch'
 }
 
@@ -133,6 +137,7 @@ function statusOf(t: Topic): string {
     const review = t.words.find((k) => k.review_verdict)
     const live = t.words.map((k) => k.live_at).filter(Boolean).sort().pop()
     if (review) parts.push(`${tr(`keywords.verdict_${review.review_verdict}`)} · ${review.review_summary ?? ''}`)
+    else if (t.act === 'reviewing' && live) parts.push(tr('keywords.changed_wait', { live: day(live), review: day(new Date(Date.parse(live) + REVIEW_DAYS * 86400_000).toISOString()) }))
     else if (live && !t.impressions) parts.push(tr('keywords.live_wait', { live: day(live), review: day(new Date(Date.parse(live) + REVIEW_DAYS * 86400_000).toISOString()) }))
     else if (t.impressions) parts.push(tr('keywords.s_shown', { imp: num(t.impressions), clicks: num(t.clicks) }))
     if (t.words.some(pageMissing)) parts.push(tr('keywords.r_missing'))
@@ -198,7 +203,7 @@ export default function Keywords({ channel, rev, onGo, beforeLoad, topicActions 
       return { ...row, words, act: actOf(row, words) }
     })
     // 要做的在前：待做 → 进行中 → 已上线；同一类里阶段靠后、曝光多的在前
-    const order: Act[] = ['fix', 'write', 'publish', 'writing', 'watch']
+    const order: Act[] = ['fix', 'write', 'publish', 'writing', 'reviewing', 'watch']
     topics.sort((a, b) => order.indexOf(a.act) - order.indexOf(b.act) || RANK[b.stage] - RANK[a.stage] || b.impressions - a.impressions)
     return { topics, loose }
   }, [data, map])
@@ -412,7 +417,6 @@ function Details({ k, channel, onChanged }: { k: Keyword; channel: Channel; onCh
               {mark(o.title, tr('keywords.onpage_title'))}
               {mark(o.h1, 'H1')}
               {mark(o.description, tr('keywords.onpage_desc'))}
-              {pathOf(o.page) !== '/' && mark(o.url, tr('keywords.onpage_url'))}
               <span className="inline-flex items-center gap-0.5 text-primary-text"><CircleHelp className="size-3" />{tr('keywords.onpage_help')}</span>
             </button>
           )}
@@ -486,7 +490,6 @@ function OnPageDialog({ open, onClose, k, o, onChanged }: { open: boolean; onClo
     { key: 'title', label: tr('keywords.onpage_title'), ok: o.title, text: o.title_text },
     { key: 'h1', label: 'H1', ok: o.h1, text: o.h1_text },
     { key: 'desc', label: tr('keywords.onpage_desc'), ok: o.description, text: o.desc_text },
-    ...(pathOf(o.page) !== '/' ? [{ key: 'url', label: tr('keywords.onpage_url'), ok: o.url, text: pathOf(o.page) }] : []),
   ]
   const fixable = !!k.search_page_id && (!o.title || !o.description)
   return (

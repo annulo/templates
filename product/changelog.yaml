@@ -1,6 +1,7 @@
-- version: 0.33.1
-  zh: "助手面板里的示例问题换成每天会用的：今天先做什么、做社媒视频、出选题、写周报。"
-  en: "The assistant panel now suggests everyday tasks: what to do today, a social video, topic ideas and the weekly report."
+- version: 0.35.1
+  zh: "关键词里「改现有页面」改过之后会移到「进行中」等复查，不再一直留在待做；页面检测不再查网址这一项。"
+  en: "After you change a page from the keywords list, its topic moves to In progress while it waits for its review instead of staying in To do; the page check no longer looks at the URL."
+
 - version: 0.35.0
   zh: "增长计划页多了「社媒」一块：近 28 天的阅读、互动、带来的询盘，和开始时比，再按平台对比。"
   en: "The growth plan page has a new Social section: views, engagements and inquiries over the last 28 days compared with the start, broken down by platform."
@@ -9,132 +10,178 @@
   zh: "社媒发布记录和增长计划连起来：帖子记在计划项名下、算进计划指标，询盘能对上是哪个平台带来的，检查点和周报按社媒数据调整（要社媒插件 0.11.0）。"
   en: "Social posts now tie into the growth plan: posts are recorded under plan items and counted in plan metrics, inquiries are traced to the platform that brought them, and checkpoints and weekly reports adjust from social data (needs the Social plugin 0.11.0)."
 
+- version: 0.33.1
+  zh: "助手面板里的示例问题换成每天会用的：今天先做什么、做社媒视频、出选题、写周报。"
+  en: "The assistant panel now suggests everyday tasks: what to do today, a social video, topic ideas and the weekly report."
+
 - version: 0.33.0
   zh: "新增「新建社媒内容」：填网址、说一句要做什么，AI 先出分镜和文案给你确认，再自动录网站做成视频，各平台存好待发的帖子。"
   en: "New "New social content": enter a URL and say what you want; AI drafts the storyboard and copy for you to confirm, then records the site into a video and prepares a post for each platform."
+
 - version: 0.32.0
   zh: "多语言网站写文章时就能选好要翻的语言，AI 写完在同一段对话里接着翻好各语言版本。"
   en: "On multilingual sites, pick the languages in the brief and AI translates the article right after writing it, in the same chat."
+
 - version: 0.31.0
   zh: "选题的写作简报改成整页分步填：挑产品能搜索、按分类看，大纲能让 AI 出初稿，改了自动保存。"
   en: "Topic briefs are now a step-by-step page: search and filter products to feature, let AI draft the outline, and changes save automatically."
+
 - version: 0.30.0
   zh: "外链能让 AI 写申请材料和邀请邮件（只写不发）；外链列表的排版更清爽，每条只留下一步要做的按钮。"
   en: "AI can now draft backlink applications and outreach emails (it writes, you send); the backlink list is cleaner, with just the next step on each row."
+
 - version: 0.29.0
   zh: "外链页新增「AI 找外链机会」：按你的行业找能申请外链的地方并写清怎么做；外链多了「已申请」，超过两周没上线会提醒跟进。"
   en: "New \"Find backlink ideas with AI\" on the Backlinks tab: places in your industry to get a link, with how to apply; links can be marked Applied, with a reminder to follow up after two weeks."
+
 - version: 0.28.0
   zh: "网站检查会提示公开邮箱用了 gmail 这类免费邮箱；AI 全站审查会细看首页的标题、品牌介绍和信任信息。"
   en: "Site checks now flag a free mailbox (like Gmail) as the public email, and the AI site review takes a close look at the homepage headline, brand intro and trust signals."
+
 - version: 0.27.0
   zh: "新增竞品监控：盯同类产品的网站，新上的页面能转成选题，没有竞品时 AI 帮你找。"
   en: "New Competitors page: watch similar products' sites, turn their new pages into topics, and let AI suggest competitors."
+
 - version: 0.26.0
   zh: "关键词和外贸一样按主题看：一个主题做一个页面，每个主题一张卡片、一个下一步按钮；SEO 规划并了进来。"
   en: "Keywords now work like the trade template: one page per topic, each topic a card with one next step; SEO planning is merged in."
+
 - version: 0.25.0
   zh: "侧栏理顺：每周总结并进增长计划；SEO 规划、关键词地图、外链收进「SEO 与关键词」，GA4 和转化数据收进「网站访问」；网站运营分成内容、搜索与流量、体检三段。"
   en: "Cleaner sidebar: the weekly summary moves into Growth plan; SEO planning, keyword map and backlinks live in SEO & keywords; GA4 and conversions in Site visits; website pages are grouped into content, search & traffic, and health checks."
+
 - version: 0.24.1
   zh: "起步向导去掉了顶栏的「以后再说」。"
   en: "Removed \"Later\" from the setup wizard header."
+
 - version: 0.24.0
   zh: "输入网址后自动分析网站：检查、关键词和 AI 搜索，直接排出 90 天计划看板，分清你做和 AI 做；总览可一键连接谷歌数据。"
   en: "Enter your URL and we analyze the site\u2014checks, keywords, AI search\u2014then build a 90-day plan board split into your tasks and AI's. Connect Google data in one click from the overview."
+
 - version: 0.23.1
   zh: "关键词地图里没页面的主题能直接转成选题，不用再去关键词页。"
   en: "Topics without a page can now be turned into content topics right from the keyword map."
+
 - version: 0.23.0
   zh: "增长计划每周的事能自动判断做完了没有，AI 做完也会自己标；首页加「今天要做的」卡片，后台换成灰底白卡片。"
   en: "Growth plan tasks now mark themselves done from your data, or by AI when it finishes them; the home page adds a Today card, and the dashboard gets a cleaner card layout."
+
 - version: 0.22.0
   zh: "新增 90 天增长计划：AI 定目标、排每周要做的事，第 30/60/90 天对着谷歌数据检查效果；还有关键词地图和外链记录。"
   en: "New 90-day growth plan: AI sets targets and weekly tasks, with day 30/60/90 checks against Google data; plus a keyword map and backlink tracking."
+
 - version: 0.21.0
   zh: "与外贸助手共用一套代码：写网站文章会查重，周报多了网站检查和关键词；增长机会的函数改名为 campaigns.*。"
   en: "Now shares one codebase with the trade template: website articles are checked for duplicates, and weekly reports add site audits and keywords. Opportunity functions are renamed to campaigns.*."
+
 - version: 0.20.1
   zh: "修好文章页多语言一栏里「原文语言」显示成代码的问题。"
   en: "Fixed the \"Original language\" label on the article page showing as code."
+
 - version: 0.20.0
   zh: "网站文章和落地页支持多语言：照 creght 站点开的语言，AI 翻出各语言版本，发布时一起发上去；术语表统一各语言的说法。"
   en: "Website articles and landing pages go multilingual: AI translates them into each language your creght site has, published together, with a glossary keeping terms consistent."
+
 - version: 0.19.0
   zh: "长文能设封面，发网站时用作封面；新增落地页：写清目标，AI 在网站上做出页面，产品、关键词、选题上都能发起。"
   en: "Long-form articles get a cover used on your website, plus landing pages: say the goal and AI builds the page on your site, started from a product, keyword or topic."
+
 - version: 0.18.1
   zh: "拆解风格不用先补正文：视频笔记有标题和互动数就能拆，内容不够时助手自己先同步博主的笔记；以前只有链接的笔记同步时补上正文。"
   en: "Style analysis no longer needs post text first: video posts with titles and engagement count, the assistant syncs the creator's posts itself when there isn't enough, and link-only posts get their text on sync."
+
 - version: 0.18.0
   zh: "参考博主能自动同步小红书笔记：读你 Chrome 里登录的网页版，新笔记带正文和互动数进灵感库并标「新」，拆风格卡时参考哪些写法互动高。需要社媒插件 0.10.0。"
   en: "Reference creators sync their Xiaohongshu posts automatically via the web version signed in in your Chrome: new posts arrive with text and engagement, marked new, and playbooks note which styles perform best. Needs the social plugin 0.10.0."
+
 - version: 0.17.0
   zh: "灵感库新增风格卡：把参考博主的写法拆成标题公式、开场和结构，照卡出选题、写内容；发布到网站时自动上传正文里的图片。"
   en: "The inspiration library adds playbooks: break a creator's style into title formulas, hooks and structure, then suggest topics and write posts that follow it. Publishing to a website now uploads images in the body automatically."
+
 - version: 0.16.1
   zh: "网站检查查全站：查内容是不是套话、谷歌收录了没有，新增 SEO 报告；还能让 AI 逐页审查，写全站优化方案。"
   en: "Site checks now cover the whole site, flagging boilerplate content and Google indexing, with a new SEO report and an AI page-by-page review that writes a site-wide plan."
+
 - version: 0.16.0
   zh: "B 站能发图文和长文（发成专栏），编辑帖子时按视频或专栏显示对应的字段。"
   en: "Bilibili takes image and long-form posts as articles; editing a post shows the fields for a video or an article."
+
 - version: 0.15.12
   zh: "网站检查不再把首页带不带 / 当成两个页面，误报「标题重复」「描述重复」。"
   en: "Site checks no longer treat the home page with and without a trailing slash as two pages, which caused false duplicate title and description issues."
+
 - version: 0.15.11
   zh: "网站访问、渠道卡片等处显示网站的正式域名，没发布过才显示预览地址。"
   en: "Site visits, channel cards and other places now show the site's live domain, falling back to the preview address only before it's published."
+
 - version: 0.15.10
   zh: "网站文章有了「AI 引用分」：按规则看 AI 好不好读懂、引用，标出最弱的段落，能交给 AI 改；网站检查会查 robots.txt 有没有拦 AI 爬虫。"
   en: "Website articles get an AI citation score: rule-based checks on how easily AI can read and quote them, with the weakest paragraphs flagged for AI to fix; site checks now flag robots.txt rules that block AI crawlers."
+
 - version: 0.15.9
   zh: "关键词能从竞品的产品挖词，查 Google 结果页时单独列出竞品在排、我们不在的词。"
   en: "Keywords can be mined from competitors' products, and Google result checks list the keywords where competitors rank and you don't."
+
 - version: 0.15.8
   zh: "网站和自媒体内容能按来源筛选：AI 搜索、SEO 关键词、谷歌搜索词、灵感、运营计划、改写或直接写。"
   en: "Website and social content can be filtered by origin: AI search, SEO keyword, Google query, inspiration, plan, rewrite or written directly."
+
 - version: 0.15.7
   zh: "关键词能看出做了有没有用：页面上线 17 天后，每个词自动对比前后排名；选题也记下来自哪个关键词、哪个问题。"
   en: "Keywords now show whether the work paid off: 17 days after a page goes live, each keyword's ranking is compared before and after; topics also record which keyword or question they came from."
+
 - version: 0.15.6
   zh: "关键词能在你的 Chrome 里查 Google 结果页，分出新机会、有竞争、难；社媒数据改成每天采集一次。"
   en: "Keywords can be checked against Google results in your Chrome and sorted into new chances, competitive and hard; social stats are now collected once a day."
+
 - version: 0.15.5
   zh: "搜索页多了「关键词」：从产品词扩出关键词，按排名分出快赢的词，能转成选题。还修了接入网站时等资料会出错、发布进度上「查看」点不开。"
   en: "The Search page has a new Keywords tab: keywords are expanded from your product terms, quick wins are picked out by ranking, and they can become topics. Also fixed an error while waiting for site details during setup and the View button on publishing progress."
+
 - version: 0.15.4
   zh: "「交给 AI」的说明和自带预设改得更通用，做的配图、视频默认就用到这篇上。"
   en: "The \"Hand to AI\" hint and built-in presets are more general, and images or videos it makes are used on the article by default."
+
 - version: 0.15.3
   zh: "账号卡片改成显示上次发布、采集成没成；发布记录能只删记录；发布进度能展开看每一步。"
   en: "Account cards show whether the last publish and collection worked; publish records can be removed without touching the platform; publishing progress can be expanded step by step."
+
 - version: 0.15.2
   zh: 渠道页的 creght 站点多了「去编辑」：一点就打开这个站点在 creght 里的编辑器，已经是登录状态，不用再登录一次。视频内容支持独立封面：上传、粘贴、从资料库选择、更换和移除，小红书、抖音发布带上封面。定时发布用日历选时间。不在 Annulo 里打开时的提示改成用 Annulo 的远程访问。需要社媒插件 0.8.5。
   en: "creght sites on the Channels page get an \"Edit site\" button: it opens the site's editor in creght, already signed in. Video content can have its own cover: upload, paste, pick from the library, replace or remove it, and Xiaohongshu and Douyin posts carry it. Scheduling uses a calendar picker. The hints shown outside Annulo now point to Annulo's remote access. Requires the social plugin 0.8.5."
+
 - version: 0.15.0
   zh: "每篇文章可以带一个「稿子」（默认折叠）：写为什么写这篇、大纲、剧本，不会发出去；能直接放进正文、让 AI 照稿子写成正文，或者改写成别的类型。「改写」和「AI 修改」合成「交给 AI」：「在这篇上做」（改正文、照稿子写正文、配图、做封面、做视频……做出来的挂在这篇下面）和「另写一篇」。AI 做出来的东西是这篇的「产物」，一组图算一个，能翻看、用作配图或发布用的视频，同时出现在资料库里，带备注，能点回文章；要改就点「继续对话」。文章、产物、组里的某一张都能「复制引用」贴进对话交给 AI。资料库按类型显示图片、视频、网页、音频，能用系统程序打开；长文能插视频；没保存的修改离开后会自动恢复，保存后留在编辑。需要 Annulo 能力版本 45。"
   en: "Each article can have a draft (collapsed by default): why you're writing it, an outline, a script, never published. Use it as the content, have AI write the content from it, or rewrite it as another type. Rewrite and AI revise are now one \"Ask AI\": \"Work on this\" (revise or write the content, make images, a cover or a video attached to this piece) and \"Write a new one\". What AI makes is this piece's artifacts: a set of images counts as one, you can flip through it and use it as the post's images or the video to publish; it also appears in the library with a note and a link back. To change it, click \"Continue chat\". Articles, artifacts and single images can be copied as references into a chat. The library shows images, videos, web pages and audio by type and opens them in your apps; long-form can embed videos; unsaved edits come back when you return, and saving keeps you in the editor. Requires Annulo API 45."
+
 - version: 0.14.7
   zh: 工作台整合今日任务与每周总结，网站运营、自媒体运营和产品资料分组展示，侧栏支持折叠。内容状态和发布链接合并到同一个弹窗：手动关联的链接可以添加、修改和删除，网站内容也能关联；发布记录里的链接自动带出。列表、选题、计划和正文详情的状态与链接看法、改法一致，列表每行统一为状态和「更多」菜单，链接以站点名显示。
   en: "Combine daily tasks and weekly summaries in the workbench and organize navigation into collapsible operation groups. Edit status and publication links in one dialog: add, change or remove manually linked URLs, for website content too, while links from publication records appear automatically. Lists, topics, plans and drafts now show and edit status and links the same way; each list row has its status and a More menu, with links shown by site."
+
 - version: 0.14.6
   zh: 网站与自媒体内容的所有任务状态均可再次编辑，包括已发布、已排期和已归档；修改保存后刷新仍保留并用于状态筛选。列表与计划详情同步显示，可恢复自动判断，正文、素材与历史回执保留。
   en: Edit every task status in website and social content, including published, scheduled and archived tasks. Saved progress persists after reload and drives filters, with matching plan details. Restore automatic status at any time; content, assets and publication receipts are preserved.
+
 - version: 0.14.5
   zh: 网站运营与自媒体运营分为独立工作区，各自的内容管理合并展示选题、营销计划与成品流程，账号定位移到自媒体管理。旧内容、素材关联和发布记录全部保留，归属不明确的记录可手动确认；新内容延续当前工作区，发布目标与复盘队列分别展示。
   en: Separate website and social operations into workspaces with joined topic, plan and content workflows. Move account positioning into social management. Preserve existing content, asset links and publication history; classify older unassigned records explicitly. New content keeps its workspace, with separate publishing destinations and review queues.
+
 - version: 0.14.4
   zh: 今日任务的统计卡片可直接进入 SEO 页面地图、营销计划与账号绑定、效果复盘。修复内容列表「更多」菜单被裁切的问题，空间不足时向上展开，支持 Escape 和点击外部关闭。
   en: Open the SEO page map, marketing plans and account binding, or reviews directly from daily task cards. Keep content action menus fully visible outside list clipping, open upward when needed, and close with Escape or an outside click.
+
 - version: 0.14.3
   zh: 营销内容与 SEO 规划融入产品运营：今日优先任务、关键词主页面地图、母题与多账号内容版本、旧正文草稿导入和素材复用。真实发布回执自动安排复盘，保留历史状态与未知指标，重复导入不覆盖现有编辑。
   en: Integrate marketing content and SEO plans with prioritized daily actions, primary-page query maps, multi-account content variants, source draft imports and asset reuse. Verified receipts schedule reviews, historical states and unknown metrics remain distinct, and repeated imports preserve existing edits.
+
 - version: 0.14.2
   zh: 内容中心新增灵感库与参考博主：保存来源、收藏原因与原创转化方向，按人物归组平台账号，从灵感生成或关联选题，文章保留参考快照。支持旧营销库校验导入和重复记录去重。
   en: Add inspiration sources and reference creators to the content center, group platform accounts, generate or link topics, preserve article reference snapshots, and import existing marketing libraries without duplicate records.
+
 - version: 0.14.1
   zh: 产品运营助手新增网站起步向导：先输入官网或选择网站，AI 读取真实内容并预填定位、产品事实和用户场景，核对后保存。重新解析先保留待确认草稿，避免覆盖现有资料；重复整理复用产品与场景。
   en: Start product onboarding by entering a website or selecting a connected site. AI prepares product positioning, facts and user scenarios for review before saving. Re-analysis keeps existing data until confirmation and repeated imports reuse matching records.
+
 - version: 0.14.0
   zh: 新增产品运营助手：产品事实与用户场景、SEO 增长机会、官网/小红书/抖音/X 运营主题和内容计划、转化日数据导入与每周复盘，复用网站运营和社媒插件。
   en: Introduce the product growth assistant with product facts and use cases, SEO opportunities, website/Xiaohongshu/Douyin/X campaign plans, daily conversion imports and weekly reviews, reusing website operations and the social plugin.
