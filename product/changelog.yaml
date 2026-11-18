@@ -1,6 +1,10 @@
 - version: 0.33.1
   zh: "助手面板里的示例问题换成每天会用的：今天先做什么、做社媒视频、出选题、写周报。"
   en: "The assistant panel now suggests everyday tasks: what to do today, a social video, topic ideas and the weekly report."
+- version: 0.35.0
+  zh: "增长计划页多了「社媒」一块：近 28 天的阅读、互动、带来的询盘，和开始时比，再按平台对比。"
+  en: "The growth plan page has a new Social section: views, engagements and inquiries over the last 28 days compared with the start, broken down by platform."
+
 - version: 0.34.0
   zh: "社媒发布记录和增长计划连起来：帖子记在计划项名下、算进计划指标，询盘能对上是哪个平台带来的，检查点和周报按社媒数据调整（要社媒插件 0.11.0）。"
   en: "Social posts now tie into the growth plan: posts are recorded under plan items and counted in plan metrics, inquiries are traced to the platform that brought them, and checkpoints and weekly reports adjust from social data (needs the Social plugin 0.11.0)."

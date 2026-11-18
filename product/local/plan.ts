@@ -2,7 +2,7 @@ import { L } from './_i18n'
 import { itemPosts, socialDigest, socialMetrics } from './_social'
 
 // 只读写业务表：手机上也能看计划、标做完
-export const cloud = ['get', 'mark', 'metrics', 'thisWeek', 'keywordMap', 'setLevel']
+export const cloud = ['get', 'mark', 'metrics', 'thisWeek', 'keywordMap', 'setLevel', 'social']
 
 // 90 天增长计划（设计见 docs/growth-plan.md）：把关键词、竞品、网站检查、内容、社媒、谷歌数据、询盘这些现有功能串成一份有目标、有基线、有检查点的计划。
 // 起草和检查点的分析交给助手（任务 draft-plan、plan-checkpoint）；这里只取数、存表、按数据算进度，不调模型。

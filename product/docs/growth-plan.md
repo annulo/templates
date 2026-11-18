@@ -165,6 +165,8 @@ AI 起草（任务 draft-plan）：判断从哪个阶段开始、三档目标、
    `leadSocial` 按询盘的 `utm`（source 的常见写法：twitter、xhs、ig…）和来源域名（t.co、lnkd.in、l.instagram.com…）算是哪个平台，`utm_campaign` 对上计划项。小红书、抖音正文里不放站外链接，这两个平台的询盘靠来源域名（多数拿不到）。
 4. **反过来指导计划**：`plan.checkpointContext` 带 `social`（按平台、按计划项、最好 / 最差的帖子、没挂计划项的帖子数、带来的询盘），检查点任务按它排下一阶段的社媒（互动高、带来询盘的加量，没动静的减量或换写法）；`plan.context`（起草）带近 90 天的 `social`，老项目据此定每周发多少；周报数据 `plan.social`（`plan.social({ since })`）给「社媒对计划的贡献」。
 
+5. **计划页的「社媒」卡片**（`Plan.tsx` 的 `SocialCard`，在「怎么衡量」下面）：目标里有没有社媒指标都显示近 28 天的四项（有发帖的账号、新增阅读、新增互动、带来的询盘）和开始时的数，再按平台一张表（`plan.social`）；没有社媒账号不出。
+
 模板依赖：`plugins_min.social` 要 ≥ 0.11.0（`social_posts` 才有 `plan_item_id`）。测试：`publish/tests/social-plan.test.mjs`。
 
 ## 每周总结
