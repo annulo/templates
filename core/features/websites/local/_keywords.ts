@@ -222,20 +222,15 @@ export function hasKeyword(text: string, keyword: string): boolean {
   return need.length > 0 && need.every((w) => have.has(w))
 }
 
-export type OnPage = { page: string; title: boolean; h1: boolean; description: boolean; url: boolean; checked_at: string; error?: string }
+export type OnPage = { page: string; title: boolean; h1: boolean; description: boolean; checked_at: string; error?: string }
 
-/** 页面的标题、H1、描述、网址里各有没有这个词（网址把 - _ / 当空格） */
+/** 页面的标题、H1、描述里各有没有这个词（网址不查：中文词、缩写、产品页的网址本来就不按词起，查了几乎都是没有，也不影响排名） */
 export function onPageFacts(page: string, doc: { title: string; h1: string[]; description: string }, keyword: string, at: string): OnPage {
-  let path = page
-  try {
-    path = decodeURIComponent(new URL(page).pathname)
-  } catch {}
   return {
     page, checked_at: at,
     title: hasKeyword(doc.title, keyword),
     h1: doc.h1.some((h) => hasKeyword(h, keyword)),
     description: hasKeyword(doc.description, keyword),
-    url: hasKeyword(path.replace(/[-_/.]+/g, ' '), keyword),
   }
 }
 
