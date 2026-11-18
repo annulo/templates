@@ -277,6 +277,7 @@ function Active({ ctx, data, plan, onChanged }: { ctx: Ctx; data: Data; plan: Pl
       <Roadmap ctx={ctx} plan={plan} items={items} week={week} onChanged={onChanged} />
       {plan.weekly?.length > 0 && <Rhythm ctx={ctx} list={plan.weekly} />}
       <Measure ctx={ctx} progress={data.progress ?? []} />
+      <SocialCard ctx={ctx} metrics={data.metrics} baseline={data.plan?.baseline?.metrics} />
       {plan.checkpoints.length > 0 && <Checkpoints list={plan.checkpoints} />}
       <DoneList items={items} />
       <Links ctx={ctx} />
@@ -476,6 +477,65 @@ function Measure({ ctx, progress }: { ctx: Ctx; progress: Progress[] }) {
             })}
           </tbody>
         </table>
+      </div>
+    </section>
+  )
+}
+
+const PLATFORM: Record<string, string> = { x: 'X', linkedin: 'LinkedIn', facebook: 'Facebook', instagram: 'Instagram', youtube: 'YouTube', xiaohongshu: '小红书 / Xiaohongshu', douyin: '抖音 / Douyin', bilibili: 'Bilibili', zhihu: 'Zhihu' }
+type SocialDigest = { published: number; leads: number; unattributed_posts: number; by_platform: { platform: string; posts: number; views: number; engagement: number; with_link: number; leads: number }[] }
+
+/** 社媒：近 28 天的阅读、互动、带来的询盘（和开始时比），以及各平台的对比。目标里没有这几项也显示；没有社媒账号就不出 */
+function SocialCard({ ctx, metrics, baseline }: { ctx: Ctx; metrics?: Record<string, number | null>; baseline?: Record<string, number | null> }) {
+  const [d, setD] = useState<SocialDigest | null>(null)
+  const has = !!metrics && 'social_views_28d' in metrics
+  useEffect(() => {
+    if (!has) return
+    void runLocal<SocialDigest | null>('plan.social', { since: new Date(Date.now() - 27 * 86400_000).toISOString() }).then(setD).catch(() => {})
+  }, [has])
+  if (!has || !metrics) return null
+  const cells = ['social_active_channels', 'social_views_28d', 'social_engagement_28d', 'social_leads_28d'] as const
+  return (
+    <section className="space-y-3">
+      <h3 className="text-base font-semibold">{tr('plan.social_title')} <span className="ml-1 text-xs font-normal text-muted-foreground">{tr('plan.social_desc')}</span></h3>
+      <div className="grid gap-2 sm:grid-cols-4">
+        {cells.map((k) => (
+          <div key={k} className="rounded-xl border border-border bg-background p-3">
+            <div className="text-xs text-muted-foreground">{tr(`plan.social_${k}`)}</div>
+            <div className="mt-1 text-xl font-semibold tabular-nums">{metrics[k] == null ? <span className="text-xs font-normal text-muted-foreground">{tr('plan.social_no_data')}</span> : fmt(metrics[k])}</div>
+            <div className="text-[11px] text-muted-foreground">{tr('plan.social_base', { n: fmt(baseline?.[k]) })}</div>
+          </div>
+        ))}
+      </div>
+      {!!d?.by_platform.length && (
+        <div className="overflow-x-auto rounded-xl border border-border bg-background">
+          <table className="w-full min-w-[480px] text-sm">
+            <thead className="border-b border-border text-left text-xs text-muted-foreground">
+              <tr>
+                <th className="px-4 py-2 font-normal">{tr('plan.social_platform')}</th>
+                <th className="px-3 py-2 text-right font-normal">{tr('plan.social_posts')}</th>
+                <th className="px-3 py-2 text-right font-normal">{tr('plan.social_views')}</th>
+                <th className="px-3 py-2 text-right font-normal">{tr('plan.social_engagement')}</th>
+                <th className="px-3 py-2 text-right font-normal">{tr('plan.social_leads')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.by_platform.map((r) => (
+                <tr key={r.platform} className="border-b border-border last:border-b-0">
+                  <td className="px-4 py-2.5">{PLATFORM[r.platform] ?? r.platform}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{r.posts}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{fmt(r.views)}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{fmt(r.engagement)}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{r.leads}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        {!!d?.unattributed_posts && <span>{tr('plan.social_unattributed', { n: d.unattributed_posts })}</span>}
+        <Button size="sm" variant="ghost" feedback={false} onClick={() => ctx.go('social-content')}>{tr('plan.m_see')}</Button>
       </div>
     </section>
   )
