@@ -12,6 +12,7 @@ import ContentStatus, { LinkChips, PublicationLinks, StageBadge } from '../Conte
 import { TaskFailed, TaskLaunchButton, TaskRequirements, TaskRunning, useTask } from '../Task'
 import { Button, Dialog, Field, Notice, PageHeader, Skeleton, cx, inputCls, toast } from '../ui'
 import Select from '../Select'
+import VideoField from '../VideoField'
 import { contentEntries, entryAccountIds, entryMetrics, legacyContentWorkspace, reviewWorkspace, type ContentData, type ContentEntry, type ContentStage, type ContentWorkspace } from '../../lib/contentWorkspace'
 import { dbCreate, dbPatch, isPublishSite, isSite, runLocal } from '../../lib/shuttle'
 import { isEn, tr } from '../../lib/i18n'
@@ -56,7 +57,7 @@ function useContentData(rev: unknown) {
   useEffect(reload, [reload, rev])
   return { data, error, reload }
 }
-type NewContent = { title: string; angle: string; type: ArticleType; account: string; topic?: any; savedId?: string }
+type NewContent = { title: string; angle: string; type: ArticleType; account: string; topic?: any; savedId?: string; record?: boolean; body?: string; video?: string; stage?: 'draft' | 'published'; link?: string }
 
 /**
  * 网站文章 / 社媒内容：同一份文章、选题表按工作区分开看（lib/contentWorkspace.ts 判断归属），新建、发布都只在所属工作区。
@@ -110,7 +111,7 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
     setForm({ title: topic?.title || '', angle: topic?.angle || '', type: workspace === 'website' ? 'article' : topic?.content_type || 'post', account: topic?.target_account_id || params.account || '', topic })
   }
   useEffect(() => { if (params.new === '1') { openNew(); setParam('new', '') } }, [params.new])
-  const save = async (mode: 'topic' | 'draft' | 'ai') => {
+  const save = async (mode: 'topic' | 'draft' | 'ai' | 'record') => {
     if (!form || !form.title.trim()) return
     setBusy(true); setSaveError('')
     try {
@@ -129,6 +130,17 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
       if (mode === 'ai') {
         const chat = await writer.run({ workspace, topic_id: topic.id, type: form.type, ...(workspace === 'website' && account ? { channel_id: account.id } : {}) })
         if (!chat) return
+      } else if (mode === 'record') {
+        // 直接录入已有内容：不经过 AI。存成一篇文章（视频、文案），已发布的再带上发布链接和状态（用户确认的记录，不伪造平台帖子和数据）
+        const now = new Date().toISOString()
+        const published = form.stage === 'published'
+        const article = await dbCreate('articles', { title: fields.title, type: form.type, body: (form.body || '').trim(), summary: '', tags: '[]', status: 'draft',
+          ...(form.type === 'video' && form.video ? { video: form.video } : {}),
+          topic_id: topic.id, workspace, target_platform: fields.target_platform, target_account_id: fields.target_account_id,
+          channel_id: '', created_at: now, updated_at: now } as any)
+        await dbPatch('topics', topic.id, { article_id: article.id, status: 'done' })
+        if (published) await runLocal('content-workspace.setStage', { key: 'topic:' + topic.id, workspace, stage: 'published', links: [(form.link || '').trim()] })
+        if (!published) setParam('article', article.id)
       } else if (mode === 'draft') {
         const now = new Date().toISOString()
         const article = await dbCreate('articles', { title: fields.title, type: form.type, body: '', summary: '', tags: '[]', status: 'draft',
@@ -277,18 +289,40 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
       onClose={() => setParam('post', '')} onDone={id => { setParam('post', ''); reload(); setParam('article', id) }} />}
     <Dialog open={!!form} onClose={() => !busy && setForm(null)} title={w('new_content')} width={680} footer={<>
       <Button variant="ghost" disabled={busy} onClick={() => setForm(null)}>{tr('common.cancel')}</Button>
-      <Button variant="outline" disabled={busy || !form?.title.trim()} onClick={() => save('topic')}>{w('save_topic')}</Button>
-      <Button variant="outline" disabled={busy || !form?.title.trim()} onClick={() => save('draft')}>{tr('content.write_self')}</Button>
-      <Button disabled={busy || !form?.title.trim() || !writer.task || !writer.shuttle} onClick={() => save('ai')}>{busy ? <Loader className="animate-spin" /> : <Sparkles />}{w('ai_create')}</Button>
+      {form?.record ? (
+        <Button disabled={busy || !form.title.trim() || (form.stage === 'published' && !(form.link || '').trim())} onClick={() => save('record')}>{busy ? <Loader className="animate-spin" /> : <ClipboardList />}{w('record_save')}</Button>
+      ) : (<>
+        <Button variant="outline" disabled={busy || !form?.title.trim()} onClick={() => save('topic')}>{w('save_topic')}</Button>
+        <Button variant="outline" disabled={busy || !form?.title.trim()} onClick={() => save('draft')}>{tr('content.write_self')}</Button>
+        <Button disabled={busy || !form?.title.trim() || !writer.task || !writer.shuttle} onClick={() => save('ai')}>{busy ? <Loader className="animate-spin" /> : <Sparkles />}{w('ai_create')}</Button>
+      </>)}
     </>}>
       {form && <div className="space-y-4">
         {saveError && <Notice tone="error">{saveError}</Notice>}
         <Field label={w('title')}><input autoFocus aria-label={w('title')} className={inputCls} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></Field>
-        <Field label={w('angle')}><textarea aria-label={w('angle')} className={inputCls} rows={3} value={form.angle} onChange={e => setForm({ ...form, angle: e.target.value })} /></Field>
+        {workspace === 'social' && !form.topic && !form.savedId && (
+          <button type="button" role="switch" aria-checked={!!form.record} onClick={() => setForm({ ...form, record: !form.record, stage: form.stage || 'draft', type: !form.record && form.type === 'post' ? 'video' : form.type })}
+            className={cx('flex w-full cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors', form.record ? 'border-primary/40 bg-primary/5' : 'border-border hover:bg-muted/40')}>
+            <ClipboardList className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span><span className="font-medium">{w('record_toggle')}</span><span className="block text-xs text-muted-foreground">{w('record_hint')}</span></span>
+          </button>
+        )}
+        {!form.record && <Field label={w('angle')}><textarea aria-label={w('angle')} className={inputCls} rows={3} value={form.angle} onChange={e => setForm({ ...form, angle: e.target.value })} /></Field>}
         {workspace === 'social' && <Field group label={tr('article.type')}><TypePicker value={form.type} onChange={type => setForm({ ...form, type })} /></Field>}
         <Field label={w(workspace === 'website' ? 'site_target' : 'account_target')}><Select ariaLabel={w('destination')} value={form.account} onChange={account => setForm({ ...form, account })} options={[
           { value: '', label: w('destination_pending') }, ...accounts.map(c => ({ value: c.id, label: c.name }))]} /></Field>
-        {writer.task && <Button size="sm" variant="ghost" onClick={() => setRequirements(true)}>{tr('content.req_btn')}</Button>}
+        {form.record && <>
+          {form.type === 'video' && <VideoField video={form.video || ''} onChange={video => setForm({ ...form, video })} />}
+          <Field label={w('record_body')}><textarea aria-label={w('record_body')} className={inputCls} rows={4} value={form.body || ''} onChange={e => setForm({ ...form, body: e.target.value })} /></Field>
+          <Field group label={w('record_stage')}><div className="flex gap-2">
+            {(['draft', 'published'] as const).map(st => (
+              <button key={st} type="button" aria-pressed={form.stage === st} onClick={() => setForm({ ...form, stage: st })}
+                className={cx('cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors', form.stage === st ? 'border-primary/40 bg-primary/10 font-semibold text-primary-text' : 'border-border text-muted-foreground hover:text-foreground')}>{w('record_' + st)}</button>
+            ))}
+          </div></Field>
+          {form.stage === 'published' && <Field label={w('record_link')}><input aria-label={w('record_link')} className={inputCls} placeholder="https://" value={form.link || ''} onChange={e => setForm({ ...form, link: e.target.value })} /></Field>}
+        </>}
+        {!form.record && writer.task && <Button size="sm" variant="ghost" onClick={() => setRequirements(true)}>{tr('content.req_btn')}</Button>}
         {writer.error && <Notice tone="error">{writer.error}</Notice>}
       </div>}
     </Dialog>
