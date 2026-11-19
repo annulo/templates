@@ -1,3 +1,5 @@
+import { InstagramConnectionButton, instagramApi } from './InstagramAccountFlow'
+import { instagramPublishRecovery } from '../lib/instagramPublishRecovery'
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowUpRight, RefreshCw, Send, Wrench, X } from 'lucide-react'
 import RunButton from './RunButton'
@@ -67,7 +69,7 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
             </div>
           </div>
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            {a.auth_mode === 'api' && r.kind === 'permission' ? <FacebookConnectionButton channel={a} onDone={onChanged} /> : a.auth_mode === 'api' && r.kind === 'restricted' ? <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="text-xs text-primary-text underline">{tr('facebook_connect.open_meta')}</a> : r.kind !== 'network' && <TaskButton task={FIX_TASK} input={{ channel_id: a.id }} match={(run) => run.input?.channel_id === a.id} icon={Wrench} onFinished={onChanged}>
+            {a.auth_mode === 'api' && r.kind === 'permission' ? (a.type === 'instagram' ? <InstagramConnectionButton channel={a} onDone={onChanged} /> : <FacebookConnectionButton channel={a} onDone={onChanged} />) : a.auth_mode === 'api' && r.kind === 'restricted' ? <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="text-xs text-primary-text underline">{tr('facebook_connect.open_meta')}</a> : r.kind !== 'network' && <TaskButton task={FIX_TASK} input={{ channel_id: a.id }} match={(run) => run.input?.channel_id === a.id} icon={Wrench} onFinished={onChanged}>
               {tr('health.fix')}
             </TaskButton>}
             {r.op === 'collect' && (
@@ -110,7 +112,7 @@ export function PublishProblems({ account, rows, posts, onOpenPost, onChanged }:
                   <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.error || tr('health.no_reason')}</div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-1">
-                  {facebookPublishRecovery(p, account) ? (
+                  {(facebookPublishRecovery(p, account) || instagramPublishRecovery(p, account)) ? (
                     <Button size="sm" variant="outline" onClick={() => onOpenPost(p)}><ArrowUpRight />{tr('facebook_retry.view_record')}</Button>
                   ) : <>
                     <RunButton inline fn="social/social.publish" input={{ post_id: p.id }} icon={Send} variant="outline" onDone={onChanged}>
@@ -182,5 +184,5 @@ export function ActivityLine({ ch, rows, onChanged }: { ch: Channel; rows: Platf
       </div>
     )
   }
-  return <div className="space-y-1.5 border-t border-border pt-2 text-[11px] text-muted-foreground">{line('publish')}{line('collect')}</div>
+  return <div className="space-y-1.5 border-t border-border pt-2 text-[11px] text-muted-foreground">{line('publish')}{instagramApi(ch) ? <p>{tr('instagram_connect.collection_later')}</p> : line('collect')}</div>
 }

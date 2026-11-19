@@ -7,6 +7,8 @@ import type { Ctx } from './views/types'
 import { TopicOrigins } from './Origins'
 import { LandingButton } from './views/Landing'
 import { TaskButton, TaskRequirements, useTask } from './Task'
+import { localeName } from './ArticleLanguages'
+import { isEn } from '../lib/i18n'
 
 /** tasks/brief-outline.md：AI 出大纲初稿，存进简报；模板没有这个任务（自媒体）就不显示按钮 */
 const OUTLINE_TASK = 'brief-outline'
@@ -19,6 +21,29 @@ const parse = <T,>(value: string | undefined, fallback: T): T => { try { return 
 
 type StepId = 'what' | 'products' | 'outline' | 'review'
 type Draft = { title: string; angle: string; keywords: string }
+/** 要发的网站开了几种语言（creght 站点开了两种以上才有）：写完可以接着翻成别的语言 */
+type SiteLangs = { locales: string[]; def: string }
+const normLoc = (v: unknown) => String(v ?? '').trim().toLowerCase().replace(/_/g, '-')
+function parseLocs(v: unknown): string[] {
+  let list: unknown = v
+  if (typeof v === 'string') { try { list = JSON.parse(v || '[]') } catch { list = v.split(/[,\s]+/) } }
+  return Array.isArray(list) ? [...new Set(list.map(normLoc).filter(Boolean))] : []
+}
+/** 简报里的语言（老数据是「English」这种名字）对上网站的哪种语言 */
+function matchLoc(locales: string[], v: unknown): string {
+  const l = normLoc(v)
+  if (!l) return ''
+  if (locales.includes(l)) return l
+  const primary = l.split('-')[0]
+  const byCode = locales.find((x) => x === primary) ?? locales.find((x) => x.split('-')[0] === primary)
+  if (byCode) return byCode
+  for (const ui of ['en', 'zh-CN']) {
+    try { const names = new Intl.DisplayNames([ui], { type: 'language' }); const hit = locales.find((x) => names.of(x)?.toLowerCase() === l); if (hit) return hit } catch { /* 浏览器不支持就不认名字 */ }
+  }
+  return ''
+}
+const joinNames = (l: string[]) => l.map(localeName).join(isEn() ? ', ' : '、')
+
 type OutlineAI = { task: Task; setTask: (t: Task) => void; input: () => Promise<unknown>; onFinished: () => void; chatId?: string }
 
 /** 老选题的大纲是一段文字：一行一节，缩进的行接在上一节后面当要点 */
@@ -70,8 +95,9 @@ function relevance(p: Product, title: string, keywords: string[]) {
   return score
 }
 
-/** header：放在标题下面的东西（内容工作区放状态和发布链接）；defaults：没写过简报时的默认值（自媒体不默认英文、官网） */
-export function WritingBriefPage({ ctx, topic, onClose, onChanged, onWrite, header, defaults }: { ctx: Ctx; topic: Topic; onClose: () => void; onChanged: () => void; onWrite: () => void; header?: ReactNode; defaults?: Partial<WritingBrief> }) {
+/** header：放在标题下面的东西（内容工作区放状态和发布链接）；defaults：没写过简报时的默认值（自媒体不默认英文、官网）；
+ *  translate：写文章任务会不会「写完翻译」（自媒体的写文章任务没有这一步，传 false 就不显示语言选项） */
+export function WritingBriefPage({ ctx, topic, onClose, onChanged, onWrite, header, defaults, translate = true }: { ctx: Ctx; topic: Topic; onClose: () => void; onChanged: () => void; onWrite: () => void; header?: ReactNode; defaults?: Partial<WritingBrief>; translate?: boolean }) {
   const [draft, setDraft] = useState<Draft>({ title: topic.title, angle: topic.angle || '', keywords: topic.keywords || '' })
   const [brief, setBrief] = useState<WritingBrief>(() => parse(topic.brief, { language: 'English', channels: 'Website, LinkedIn', product_ids: [], ...defaults }))
   const [sections, setSections] = useState<BriefSection[]>(() => sectionsFrom(parse(topic.brief, {} as WritingBrief)))
@@ -81,13 +107,26 @@ export function WritingBriefPage({ ctx, topic, onClose, onChanged, onWrite, head
   const [saved, setSaved] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [busy, setBusy] = useState(false)
   useEffect(() => { dbList('products').then((p) => setProducts(p.filter((x) => x.status !== 'hidden'))).catch(() => setProducts(null)) }, [])
+  // 多语言网站：选题定了发哪个网站用它，没定用第一个开了多语言的
+  const [site, setSite] = useState<SiteLangs | null>(null)
+  useEffect(() => {
+    if (!translate) return
+    dbList('channels').then((list) => {
+      const multi = (list as any[]).filter((c) => c.type === 'creght_site').map((c) => ({ c, l: parseLocs(c.locales) })).filter((x) => x.l.length > 1)
+      const pick = multi.find((x) => x.c.id === (topic as { target_account_id?: string }).target_account_id) ?? multi[0]
+      if (pick) setSite({ locales: pick.l, def: matchLoc(pick.l, pick.c.default_locale) || pick.l[0] })
+    }).catch(() => {})
+  }, [])
+  const srcLang = site ? matchLoc(site.locales, brief.language) || site.def : ''
+  // 没选过：默认网站的其余语言都翻
+  const targets = site ? (brief.translate_locales ?? site.locales).filter((l) => site.locales.includes(l) && l !== srcLang) : []
 
   const steps: StepId[] = products ? ['what', 'products', 'outline', 'review'] : ['what', 'outline', 'review']
   const index = Math.max(0, steps.indexOf(step))
   const picked = (brief.product_ids || []).map((id) => products?.find((p) => p.id === id)).filter(Boolean) as Product[]
 
   // 改了就存（停手 0.8 秒后）；标题空着不存，content.saveBrief 会拒绝
-  const payload = () => ({ topic_id: topic.id, ...draft, brief: { ...brief, sections: sections.filter((s) => s.heading.trim() || s.note?.trim()), outline: outlineText(sections, products || []) } })
+  const payload = () => ({ topic_id: topic.id, ...draft, brief: { ...brief, ...(site ? { language: brief.language || srcLang, translate_locales: targets } : {}), sections: sections.filter((s) => s.heading.trim() || s.note?.trim()), outline: outlineText(sections, products || []) } })
   // 只看不改不写：和上次存的（打开时就是选题原样）一样就不存
   const snapshot = () => JSON.stringify([draft, brief, sections])
   const lastSaved = useRef(snapshot())
@@ -180,15 +219,15 @@ export function WritingBriefPage({ ctx, topic, onClose, onChanged, onWrite, head
         <div className="min-w-0 space-y-4">
           {step === 'what' && <WhatStep ctx={ctx} topic={topic} draft={draft} setDraft={setDraft} brief={brief} setBrief={setBrief} />}
           {step === 'products' && products && <ProductsStep products={products} draft={draft} ids={brief.product_ids || []} setIds={(ids) => { setBrief({ ...brief, product_ids: ids }); setSections(sections.map((s) => ({ ...s, product_ids: (s.product_ids || []).filter((id) => ids.includes(id)) }))) }} />}
-          {step === 'outline' && <OutlineStep ai={outlineAI} sections={sections} setSections={setSections} picked={picked} brief={brief} setBrief={setBrief} />}
-          {step === 'review' && <ReviewStep draft={draft} brief={brief} sections={sections} picked={picked} hasProducts={!!products} go={go} />}
+          {step === 'outline' && <OutlineStep ai={outlineAI} site={site} srcLang={srcLang} targets={targets} sections={sections} setSections={setSections} picked={picked} brief={brief} setBrief={setBrief} />}
+          {step === 'review' && <ReviewStep srcLang={srcLang} targets={targets} draft={draft} brief={brief} sections={sections} picked={picked} hasProducts={!!products} go={go} />}
         </div>
         <aside className="space-y-3 @4xl:sticky @4xl:top-4">
           {step === 'review' ? <>
             <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
               <h3 className="mb-3 text-sm font-semibold">{r('after_title')}</h3>
               <ol className="space-y-2.5">
-                {[1, 2, 3].map((n) => <li key={n} className="flex gap-2.5 text-xs leading-relaxed"><span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-background text-[11px] font-semibold text-primary-text">{n}</span>{r('after_' + n)}</li>)}
+                {[r('after_1'), ...(targets.length ? [r('after_translate', { langs: joinNames(targets) })] : []), r('after_2'), r('after_3')].map((t, i) => <li key={i} className="flex gap-2.5 text-xs leading-relaxed"><span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-background text-[11px] font-semibold text-primary-text">{i + 1}</span>{t}</li>)}
               </ol>
             </div>
             <LandingButton variant="outline" className="w-full" sites={ctx.channels.filter(isPublishSite)} onStarted={onClose} preset={() => ({ topic_id: topic.id, product_ids: brief.product_ids ?? [], keyword: kws[0] ?? '', goal: tr('landing.goal_from_topic', { title: draft.title.trim() || topic.title }) })} />
@@ -392,7 +431,7 @@ function ProductsStep({ products, draft, ids, setIds }: { products: Product[]; d
   )
 }
 
-function OutlineStep({ ai, sections, setSections, picked, brief, setBrief }: { ai?: OutlineAI; sections: BriefSection[]; setSections: (s: BriefSection[]) => void; picked: Product[]; brief: WritingBrief; setBrief: (b: WritingBrief) => void }) {
+function OutlineStep({ ai, site, srcLang, targets, sections, setSections, picked, brief, setBrief }: { ai?: OutlineAI; site: SiteLangs | null; srcLang: string; targets: string[]; sections: BriefSection[]; setSections: (s: BriefSection[]) => void; picked: Product[]; brief: WritingBrief; setBrief: (b: WritingBrief) => void }) {
   // 只有按住拖动把手时整行才能拖，不然在输入框里选字会变成拖动
   const [armed, setArmed] = useState<number | null>(null)
   const [dragging, setDragging] = useState<number | null>(null)
@@ -448,13 +487,37 @@ function OutlineStep({ ai, sections, setSections, picked, brief, setBrief }: { a
     <Card icon={TriangleAlert} title={r('more_title')} desc={r('more_desc')}>
       <div className="grid gap-4 sm:grid-cols-2">
         {(['cta', 'gaps'] as const).map((key) => <label key={key} className="block"><Label hint={key === 'gaps' ? r('gaps_hint') : undefined}>{r('brief_' + key)}</Label><textarea aria-label={r('brief_' + key)} rows={3} value={brief[key] || ''} onChange={(e) => setBrief({ ...brief, [key]: e.target.value })} className={cx(inputCls, 'resize-none py-2 leading-relaxed')} /></label>)}
-        {(['language', 'channels'] as const).map((key) => <label key={key} className="block"><Label>{r('brief_' + key)}</Label><input aria-label={r('brief_' + key)} value={brief[key] || ''} onChange={(e) => setBrief({ ...brief, [key]: e.target.value })} className={cx(inputCls, 'h-9')} /></label>)}
+        {(site ? ['channels'] as const : ['language', 'channels'] as const).map((key) => <label key={key} className="block"><Label>{r('brief_' + key)}</Label><input aria-label={r('brief_' + key)} value={brief[key] || ''} onChange={(e) => setBrief({ ...brief, [key]: e.target.value })} className={cx(inputCls, 'h-9')} /></label>)}
       </div>
+      {/* 多语言网站：原文用哪种语言写，写完接着翻成哪几种（发布时一起发到网站的各语言版本） */}
+      {site && (
+        <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3.5">
+          <div>
+            <Label>{r('lang_source')}</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {site.locales.map((l) => <button key={l} type="button" aria-pressed={l === srcLang} onClick={() => setBrief({ ...brief, language: l, translate_locales: [...new Set([...targets, srcLang])].filter((x) => x && x !== l) })}
+                className={cx('cursor-pointer rounded-md border px-2.5 py-1 text-xs', l === srcLang ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background hover:border-foreground/30')}>{localeName(l)}</button>)}
+            </div>
+          </div>
+          <div>
+            <Label hint={r('translate_hint')}>{r('translate_to')}</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {site.locales.filter((l) => l !== srcLang).map((l) => {
+                const on = targets.includes(l)
+                return <button key={l} type="button" aria-pressed={on} onClick={() => setBrief({ ...brief, translate_locales: on ? targets.filter((x) => x !== l) : [...targets, l] })}
+                  className={cx('inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs', on ? 'border-primary/40 bg-primary/10 font-medium text-primary-text' : 'border-border bg-background text-muted-foreground hover:border-foreground/30')}>
+                  <span className={cx('flex size-3.5 items-center justify-center rounded-sm border', on ? 'border-primary bg-primary text-primary-foreground' : 'border-foreground/25')}>{on && <Check className="size-2.5" />}</span>{localeName(l)}
+                </button>
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   </>
 }
 
-function ReviewStep({ draft, brief, sections, picked, hasProducts, go }: { draft: Draft; brief: WritingBrief; sections: BriefSection[]; picked: Product[]; hasProducts: boolean; go: (s: StepId) => void }) {
+function ReviewStep({ srcLang, targets, draft, brief, sections, picked, hasProducts, go }: { srcLang: string; targets: string[]; draft: Draft; brief: WritingBrief; sections: BriefSection[]; picked: Product[]; hasProducts: boolean; go: (s: StepId) => void }) {
   const kws = keywordList(draft.keywords)
   const outline = sections.filter((s) => s.heading.trim())
   const empty = <span className="text-muted-foreground">{r('not_set')}</span>
@@ -484,7 +547,10 @@ function ReviewStep({ draft, brief, sections, picked, hasProducts, go }: { draft
         ? <ol className="space-y-1">{outline.map((s, i) => <li key={i} className="flex gap-2"><span className="mt-0.5 flex size-[18px] shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold text-muted-foreground">{i + 1}</span><span>{s.heading}</span></li>)}</ol>
         : <span className="text-muted-foreground">{r('outline_auto')}</span>)}
       {row(r('brief_cta'), 'outline', brief.cta || empty)}
-      {row(r('brief_channels'), 'outline', [brief.language, brief.channels].filter(Boolean).join(' · ') || empty)}
+      {srcLang
+        ? row(r('lang_row'), 'outline', <>{localeName(srcLang)}{targets.length > 0 ? <span className="text-muted-foreground"> → {r('translate_after', { langs: joinNames(targets) })}</span> : <span className="text-muted-foreground"> · {r('translate_none')}</span>}</>)
+        : null}
+      {row(r('brief_channels'), 'outline', (srcLang ? brief.channels : [brief.language, brief.channels].filter(Boolean).join(' · ')) || empty)}
     </div>
     {brief.gaps?.trim() && (
       <div className="flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">

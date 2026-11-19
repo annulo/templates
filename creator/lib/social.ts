@@ -234,7 +234,7 @@ export type Elsewhere = Record<string, string>
 let elsewhereOnce: { key: string; p: Promise<Elsewhere> } | null = null
 /** 哪些账号的登录态不在这里（social.elsewhereAll，按本机浏览器 profile 认）：账号的登录记录变了就重新读，几个地方同时用只读一次 */
 export function useElsewhere(channels: Channel[]): Elsewhere {
-  const key = channels.map((c) => `${c.id}:${c.browser_profile ?? ''}:${c.browser_profile_id ?? ''}:${c.browser_machine ?? ''}`).join(',')
+  const key = channels.map((c) => `${c.id}:${c.auth_mode ?? ''}:${c.browser_profile ?? ''}:${c.browser_profile_id ?? ''}:${c.browser_machine ?? ''}`).join(',')
   const [m, setM] = useState<Elsewhere>({})
   useEffect(() => {
     if (elsewhereOnce?.key !== key) elsewhereOnce = { key, p: runLocal<Elsewhere>('social/social.elsewhereAll', {}).catch(() => ({})) }
