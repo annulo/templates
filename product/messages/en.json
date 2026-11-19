@@ -194,5 +194,10 @@
     "untitled": "(Untitled)",
     "views_gain": "+{n} views",
     "views_total": "{n} views total"
+  },
+  "competitors": {
+    "kind_direct": "Alternative",
+    "kind_brand": "Major brand / platform",
+    "kind_channel": "Distribution channel"
   }
 }

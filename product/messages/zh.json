@@ -194,5 +194,10 @@
     "untitled": "（无标题）",
     "views_gain": "浏览 +{n}",
     "views_total": "累计浏览 {n}"
+  },
+  "competitors": {
+    "kind_direct": "同类产品",
+    "kind_brand": "大品牌 / 平台",
+    "kind_channel": "分发渠道"
   }
 }

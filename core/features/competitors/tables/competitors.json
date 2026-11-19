@@ -22,7 +22,7 @@
       },
       "kind": {
         "type": "string",
-        "description": "direct 同类工厂、供应商 / brand 品牌商 / channel 渠道商、分销商（AI 推荐时分的类，手动加的为空）"
+        "description": "direct 直接竞争（外贸：同类工厂、供应商；产品：同类产品）/ brand 品牌商、品类大品牌或平台 / channel 渠道商、分发渠道（AI 推荐时分的类，手动加的为空）"
       },
       "evidence": {
         "type": "string",
