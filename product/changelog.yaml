@@ -1,6 +1,6 @@
-- version: next
-  zh: "账号管理支持 Instagram 官方 API 连接、授权检测和口令更新；内容中心可发单张 JPEG，发布异常时先核对结果，避免重复发帖。"
-  en: "Manage Instagram API connections and credentials, check authorization, and publish single JPEG images from the content center. Uncertain attempts offer result checks to avoid duplicate posts."
+- version: 0.36.0
+  zh: "账号管理里 Instagram 可以选「官方 API」：粘贴访问口令连接专业账号，内容中心能用它发单张图片，发布中断时先核对结果、不会重复发帖（要社媒插件 0.12.0）。"
+  en: "Instagram accounts can use the official API: paste an access token to connect a professional account and publish single images from the content center; interrupted attempts are checked first so nothing is posted twice (needs the Social plugin 0.12.0)."
 
 - version: 0.35.2
   zh: "AI 推荐竞品的类别改成产品的说法：同类产品、大品牌 / 平台、分发渠道，不再显示「同类工厂」。"
