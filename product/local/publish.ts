@@ -67,13 +67,19 @@ export function prepare(input: { article_id: string; channel_ids: string[]; sche
     }
     const ch = ctx.db.get('social_accounts', id)
     if (!ch) { problems.push({ channel_id: id, problems: [L(ctx, '没有这个账号', 'No such account')] }); continue }
+    if (at && ch.type === 'instagram' && ch.auth_mode === 'api') { problems.push({ channel_id: id, problems: [L(ctx, 'Instagram API 自动排期尚未接入，请立即发布。', 'Instagram API scheduling is not connected; publish now.')] }); continue }
     if (!ok.includes(ch.type)) { problems.push({ channel_id: id, problems: [L(ctx, '这个平台不支持这种类型的文章，先改写成它支持的类型', "This platform doesn't take this type; rewrite it into a type it supports first")] }); continue }
     const now = new Date().toISOString()
     const post: any = fromContent(a, ch.type)
     const tagged = optional('backlinks')?.tagLinks?.({ body: post.body, platform: ch.type, plan_item_id: planItem }, ctx)
     if (tagged?.tagged) post.body = tagged.body
     const row = { ...post, status: at ? 'scheduled' : 'approved', scheduled_at: at, error: null, review_note: null, updated_at: now }
-    const old = ctx.db.query('social_posts', { where: { article_id: a.id, channel_id: id }, limit: 50 }).list.find((p: any) => !['published', 'publishing', 'removed'].includes(p.status))
+    const prior = ctx.db.query('social_posts', { where: { article_id: a.id, channel_id: id }, limit: 50 }).list
+    if (ch.type === 'instagram' && ch.auth_mode === 'api' && prior.some((p: any) => p.status === 'publishing')) { problems.push({ channel_id: id, problems: [L(ctx, '这篇内容正在发布，请等待完成或核对已有记录。', 'This content is publishing; wait or reconcile its existing record.')] }); continue }
+    const old = prior.find((p: any) => !['published', 'publishing', 'removed'].includes(p.status))
+    let instagramAttempt = false
+    if (old?.instagram_api_state) { try { instagramAttempt = ['submitted', 'published'].includes(JSON.parse(old.instagram_api_state).stage) } catch { instagramAttempt = true } }
+    if (instagramAttempt) { problems.push({ channel_id: id, problems: [L(ctx, '已有 Instagram 发布记录待核对，请到发布记录中核对结果。', 'An Instagram attempt needs reconciliation; check its publication record.')] }); continue }
     // 计划项只在第一次记（同一条帖子再改、重发不换归属）
     const attach = planItem && !old?.plan_item_id ? { plan_item_id: planItem } : {}
     const postId = old ? (ctx.db.update('social_posts', old.id, { ...row, ...attach }), old.id) : ctx.db.insert('social_posts', { ...row, ...attach, channel_id: id, article_id: a.id, source: 'shuttle', created_at: now }).id

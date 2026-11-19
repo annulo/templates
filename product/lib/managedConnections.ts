@@ -1,0 +1,22 @@
+import { markShuttle, shuttleMissing, ShuttleUnavailable } from './remote'
+import { tr } from './i18n'
+
+export type ManagedConnection = {
+  id: string; grant_id: string; login_method: string; status: string;
+  needs_reconnect?: boolean; scopes?: string[] | null;
+  assets: { id: string; name: string; kind: string; status: string }[];
+}
+async function request<T>(path: string, method = 'GET'): Promise<T> {
+  if (shuttleMissing()) throw new ShuttleUnavailable(tr('meta.err.not_from_shuttle'))
+  let response: Response
+  try { response = await fetch('/_shuttle/api/' + path, { method, headers: { 'X-Shuttle': '1' } }) }
+  catch { throw new ShuttleUnavailable(tr('meta.err.no_shuttle')) }
+  if (!response.headers.get('x-shuttle')) { markShuttle(false); throw new ShuttleUnavailable(tr('meta.err.not_from_shuttle')) }
+  markShuttle(true)
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(body.error || tr('meta.err.req_failed', { status: response.status }))
+  return body as T
+}
+export const managedConnections = (provider: string) => request<{list: ManagedConnection[]}>(`settings/connections/${encodeURIComponent(provider)}/assets`).then(r => r.list)
+export const disconnectManagedConnection = (provider: string, id: string) => request(`settings/connections/${encodeURIComponent(provider)}?account=${encodeURIComponent(id)}`, 'DELETE')
+export const authorizeConnections = () => request<{verify_url: string}>('login?connections=1', 'POST')
