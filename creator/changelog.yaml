@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: next
+  zh: "账号管理支持 Instagram 官方 API 连接、授权检测和口令更新；内容中心可发单张 JPEG，发布异常时先核对结果，避免重复发帖。"
+  en: "Manage Instagram API connections and credentials, check authorization, and publish single JPEG images from the content center. Uncertain attempts offer result checks to avoid duplicate posts."
+
 - version: 0.24.0
   zh: "选题的写作简报改成整页分步填，大纲一节一节排、能拖动顺序，改了自动保存。"
   en: "Topic briefs are now a step-by-step page with a section-by-section outline you can reorder; changes save automatically."
