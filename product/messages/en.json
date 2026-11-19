@@ -1962,7 +1962,10 @@
     "pick_start": "Suggest topics",
     "playbook": "Playbook",
     "recent": "Recently updated pages",
-    "recent_all": "Recently updated pages (new ones will show up here, marked new)"
+    "recent_all": "Recently updated pages (new ones will show up here, marked new)",
+    "kind_direct": "Alternative",
+    "kind_brand": "Major brand / platform",
+    "kind_channel": "Distribution channel"
   },
   "campaigns": {
     "template_name": "Product growth assistant",

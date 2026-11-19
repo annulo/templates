@@ -43,6 +43,12 @@ type Report = { id: string; title: string; body: string; created_at: string; com
 
 const KIND_TONE: Record<Kind, Tone> = { product: 'ok', blog: 'primary', landing: 'warn', other: 'default' }
 const REL_TONE: Record<string, Tone> = { direct: 'warn', brand: 'primary', channel: 'default' }
+/** 竞品的类：模板可以在自己的 messages 里给 competitors.kind_<类> 换说法（产品运营没有「工厂」），没给用模块默认的 rel_<类> */
+const relLabel = (kind: string) => {
+  const key = `competitors.kind_${kind}`
+  const v = tr(key)
+  return v && v !== key && !v.endsWith(key) ? v : tr(`competitors.rel_${kind}`)
+}
 const pathOf = (u: string) => {
   try {
     const x = new URL(u)
@@ -323,7 +329,7 @@ function Suggestions({ list, onChanged }: { list: Suggestion[]; onChanged: () =>
                 <a href={c.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
                   {c.host} <ExternalLink className="size-3" />
                 </a>
-                {c.kind && <Badge tone={REL_TONE[c.kind] ?? 'default'}>{tr(`competitors.rel_${c.kind}`)}</Badge>}
+                {c.kind && <Badge tone={REL_TONE[c.kind] ?? 'default'}>{relLabel(c.kind)}</Badge>}
                 {c.source === 'geo' && <Badge tone="primary">{tr('competitors.from_geo')}</Badge>}
               </div>
               {c.reason && <p className="text-xs [overflow-wrap:anywhere]">{c.reason}</p>}

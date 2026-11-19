@@ -1,3 +1,7 @@
+- version: 0.35.2
+  zh: "AI 推荐竞品的类别改成产品的说法：同类产品、大品牌 / 平台、分发渠道，不再显示「同类工厂」。"
+  en: "AI-suggested competitors are now labelled for products: Alternative, Major brand / platform, Distribution channel, instead of supplier terms."
+
 - version: 0.35.1
   zh: "关键词里「改现有页面」改过之后会移到「进行中」等复查，不再一直留在待做；页面检测不再查网址这一项。"
   en: "After you change a page from the keywords list, its topic moves to In progress while it waits for its review instead of staying in To do; the page check no longer looks at the URL."

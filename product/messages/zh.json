@@ -1962,7 +1962,10 @@
     "pick_start": "开始出选题",
     "playbook": "打法卡",
     "recent": "最近更新的页面",
-    "recent_all": "各家最近更新的页面（之后新上的会出现在上面，带「新」）"
+    "recent_all": "各家最近更新的页面（之后新上的会出现在上面，带「新」）",
+    "kind_direct": "同类产品",
+    "kind_brand": "大品牌 / 平台",
+    "kind_channel": "分发渠道"
   },
   "campaigns": {
     "template_name": "产品运营助手",
