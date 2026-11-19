@@ -1,3 +1,7 @@
+- version: 0.37.0
+  zh: "新建社媒内容时可以直接录入已有内容：传视频、写文案就存好，已经发出去的填上发布链接，记进内容列表。"
+  en: "When creating social content you can record what you already have: upload a video and add copy, and for posts already out, add the link so they show up in your content list."
+
 - version: 0.36.0
   zh: "账号管理里 Instagram 可以选「官方 API」：粘贴访问口令连接专业账号，内容中心能用它发单张图片，发布中断时先核对结果、不会重复发帖（要社媒插件 0.12.0）。"
   en: "Instagram accounts can use the official API: paste an access token to connect a professional account and publish single images from the content center; interrupted attempts are checked first so nothing is posted twice (needs the Social plugin 0.12.0)."
