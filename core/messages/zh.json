@@ -24,18 +24,6 @@
     "published_hint": "手动标记为已发布，包括在其他渠道发布",
     "saved": "内容状态已更新"
   },
-  "facebook_comments": {
-    "view": "查看评论",
-    "title": "Facebook 评论",
-    "refresh": "刷新评论",
-    "more": "加载更多评论",
-    "loading": "正在读取评论…",
-    "empty": "Facebook 暂未返回可查看的评论。",
-    "no_text": "此评论没有文字内容，请到 Facebook 查看。",
-    "hint": "按时间倒序显示评论及回复。Facebook 可返回的评论受可见性限制，可能少于评论总数。",
-    "updated": "更新于 {when}",
-    "loaded": "已显示 {n} 条评论"
-  },
   "facebook_retry": {
     "view_record": "核对发布结果",
     "uncertain": "上次发布结果待确认",
@@ -688,19 +676,17 @@
     "token": "访问口令",
     "token_placeholder": "留空使用已保存的口令",
     "token_hint": "口令只保存在这台电脑的密钥里，不会上传。大约 60 天后失效，到时在「管理连接」里重新粘贴一次。",
-    "host": "本机图片上传到（可选）",
+    "host": "本机图片、视频上传到（可选）",
+    "host_saved": "已保存",
     "public_only": "只使用公开图片地址",
-    "host_hint": "选择已连接网站的素材库后，本机 JPEG 会在发布时自动上传。此电脑需已登录对应区域的 Creght CLI。",
+    "host_hint": "选择已连接网站的素材库后，本机 JPEG 和视频会在发布时自动上传。图片要这台电脑登录对应区域的 Creght CLI，视频要 Annulo 连着对应区域的 creght。",
     "connect": "验证并连接",
     "check": "检测授权",
     "manage": "管理连接",
     "title": "Instagram 连接",
     "recovery": "这条帖子已提交过发布请求。请先核对结果；系统不会再次提交，以免重复发帖。",
     "check_result": "核对发布结果",
-    "single_now": "Instagram API 当前仅支持单图立即发布",
-    "collection_later": "API 互动数据采集尚未接入",
     "checked": "授权检测通过",
-    "unschedule": "取消排期，转为待发布",
     "intro": "点下面的按钮，Annulo 会打开浏览器替你完成大部分操作：你只需要登录 Facebook 和 Instagram、点「允许」。第一次大约 3 分钟。",
     "renew_intro": "口令大约 60 天失效。点下面的按钮重新生成，一般只需要在弹窗里点「允许」。",
     "manual_step_facebook": "打开 developers.facebook.com，登录 Facebook。",
@@ -717,5 +703,51 @@
     "start_hint": "第一次用要注册 Meta 开发者（免费，验证一次手机或邮箱），账号要是 Instagram 专业账号（创作者或商家）。浏览器会把这个账号加成应用的测试员，你在 Instagram 里点「接受」、在弹窗里登录并点「允许」就行。右下角会提示每一步。",
     "have_token": "已经有口令？直接粘贴",
     "username": "要连接的 Instagram 用户名"
+  },
+  "meta": {
+    "channel_types": {
+      "threads": {
+        "label": "Threads",
+        "hint": "粘贴 Threads 口令，用官方 API 发帖"
+      }
+    },
+    "platform": {
+      "threads": {
+        "label": "Threads",
+        "noun": "帖子",
+        "body_hint": "最多 500 字（emoji 按字节算），最多 5 个链接；话题只能 1 个，不接在正文里；视频 MP4 / MOV，最长 5 分钟",
+        "login_hint": "粘贴 Meta 应用里生成的 Threads 口令",
+        "m_views": "浏览",
+        "m_likes": "赞",
+        "m_comments": "回复",
+        "m_shares": "转发",
+        "m_collects": "收藏"
+      }
+    }
+  },
+  "threads_connect": {
+    "api": "官方 API",
+    "intro": "Threads 用官方 API 发帖：在你自己的 Meta 应用里生成一个 Threads 口令，粘贴到下面。第一次大约 5 分钟，步骤见下面。",
+    "renew_intro": "口令大约 60 天失效。重新生成一个粘贴进来即可；只想换图片素材库，口令留空直接点「验证并连接」。",
+    "token_paste_placeholder": "粘贴口令（TH 开头）",
+    "token_placeholder": "留空使用已保存的口令",
+    "token_missing": "先粘贴口令。",
+    "connect": "验证并连接",
+    "how": "怎么拿到 Threads 口令",
+    "step_app": "打开 developers.facebook.com，登录 Facebook，点「我的应用 → 创建应用」，用例选「访问 Threads API」，一路下一步创建（第一次要先免费注册成开发者）。",
+    "step_permissions": "进入应用 →「用例」→「访问 Threads API」→「自定义」→「权限」，确认 threads_basic、threads_content_publish 已添加，再加上 threads_manage_insights（读帖子数据和粉丝数要用）。",
+    "step_tester": "「应用角色 → 角色」→「添加人员」→ 选「Threads 测试员」，填要连的 Threads 用户名；再到 Threads 网页版 设置 → 账户 → 网站权限 →「邀请」里点「接受」。",
+    "step_token": "回到「用例 → 访问 Threads API → 自定义 → 设置」，在「用户口令生成工具」里给这个测试员点「生成访问口令」，登录 Threads 并允许，复制口令（TH 开头的一长串）。",
+    "step_paste": "把口令粘贴到上面，点「验证并连接」。",
+    "open_meta": "打开 Meta 开发者后台",
+    "host": "本机图片、视频上传到（可选）",
+    "public_only": "只使用公开图片地址",
+    "host_hint": "选一个已连接网站的素材库，发布时本机的图片（JPEG）和视频会自动传上去给 Threads 抓取。图片要这台电脑登录对应区域的 Creght CLI，视频要 Annulo 连着那个区域的 creght。",
+    "token_hint": "口令只保存在这台电脑的密钥里，不会上传。大约 60 天后失效，到时在「管理连接」里重新粘贴。",
+    "wrong_account": "这个口令属于 @{username}，不是这个账号。请用原来那个 Threads 账号生成口令。",
+    "check": "检测授权",
+    "checked": "授权检测通过",
+    "manage": "管理连接",
+    "title": "Threads 连接"
   }
 }

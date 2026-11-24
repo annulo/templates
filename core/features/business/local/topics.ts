@@ -5,7 +5,8 @@
 //       项目资料、已有选题、网站上和后台已有的文章、站点内容；带 channel_id 时再给 GEO 里没被引用的问题（question_ids 指定就只给这几个）；
 //       competitor_page_ids 给这几个竞品新页面（竞品模块），source_ids 给这几条灵感来源（灵感库模块），playbook_id 给那张风格卡；
 //       有运营主题模块（产品运营）时合并它的上下文（用户场景、增长机会、运营主题、账号策略…）；自媒体选题带已发内容的表现（performance）
-//   topics.save({ ideas: [{ title, angle, keywords, question_ids?, source_ids?, origins? }], source?, workspace?, question_ids?, source_ids?, origins?, playbook_id? })
+//   topics.save({ ideas: [{ title, angle, keywords, question_ids?, source_ids?, origins? }], source?, workspace, question_ids?, source_ids?, origins?, playbook_id? })
+//       workspace 必填（website / social）；source 是 geo、competitor 的总是 website
 //       带 playbook_id 的选题记下这张卡，写的时候照它写。去掉和已有选题重复的，写进 topics（status=idea），返回存了哪些。
 //       每个选题记下出处（origins）和出它的对话（chat_id），从 AI 搜索出的（source=geo）必须说清回答的是哪几个问题；标题重复的不另建，把出处并进已有的那个（linked）。
 //       网站文章的选题还和网站上、后台已有的文章、别的选题比（local/_overlap.ts）：换个说法的同一个主题、同一个主关键词也不存，列在 similar
@@ -109,6 +110,8 @@ export async function save(input: { ideas: Idea[]; source?: string; workspace?: 
   const source = sourceIds.length ? 'inspiration' : SOURCES.includes(String(input?.source)) ? String(input.source) : 'agent'
   // 在网站文章 / 社媒内容里出的选题记下归属；AI 搜索推荐、竞品来的总是网站
   const workspace = SOURCES.includes(source) ? 'website' : ['website', 'social'].includes(String(input?.workspace)) ? String(input.workspace) : ''
+  // 没有归属的选题会掉进「选发到哪」等人点：存的时候就要写清（2026-11-20 起必填）
+  if (!workspace) throw new Error(L(ctx, '选题要写清发到哪：workspace 填 website（网站文章：搜索、AI 搜索、对比选型这类长文）或 social（社媒：图文笔记、视频）。从增长计划「写博客」项来的是 website。', 'Say where these topics go: set workspace to website (site articles: search, AI search, comparisons) or social (posts and videos). Topics from a growth-plan "write a blog post" item are website.'))
   const shared = [...questionOrigins(ctx, input?.question_ids), ...checkOrigins(ctx, input?.origins), ...(playbook ? [{ type: 'playbook', id: playbook.id, label: playbook.name }] : [])]
   const existing: Topic[] = ctx.db.query('topics', { limit: 1000 }).list
   // 标题一样（不分大小写）算重复；只和同一个工作区（或者还没归属）的比：同一个题目网站写一篇、社媒发一条是正常的

@@ -24,18 +24,6 @@
     "published_hint": "Mark as published, including on other channels",
     "saved": "Content status updated"
   },
-  "facebook_comments": {
-    "view": "View comments",
-    "title": "Facebook comments",
-    "refresh": "Refresh comments",
-    "more": "Load more comments",
-    "loading": "Loading comments…",
-    "empty": "Facebook has not returned any viewable comments.",
-    "no_text": "This comment has no text. View it on Facebook.",
-    "hint": "Comments and replies appear newest first. Visibility restrictions may make the available comments fewer than the total count.",
-    "updated": "Updated {when}",
-    "loaded": "Showing {n} comments"
-  },
   "facebook_retry": {
     "view_record": "Review publishing result",
     "uncertain": "Previous publishing result needs confirmation",
@@ -688,19 +676,17 @@
     "token": "Access token",
     "token_placeholder": "Leave blank to use the saved token",
     "token_hint": "The token stays in this computer's secrets and is never uploaded. It expires in about 60 days; then paste a new one in \"Manage connection\".",
-    "host": "Upload local images to (optional)",
+    "host": "Upload local images and videos to (optional)",
+    "host_saved": "Saved",
     "public_only": "Public image URLs only",
-    "host_hint": "Choose a connected site to upload local JPEGs when publishing. Creght CLI must be signed in to that region on this computer.",
+    "host_hint": "Choose a connected site to upload local JPEGs and videos when publishing. Images need the Creght CLI signed in to that region on this computer; videos need Annulo connected to creght in that region.",
     "connect": "Verify and connect",
     "check": "Check authorization",
     "manage": "Manage connection",
     "title": "Instagram connection",
     "recovery": "This post has a submitted publishing attempt. Check the result first; it will not be submitted again to avoid duplicates.",
     "check_result": "Check publishing result",
-    "single_now": "Instagram API currently supports one image published immediately",
-    "collection_later": "API engagement collection is not connected yet",
     "checked": "Authorization check passed",
-    "unschedule": "Cancel schedule and mark ready",
     "intro": "Click the button and Annulo opens a browser and does most of the work for you: you only log in to Facebook and Instagram and click \"Allow\". About 3 minutes the first time.",
     "renew_intro": "Tokens expire after about 60 days. Click the button to generate a new one; usually you only click \"Allow\" in the pop-up.",
     "manual_step_facebook": "Open developers.facebook.com and log in to Facebook.",
@@ -717,5 +703,51 @@
     "start_hint": "First time: register as a Meta developer (free, one phone or email check). The account must be an Instagram professional account (Creator or Business). The browser adds it as a tester of the app; you click \"Accept\" in Instagram, log in and click \"Allow\" in the pop-up. The bottom-right corner shows each step.",
     "have_token": "Already have a token? Paste it",
     "username": "Instagram username to connect"
+  },
+  "meta": {
+    "channel_types": {
+      "threads": {
+        "label": "Threads",
+        "hint": "Paste a Threads token and post through the official API"
+      }
+    },
+    "platform": {
+      "threads": {
+        "label": "Threads",
+        "noun": "post",
+        "body_hint": "Up to 500 characters (emoji count as bytes) and 5 links; one topic, not added to the text; videos MP4 / MOV up to 5 minutes",
+        "login_hint": "Paste the Threads token generated in your Meta app",
+        "m_views": "Views",
+        "m_likes": "Likes",
+        "m_comments": "Replies",
+        "m_shares": "Reposts",
+        "m_collects": "Saves"
+      }
+    }
+  },
+  "threads_connect": {
+    "api": "Official API",
+    "intro": "Threads posts through the official API: generate a Threads token in your own Meta app and paste it below. The first time takes about 5 minutes; steps are below.",
+    "renew_intro": "Tokens expire after about 60 days. Paste a newly generated one; to change only the image host, leave it empty and click Verify and connect.",
+    "token_paste_placeholder": "Paste the token (starts with TH)",
+    "token_placeholder": "Leave empty to keep the saved token",
+    "token_missing": "Paste a token first.",
+    "connect": "Verify and connect",
+    "how": "How to get a Threads token",
+    "step_app": "Open developers.facebook.com, log in to Facebook, choose My Apps → Create App, pick the \"Access the Threads API\" use case and continue (register as a developer first if needed; it's free).",
+    "step_permissions": "In the app, open Use cases → Access the Threads API → Customize → Permissions, make sure threads_basic and threads_content_publish are added, and add threads_manage_insights (needed to read post stats and followers).",
+    "step_tester": "App roles → Roles → Add people → Threads Tester, enter the Threads username; then on Threads on the web go to Settings → Account → Website permissions → Invites and accept.",
+    "step_token": "Back in Use cases → Access the Threads API → Customize → Settings, use the User Token Generator to generate an access token for that tester, log in to Threads, allow, and copy the token (a long string starting with TH).",
+    "step_paste": "Paste the token above and click Verify and connect.",
+    "open_meta": "Open Meta for Developers",
+    "host": "Upload local images and videos to (optional)",
+    "public_only": "Public image URLs only",
+    "host_hint": "Choose a connected site's library; local images (JPEG) and videos are uploaded there when publishing so Threads can fetch them. Images need the Creght CLI logged in for that region on this computer; videos need Annulo connected to creght in that region.",
+    "token_hint": "The token stays in this computer's secrets and is never uploaded. It expires after about 60 days; paste a new one in Manage connection then.",
+    "wrong_account": "This token belongs to @{username}, not this account. Generate the token with the original Threads account.",
+    "check": "Check authorization",
+    "checked": "Authorization OK",
+    "manage": "Manage connection",
+    "title": "Threads connection"
   }
 }

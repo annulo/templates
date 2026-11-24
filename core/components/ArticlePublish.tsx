@@ -4,7 +4,6 @@ import { instagramApi } from './InstagramAccountFlow'
 import { metricText } from '../lib/apiMetrics'
 import { facebookPublishRecovery } from '../lib/facebookPublishRecovery'
 import FacebookPublishRecovery from './FacebookPublishRecovery'
-import FacebookComments from './FacebookComments'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle, ArrowUpRight, Bookmark, Eye, Film, Heart, Loader2, MessageCircle, RefreshCw, Send, Share2, Trash2 } from 'lucide-react'
 import RunButton from './RunButton'
@@ -124,11 +123,10 @@ export function PublishDialog({ open, ctx, article, posts, pubs, onClose, onRewr
   // 发到网站的长文：显示 AI 引用分，D、F 级多提醒一句，不拦发布（docs/ai-citation-score.md）
   const aiScore = useAiScore(article)
   const scoreShown = t === 'article' && !!aiScore && picked.some((id) => isSite(accounts.find((ch) => ch.id === id)))
-  useEffect(() => { if (open) { setPicked(targetAccount && !blocked(targetAccount) ? [targetAccount.id] : []); setResult({}); setError(''); setWhen('now'); setAt(nextHour()) } }, [open, article.id, targetAccountId])
+  useEffect(() => { if (open) { const wanted = (() => { try { const l = JSON.parse(String((article as any).targets || '[]')); return Array.isArray(l) ? l.map(String) : [] } catch { return [] } })().filter((id) => accounts.some((ch) => ch.id === id && !blocked(ch))); setPicked(wanted.length ? wanted : targetAccount && !blocked(targetAccount) ? [targetAccount.id] : []); setResult({}); setError(''); setWhen('now'); setAt(nextHour()) } }, [open, article.id, targetAccountId, (article as any).targets])
 
   // 不能选的原因：平台不支持这种类型、网站没配好发布、登录在别的电脑、登录过期
   const blocked = (ch: Channel) => !takes(ch) ? tr('article.pub_unsupported', { type: TYPE_META[t].label })
-    : instagramApi(ch) && (t === 'video' || when === 'later') ? tr('instagram_connect.single_now')
     : isSite(ch) ? (ch.publish_status !== 'ready' || !ch.publisher ? tr('article.pub_site_setup') : '')
     : loggedInElsewhere(ch, machine) ? tr('social.on_machine', { name: loggedInElsewhere(ch, machine) })
     : ch.login_status === 'expired' ? tr('article.pub_expired') : ''
@@ -337,7 +335,6 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
           {detailed && p.status === 'published' && <PostMetrics p={p} onChanged={onChanged} />}
           {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} fromArticle />}
           <JobLine job={jobOf(p.id)} />
-          <FacebookComments post={p} channel={ch} />
           {!jobOf(p.id) && p.error && p.status !== 'published' && <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{p.error}</p>}
           {!jobOf(p.id) && <InstagramPublishRecovery post={p} channel={ch} disabled={!!busy} onAction={(input) => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', ...input }])} />}
           {!jobOf(p.id) && <FacebookPublishRecovery post={p} channel={ch} disabled={!!busy} onAction={(input) => enqueue([{ article_id: article.id, article_title: article.title, channel_id: p.channel_id, channel_name: ch?.name ?? '', ...input }])} />}

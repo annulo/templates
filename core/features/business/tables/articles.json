@@ -136,6 +136,18 @@
         "type": "string",
         "description": "目标网站或社媒账号的 id"
       },
+      "targets": {
+        "type": "string",
+        "description": "自媒体：这条内容要发的账号（social_accounts 的 id），JSON 数组，顺序就是页签顺序，第一个是主账号（主文案存在 title、body、tags 里）；空的按 target_account_id 看"
+      },
+      "media": {
+        "type": "string",
+        "description": "自媒体：图片、视频的有序列表 JSON：[{ kind: image|video, url, cover? }]，可以多个、混放；images、video、video_cover 是从它算出来给社媒插件用的（一条只能一个视频、图和视频不能同发，发布前检查会报）"
+      },
+      "variants": {
+        "type": "string",
+        "description": "自媒体：某个账号单独改过的文字，JSON：{ <账号 id>: { body, tags } }，tags 是空格分隔的话题文字；media（可选）是这个账号单独设置的图片、视频列表（格式同 articles.media），没有 media 就和主文案共用；没有这个账号的 key 就是跟随主文案。发布时叠在文章上（local/publish.ts），"
+      },
       "publication_links": {
         "type": "string",
         "description": "用户手动关联的发布链接 JSON：{ website: [网址], social: [网址] }"

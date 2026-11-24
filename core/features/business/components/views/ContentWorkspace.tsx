@@ -3,6 +3,7 @@ import { ArrowUpRight, ClipboardList, Link2, Loader, NotebookPen, Plus, Search a
 import { ArticleDetail, RowMore, removeArticle } from './Content'
 import { WritingBriefPage } from '../ContentEvidence'
 import SocialCreate, { socialOf } from '../SocialCreate'
+import SocialWorkspace from './SocialWorkspace'
 import { TypeBadge, TypePicker, type ArticleType } from '../ArticleTypes'
 import { AiScoreTag, aiScoreOn } from '../AiScore'
 import RewriteDialog, { REWRITE_TASK } from '../RewriteDialog'
@@ -13,7 +14,7 @@ import { TaskFailed, TaskLaunchButton, TaskRequirements, TaskRunning, useTask } 
 import { Button, Dialog, Field, Notice, PageHeader, Skeleton, cx, inputCls, toast } from '../ui'
 import Select from '../Select'
 import VideoField from '../VideoField'
-import { contentEntries, entryAccountIds, entryMetrics, legacyContentWorkspace, reviewWorkspace, type ContentData, type ContentEntry, type ContentStage, type ContentWorkspace } from '../../lib/contentWorkspace'
+import { contentEntries, entryAccountIds, entryMetrics, legacyContentWorkspace, type ContentData, type ContentEntry, type ContentStage, type ContentWorkspace } from '../../lib/contentWorkspace'
 import { dbCreate, dbPatch, isPublishSite, isSite, runLocal } from '../../lib/shuttle'
 import { isEn, tr } from '../../lib/i18n'
 import { CONTENT_ORIGINS, contentOrigins, type ContentOrigin } from '../../lib/origins'
@@ -22,7 +23,6 @@ import type { Ctx } from './types'
 export const w = (key: string, vars?: Record<string, unknown>) => tr('workspace.' + key, vars)
 
 /** 页签：下划线样式，选中的加粗、底下一条深色线 */
-const tabCls = (on: boolean) => cx('-mb-px cursor-pointer border-b-2 pb-2.5 text-sm transition-colors', on ? 'border-foreground font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')
 
 // 列表按状态分组：要用户处理的在最上面，然后是进行中、已发布、已归档。筛了某个状态或按数据排序时不分组
 const GROUPS: [string, ContentStage[]][] = [['attention', ['draft', 'ready', 'verify', 'blocked']], ['progress', ['planned', 'creating', 'scheduled']], ['published', ['published']], ['archived', ['archived']]]
@@ -73,20 +73,20 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
     if (['article', 'topic', 'plan'].includes(key) && !value) {
       if (!requested) updateParam('workspace', workspace)
       const field = key as 'article' | 'topic' | 'plan'
-      const previous = params[key] && all.find(e => e[field]?.id === params[key])
-      if (previous && !previous.workspaces.length) updateParam('ownership', 'unassigned')
     }
     updateParam(key, value)
   }
   const entries = data ? contentEntries(data, workspace) : []
+  // 还没记归属的（老数据、没带 workspace 建的选题）不单独一栏：放在列表里，行上「选发到哪」点一下归过去
   const unassigned = entries.filter(e => !e.workspaces.length)
-  // 在平台上直接发的帖子单独一栏：常常有几百条，混进来会把自己做的内容淹掉
+  // 在平台上直接发的帖子：自媒体放进「已发布」，标「平台上发的」、能按来源筛（SocialWorkspace），不用先并入
   const owned = entries.filter(e => e.workspaces.includes(workspace) && !e.post), platform = entries.filter(e => e.post)
-  const base = params.ownership === 'unassigned' ? unassigned : params.ownership === 'platform' ? platform : owned
+  const base = [...owned, ...unassigned]
+  const assign = (entry: ContentEntry) => { setAssignmentScope(workspace); setAssignment(entry) }
   const stage = params.stage || (['draft', 'published'].includes(params.status) ? params.status : 'all')
   const [query, setQuery] = useState(''), [form, setForm] = useState<NewContent | null>(null)
   const [shown, setShown] = useState(PAGE)
-  useEffect(() => setShown(PAGE), [params.ownership, params.stage, params.account, params.origin, params.sort, query])
+  useEffect(() => setShown(PAGE), [params.stage, params.account, params.origin, params.sort, query])
   const [busy, setBusy] = useState(false), [saveError, setSaveError] = useState(''), [requirements, setRequirements] = useState(false)
   const [rewrite, setRewrite] = useState<any>(null), [assignment, setAssignment] = useState<ContentEntry | null>(null), [assignmentScope, setAssignmentScope] = useState<ContentWorkspace>(workspace)
   const writer = useTask('write-article', reload), rewriter = useTask(REWRITE_TASK, reload)
@@ -104,8 +104,6 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
     && (!query.trim() || [e.title, e.topic?.angle, e.plan?.notes, e.article?.body, e.post?.body].join(' ').toLowerCase().includes(query.trim().toLowerCase())))
   if (sort !== 'recent') rows.sort((a, b) => score(b) - score(a))
   const visible = new Set(groupRows(rows, stage === 'all' && sort === 'recent').flatMap(g => g.rows).slice(0, shown).map(e => e.key))
-  const dueReviews = marketing && workspace === 'social' && data ? (data.reviews || []).filter((r: any) => r.status === 'pending' && r.due_at <= new Date().toISOString() && reviewWorkspace(r, data) === 'social').length : 0
-  const reviewing = !!marketing && workspace === 'social' && params.ownership === 'reviews'
   const openNew = (topic?: any) => {
     setSaveError('')
     setForm({ title: topic?.title || '', angle: topic?.angle || '', type: workspace === 'website' ? 'article' : topic?.content_type || 'post', account: topic?.target_account_id || params.account || '', topic })
@@ -149,7 +147,7 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
         await dbPatch('topics', topic.id, { article_id: article.id, status: 'done' })
         setParam('article', article.id)
       }
-      setParam('ownership', ''); setParam('stage', 'all'); setParam('account', ''); setParam('origin', ''); setQuery('')
+      setParam('stage', 'all'); setParam('account', ''); setParam('origin', ''); setQuery('')
       setForm(null); reload()
     } catch (e) { setSaveError((e as Error).message) } finally { setBusy(false) }
   }
@@ -171,7 +169,7 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
   </div>
   const published = selectedArticle && entries.some(e => e.article?.id === selectedArticle.id && e.stage === 'published')
   // 每一行点标题都进它走得最远的那份记录：有成品进正文，没有成品进计划，只有选题进选题
-  const openEntry = (entry: ContentEntry) => entry.post ? setParam('post', entry.post.id) : entry.article ? setParam('article', entry.article.id) : entry.plan ? setParam('plan', entry.plan.id) : socialOf(entry.topic) ? setParam('create', entry.topic.id) : setParam('topic', entry.topic.id)
+  const openEntry = (entry: ContentEntry) => entry.post ? setParam('adopt', entry.post.id) : entry.article ? setParam('article', entry.article.id) : entry.plan ? setParam('plan', entry.plan.id) : socialOf(entry.topic) ? setParam('create', entry.topic.id) : setParam('topic', entry.topic.id)
   const destination = (entry: ContentEntry) => {
     const name = (id?: string) => ctx.channels.find(c => c.id === id)?.name || data?.channels.find(c => c.id === id)?.name
     const publishedIds = entryAccountIds(entry, data!, workspace, true)
@@ -179,15 +177,31 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
     const id = entry.article?.target_account_id || entry.topic?.target_account_id || entry.plan?.target_account_id || entry.plan?.target_account?.id || entry.article?.channel_id
     return name(id) || entry.plan?.role_name || (entry.workspaces.length ? w('destination_pending') : w('unassigned'))
   }
+  // 渲染一篇文章的详情页（发布记录、数据、复盘）：整页、或社媒两栏布局的右边（排期、已发布的）都用它
+  const renderArticle = (article: any) => {
+    const entry = entries.find(e => e.article?.id === article.id)
+    const isPublished = entries.some(e => e.article?.id === article.id && e.stage === 'published')
+    return <>
+      <ArticleDetail key={article.id} work={aiWork} ctx={ctx} a={article} all={data!.articles}
+        posts={data!.posts.filter(p => p.article_id === article.id)} pubs={data!.publications.filter(p => p.article_id === article.id)}
+        focus={params.version} displayStatus={isPublished ? 'published' : 'draft'} inspiration={!!marketing?.inspiration} publishScope={workspace}
+        statusControl={entry ? <ContentStatus entry={entry} workspace={workspace} onChanged={reload} /> : undefined}
+        publicationLinks={entry ? <PublicationLinks entry={entry} workspace={workspace} onChanged={reload} recordsShown /> : undefined}
+        open={id => setParam('article', id)} onBack={() => { setParam('article', ''); setParam('version', '') }} onChanged={reload} />
+      {workspace === 'social' && entry && <ContentPerformance ctx={ctx} entry={entry} data={data!} reviews={growthReviews} />}
+    </>
+  }
+  // 自媒体内容默认是「左边列表、右边直接编辑」（SocialWorkspace，平台上直接发的帖子也在里面）；选题、计划仍是原来的整页
+  const split = workspace === 'social' && !!data && !params.plan && !params.topic && !creating
   return <div className="space-y-5">
-    {selectedArticle ? <ArticleDetail key={selectedArticle.id} work={aiWork} ctx={ctx} a={selectedArticle} all={data!.articles}
-      posts={data!.posts.filter(p => p.article_id === selectedArticle.id)} pubs={data!.publications.filter(p => p.article_id === selectedArticle.id)}
-      focus={params.version} displayStatus={published ? 'published' : 'draft'} inspiration={!!marketing?.inspiration} publishScope={workspace}
-      statusControl={selectedEntry ? <ContentStatus entry={selectedEntry} workspace={workspace} onChanged={reload} /> : undefined}
-      publicationLinks={selectedEntry ? <PublicationLinks entry={selectedEntry} workspace={workspace} onChanged={reload} recordsShown /> : undefined}
-      open={id => setParam('article', id)} onBack={() => { setParam('article', ''); setParam('version', '') }} onChanged={reload} />
-      : null}
-    {selectedArticle && workspace === 'social' && selectedEntry && <ContentPerformance ctx={ctx} entry={selectedEntry} data={data!} reviews={growthReviews} />}
+    {split && <SocialWorkspace ctx={ctx} data={data!} entries={[...owned, ...unassigned, ...platform]} params={params} setParam={setParam} reload={reload} detail={renderArticle}
+      openEntry={openEntry} onAssign={assign}
+      tools={<>
+        <TaskLaunchButton task="suggest-topics" input={{ workspace }} match={r => r.input?.workspace === workspace} reqKey="topic_requirements" onFinished={reload}
+          title={tr('content.gen_topics')} desc={w('suggest_desc')} reqTitle={tr('content.req_title')} reqHint={tr('content.req_hint')} startLabel={tr('content.start_topics')} variant="ghost">{tr('content.gen_topics')}</TaskLaunchButton>
+        {marketing && marketing.Import({ data: data!, onDone: reload })}
+      </>} />}
+    {!split && selectedArticle && renderArticle(selectedArticle)}
     {selectedTopic && <WritingBriefPage key={selectedTopic.id} ctx={ctx} topic={selectedTopic} header={topicEntry && entryHeader(topicEntry)} onClose={() => setParam('topic', '')} onChanged={reload} onWrite={async () => {
       try {
         // 网站文章：发到哪个网站定得下来就直接交给助手写；定不下来（几个网站、社媒要选账号）再弹新建内容选
@@ -201,7 +215,7 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
     {creating && data && (creating === 'new' || createTopic) && <SocialCreate key={createTopic?.id || 'new'} ctx={ctx} topic={createTopic}
       onCreated={id => updateParam('create', id)} onClose={() => { updateParam('create', ''); updateParam('topic', '') }} onChanged={reload}
       openArticle={id => { updateParam('create', ''); updateParam('topic', ''); setParam('article', id) }} />}
-    {!selectedArticle && !selectedTopic && !creating && <>
+    {!split && !selectedArticle && !selectedTopic && !creating && <>
       <PageHeader title={w(workspace + '_content')} desc={w(workspace + '_desc')} actions={<>
         {workspace === 'social' && <Button onClick={() => setParam('create', 'new')}><Sparkles />{tr('social_create.new')}</Button>}
         <Button variant={workspace === 'social' ? 'outline' : 'default'} onClick={() => openNew()}><Plus />{w('new_content')}</Button>
@@ -214,16 +228,6 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
       {error && <Notice tone="error">{error}</Notice>}
       {!data && !error && <Skeleton className="h-40 rounded-xl" />}
       {data && <>
-        <div role="tablist" className="flex flex-wrap items-center gap-x-6 border-b border-border">
-          <button type="button" role="tab" aria-selected={!params.ownership || params.ownership === 'owned'} onClick={() => setParam('ownership', '')} className={tabCls(!params.ownership || params.ownership === 'owned')}>{w('owned_count', { n: owned.length })}</button>
-          {!!unassigned.length && <button type="button" role="tab" aria-selected={params.ownership === 'unassigned'} onClick={() => setParam('ownership', 'unassigned')} className={tabCls(params.ownership === 'unassigned')}>{w('unassigned_count', { n: unassigned.length })}</button>}
-          {!!platform.length && <button type="button" role="tab" aria-selected={params.ownership === 'platform'} onClick={() => setParam('ownership', 'platform')} className={tabCls(params.ownership === 'platform')}>{w('platform_count', { n: platform.length })}</button>}
-          {marketing && workspace === 'social' && <button type="button" role="tab" aria-selected={reviewing} onClick={() => setParam('ownership', 'reviews')} className={tabCls(reviewing)}>
-            {w('reviews_tab')}{!!dueReviews && <span className="ml-1.5 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary-text">{dueReviews}</span>}</button>}
-        </div>
-        {reviewing ? marketing!.Reviews({}) : <>
-        {params.ownership === 'unassigned' && <Notice>{w('unassigned_note')}</Notice>}
-        {params.ownership === 'platform' && <Notice>{w('platform_note')}</Notice>}
         {/* 搜索占满剩下的宽度，筛选是后面一排紧凑的按钮（显示当前选的值） */}
         <div className="flex flex-wrap items-center gap-2">
           <label className="relative min-w-48 flex-1">
@@ -264,9 +268,9 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               {entry.post ? <>
                 <StageBadge stage={entry.stage} />
-                <Button size="sm" variant="outline" onClick={() => setParam('post', entry.post.id)}><Link2 />{w('adopt')}</Button>
+                <Button size="sm" variant="outline" onClick={() => setParam('adopt', entry.post.id)}><Link2 />{w('adopt')}</Button>
               </> : <ContentStatus entry={entry} workspace={workspace} onChanged={reload} />}
-              {!entry.workspaces.length && <Button size="sm" variant="outline" onClick={() => { setAssignmentScope(workspace); setAssignment(entry) }}>{w('assign')}</Button>}
+              {!entry.workspaces.length && <Button size="sm" variant="outline" onClick={() => assign(entry)}>{w('assign_where')}</Button>}
               {!entry.post && <RowMore items={[
                 ...(entry.plan ? [{ label: w('plan_details'), icon: <ClipboardList className="size-4" />, onSelect: () => setParam('plan', entry.plan.id) }] : []),
                 ...(entry.topic ? [{ label: socialOf(entry.topic) ? tr('social_create.title') : w('brief'), icon: <NotebookPen className="size-4" />, onSelect: () => socialOf(entry.topic) ? setParam('create', entry.topic.id) : setParam('topic', entry.topic.id) }] : [])]}
@@ -279,14 +283,13 @@ export default function ContentWorkspace({ ctx, params, setParam: updateParam, w
           {rows.length > shown && <div><Button size="sm" variant="ghost" onClick={() => setShown(n => n + PAGE)}>{w('show_more', { n: rows.length - shown })}</Button></div>}
         </>}
       </>}
-      </>}
     </>}
     {params.plan && marketing?.Plan({ params, setParam, entry: entries.find(e => e.plan?.id === params.plan), workspace, onChanged: reload,
       performance: workspace === 'social' && data && entries.find(e => e.plan?.id === params.plan) ? <ContentPerformance ctx={ctx} entry={entries.find(e => e.plan?.id === params.plan)!} data={data} reviews={growthReviews} /> : undefined })}
-    {params.post && data && entries.find(e => e.post?.id === params.post) && <AdoptPostDialog entry={entries.find(e => e.post?.id === params.post)!}
-      metrics={metrics.get('post:' + params.post)} account={destination(entries.find(e => e.post?.id === params.post)!)}
+    {params.adopt && data && entries.find(e => e.post?.id === params.adopt) && <AdoptPostDialog entry={entries.find(e => e.post?.id === params.adopt)!}
+      metrics={metrics.get('post:' + params.adopt)} account={destination(entries.find(e => e.post?.id === params.adopt)!)}
       articles={entries.filter(e => e.article && e.workspaces.includes('social')).map(e => e.article)}
-      onClose={() => setParam('post', '')} onDone={id => { setParam('post', ''); reload(); setParam('article', id) }} />}
+      onClose={() => setParam('adopt', '')} onDone={id => { setParam('adopt', ''); setParam('post', ''); reload(); setParam('article', id) }} />}
     <Dialog open={!!form} onClose={() => !busy && setForm(null)} title={w('new_content')} width={680} footer={<>
       <Button variant="ghost" disabled={busy} onClick={() => setForm(null)}>{tr('common.cancel')}</Button>
       {form?.record ? (

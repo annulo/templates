@@ -20,7 +20,7 @@ const PENDING = 'INSTAGRAM_USER_TOKEN_PENDING'
  * written straight into INSTAGRAM_USER_TOKEN_<id>; it never goes into tables, inputs or state beyond this call.
  * A pasted token works too (the plugin asks Instagram which account it is).
  */
-export default function InstagramAccountFlow({ channel, onAdded }: { channel?: Channel; onAdded: () => void }) {
+export default function InstagramAccountFlow({ channel, onAdded, onChanged }: { channel?: Channel; onAdded: () => void; onChanged?: () => void }) {
   const renew = instagramApi(channel)
   const [mode, setMode] = useState<'api' | 'browser' | 'managed'>(channel ? channel.api_credential === 'instagram_managed' ? 'managed' : renew ? 'api' : 'browser' : 'api')
   const [token, setToken] = useState('')
@@ -31,12 +31,24 @@ export default function InstagramAccountFlow({ channel, onAdded }: { channel?: C
   const [sites, setSites] = useState<Channel[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [hostSaved, setHostSaved] = useState(false)
   useEffect(() => { let live = true; listChannels().then(r => { if (live) setSites(r.list.filter(c => c.type === 'creght_site' && c.project_id && c.site_id)) }).catch(() => {}); return () => { live = false } }, [])
   const save = async (who: { account_id: string; username: string }, value?: string) => {
     if (channel?.instagram_user_id && who.account_id !== channel.instagram_user_id) throw new Error(tr('instagram_connect.wrong_account', { username: who.username }))
     if (value) await setSecret(`INSTAGRAM_USER_TOKEN_${who.account_id}`, value)
     await runLocal('social/social.login', { type: 'instagram', channel_id: channel?.id, mode: 'api', account_id: who.account_id, username: who.username, media_host: host })
     onAdded()
+  }
+  // 已经连上的账号：选了素材库马上存（用已保存的口令核对一下账号），不用再点「验证并连接」
+  const changeHost = async (value: string) => {
+    const before = host
+    setHost(value); setHostSaved(false)
+    if (!renew || !channel) return
+    setBusy(true); setError('')
+    try {
+      await runLocal('social/social.login', { type: 'instagram', channel_id: channel.id, mode: 'api', account_id: channel.instagram_user_id, username: channel.handle, media_host: value })
+      setHostSaved(true); onChanged?.()
+    } catch (e) { setHost(before); setError((e as Error).message) } finally { setBusy(false) }
   }
   const guided = async (r: unknown) => {
     const v = r as { account_id?: string; username?: string; token?: string } | null
@@ -79,7 +91,8 @@ export default function InstagramAccountFlow({ channel, onAdded }: { channel?: C
       </details>
       <details className="text-sm" open={!!host}>
         <summary className="cursor-pointer select-none text-muted-foreground">{tr('instagram_connect.host')}</summary>
-        <div className="mt-2 space-y-1"><Select value={host} onChange={setHost} options={[{ value: '', label: tr('instagram_connect.public_only') }, ...sites.map(c => ({ value: JSON.stringify({ api_host: c.api_host || 'https://creght.cn', project_id: c.project_id, site_id: c.site_id }), label: c.name }))]} />
+        <div className="mt-2 space-y-1"><Select value={host} onChange={changeHost} options={[{ value: '', label: tr('instagram_connect.public_only') }, ...sites.map(c => ({ value: JSON.stringify({ api_host: c.api_host || 'https://creght.cn', project_id: c.project_id, site_id: c.site_id }), label: c.name }))]} />
+        {hostSaved && <p className="text-xs text-primary-text">{tr('instagram_connect.host_saved')}</p>}
         <p className="text-xs text-muted-foreground">{tr('instagram_connect.host_hint')}</p></div>
       </details>
       <p className="text-xs text-muted-foreground">{tr('instagram_connect.token_hint')}</p>
@@ -101,7 +114,7 @@ export function InstagramConnectionButton({ channel, onDone }: { channel: Channe
     {error && <span className="basis-full text-xs text-destructive">{error}</span>}
     {checked && !error && <span className="basis-full text-xs text-muted-foreground">{tr('instagram_connect.checked')}</span>}
     <Dialog open={open} onClose={() => setOpen(false)} title={tr('instagram_connect.title')} footer={<Button variant="ghost" onClick={() => setOpen(false)}>{tr('common.close')}</Button>}>
-      {open && <InstagramAccountFlow channel={channel} onAdded={() => { setOpen(false); setError(''); onDone() }} />}
+      {open && <InstagramAccountFlow channel={channel} onAdded={() => { setOpen(false); setError(''); onDone() }} onChanged={onDone} />}
     </Dialog>
   </>
 }

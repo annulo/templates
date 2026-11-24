@@ -131,6 +131,28 @@ export function adoptPost(input: { post_id: string; article_id?: string }, ctx: 
   return { article_id: id, post_id: post.id }
 }
 
+/**
+ * 拿一条平台上直接发的帖子再用：复制成一条新草稿（文字、话题、图片、视频，发到原来那个账号），不关联原帖子、不带数据。
+ * 页面上的「复用」和「让 AI 照这条再写一条」（复制后交给 revise-article）都用它
+ */
+export function reusePost(input: { post_id: string }, ctx: any) {
+  const post = ctx.db.get('social_posts', input?.post_id)
+  if (!post) throw new Error(L(ctx, '没有这条帖子', 'No such post'))
+  const account = ctx.db.get('social_accounts', post.channel_id)
+  const now = new Date().toISOString(), body = String(post.body || '')
+  let images: string[] = []
+  try { const l = JSON.parse(String(post.images || '[]')); if (Array.isArray(l)) images = l.map(String).filter(Boolean) } catch {}
+  const video = String(post.video || '')
+  const media = [...(video ? [{ kind: 'video', url: video }] : []), ...(video ? [] : images.map((url) => ({ kind: 'image', url })))]
+  const id = ctx.db.insert('articles', {
+    title: String(post.title || '').slice(0, 120), type: video ? 'video' : 'post', body, summary: '', tags: post.tags || '[]',
+    images: JSON.stringify(video ? [] : images), media: JSON.stringify(media), ...(video ? { video } : {}),
+    status: 'draft', workspace: 'social', channel_id: '', targets: JSON.stringify(account ? [account.id] : []), variants: '{}',
+    target_platform: account?.type || '', target_account_id: account?.id || '', created_at: now, updated_at: now,
+  }).id
+  return { article_id: id }
+}
+
 /** Ownership is an explicit, reversible metadata edit; no content or publication is moved or copied. */
 export function assign(input: { key: string; workspace: ContentWorkspace }, ctx: any) {
   if (!['website', 'social'].includes(input.workspace)) throw new Error('Invalid content workspace')

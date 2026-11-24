@@ -67,6 +67,7 @@ export const CHANNELS: ChannelType[] = [
   "douyin",
   "x",
   "instagram",
+  "threads",
 ];
 import { lazy } from "react";
 import type { WizardScreen } from "../components/wizard/types";

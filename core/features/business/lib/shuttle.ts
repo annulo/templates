@@ -12,7 +12,7 @@ import { uploadAsset } from 'talizen/assets'
 export { ShuttleUnavailable, MemberLoginRequired, memberLoginURL, isNeedsShuttle, shuttleMissing, inShuttle, fnManifest, computerStatus, watchComputer, assistantOnline, type FnManifest, type ComputerStatus } from './remote'
 
 /** 渠道类型。creght_site、wordpress、website 是网站（website 只填了网址：能检查、能连谷歌，不能发布）；其余是社媒。 */
-export type ChannelType = 'creght_site' | 'wordpress' | 'website' | 'xiaohongshu' | 'douyin' | 'x' | 'wechat_mp' | 'linkedin' | 'facebook' | 'instagram' | 'youtube' | 'bilibili' | 'zhihu'
+export type ChannelType = 'creght_site' | 'wordpress' | 'website' | 'xiaohongshu' | 'douyin' | 'x' | 'wechat_mp' | 'linkedin' | 'facebook' | 'instagram' | 'threads' | 'youtube' | 'bilibili' | 'zhihu'
 
 export type Channel = {
   id: string
@@ -332,6 +332,12 @@ export type Article = {
   workspace?: 'website' | 'social'
   target_account_id?: string
   target_platform?: string
+  /** 要发的账号 id 的 JSON 数组，第一个是主账号 */
+  targets?: string
+  /** 账号单独改过的文字 JSON：{ <账号 id>: { body, tags } } */
+  variants?: string
+  /** 图片、视频的有序列表 JSON：[{ kind: 'image'|'video', url, cover? }]；images、video、video_cover 是从它算出来给插件用的 */
+  media?: string
   // 运营主题模块（产品运营）的关联
   account_role_key?: string
   marketing_plan_id?: string

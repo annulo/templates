@@ -1,4 +1,5 @@
-import { InstagramConnectionButton, instagramApi } from './InstagramAccountFlow'
+import { InstagramConnectionButton } from './InstagramAccountFlow'
+import { ThreadsConnectionButton } from './ThreadsAccountFlow'
 import { instagramPublishRecovery } from '../lib/instagramPublishRecovery'
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowUpRight, RefreshCw, Send, Wrench, X } from 'lucide-react'
@@ -69,7 +70,7 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
             </div>
           </div>
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            {a.auth_mode === 'api' && r.kind === 'permission' ? (a.type === 'instagram' ? <InstagramConnectionButton channel={a} onDone={onChanged} /> : <FacebookConnectionButton channel={a} onDone={onChanged} />) : a.auth_mode === 'api' && r.kind === 'restricted' ? <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="text-xs text-primary-text underline">{tr('facebook_connect.open_meta')}</a> : r.kind !== 'network' && <TaskButton task={FIX_TASK} input={{ channel_id: a.id }} match={(run) => run.input?.channel_id === a.id} icon={Wrench} onFinished={onChanged}>
+            {a.auth_mode === 'api' && r.kind === 'permission' ? (a.type === 'instagram' ? <InstagramConnectionButton channel={a} onDone={onChanged} /> : a.type === 'threads' ? <ThreadsConnectionButton channel={a} onDone={onChanged} /> : <FacebookConnectionButton channel={a} onDone={onChanged} />) : a.auth_mode === 'api' && r.kind === 'restricted' ? <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="text-xs text-primary-text underline">{tr('facebook_connect.open_meta')}</a> : r.kind !== 'network' && a.type !== 'threads' && <TaskButton task={FIX_TASK} input={{ channel_id: a.id }} match={(run) => run.input?.channel_id === a.id} icon={Wrench} onFinished={onChanged}>
               {tr('health.fix')}
             </TaskButton>}
             {r.op === 'collect' && (
@@ -184,5 +185,5 @@ export function ActivityLine({ ch, rows, onChanged }: { ch: Channel; rows: Platf
       </div>
     )
   }
-  return <div className="space-y-1.5 border-t border-border pt-2 text-[11px] text-muted-foreground">{line('publish')}{instagramApi(ch) ? <p>{tr('instagram_connect.collection_later')}</p> : line('collect')}</div>
+  return <div className="space-y-1.5 border-t border-border pt-2 text-[11px] text-muted-foreground">{line('publish')}{line('collect')}</div>
 }

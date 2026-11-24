@@ -562,13 +562,14 @@ export function GrowthOverview({ ctx }: { ctx: Ctx }) {
         extra: {},
         label: item.action_label,
       });
-  for (const workspace of ['website', 'social'] as const) if (due(workspace))
+  // 只有网站有复盘待办；自媒体的「待复盘」2026-11-20 去掉了
+  if (due('website'))
     actions.push({
-      key: "reviews:" + workspace,
-      title: cw(workspace + '_reviews'),
+      key: "reviews:website",
+      title: cw('website_reviews'),
       why: m("review_rule"),
-      view: workspace === 'website' ? 'metrics' : 'social-content',
-      extra: workspace === 'website' ? {} : { ownership: 'reviews' },
+      view: 'metrics',
+      extra: {},
       label: m("record_review"),
     });
   for (const r of data?.roles || [])

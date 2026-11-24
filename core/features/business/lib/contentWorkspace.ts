@@ -96,7 +96,7 @@ export function entryAccountIds(entry: ContentEntry, data: ContentData, workspac
   return [...ids]
 }
 
-/** Only persisted destination/relationship evidence determines ownership. Format and title do not. */
+/** Only persisted destination/relationship evidence determines ownership. Format and title do not (one exception: a topic that records search keywords is for the website). */
 export function recordWorkspaces(record: any, data: ContentData, visited = new Set<any>()): ContentWorkspace[] {
   if (!record) return []
   if (visited.has(record)) return []
@@ -109,13 +109,15 @@ export function recordWorkspaces(record: any, data: ContentData, visited = new S
     const target = data.channels.find(c => c.id === record.target_account_id)
     if (target) add(target.type)
     if (!result.size && record.channel_id) add(data.channels.find(c => c.id === record.channel_id)?.type)
-    // 谷歌排名、AI 搜索推荐、竞品新发现来的选题都是给网站写的
-    if (['search', 'geo', 'competitor'].includes(record.source)) result.add('website')
+    // 谷歌排名、关键词主题、AI 搜索推荐、竞品新发现来的选题都是给网站写的
+    if (['search', 'keyword', 'geo', 'competitor'].includes(record.source)) result.add('website')
     if (!result.size) {
       const channels = parse(record.brief).channels
       const terms = Array.isArray(channels) ? channels : String(channels || '').toLowerCase().split(/[,，、/|\s]+/)
       terms.forEach((p: string) => add(p.toLowerCase()))
     }
+    // 还判断不了、但记了搜索关键词的选题（老数据、没带 workspace 出的）：关键词是给网站搜索排名用的，归网站
+    if (!result.size && String(record.keywords ?? '').trim() && !record.type) result.add('website')
   }
   for (const scope of ['website', 'social'] as const) {
     const links = parse(record.publication_links)?.[scope]
