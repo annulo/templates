@@ -135,6 +135,16 @@ const ALL_SOCIAL: Partial<Record<ChannelType, SocialPlatform>> = {
     metrics: [metric('instagram', 'views'), metric('instagram', 'likes'), metric('instagram', 'comments'), metric('instagram', 'collects')],
     get loginHint() { return tr('meta.platform.instagram.login_hint') },
   },
+  threads: {
+    ...fromPlugin('threads'),
+    label: 'Threads',
+    get noun() { return tr('meta.platform.threads.noun') },
+    task: 'social/write-threads',
+    profileUrl: (ch) => (ch.handle ? `https://www.threads.com/@${ch.handle}` : ''),
+    get bodyHint() { return tr('meta.platform.threads.body_hint') },
+    metrics: [metric('threads', 'views'), metric('threads', 'likes'), metric('threads', 'comments'), metric('threads', 'shares')],
+    get loginHint() { return tr('meta.platform.threads.login_hint') },
+  },
   youtube: {
     ...fromPlugin('youtube'),
     label: 'YouTube',

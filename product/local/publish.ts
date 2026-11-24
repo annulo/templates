@@ -1,6 +1,7 @@
 import { L } from './_i18n'
 import { articleFixes, fromContent, platformsFor, typeOf } from './_types'
 import { check } from '../plugins/social/local/social'
+import { fieldsFor } from '../plugins/social/local/_fields'
 
 // 把一篇文章发到社媒账号（本机函数）。
 //
@@ -21,6 +22,32 @@ function optional(name: string): any {
   try { return require('./' + name + '.ts') } catch { return null }
 }
 declare const require: (path: string) => any
+
+/** 这个账号单独改过文字（articles.variants）的话叠在文章上；图片、视频所有账号共用 */
+function withVariant(a: any, channelId: string) {
+  let v: any
+  try { v = JSON.parse(String(a.variants || '{}'))?.[channelId] } catch { v = null }
+  if (!v || typeof v !== 'object') return a
+  const m: any[] | null = Array.isArray(v.media) ? v.media : null
+  const imgs = m ? m.filter((i) => i?.kind === 'image' && i.url).map((i) => String(i.url)) : []
+  const vid = m ? m.find((i) => i?.kind === 'video' && i.url) : null
+  return { ...a, ...(typeof v.body === 'string' ? { body: v.body } : {}), ...(typeof v.title === 'string' ? { title: v.title } : {}),
+    ...(typeof v.tags === 'string' ? { tags: JSON.stringify(v.tags.split(/[\s,，#]+/).filter(Boolean)) } : {}),
+    // 这个账号单独设置了图片、视频：有视频就是视频，否则是图文
+    ...(m ? { media: JSON.stringify(m), type: vid ? 'video' : 'post', video: vid ? String(vid.url) : '', video_cover: vid?.cover ? String(vid.cover) : '', images: JSON.stringify(imgs) } : {}) }
+}
+
+/** 编辑器里图片、视频能放多个、混放；能混放的平台（_fields.ts 的 media，X）只看总数，别的一条只发一个视频、图和视频不能同发：不满足的报出来，不要悄悄丢掉 */
+function mediaProblems(ctx: any, a: any, platform: string): string[] {
+  let l: any[] = []
+  try { l = JSON.parse(String(a.media || '[]')) } catch {}
+  if (!Array.isArray(l)) return []
+  const vids = l.filter((i) => i?.kind === 'video').length, imgs = l.filter((i) => i?.kind === 'image').length
+  const max = fieldsFor(platform, vids ? 'video' : 'post')?.media
+  if (max) return vids + imgs > max ? [L(ctx, `图片和视频共 ${vids + imgs} 个，这个平台一条最多 ${max} 个，删掉多的`, `${vids + imgs} images and videos; this platform takes up to ${max} per post. Remove the extras`)] : []
+  return [...(vids > 1 ? [L(ctx, `一条只能发 1 个视频，现在有 ${vids} 个，删掉多的`, `Only one video per post; this has ${vids}. Remove the extras`)] : []),
+    ...(vids && imgs ? [L(ctx, '图片和视频不能放在同一条里发，删掉其中一种', "Images and a video can't go in the same post; remove one kind")] : [])]
+}
 
 type Ready = { channel_id: string; post_id?: string; publisher?: string }
 
@@ -67,10 +94,12 @@ export function prepare(input: { article_id: string; channel_ids: string[]; sche
     }
     const ch = ctx.db.get('social_accounts', id)
     if (!ch) { problems.push({ channel_id: id, problems: [L(ctx, '没有这个账号', 'No such account')] }); continue }
-    if (at && ch.type === 'instagram' && ch.auth_mode === 'api') { problems.push({ channel_id: id, problems: [L(ctx, 'Instagram API 自动排期尚未接入，请立即发布。', 'Instagram API scheduling is not connected; publish now.')] }); continue }
-    if (!ok.includes(ch.type)) { problems.push({ channel_id: id, problems: [L(ctx, '这个平台不支持这种类型的文章，先改写成它支持的类型', "This platform doesn't take this type; rewrite it into a type it supports first")] }); continue }
+    const src = withVariant(a, id)
+    const mediaIssues = mediaProblems(ctx, src, ch.type)
+    if (mediaIssues.length) { problems.push({ channel_id: id, problems: mediaIssues }); continue }
+    if (!platformsFor(typeOf(src)).includes(ch.type)) { problems.push({ channel_id: id, problems: [L(ctx, '这个平台不支持这种类型的文章，先改写成它支持的类型', "This platform doesn't take this type; rewrite it into a type it supports first")] }); continue }
     const now = new Date().toISOString()
-    const post: any = fromContent(a, ch.type)
+    const post: any = fromContent(src, ch.type)
     const tagged = optional('backlinks')?.tagLinks?.({ body: post.body, platform: ch.type, plan_item_id: planItem }, ctx)
     if (tagged?.tagged) post.body = tagged.body
     const row = { ...post, status: at ? 'scheduled' : 'approved', scheduled_at: at, error: null, review_note: null, updated_at: now }

@@ -233,7 +233,7 @@ function catalog(ctx: any) {
 
   const tasks: { task: string; what: string }[] = [
     { task: 'keyword-research', what: L(ctx, '挖一批关键词并筛选归主题', 'Find and screen a batch of keywords') },
-    { task: 'suggest-topics', what: L(ctx, '出一批选题（input 可带 workspace: website）', 'Suggest topics (input may include workspace: website)') },
+    { task: 'suggest-topics', what: L(ctx, '出一批选题（input 要带 workspace：website 网站文章 / social 社媒）', 'Suggest topics (input needs workspace: website for site articles / social for posts)') },
     { task: 'geo-questions', what: L(ctx, '生成 AI 搜索检测的问题', 'Generate AI search questions') },
   ]
   if (hasFn('competitors')) tasks.push({ task: 'competitor-suggest', what: L(ctx, 'AI 推荐竞品', 'AI suggests competitors') }, { task: 'competitor-overview', what: L(ctx, '写竞对总览', 'Write a competitor overview') })

@@ -5,7 +5,7 @@ description: 按项目定位、已有选题和站点内容出一批新选题，�
 
 参数：都可以没有。`topic_requirements` 见第 2 步。`channel_id` + `question_ids`（可选）：从 GEO 出选题，把这个网站在 AI 回答里没被引用的问题写成选题（`question_ids` 指定就只写这几个）。
 
-`workspace` 是在哪个工作区点的：`website`（网站文章：给独立站写长文，选题偏搜索和 AI 搜索会问的问题、对比、选型、应用）或 `social`（社媒内容：图文笔记和视频，偏场景、卖点、幕后、案例，参照各账号的平台限制）。收到时原样传给 topics.context，存的时候也带上（`topics.save` 的 `workspace`），这样东西会出现在对的那一边。没有这个参数就照以前的做法。
+`workspace` 是在哪个工作区点的：`website`（网站文章：给独立站写长文，选题偏搜索和 AI 搜索会问的问题、对比、选型、应用）或 `social`（社媒内容：图文笔记和视频，偏场景、卖点、幕后、案例，参照各账号的平台限制）。收到时原样传给 topics.context，存的时候也带上（`topics.save` 的 `workspace`），这样东西会出现在对的那一边。**`topics.save` 必须带 `workspace`**（不带会报错）：没给这个参数时自己定，给网站写的长文（搜索、AI 搜索、对比选型，从增长计划「写博客」项来的）是 `website`，图文笔记、视频是 `social`；拿不准就问用户。
 
 ## 1. 拿上下文
 
@@ -56,7 +56,7 @@ annulo run knowledge.search --input '{"q":"<几个关键词，中英文都可以
 
 ```bash
 cat > /tmp/topics.json <<'JSON'
-{ "source": "geo", "ideas": [ { "title": "…", "angle": "…", "keywords": "…", "question_ids": ["<geo_questions 里的 id>"] } ] }
+{ "source": "geo", "workspace": "website", "ideas": [ { "title": "…", "angle": "…", "keywords": "…", "question_ids": ["<geo_questions 里的 id>"] } ] }
 JSON
 annulo run topics.save --input @/tmp/topics.json
 ```
@@ -73,4 +73,4 @@ annulo run topics.save --input @/tmp/topics.json
 
 ## 工作区归属
 
-网站选题围绕搜索意图、目标页面与网站文章；自媒体选题围绕平台、账号定位与表达角度。保存时带本次 workspace；从灵感生成的自媒体选题同样带 workspace=social。来源与内容类型不代替明确归属。未给 workspace 的老调用继续兼容，不擅自猜测归属。
+网站选题围绕搜索意图、目标页面与网站文章；自媒体选题围绕平台、账号定位与表达角度。保存时带本次 workspace；从灵感生成的自媒体选题同样带 workspace=social。来源与内容类型不代替明确归属。没给 workspace 时按上面的规则定，拿不准就问用户，不存没有归属的选题。

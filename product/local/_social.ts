@@ -12,6 +12,7 @@ const PLATFORMS: Record<string, { hosts: string[]; names: string[] }> = {
   linkedin: { hosts: ['linkedin.com', 'lnkd.in'], names: ['linkedin'] },
   facebook: { hosts: ['facebook.com', 'fb.me', 'fb.com'], names: ['facebook', 'fb'] },
   instagram: { hosts: ['instagram.com'], names: ['instagram', 'ig'] },
+  threads: { hosts: ['threads.com', 'threads.net'], names: ['threads'] },
   youtube: { hosts: ['youtube.com', 'youtu.be'], names: ['youtube', 'yt'] },
   xiaohongshu: { hosts: ['xiaohongshu.com', 'xhslink.com'], names: ['xiaohongshu', 'xhs'] },
   douyin: { hosts: ['douyin.com'], names: ['douyin'] },
