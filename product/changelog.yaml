@@ -1,3 +1,7 @@
+- version: 0.38.0
+  zh: "自媒体内容改成左边列表、右边直接编辑，一条内容可以发多个账号；新增 Threads 账号，Instagram 官方 API 也能定时发布（要社媒插件 0.13.0）。"
+  en: "Social content is now a list on the left with the editor on the right, and one piece can go to several accounts; Threads accounts added, and Instagram official API posts can be scheduled (needs the Social plugin 0.13.0)."
+
 - version: 0.37.0
   zh: "新建社媒内容时可以直接录入已有内容：传视频、写文案就存好，已经发出去的填上发布链接，记进内容列表。"
   en: "When creating social content you can record what you already have: upload a video and add copy, and for posts already out, add the link so they show up in your content list."
