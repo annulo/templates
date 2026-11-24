@@ -8,7 +8,7 @@ import { uploadAsset } from 'talizen/assets'
 export { ShuttleUnavailable, MemberLoginRequired, memberLoginURL, isNeedsShuttle, shuttleMissing, inShuttle, fnManifest, computerStatus, watchComputer, assistantOnline, type FnManifest, type ComputerStatus } from './remote'
 
 /** 渠道类型。creght_site、wordpress 是网站；其余是社媒。 */
-export type ChannelType = 'creght_site' | 'wordpress' | 'website' | 'xiaohongshu' | 'douyin' | 'x' | 'wechat_mp' | 'linkedin' | 'facebook' | 'instagram' | 'youtube' | 'bilibili' | 'zhihu'
+export type ChannelType = 'creght_site' | 'wordpress' | 'website' | 'xiaohongshu' | 'douyin' | 'x' | 'wechat_mp' | 'linkedin' | 'facebook' | 'instagram' | 'threads' | 'youtube' | 'bilibili' | 'zhihu'
 
 export type Channel = {
   id: string

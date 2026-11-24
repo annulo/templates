@@ -24,18 +24,6 @@
     "published_hint": "手动标记为已发布，包括在其他渠道发布",
     "saved": "内容状态已更新"
   },
-  "facebook_comments": {
-    "view": "查看评论",
-    "title": "Facebook 评论",
-    "refresh": "刷新评论",
-    "more": "加载更多评论",
-    "loading": "正在读取评论…",
-    "empty": "Facebook 暂未返回可查看的评论。",
-    "no_text": "此评论没有文字内容，请到 Facebook 查看。",
-    "hint": "按时间倒序显示评论及回复。Facebook 可返回的评论受可见性限制，可能少于评论总数。",
-    "updated": "更新于 {when}",
-    "loaded": "已显示 {n} 条评论"
-  },
   "facebook_retry": {
     "view_record": "核对发布结果",
     "uncertain": "上次发布结果待确认",
@@ -1091,19 +1079,17 @@
     "token": "访问口令",
     "token_placeholder": "留空使用已保存的口令",
     "token_hint": "口令只保存在这台电脑的密钥里，不会上传。大约 60 天后失效，到时在「管理连接」里重新粘贴一次。",
-    "host": "本机图片上传到（可选）",
+    "host": "本机图片、视频上传到（可选）",
+    "host_saved": "已保存",
     "public_only": "只使用公开图片地址",
-    "host_hint": "选择已连接网站的素材库后，本机 JPEG 会在发布时自动上传。此电脑需已登录对应区域的 Creght CLI。",
+    "host_hint": "选择已连接网站的素材库后，本机 JPEG 和视频会在发布时自动上传。图片要这台电脑登录对应区域的 Creght CLI，视频要 Annulo 连着对应区域的 creght。",
     "connect": "验证并连接",
     "check": "检测授权",
     "manage": "管理连接",
     "title": "Instagram 连接",
     "recovery": "这条帖子已提交过发布请求。请先核对结果；系统不会再次提交，以免重复发帖。",
     "check_result": "核对发布结果",
-    "single_now": "Instagram API 当前仅支持单图立即发布",
-    "collection_later": "API 互动数据采集尚未接入",
     "checked": "授权检测通过",
-    "unschedule": "取消排期，转为待发布",
     "intro": "点下面的按钮，Annulo 会打开浏览器替你完成大部分操作：你只需要登录 Facebook 和 Instagram、点「允许」。第一次大约 3 分钟。",
     "renew_intro": "口令大约 60 天失效。点下面的按钮重新生成，一般只需要在弹窗里点「允许」。",
     "manual_step_facebook": "打开 developers.facebook.com，登录 Facebook。",
@@ -1120,6 +1106,245 @@
     "start_hint": "第一次用要注册 Meta 开发者（免费，验证一次手机或邮箱），账号要是 Instagram 专业账号（创作者或商家）。浏览器会把这个账号加成应用的测试员，你在 Instagram 里点「接受」、在弹窗里登录并点「允许」就行。右下角会提示每一步。",
     "have_token": "已经有口令？直接粘贴",
     "username": "要连接的 Instagram 用户名"
+  },
+  "meta": {
+    "channel_types": {
+      "threads": {
+        "label": "Threads",
+        "hint": "粘贴 Threads 口令，用官方 API 发帖"
+      },
+      "creght_site": {
+        "label": "Creght 网站",
+        "hint": "从你的 creght 网站里选一个"
+      },
+      "website": {
+        "label": "网站",
+        "hint": "只填了网址：能检查网站、连谷歌数据；接入 creght 或 WordPress 后才能发布"
+      },
+      "wordpress": {
+        "label": "WordPress 网站",
+        "hint": "填网站地址，用应用密码连接"
+      },
+      "xiaohongshu": {
+        "label": "小红书",
+        "hint": "登录你的小红书账号"
+      },
+      "douyin": {
+        "label": "抖音",
+        "hint": "弹出浏览器窗口，用抖音 App 扫码登录"
+      },
+      "wechat_mp": {
+        "label": "公众号",
+        "hint": "即将支持"
+      },
+      "x": {
+        "label": "X",
+        "hint": "登录你的 X 账号"
+      },
+      "linkedin": {
+        "label": "LinkedIn",
+        "hint": "弹出浏览器窗口登录你的 LinkedIn 个人账号"
+      },
+      "facebook": {
+        "label": "Facebook",
+        "hint": "弹出浏览器窗口登录 Facebook，个人主页和你管理的公司主页都能加"
+      },
+      "instagram": {
+        "label": "Instagram",
+        "hint": "弹出浏览器窗口登录 Instagram"
+      },
+      "youtube": {
+        "label": "YouTube",
+        "hint": "弹出浏览器窗口登录 YouTube 频道（Google 账号）"
+      },
+      "bilibili": {
+        "label": "B 站",
+        "hint": "弹出浏览器窗口，用哔哩哔哩 App 扫码登录"
+      },
+      "zhihu": {
+        "label": "知乎",
+        "hint": "弹出浏览器窗口，用知乎 App 扫码或手机验证码登录"
+      }
+    },
+    "platform": {
+      "threads": {
+        "label": "Threads",
+        "noun": "帖子",
+        "body_hint": "最多 500 字（emoji 按字节算），最多 5 个链接；话题只能 1 个，不接在正文里；视频 MP4 / MOV，最长 5 分钟",
+        "login_hint": "粘贴 Meta 应用里生成的 Threads 口令",
+        "m_views": "浏览",
+        "m_likes": "赞",
+        "m_comments": "回复",
+        "m_shares": "转发",
+        "m_collects": "收藏"
+      },
+      "xiaohongshu": {
+        "label": "小红书",
+        "noun": "笔记",
+        "body_hint": "不要放站外链接、不要引导加微信",
+        "login_hint": "弹出一个浏览器窗口，在里面登录创作者中心（手机验证码或扫码）",
+        "m_views": "阅读",
+        "m_likes": "点赞",
+        "m_collects": "收藏",
+        "m_comments": "评论",
+        "m_shares": "分享"
+      },
+      "x": {
+        "label": "X",
+        "noun": "推文",
+        "body_hint": "话题会接在正文最后；中文和 emoji 算 2 个字，链接算 23",
+        "login_hint": "弹出一个浏览器窗口，在里面登录 X",
+        "m_views": "浏览",
+        "m_likes": "点赞",
+        "m_comments": "回复",
+        "m_shares": "转发",
+        "m_collects": "书签"
+      },
+      "linkedin": {
+        "label": "LinkedIn",
+        "noun": "帖子",
+        "body_hint": "话题接在正文最后；前 210 个字符会直接显示，后面折叠在「查看更多」里",
+        "login_hint": "弹出一个浏览器窗口，在里面登录 LinkedIn",
+        "m_views": "展示",
+        "m_likes": "赞",
+        "m_comments": "评论",
+        "m_shares": "转发",
+        "m_collects": "收藏"
+      },
+      "facebook": {
+        "label": "Facebook",
+        "noun": "帖子",
+        "body_hint": "开头两行最显眼；话题接在正文最后",
+        "login_hint": "弹出一个浏览器窗口，在里面登录 Facebook",
+        "m_views": "展示",
+        "m_likes": "赞",
+        "m_comments": "评论",
+        "m_shares": "分享",
+        "m_collects": "收藏"
+      },
+      "instagram": {
+        "label": "Instagram",
+        "noun": "帖子",
+        "body_hint": "必须配图；正文前 125 个字符直接显示，话题接在最后",
+        "login_hint": "弹出一个浏览器窗口，在里面登录 Instagram",
+        "m_views": "展示",
+        "m_likes": "赞",
+        "m_comments": "评论",
+        "m_shares": "分享",
+        "m_collects": "收藏"
+      },
+      "youtube": {
+        "label": "YouTube",
+        "noun": "视频",
+        "body_hint": "标题是视频标题；正文是视频描述，前两行最显眼；视频从资料库选或者上传本机视频",
+        "login_hint": "弹出一个浏览器窗口，在里面登录 YouTube",
+        "m_views": "播放",
+        "m_likes": "赞",
+        "m_comments": "评论",
+        "m_shares": "分享",
+        "m_collects": "收藏"
+      },
+      "bilibili": {
+        "label": "B 站",
+        "noun": "视频",
+        "body_hint": "标题是视频标题（80 字内）；正文是简介，开头两行最显眼；视频从资料库选或者上传本机视频",
+        "post_noun": "专栏",
+        "post_hint": "图文发成专栏：标题 50 字内；正文是纯文字，配图依次排在文字后面",
+        "article_noun": "专栏",
+        "article_hint": "长文发成专栏：标题 50 字内；正文照富文本原样（小标题、列表、引用、加粗），图片在原位置；外链 B 站会去掉",
+        "login_hint": "弹出一个浏览器窗口，用哔哩哔哩 App 扫码登录",
+        "m_views": "播放",
+        "m_likes": "点赞",
+        "m_comments": "评论",
+        "m_shares": "分享",
+        "m_collects": "收藏",
+        "review_note": "投稿后要等 B 站审核。"
+      },
+      "zhihu": {
+        "label": "知乎",
+        "noun": "文章",
+        "body_hint": "专栏文章，和文章一样的富文本：小标题、列表、加粗、引用都会保留，图片直接插在正文里；话题最多 3 个；不要引导加微信",
+        "login_hint": "弹出一个浏览器窗口，用知乎 App 扫码或手机验证码登录",
+        "m_views": "阅读",
+        "m_likes": "赞同",
+        "m_comments": "评论",
+        "m_collects": "收藏"
+      },
+      "douyin": {
+        "label": "抖音",
+        "noun": "视频",
+        "body_hint": "标题是作品标题（30 字内）；正文是作品简介，话题接在简介后面（连同话题 1000 字内）；视频从资料库选或者上传本机视频",
+        "login_hint": "弹出一个浏览器窗口，用抖音 App 扫码登录创作者中心",
+        "m_views": "播放",
+        "m_likes": "点赞",
+        "m_comments": "评论",
+        "m_shares": "分享",
+        "m_collects": "收藏",
+        "review_note": "发布后要等抖音审核。"
+      }
+    },
+    "brand": {
+      "xiaohongshu": "小红书",
+      "douyin": "抖音",
+      "wechat": "微信",
+      "zhihu": "知乎"
+    },
+    "asset_kinds": {
+      "image": "图片",
+      "video": "视频",
+      "text": "文字"
+    },
+    "social_status": {
+      "draft": "草稿",
+      "pending_review": "待审核",
+      "approved": "待发布",
+      "scheduled": "已排期",
+      "publishing": "发布中",
+      "published": "已发布",
+      "failed": "发布失败",
+      "rejected": "已退回",
+      "removed": "已删除"
+    },
+    "err": {
+      "no_shuttle": "连不上本机的 Annulo",
+      "member_login": "登录后才能看：这是你的运营后台，只给项目成员看",
+      "not_from_shuttle": "这一项要在电脑上的 Annulo 里打开后台才能用",
+      "computer_offline": "调不到你的电脑：要在手机上用，在电脑上的 Annulo 里打开 设置 → 远程访问 的「在手机上打开这台电脑的 Annulo」，用那里给的地址打开",
+      "req_failed": "请求失败（{status}）",
+      "run_failed": "执行失败",
+      "run_disconnected": "和 Annulo 的连接断了，函数可能还在跑，稍后刷新看结果",
+      "too_big": "「{name}」太大：单个文件最多 200 MB",
+      "empty_file": "「{name}」是空文件",
+      "upload_offline": "从 Annulo 打开后台才能上传文件",
+      "upload_failed": "上传失败（{status}）",
+      "too_big_local": "「{name}」太大：单个文件最多 8 GB",
+      "too_big_remote": "「{name}」太大：在手机上单个文件最多 200 MB，更大的视频在电脑上的 Annulo 里上传"
+    }
+  },
+  "threads_connect": {
+    "api": "官方 API",
+    "intro": "Threads 用官方 API 发帖：在你自己的 Meta 应用里生成一个 Threads 口令，粘贴到下面。第一次大约 5 分钟，步骤见下面。",
+    "renew_intro": "口令大约 60 天失效。重新生成一个粘贴进来即可；只想换图片素材库，口令留空直接点「验证并连接」。",
+    "token_paste_placeholder": "粘贴口令（TH 开头）",
+    "token_placeholder": "留空使用已保存的口令",
+    "token_missing": "先粘贴口令。",
+    "connect": "验证并连接",
+    "how": "怎么拿到 Threads 口令",
+    "step_app": "打开 developers.facebook.com，登录 Facebook，点「我的应用 → 创建应用」，用例选「访问 Threads API」，一路下一步创建（第一次要先免费注册成开发者）。",
+    "step_permissions": "进入应用 →「用例」→「访问 Threads API」→「自定义」→「权限」，确认 threads_basic、threads_content_publish 已添加，再加上 threads_manage_insights（读帖子数据和粉丝数要用）。",
+    "step_tester": "「应用角色 → 角色」→「添加人员」→ 选「Threads 测试员」，填要连的 Threads 用户名；再到 Threads 网页版 设置 → 账户 → 网站权限 →「邀请」里点「接受」。",
+    "step_token": "回到「用例 → 访问 Threads API → 自定义 → 设置」，在「用户口令生成工具」里给这个测试员点「生成访问口令」，登录 Threads 并允许，复制口令（TH 开头的一长串）。",
+    "step_paste": "把口令粘贴到上面，点「验证并连接」。",
+    "open_meta": "打开 Meta 开发者后台",
+    "host": "本机图片、视频上传到（可选）",
+    "public_only": "只使用公开图片地址",
+    "host_hint": "选一个已连接网站的素材库，发布时本机的图片（JPEG）和视频会自动传上去给 Threads 抓取。图片要这台电脑登录对应区域的 Creght CLI，视频要 Annulo 连着那个区域的 creght。",
+    "token_hint": "口令只保存在这台电脑的密钥里，不会上传。大约 60 天后失效，到时在「管理连接」里重新粘贴。",
+    "wrong_account": "这个口令属于 @{username}，不是这个账号。请用原来那个 Threads 账号生成口令。",
+    "check": "检测授权",
+    "checked": "授权检测通过",
+    "manage": "管理连接",
+    "title": "Threads 连接"
   },
   "add_channel": {
     "added": "已添加",
@@ -1851,205 +2076,6 @@
     "geo_done_sep": "，",
     "geo_badge": "有新的检测结果",
     "geo_done_go": "去看看"
-  },
-  "meta": {
-    "brand": {
-      "xiaohongshu": "小红书",
-      "douyin": "抖音",
-      "wechat": "微信",
-      "zhihu": "知乎"
-    },
-    "channel_types": {
-      "creght_site": {
-        "label": "Creght 网站",
-        "hint": "从你的 creght 网站里选一个"
-      },
-      "website": {
-        "label": "网站",
-        "hint": "只填了网址：能检查网站、连谷歌数据；接入 creght 或 WordPress 后才能发布"
-      },
-      "wordpress": {
-        "label": "WordPress 网站",
-        "hint": "填网站地址，用应用密码连接"
-      },
-      "xiaohongshu": {
-        "label": "小红书",
-        "hint": "登录你的小红书账号"
-      },
-      "douyin": {
-        "label": "抖音",
-        "hint": "弹出浏览器窗口，用抖音 App 扫码登录"
-      },
-      "wechat_mp": {
-        "label": "公众号",
-        "hint": "即将支持"
-      },
-      "x": {
-        "label": "X",
-        "hint": "登录你的 X 账号"
-      },
-      "linkedin": {
-        "label": "LinkedIn",
-        "hint": "弹出浏览器窗口登录你的 LinkedIn 个人账号"
-      },
-      "facebook": {
-        "label": "Facebook",
-        "hint": "弹出浏览器窗口登录 Facebook，个人主页和你管理的公司主页都能加"
-      },
-      "instagram": {
-        "label": "Instagram",
-        "hint": "弹出浏览器窗口登录 Instagram"
-      },
-      "youtube": {
-        "label": "YouTube",
-        "hint": "弹出浏览器窗口登录 YouTube 频道（Google 账号）"
-      },
-      "bilibili": {
-        "label": "B 站",
-        "hint": "弹出浏览器窗口，用哔哩哔哩 App 扫码登录"
-      },
-      "zhihu": {
-        "label": "知乎",
-        "hint": "弹出浏览器窗口，用知乎 App 扫码或手机验证码登录"
-      }
-    },
-    "asset_kinds": {
-      "image": "图片",
-      "video": "视频",
-      "text": "文字"
-    },
-    "social_status": {
-      "draft": "草稿",
-      "pending_review": "待审核",
-      "approved": "待发布",
-      "scheduled": "已排期",
-      "publishing": "发布中",
-      "published": "已发布",
-      "failed": "发布失败",
-      "rejected": "已退回",
-      "removed": "已删除"
-    },
-    "platform": {
-      "xiaohongshu": {
-        "label": "小红书",
-        "noun": "笔记",
-        "body_hint": "不要放站外链接、不要引导加微信",
-        "login_hint": "弹出一个浏览器窗口，在里面登录创作者中心（手机验证码或扫码）",
-        "m_views": "阅读",
-        "m_likes": "点赞",
-        "m_collects": "收藏",
-        "m_comments": "评论",
-        "m_shares": "分享"
-      },
-      "x": {
-        "label": "X",
-        "noun": "推文",
-        "body_hint": "话题会接在正文最后；中文和 emoji 算 2 个字，链接算 23",
-        "login_hint": "弹出一个浏览器窗口，在里面登录 X",
-        "m_views": "浏览",
-        "m_likes": "点赞",
-        "m_comments": "回复",
-        "m_shares": "转发",
-        "m_collects": "书签"
-      },
-      "linkedin": {
-        "label": "LinkedIn",
-        "noun": "帖子",
-        "body_hint": "话题接在正文最后；前 210 个字符会直接显示，后面折叠在「查看更多」里",
-        "login_hint": "弹出一个浏览器窗口，在里面登录 LinkedIn",
-        "m_views": "展示",
-        "m_likes": "赞",
-        "m_comments": "评论",
-        "m_shares": "转发",
-        "m_collects": "收藏"
-      },
-      "facebook": {
-        "label": "Facebook",
-        "noun": "帖子",
-        "body_hint": "开头两行最显眼；话题接在正文最后",
-        "login_hint": "弹出一个浏览器窗口，在里面登录 Facebook",
-        "m_views": "展示",
-        "m_likes": "赞",
-        "m_comments": "评论",
-        "m_shares": "分享",
-        "m_collects": "收藏"
-      },
-      "instagram": {
-        "label": "Instagram",
-        "noun": "帖子",
-        "body_hint": "必须配图；正文前 125 个字符直接显示，话题接在最后",
-        "login_hint": "弹出一个浏览器窗口，在里面登录 Instagram",
-        "m_views": "展示",
-        "m_likes": "赞",
-        "m_comments": "评论",
-        "m_shares": "分享",
-        "m_collects": "收藏"
-      },
-      "youtube": {
-        "label": "YouTube",
-        "noun": "视频",
-        "body_hint": "标题是视频标题；正文是视频描述，前两行最显眼；视频从资料库选或者上传本机视频",
-        "login_hint": "弹出一个浏览器窗口，在里面登录 YouTube",
-        "m_views": "播放",
-        "m_likes": "赞",
-        "m_comments": "评论",
-        "m_shares": "分享",
-        "m_collects": "收藏"
-      },
-      "bilibili": {
-        "label": "B 站",
-        "noun": "视频",
-        "body_hint": "标题是视频标题（80 字内）；正文是简介，开头两行最显眼；视频从资料库选或者上传本机视频",
-        "post_noun": "专栏",
-        "post_hint": "图文发成专栏：标题 50 字内；正文是纯文字，配图依次排在文字后面",
-        "article_noun": "专栏",
-        "article_hint": "长文发成专栏：标题 50 字内；正文照富文本原样（小标题、列表、引用、加粗），图片在原位置；外链 B 站会去掉",
-        "login_hint": "弹出一个浏览器窗口，用哔哩哔哩 App 扫码登录",
-        "m_views": "播放",
-        "m_likes": "点赞",
-        "m_comments": "评论",
-        "m_shares": "分享",
-        "m_collects": "收藏",
-        "review_note": "投稿后要等 B 站审核。"
-      },
-      "zhihu": {
-        "label": "知乎",
-        "noun": "文章",
-        "body_hint": "专栏文章，和文章一样的富文本：小标题、列表、加粗、引用都会保留，图片直接插在正文里；话题最多 3 个；不要引导加微信",
-        "login_hint": "弹出一个浏览器窗口，用知乎 App 扫码或手机验证码登录",
-        "m_views": "阅读",
-        "m_likes": "赞同",
-        "m_comments": "评论",
-        "m_collects": "收藏"
-      },
-      "douyin": {
-        "label": "抖音",
-        "noun": "视频",
-        "body_hint": "标题是作品标题（30 字内）；正文是作品简介，话题接在简介后面（连同话题 1000 字内）；视频从资料库选或者上传本机视频",
-        "login_hint": "弹出一个浏览器窗口，用抖音 App 扫码登录创作者中心",
-        "m_views": "播放",
-        "m_likes": "点赞",
-        "m_comments": "评论",
-        "m_shares": "分享",
-        "m_collects": "收藏",
-        "review_note": "发布后要等抖音审核。"
-      }
-    },
-    "err": {
-      "no_shuttle": "连不上本机的 Annulo",
-      "member_login": "登录后才能看：这是你的运营后台，只给项目成员看",
-      "not_from_shuttle": "这一项要在电脑上的 Annulo 里打开后台才能用",
-      "computer_offline": "调不到你的电脑：要在手机上用，在电脑上的 Annulo 里打开 设置 → 远程访问 的「在手机上打开这台电脑的 Annulo」，用那里给的地址打开",
-      "req_failed": "请求失败（{status}）",
-      "run_failed": "执行失败",
-      "run_disconnected": "和 Annulo 的连接断了，函数可能还在跑，稍后刷新看结果",
-      "too_big": "「{name}」太大：单个文件最多 200 MB",
-      "empty_file": "「{name}」是空文件",
-      "upload_offline": "从 Annulo 打开后台才能上传文件",
-      "upload_failed": "上传失败（{status}）",
-      "too_big_local": "「{name}」太大：单个文件最多 8 GB",
-      "too_big_remote": "「{name}」太大：在手机上单个文件最多 200 MB，更大的视频在电脑上的 Annulo 里上传"
-    }
   },
   "settings": {
     "title": "我的定位",

@@ -1,4 +1,5 @@
 import { InstagramConnectionButton, instagramApi } from '../InstagramAccountFlow'
+import { ThreadsConnectionButton } from '../ThreadsAccountFlow'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowUpRight, BarChart3, Globe, Plus, RefreshCw, Settings, Trash2, UserRound, X } from 'lucide-react'
 import { PublishSetup } from '../PublishTargets'
@@ -221,7 +222,7 @@ function AccountConnection({ ch, actions, other, health, posts, onOpenPost, onDo
               {tr('social.collect')}
             </RunButton>
           )}
-          {ch.type === 'instagram' ? <InstagramConnectionButton channel={ch} onDone={onDone} /> : ch.type === 'facebook' ? <FacebookConnectionButton channel={ch} onDone={onDone} /> : <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} variant={other || expired ? 'default' : 'ghost'} onError={setError} onDone={onDone}>
+          {ch.type === 'instagram' ? <InstagramConnectionButton channel={ch} onDone={onDone} /> : ch.type === 'threads' ? <ThreadsConnectionButton channel={ch} onDone={onDone} /> : ch.type === 'facebook' ? <FacebookConnectionButton channel={ch} onDone={onDone} /> : <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} variant={other || expired ? 'default' : 'ghost'} onError={setError} onDone={onDone}>
             {other ? tr('social.login_here') : tr('social.relogin')}
           </RunButton>}
           {actions}

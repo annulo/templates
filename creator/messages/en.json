@@ -24,18 +24,6 @@
     "published_hint": "Mark as published, including on other channels",
     "saved": "Content status updated"
   },
-  "facebook_comments": {
-    "view": "View comments",
-    "title": "Facebook comments",
-    "refresh": "Refresh comments",
-    "more": "Load more comments",
-    "loading": "Loading comments…",
-    "empty": "Facebook has not returned any viewable comments.",
-    "no_text": "This comment has no text. View it on Facebook.",
-    "hint": "Comments and replies appear newest first. Visibility restrictions may make the available comments fewer than the total count.",
-    "updated": "Updated {when}",
-    "loaded": "Showing {n} comments"
-  },
   "facebook_retry": {
     "view_record": "Review publishing result",
     "uncertain": "Previous publishing result needs confirmation",
@@ -1091,19 +1079,17 @@
     "token": "Access token",
     "token_placeholder": "Leave blank to use the saved token",
     "token_hint": "The token stays in this computer's secrets and is never uploaded. It expires in about 60 days; then paste a new one in \"Manage connection\".",
-    "host": "Upload local images to (optional)",
+    "host": "Upload local images and videos to (optional)",
+    "host_saved": "Saved",
     "public_only": "Public image URLs only",
-    "host_hint": "Choose a connected site to upload local JPEGs when publishing. Creght CLI must be signed in to that region on this computer.",
+    "host_hint": "Choose a connected site to upload local JPEGs and videos when publishing. Images need the Creght CLI signed in to that region on this computer; videos need Annulo connected to creght in that region.",
     "connect": "Verify and connect",
     "check": "Check authorization",
     "manage": "Manage connection",
     "title": "Instagram connection",
     "recovery": "This post has a submitted publishing attempt. Check the result first; it will not be submitted again to avoid duplicates.",
     "check_result": "Check publishing result",
-    "single_now": "Instagram API currently supports one image published immediately",
-    "collection_later": "API engagement collection is not connected yet",
     "checked": "Authorization check passed",
-    "unschedule": "Cancel schedule and mark ready",
     "intro": "Click the button and Annulo opens a browser and does most of the work for you: you only log in to Facebook and Instagram and click \"Allow\". About 3 minutes the first time.",
     "renew_intro": "Tokens expire after about 60 days. Click the button to generate a new one; usually you only click \"Allow\" in the pop-up.",
     "manual_step_facebook": "Open developers.facebook.com and log in to Facebook.",
@@ -1120,6 +1106,245 @@
     "start_hint": "First time: register as a Meta developer (free, one phone or email check). The account must be an Instagram professional account (Creator or Business). The browser adds it as a tester of the app; you click \"Accept\" in Instagram, log in and click \"Allow\" in the pop-up. The bottom-right corner shows each step.",
     "have_token": "Already have a token? Paste it",
     "username": "Instagram username to connect"
+  },
+  "meta": {
+    "channel_types": {
+      "threads": {
+        "label": "Threads",
+        "hint": "Paste a Threads token and post through the official API"
+      },
+      "creght_site": {
+        "label": "Creght site",
+        "hint": "Pick one of your creght sites"
+      },
+      "website": {
+        "label": "Website",
+        "hint": "URL only: site checks and Google data work; connect creght or WordPress to publish"
+      },
+      "wordpress": {
+        "label": "WordPress site",
+        "hint": "Enter the site URL and connect with an application password"
+      },
+      "xiaohongshu": {
+        "label": "Xiaohongshu",
+        "hint": "Sign in to your Xiaohongshu account"
+      },
+      "douyin": {
+        "label": "Douyin",
+        "hint": "A browser window opens; scan the QR code with the Douyin app"
+      },
+      "wechat_mp": {
+        "label": "WeChat Official Account",
+        "hint": "Coming soon"
+      },
+      "x": {
+        "label": "X",
+        "hint": "Sign in to your X account"
+      },
+      "linkedin": {
+        "label": "LinkedIn",
+        "hint": "Log in to your LinkedIn profile in a browser window"
+      },
+      "facebook": {
+        "label": "Facebook",
+        "hint": "Sign in to Facebook in a browser window; add your profile and the Pages you manage"
+      },
+      "instagram": {
+        "label": "Instagram",
+        "hint": "Sign in to Instagram in a browser window"
+      },
+      "youtube": {
+        "label": "YouTube",
+        "hint": "Sign in to your YouTube channel (Google account) in a browser window"
+      },
+      "bilibili": {
+        "label": "Bilibili",
+        "hint": "A browser window opens; scan the QR code with the Bilibili app"
+      },
+      "zhihu": {
+        "label": "Zhihu",
+        "hint": "A browser window opens; scan the QR code with the Zhihu app or use an SMS code"
+      }
+    },
+    "platform": {
+      "threads": {
+        "label": "Threads",
+        "noun": "post",
+        "body_hint": "Up to 500 characters (emoji count as bytes) and 5 links; one topic, not added to the text; videos MP4 / MOV up to 5 minutes",
+        "login_hint": "Paste the Threads token generated in your Meta app",
+        "m_views": "Views",
+        "m_likes": "Likes",
+        "m_comments": "Replies",
+        "m_shares": "Reposts",
+        "m_collects": "Saves"
+      },
+      "xiaohongshu": {
+        "label": "Xiaohongshu",
+        "noun": "note",
+        "body_hint": "No external links, no prompts to add WeChat",
+        "login_hint": "A browser window opens; sign in to the Creator Center there (SMS code or QR)",
+        "m_views": "Views",
+        "m_likes": "Likes",
+        "m_collects": "Saves",
+        "m_comments": "Comments",
+        "m_shares": "Shares"
+      },
+      "x": {
+        "label": "X",
+        "noun": "post",
+        "body_hint": "Hashtags go at the end; CJK characters and emoji count as 2, links as 23",
+        "login_hint": "A browser window opens; sign in to X there",
+        "m_views": "Views",
+        "m_likes": "Likes",
+        "m_comments": "Replies",
+        "m_shares": "Reposts",
+        "m_collects": "Bookmarks"
+      },
+      "linkedin": {
+        "label": "LinkedIn",
+        "noun": "post",
+        "body_hint": "Hashtags go at the end; the first ~210 characters show before \"see more\"",
+        "login_hint": "A browser window opens; log in to LinkedIn there",
+        "m_views": "Impressions",
+        "m_likes": "Reactions",
+        "m_comments": "Comments",
+        "m_shares": "Reposts",
+        "m_collects": "Saves"
+      },
+      "facebook": {
+        "label": "Facebook",
+        "noun": "post",
+        "body_hint": "The first two lines matter most; hashtags go at the end",
+        "login_hint": "A browser window opens; sign in to Facebook there",
+        "m_views": "Views",
+        "m_likes": "Likes",
+        "m_comments": "Comments",
+        "m_shares": "Shares",
+        "m_collects": "Saves"
+      },
+      "instagram": {
+        "label": "Instagram",
+        "noun": "post",
+        "body_hint": "Needs an image; the first 125 characters show, hashtags go at the end",
+        "login_hint": "A browser window opens; sign in to Instagram there",
+        "m_views": "Views",
+        "m_likes": "Likes",
+        "m_comments": "Comments",
+        "m_shares": "Shares",
+        "m_collects": "Saves"
+      },
+      "youtube": {
+        "label": "YouTube",
+        "noun": "video",
+        "body_hint": "The title is the video title; the body is the description (first two lines matter most); pick the video from the library or upload one from this computer",
+        "login_hint": "A browser window opens; sign in to YouTube there",
+        "m_views": "Views",
+        "m_likes": "Likes",
+        "m_comments": "Comments",
+        "m_shares": "Shares",
+        "m_collects": "Saves"
+      },
+      "bilibili": {
+        "label": "Bilibili",
+        "noun": "video",
+        "body_hint": "The title is the video title (up to 80 chars); the body is the description, the first two lines matter most; pick a video from the library or upload one from this computer",
+        "post_noun": "article",
+        "post_hint": "Image posts go out as a Bilibili article: title up to 50 chars; plain text, with the images after it in order",
+        "article_noun": "article",
+        "article_hint": "Long-form posts go out as a Bilibili article: title up to 50 chars; rich text kept as is (headings, lists, quotes, bold), images in place; Bilibili strips outside links",
+        "login_hint": "A browser window opens; scan the QR code with the Bilibili app",
+        "m_views": "Views",
+        "m_likes": "Likes",
+        "m_comments": "Comments",
+        "m_shares": "Shares",
+        "m_collects": "Favorites",
+        "review_note": "Bilibili reviews each upload."
+      },
+      "zhihu": {
+        "label": "Zhihu",
+        "noun": "article",
+        "body_hint": "A column article with the same rich text as your articles: headings, lists, bold and quotes are kept, and images go right in the text; up to 3 topics; no prompts to add WeChat",
+        "login_hint": "A browser window opens; scan the QR code with the Zhihu app or use an SMS code",
+        "m_views": "Reads",
+        "m_likes": "Upvotes",
+        "m_comments": "Comments",
+        "m_collects": "Saves"
+      },
+      "douyin": {
+        "label": "Douyin",
+        "noun": "video",
+        "body_hint": "The title is the video title (up to 30 chars); the body is the description, with hashtags appended (up to 1000 chars in total); pick a video from the library or upload one from this computer",
+        "login_hint": "A browser window opens; scan the QR code with the Douyin app to log in to the creator center",
+        "m_views": "Views",
+        "m_likes": "Likes",
+        "m_comments": "Comments",
+        "m_shares": "Shares",
+        "m_collects": "Favorites",
+        "review_note": "Douyin reviews each video."
+      }
+    },
+    "brand": {
+      "xiaohongshu": "Xiaohongshu",
+      "douyin": "Douyin",
+      "wechat": "WeChat",
+      "zhihu": "Zhihu"
+    },
+    "asset_kinds": {
+      "image": "Image",
+      "video": "Video",
+      "text": "Text"
+    },
+    "social_status": {
+      "draft": "Draft",
+      "pending_review": "In review",
+      "approved": "Ready",
+      "scheduled": "Scheduled",
+      "publishing": "Publishing",
+      "published": "Published",
+      "failed": "Failed",
+      "rejected": "Rejected",
+      "removed": "Deleted"
+    },
+    "err": {
+      "no_shuttle": "Can't reach Annulo on this computer",
+      "member_login": "Sign in to see this: the back office is only for members of this project",
+      "not_from_shuttle": "This needs the back office opened in Annulo on your computer",
+      "computer_offline": "Can't reach your computer: to use this from your phone, turn on Settings → Remote access → \"Open this computer's Annulo on your phone\" in Annulo on your computer and open the address it gives you",
+      "req_failed": "Request failed ({status})",
+      "run_failed": "Run failed",
+      "run_disconnected": "Lost the connection to Annulo. The function may still be running; refresh later to see the result",
+      "too_big": "\"{name}\" is too large: up to 200 MB per file",
+      "empty_file": "\"{name}\" is empty",
+      "upload_offline": "Open the back office from Annulo to upload files",
+      "upload_failed": "Upload failed ({status})",
+      "too_big_local": "\"{name}\" is too large: up to 8 GB per file",
+      "too_big_remote": "\"{name}\" is too big: on the phone a file can be at most 200 MB — upload larger videos in Annulo on your computer"
+    }
+  },
+  "threads_connect": {
+    "api": "Official API",
+    "intro": "Threads posts through the official API: generate a Threads token in your own Meta app and paste it below. The first time takes about 5 minutes; steps are below.",
+    "renew_intro": "Tokens expire after about 60 days. Paste a newly generated one; to change only the image host, leave it empty and click Verify and connect.",
+    "token_paste_placeholder": "Paste the token (starts with TH)",
+    "token_placeholder": "Leave empty to keep the saved token",
+    "token_missing": "Paste a token first.",
+    "connect": "Verify and connect",
+    "how": "How to get a Threads token",
+    "step_app": "Open developers.facebook.com, log in to Facebook, choose My Apps → Create App, pick the \"Access the Threads API\" use case and continue (register as a developer first if needed; it's free).",
+    "step_permissions": "In the app, open Use cases → Access the Threads API → Customize → Permissions, make sure threads_basic and threads_content_publish are added, and add threads_manage_insights (needed to read post stats and followers).",
+    "step_tester": "App roles → Roles → Add people → Threads Tester, enter the Threads username; then on Threads on the web go to Settings → Account → Website permissions → Invites and accept.",
+    "step_token": "Back in Use cases → Access the Threads API → Customize → Settings, use the User Token Generator to generate an access token for that tester, log in to Threads, allow, and copy the token (a long string starting with TH).",
+    "step_paste": "Paste the token above and click Verify and connect.",
+    "open_meta": "Open Meta for Developers",
+    "host": "Upload local images and videos to (optional)",
+    "public_only": "Public image URLs only",
+    "host_hint": "Choose a connected site's library; local images (JPEG) and videos are uploaded there when publishing so Threads can fetch them. Images need the Creght CLI logged in for that region on this computer; videos need Annulo connected to creght in that region.",
+    "token_hint": "The token stays in this computer's secrets and is never uploaded. It expires after about 60 days; paste a new one in Manage connection then.",
+    "wrong_account": "This token belongs to @{username}, not this account. Generate the token with the original Threads account.",
+    "check": "Check authorization",
+    "checked": "Authorization OK",
+    "manage": "Manage connection",
+    "title": "Threads connection"
   },
   "add_channel": {
     "added": "Added",
@@ -1851,205 +2076,6 @@
     "geo_done_sep": ", ",
     "geo_badge": "New check results",
     "geo_done_go": "View"
-  },
-  "meta": {
-    "brand": {
-      "xiaohongshu": "Xiaohongshu",
-      "douyin": "Douyin",
-      "wechat": "WeChat",
-      "zhihu": "Zhihu"
-    },
-    "channel_types": {
-      "creght_site": {
-        "label": "Creght site",
-        "hint": "Pick one of your creght sites"
-      },
-      "website": {
-        "label": "Website",
-        "hint": "URL only: site checks and Google data work; connect creght or WordPress to publish"
-      },
-      "wordpress": {
-        "label": "WordPress site",
-        "hint": "Enter the site URL and connect with an application password"
-      },
-      "xiaohongshu": {
-        "label": "Xiaohongshu",
-        "hint": "Sign in to your Xiaohongshu account"
-      },
-      "douyin": {
-        "label": "Douyin",
-        "hint": "A browser window opens; scan the QR code with the Douyin app"
-      },
-      "wechat_mp": {
-        "label": "WeChat Official Account",
-        "hint": "Coming soon"
-      },
-      "x": {
-        "label": "X",
-        "hint": "Sign in to your X account"
-      },
-      "linkedin": {
-        "label": "LinkedIn",
-        "hint": "Log in to your LinkedIn profile in a browser window"
-      },
-      "facebook": {
-        "label": "Facebook",
-        "hint": "Sign in to Facebook in a browser window; add your profile and the Pages you manage"
-      },
-      "instagram": {
-        "label": "Instagram",
-        "hint": "Sign in to Instagram in a browser window"
-      },
-      "youtube": {
-        "label": "YouTube",
-        "hint": "Sign in to your YouTube channel (Google account) in a browser window"
-      },
-      "bilibili": {
-        "label": "Bilibili",
-        "hint": "A browser window opens; scan the QR code with the Bilibili app"
-      },
-      "zhihu": {
-        "label": "Zhihu",
-        "hint": "A browser window opens; scan the QR code with the Zhihu app or use an SMS code"
-      }
-    },
-    "asset_kinds": {
-      "image": "Image",
-      "video": "Video",
-      "text": "Text"
-    },
-    "social_status": {
-      "draft": "Draft",
-      "pending_review": "In review",
-      "approved": "Ready",
-      "scheduled": "Scheduled",
-      "publishing": "Publishing",
-      "published": "Published",
-      "failed": "Failed",
-      "rejected": "Rejected",
-      "removed": "Deleted"
-    },
-    "platform": {
-      "xiaohongshu": {
-        "label": "Xiaohongshu",
-        "noun": "note",
-        "body_hint": "No external links, no prompts to add WeChat",
-        "login_hint": "A browser window opens; sign in to the Creator Center there (SMS code or QR)",
-        "m_views": "Views",
-        "m_likes": "Likes",
-        "m_collects": "Saves",
-        "m_comments": "Comments",
-        "m_shares": "Shares"
-      },
-      "x": {
-        "label": "X",
-        "noun": "post",
-        "body_hint": "Hashtags go at the end; CJK characters and emoji count as 2, links as 23",
-        "login_hint": "A browser window opens; sign in to X there",
-        "m_views": "Views",
-        "m_likes": "Likes",
-        "m_comments": "Replies",
-        "m_shares": "Reposts",
-        "m_collects": "Bookmarks"
-      },
-      "linkedin": {
-        "label": "LinkedIn",
-        "noun": "post",
-        "body_hint": "Hashtags go at the end; the first ~210 characters show before \"see more\"",
-        "login_hint": "A browser window opens; log in to LinkedIn there",
-        "m_views": "Impressions",
-        "m_likes": "Reactions",
-        "m_comments": "Comments",
-        "m_shares": "Reposts",
-        "m_collects": "Saves"
-      },
-      "facebook": {
-        "label": "Facebook",
-        "noun": "post",
-        "body_hint": "The first two lines matter most; hashtags go at the end",
-        "login_hint": "A browser window opens; sign in to Facebook there",
-        "m_views": "Views",
-        "m_likes": "Likes",
-        "m_comments": "Comments",
-        "m_shares": "Shares",
-        "m_collects": "Saves"
-      },
-      "instagram": {
-        "label": "Instagram",
-        "noun": "post",
-        "body_hint": "Needs an image; the first 125 characters show, hashtags go at the end",
-        "login_hint": "A browser window opens; sign in to Instagram there",
-        "m_views": "Views",
-        "m_likes": "Likes",
-        "m_comments": "Comments",
-        "m_shares": "Shares",
-        "m_collects": "Saves"
-      },
-      "youtube": {
-        "label": "YouTube",
-        "noun": "video",
-        "body_hint": "The title is the video title; the body is the description (first two lines matter most); pick the video from the library or upload one from this computer",
-        "login_hint": "A browser window opens; sign in to YouTube there",
-        "m_views": "Views",
-        "m_likes": "Likes",
-        "m_comments": "Comments",
-        "m_shares": "Shares",
-        "m_collects": "Saves"
-      },
-      "bilibili": {
-        "label": "Bilibili",
-        "noun": "video",
-        "body_hint": "The title is the video title (up to 80 chars); the body is the description, the first two lines matter most; pick a video from the library or upload one from this computer",
-        "post_noun": "article",
-        "post_hint": "Image posts go out as a Bilibili article: title up to 50 chars; plain text, with the images after it in order",
-        "article_noun": "article",
-        "article_hint": "Long-form posts go out as a Bilibili article: title up to 50 chars; rich text kept as is (headings, lists, quotes, bold), images in place; Bilibili strips outside links",
-        "login_hint": "A browser window opens; scan the QR code with the Bilibili app",
-        "m_views": "Views",
-        "m_likes": "Likes",
-        "m_comments": "Comments",
-        "m_shares": "Shares",
-        "m_collects": "Favorites",
-        "review_note": "Bilibili reviews each upload."
-      },
-      "zhihu": {
-        "label": "Zhihu",
-        "noun": "article",
-        "body_hint": "A column article with the same rich text as your articles: headings, lists, bold and quotes are kept, and images go right in the text; up to 3 topics; no prompts to add WeChat",
-        "login_hint": "A browser window opens; scan the QR code with the Zhihu app or use an SMS code",
-        "m_views": "Reads",
-        "m_likes": "Upvotes",
-        "m_comments": "Comments",
-        "m_collects": "Saves"
-      },
-      "douyin": {
-        "label": "Douyin",
-        "noun": "video",
-        "body_hint": "The title is the video title (up to 30 chars); the body is the description, with hashtags appended (up to 1000 chars in total); pick a video from the library or upload one from this computer",
-        "login_hint": "A browser window opens; scan the QR code with the Douyin app to log in to the creator center",
-        "m_views": "Views",
-        "m_likes": "Likes",
-        "m_comments": "Comments",
-        "m_shares": "Shares",
-        "m_collects": "Favorites",
-        "review_note": "Douyin reviews each video."
-      }
-    },
-    "err": {
-      "no_shuttle": "Can't reach Annulo on this computer",
-      "member_login": "Sign in to see this: the back office is only for members of this project",
-      "not_from_shuttle": "This needs the back office opened in Annulo on your computer",
-      "computer_offline": "Can't reach your computer: to use this from your phone, turn on Settings → Remote access → \"Open this computer's Annulo on your phone\" in Annulo on your computer and open the address it gives you",
-      "req_failed": "Request failed ({status})",
-      "run_failed": "Run failed",
-      "run_disconnected": "Lost the connection to Annulo. The function may still be running; refresh later to see the result",
-      "too_big": "\"{name}\" is too large: up to 200 MB per file",
-      "empty_file": "\"{name}\" is empty",
-      "upload_offline": "Open the back office from Annulo to upload files",
-      "upload_failed": "Upload failed ({status})",
-      "too_big_local": "\"{name}\" is too large: up to 8 GB per file",
-      "too_big_remote": "\"{name}\" is too big: on the phone a file can be at most 200 MB — upload larger videos in Annulo on your computer"
-    }
   },
   "settings": {
     "title": "My profile",

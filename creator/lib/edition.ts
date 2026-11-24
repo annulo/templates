@@ -24,7 +24,7 @@ export const NAV: NavGroup[] = [
 ]
 
 /** 能添加的账号：网站（creght 站点、WordPress）和社媒（社媒插件支持的平台） */
-export const CHANNELS: ChannelType[] = ['creght_site', 'wordpress', 'x', 'linkedin', 'facebook', 'instagram', 'youtube', 'xiaohongshu', 'douyin', 'bilibili', 'zhihu']
+export const CHANNELS: ChannelType[] = ['creght_site', 'wordpress', 'x', 'linkedin', 'facebook', 'instagram', 'threads', 'youtube', 'xiaohongshu', 'douyin', 'bilibili', 'zhihu']
 
 import { lazy } from 'react'
 import type { WizardScreen } from '../components/wizard/types'

@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 import { Globe } from 'lucide-react'
-import { CreghtLogo, DouyinLogo, FacebookLogo, InstagramLogo, LinkedinLogo, WechatLogo, XiaohongshuLogo, XLogo, YoutubeLogo, BilibiliLogo, ZhihuLogo } from '../components/BrandIcons'
+import { CreghtLogo, DouyinLogo, FacebookLogo, InstagramLogo, LinkedinLogo, ThreadsLogo, WechatLogo, XiaohongshuLogo, XLogo, YoutubeLogo, BilibiliLogo, ZhihuLogo } from '../components/BrandIcons'
 import type { ChannelType } from './shuttle'
 import { tr } from './i18n'
 
@@ -30,6 +30,7 @@ export const CHANNEL_TYPES: Record<ChannelType, ChannelMeta> = {
   linkedin: meta('linkedin', LinkedinLogo, true),
   facebook: meta('facebook', FacebookLogo, true),
   instagram: meta('instagram', InstagramLogo, true),
+  threads: meta('threads', ThreadsLogo, true),
   youtube: meta('youtube', YoutubeLogo, true),
   bilibili: meta('bilibili', BilibiliLogo, true),
   zhihu: meta('zhihu', ZhihuLogo, true),

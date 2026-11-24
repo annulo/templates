@@ -1,11 +1,11 @@
 import { InstagramConnectionButton, instagramApi } from '../InstagramAccountFlow'
+import { ThreadsConnectionButton } from '../ThreadsAccountFlow'
 import InstagramPublishRecovery from '../InstagramPublishRecovery'
 import { instagramPublishRecovery } from '../../lib/instagramPublishRecovery'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, HardDrive, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import RunButton from '../RunButton'
 import FacebookPublishRecovery from '../FacebookPublishRecovery'
-import FacebookComments from '../FacebookComments'
 import { facebookPublishRecovery } from '../../lib/facebookPublishRecovery'
 import { FacebookConnectionButton } from '../FacebookAccountFlow'
 import VideoField from '../VideoField'
@@ -103,7 +103,7 @@ export default function Social({ ctx, params, setParam, title, hideTabs = false,
   const broken = (a: Channel) => brokenOf(health.rows, a.id).some((r) => r.op === 'publish') || owned.some((p) => p.channel_id === a.id && p.status === 'failed')
   // 要人处理的账号：登录过期，或者发布出了问题（流程失效、有发失败的帖子）。统计卡片叫「待处理账号」，不只是发布异常
   const issues = accounts.filter((a) => expired(a) || broken(a))
-  const collectable = accounts.filter((a) => !instagramApi(a) && !other(a) && a.login_status === 'ok')
+  const collectable = accounts.filter((a) => !other(a) && a.login_status === 'ok')
   const oldest = collectable.map((a) => a.collected_at).filter((t): t is string => !!t).sort()[0]
   const openSection = (next: Section, extra: Record<string, string> = {}) => onSectionChange ? onSectionChange(next, extra) : ctx.go('social', { section: next, ...extra })
   const manage = () => ctx.go('channels', selected ? { channel: selected.id } : {})
@@ -120,6 +120,7 @@ export default function Social({ ctx, params, setParam, title, hideTabs = false,
     const link = 'cursor-pointer text-sm font-medium text-primary-text hover:underline'
     if (a.type === 'instagram' && (other(a) || expired(a))) return <InstagramConnectionButton channel={a} onDone={onChanged} />
     if (a.type === 'facebook' && (other(a) || expired(a))) return <FacebookConnectionButton channel={a} onDone={onChanged} />
+    if (a.type === 'threads' && expired(a)) return <ThreadsConnectionButton channel={a} onDone={onChanged} />
     if (other(a) || expired(a)) return <RunButton inline watch fn="social/social.login" input={{ channel_id: a.id }} icon={UserRound} variant="ghost" onError={setError} onDone={onChanged}>{other(a) ? tr('social.login_here') : tr('social.relogin')}</RunButton>
     return <button type="button" className={link} onClick={() => openSection('data', { account: a.id })}>{broken(a) ? tr('social.fix_publish') : tr('social.view_data')}</button>
   }
@@ -182,7 +183,7 @@ export default function Social({ ctx, params, setParam, title, hideTabs = false,
                   <td className={tableCell}><button type="button" onClick={() => openPost(p)} className="block max-w-80 cursor-pointer truncate text-left font-medium hover:text-primary-text" title={postTitle(p)}>{postTitle(p)}</button><span className="mt-0.5 block text-xs text-muted-foreground">{owner?.name} · {fmtTime(p.published_at)}</span></td>
                   <td className={tableCell}><PlatformName type={owner?.type} name={platformOf(owner)?.label ?? ''} /></td>
                   <td className={num}>{metricText(p, 'views')}</td><td className={num}>{metricText(p, 'likes')}</td><td className={num}>{metricText(p, 'comments')}</td>
-                  <td className={tableCell}><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><FacebookComments post={p} channel={owner} />{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => openPost(p)}>{tr('social.view_content')}</button>}</div></td>
+                  <td className={tableCell}><div className="flex flex-wrap items-center gap-x-3 gap-y-2">{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => openPost(p)}>{tr('social.view_content')}</button>}</div></td>
                 </tr>
               })}</tbody>
             </table>
@@ -280,7 +281,7 @@ function AllPosts({ ch, days, posts, onOpen }: { ch: Channel; days: number; post
           <tbody className="divide-y divide-border">{rows.slice(0, shown).map((p) => <tr key={p.id} className="hover:bg-muted/30">
             <td className="px-4 py-3 text-sm"><button type="button" onClick={() => onOpen(p)} className="block max-w-96 cursor-pointer truncate text-left font-medium hover:text-primary-text" title={postTitle(p)}>{postTitle(p)}</button><span className="mt-0.5 block text-xs text-muted-foreground">{fmtTime(p.published_at)}</span></td>
             {metrics.map((m) => <td key={m.key} className="px-4 py-3 text-right text-sm tabular-nums">{metricText(p, m.key)}</td>)}
-            <td className="px-4 py-3 text-sm"><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><FacebookComments post={p} channel={ch} />{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => onOpen(p)}>{tr('social.view_content')}</button>}</div></td>
+            <td className="px-4 py-3 text-sm"><div className="flex flex-wrap items-center gap-x-3 gap-y-2">{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => onOpen(p)}>{tr('social.view_content')}</button>}</div></td>
           </tr>)}</tbody>
         </table>
       </div>
@@ -327,7 +328,8 @@ function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channe
           )}
           {ch.type === 'instagram' && <InstagramConnectionButton channel={ch} onDone={onDone} />}
           {ch.type === 'facebook' && <FacebookConnectionButton channel={ch} onDone={onDone} />}
-          {instagramApi(ch) || (['facebook', 'instagram'].includes(ch.type) && (other || expired)) ? null : other || expired ? (
+          {ch.type === 'threads' && <ThreadsConnectionButton channel={ch} onDone={onDone} />}
+          {instagramApi(ch) || (['facebook', 'instagram', 'threads'].includes(ch.type) && (other || expired)) ? null : other || expired ? (
             <RunButton inline watch fn="social/social.login" input={{ channel_id: ch.id }} icon={UserRound} onError={setError} onDone={onDone}>
               {other ? tr('social.login_here') : tr('social.relogin')}
             </RunButton>
@@ -434,7 +436,6 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
         )}
         {p.status === 'scheduled' && <ScheduledLine at={p.scheduled_at} fromArticle={!!p.article_id} />}
         {!publishingNow && (p.status === 'failed' || (p.status === 'scheduled' && p.error)) && p.error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{p.error}</div>}
-        <FacebookComments post={p} channel={owner} />
         {recovery && <InstagramPublishRecovery post={p} channel={owner} disabled={publishingNow || busy} onAction={recover} />}
         {recovery && <FacebookPublishRecovery post={p} channel={owner} disabled={publishingNow || busy} onAction={recover} />}
         {p.status === 'publishing' && <div className="text-xs text-muted-foreground">{tr('social.stuck_hint')}</div>}
@@ -468,7 +469,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
               <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onStart={() => setPublishingNow(true)} onDone={() => { setPublishingNow(false); onChanged() }}>
                 {p.status === 'failed' ? tr('social.republish') : tr('social.publish_now')}
               </RunButton>
-              {!instagramApi(owner) && <SchedulePopover size="sm" hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} onSchedule={(at) => patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string })} />}
+              <SchedulePopover size="sm" hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} onSchedule={(at) => patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string })} />
               <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
                 <Pencil />
                 {tr('social.edit')}
@@ -480,7 +481,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
               {tr('social.mark_failed')}
             </Button>
           )}
-          {!recovery && p.status === 'scheduled' && !instagramApi(owner) && (
+          {!recovery && p.status === 'scheduled' && (
             <>
               <RunButton inline onError={setErr} fn="social/social.publish" input={{ post_id: p.id }} icon={Send} onStart={() => setPublishingNow(true)} onDone={() => { setPublishingNow(false); onChanged() }}>
                 {tr('social.publish_now')}
@@ -488,7 +489,6 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
               <SchedulePopover size="sm" current={p.scheduled_at} hint={tr('social.time_hint', { p: pf.label, rate: pf.rateHint })} onSchedule={(at) => patch({ status: 'scheduled', scheduled_at: at, error: null as unknown as string })} onUnschedule={() => patch({ status: 'approved', scheduled_at: null as unknown as string })} />
             </>
           )}
-          {!recovery && p.status === 'scheduled' && instagramApi(owner) && <Button size="sm" variant="outline" onClick={() => patch({ status: 'approved', scheduled_at: null as unknown as string })}>{tr('instagram_connect.unschedule')}</Button>}
           {(p.status === 'removed' || p.status === 'rejected') &&
             (purging ? (
               <>

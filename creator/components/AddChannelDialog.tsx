@@ -1,4 +1,5 @@
 import InstagramAccountFlow from './InstagramAccountFlow'
+import ThreadsAccountFlow from './ThreadsAccountFlow'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Check, Loader, Search, X } from 'lucide-react'
 import { addSiteChannel, addWordPressChannel, listCreghtSites, openShuttleSettings, setSecret, wpPrepare, type ChannelType, type CreghtSite } from '../lib/shuttle'
@@ -134,6 +135,8 @@ export default function AddChannelDialog({ onClose, onAdded, initialUrl = '', al
           <div className="min-h-0 overflow-y-auto p-4"><FacebookAccountFlow onAdded={() => onAdded('facebook')} /></div>
         ) : type === 'instagram' ? (
           <div className="min-h-0 overflow-y-auto p-4"><InstagramAccountFlow onAdded={() => onAdded('instagram')} /></div>
+        ) : type === 'threads' ? (
+          <div className="min-h-0 overflow-y-auto p-4"><ThreadsAccountFlow onAdded={() => onAdded('threads')} /></div>
         ) : SOCIAL[type] ? (
           // 其余社媒平台（B 站、抖音…）：同样弹浏览器登录。登录都走 social.login（记下是在这台电脑登录的）
           <div className="space-y-3 p-4 text-sm">
