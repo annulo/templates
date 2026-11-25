@@ -8,7 +8,7 @@
     "refresh": "Refresh accounts",
     "pending": "Complete authorization in your browser, then return here.",
     "reopen": "Open authorization page",
-    "preview": "Preview: authorization, account binding and checks are available. Publishing through this connection is not enabled yet.",
+    "preview": "Beta: professional account authorization, single-image and Reel publishing, and basic collection. Availability depends on the connection service and Meta permissions.",
     "disconnect_hint": "Disconnecting removes this authorization’s connection in the current project. Connections in other projects are unaffected.",
     "disconnect": "Disconnect from this project",
     "product_consent": "Authorize connections in Creght",
@@ -711,7 +711,7 @@
     "channel_types": {
       "threads": {
         "label": "Threads",
-        "hint": "Paste a Threads token and post through the official API"
+        "hint": "Authorize Threads and choose the account for this project"
       }
     },
     "platform": {
@@ -719,7 +719,7 @@
         "label": "Threads",
         "noun": "post",
         "body_hint": "Up to 500 characters (emoji count as bytes) and 5 links; one topic, not added to the text; videos MP4 / MOV up to 5 minutes",
-        "login_hint": "Paste the Threads token generated in your Meta app",
+        "login_hint": "Authorize Threads on the accounts page",
         "m_views": "Views",
         "m_likes": "Likes",
         "m_comments": "Replies",
@@ -761,6 +761,20 @@
     "oauth_pending": "The Threads authorization page is open in your browser. Approve it, then come back here.",
     "oauth_reopen": "Not open? Click here",
     "oauth_hint": "The token is stored only on this computer and Annulo renews it before it expires; if renewal fails, the account asks you to authorize again.",
-    "own_app": "Use a token from your own Meta app (advanced)"
+    "own_app": "Use a token from your own Meta app (advanced)",
+    "oauth_save": "Save connection settings"
+  },
+  "account_authorization": {
+    "project_only": "Authorization belongs to this project. Other projects can connect their own social accounts. No visit to Annulo Settings is needed.",
+    "expires": "Authorization expires on {date}.",
+    "expired": "Authorization has expired. Authorize again.",
+    "missing": "Some required permissions are missing. Authorize again and allow the required permissions.",
+    "renew_failed_date": "Automatic renewal failed. Authorize again before {date}.",
+    "renew_failed": "Automatic renewal failed. Authorize again.",
+    "disconnect": "Disconnect authorization from this project",
+    "confirm_disconnect": "Confirm disconnect",
+    "disconnect_hint": "All accounts using this authorization in this project will stop publishing and collecting. Account records and past posts are kept. Other projects are unaffected. To revoke access entirely, use the platform’s account security settings.",
+    "reconnect": "Authorize again",
+    "select_account": "Select an authorized account to disconnect."
   }
 }

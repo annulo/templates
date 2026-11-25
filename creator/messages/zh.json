@@ -206,11 +206,11 @@
       },
       "facebook": {
         "label": "Facebook",
-        "hint": "弹出浏览器窗口登录 Facebook，个人主页和你管理的公司主页都能加"
+        "hint": "官方授权后选择公共主页；个人主页可用浏览器登录"
       },
       "instagram": {
         "label": "Instagram",
-        "hint": "弹出浏览器窗口登录 Instagram"
+        "hint": "直接授权 Instagram 专业账号（内测）"
       },
       "youtube": {
         "label": "YouTube",

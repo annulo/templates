@@ -18,5 +18,9 @@ async function request<T>(path: string, method = 'GET'): Promise<T> {
   return body as T
 }
 export const managedConnections = (provider: string) => request<{list: ManagedConnection[]}>(`settings/connections/${encodeURIComponent(provider)}/assets`).then(r => r.list)
-export const disconnectManagedConnection = (provider: string, id: string) => request(`settings/connections/${encodeURIComponent(provider)}?account=${encodeURIComponent(id)}`, 'DELETE')
+/** 只断开当前项目中指定的账号／托管连接，绝不省略 account。 */
+export const disconnectOAuthConnection = (provider: string, id: string) => {
+  if (!id) throw new Error(tr('account_authorization.select_account'))
+  return request(`settings/connections/${encodeURIComponent(provider)}?account=${encodeURIComponent(id)}`, 'DELETE')
+}
 export const authorizeConnections = () => request<{verify_url: string}>('login?connections=1', 'POST')

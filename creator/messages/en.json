@@ -206,11 +206,11 @@
       },
       "facebook": {
         "label": "Facebook",
-        "hint": "Sign in to Facebook in a browser window; add your profile and the Pages you manage"
+        "hint": "Authorize and select a Page; browser sign-in is available for personal profiles"
       },
       "instagram": {
         "label": "Instagram",
-        "hint": "Sign in to Instagram in a browser window"
+        "hint": "Authorize an Instagram professional account (beta)"
       },
       "youtube": {
         "label": "YouTube",
