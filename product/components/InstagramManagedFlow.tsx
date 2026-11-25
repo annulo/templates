@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ExternalLink, Loader2, RefreshCw } from 'lucide-react'
-import { listOAuthConnections, runLocal, startOAuthConnection } from '../lib/shuttle'
+import { listChannels, listOAuthConnections, runLocal, startOAuthConnection, type Channel } from '../lib/shuttle'
 import { authorizeConnections, disconnectManagedConnection, managedConnections, type ManagedConnection } from '../lib/managedConnections'
 import { tr } from '../lib/i18n'
 import { Button, Notice } from './ui'
 import Select from './Select'
 
-type Account = { id: string; instagram_user_id?: string; instagram_connection_id?: string }
+type Account = { id: string; instagram_user_id?: string; instagram_connection_id?: string; instagram_media_host?: string }
 export default function InstagramManagedFlow({ channel, onAdded }: { channel?: Account; onAdded: () => void }) {
   const [loaded, setLoaded] = useState(false)
   const [available, setAvailable] = useState(false)
@@ -17,6 +17,11 @@ export default function InstagramManagedFlow({ channel, onAdded }: { channel?: A
   const [error, setError] = useState('')
   const [authURL, setAuthURL] = useState('')
   const started = useRef(0)
+  // 本机图片、视频要先传到一个网站的素材库，Instagram 才抓得到；项目里正好一个网站就默认选它
+  const [host, setHost] = useState(channel?.instagram_media_host || '')
+  const [sites, setSites] = useState<Channel[]>([])
+  const hostOf = (c: Channel & { api_host?: string }) => JSON.stringify({ api_host: c.api_host || 'https://creght.cn', project_id: c.project_id, site_id: c.site_id })
+  useEffect(() => { let live = true; listChannels().then(r => { if (!live) return; const list = r.list.filter(c => c.type === 'creght_site' && c.project_id && c.site_id); setSites(list); if (list.length === 1) setHost(h => h || hostOf(list[0])) }).catch(() => {}); return () => { live = false } }, [])
   const load = useCallback(async () => {
     try {
       const provider = (await listOAuthConnections()).find(c => c.key === 'instagram')
@@ -37,7 +42,7 @@ export default function InstagramManagedFlow({ channel, onAdded }: { channel?: A
   })
   const bind = () => act(async () => {
     const [connection_id, asset_id] = selection.split('|')
-    const result = await runLocal('social/social.login', { type: 'instagram', channel_id: channel?.id, mode: 'managed', connection_id, asset_id }) as { id?: string }
+    const result = await runLocal('social/social.login', { type: 'instagram', channel_id: channel?.id, mode: 'managed', connection_id, asset_id, media_host: host }) as { id?: string }
     if (result?.id) onAdded()
   })
   const disconnect = () => act(async () => {
@@ -50,6 +55,11 @@ export default function InstagramManagedFlow({ channel, onAdded }: { channel?: A
     <p className="text-muted-foreground">{tr('instagram_managed.description')}</p>
     {!loaded ? <Loader2 className="size-4 animate-spin" /> : !available ? <Notice>{tr('instagram_managed.unavailable')}</Notice> : <>
       {!!options.length && <Select value={selection} onChange={setSelection} options={options} />}
+      {!!options.length && <div className="space-y-1">
+        <div className="text-xs text-muted-foreground">{tr('instagram_managed.host')}</div>
+        <Select value={host} onChange={setHost} options={[{ value: '', label: tr('instagram_managed.public_only') }, ...sites.map(c => ({ value: hostOf(c), label: c.name }))]} />
+        <p className="text-xs text-muted-foreground">{tr('instagram_managed.host_hint')}</p>
+      </div>}
       <div className="flex flex-wrap gap-2">
         {selection && <Button disabled={busy} onClick={bind}>{tr('instagram_managed.bind')}</Button>}
         <Button variant={selection ? 'outline' : 'default'} disabled={busy || pending} onClick={authorize}><ExternalLink />{tr('instagram_managed.authorize')}</Button>
