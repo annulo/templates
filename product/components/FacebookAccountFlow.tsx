@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ExternalLink, Loader2, RefreshCw } from 'lucide-react'
-import { inShuttle, listOAuthConnections, startOAuthConnection, type Channel, type OAuthConnection } from '../lib/shuttle'
+import { inShuttle, listOAuthConnections, runLocal, startOAuthConnection, type Channel, type OAuthConnection } from '../lib/shuttle'
 import { tr } from '../lib/i18n'
 import { Badge, Button, Dialog, ErrorDetails, Notice, Segmented } from './ui'
 import Select from './Select'
 import RunButton from './RunButton'
 import ChooseAccounts, { type Choose } from './ChooseAccounts'
 import { apiMetricState } from '../lib/apiMetrics'
+import OAuthAccountControls from './OAuthAccountControls'
 
 /** 授权仍由 Annulo 的连接层完成，页面只读不含 token 的连接状态并选择主页。 */
 export default function FacebookAccountFlow({ channel, onAdded }: { channel?: Channel; onAdded: () => void }) {
-  const [mode, setMode] = useState<'browser' | 'api'>(channel?.auth_mode === 'api' ? 'api' : 'browser')
+  const [mode, setMode] = useState<'browser' | 'api'>(channel ? channel.auth_mode === 'api' ? 'api' : 'browser' : 'api')
   const [connection, setConnection] = useState<OAuthConnection | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [account, setAccount] = useState(channel?.oauth_account || '')
@@ -82,12 +83,12 @@ export default function FacebookAccountFlow({ channel, onAdded }: { channel?: Ch
   const selected = connection?.accounts.find((a) => a.account === account)
   const incomplete = !!selected?.missing_scopes?.length
   const reconnect = !!selected?.needs_reconnect
-  const official = page && (connection?.available || channel?.auth_mode === 'api')
+  const official = page
 
   return <div className="space-y-4 text-sm">
     {official && <Segmented value={mode} onChange={changeMode} options={[
-      { value: 'browser', label: tr('facebook_connect.browser') },
       { value: 'api', label: tr('facebook_connect.api') },
+      { value: 'browser', label: tr('facebook_connect.browser') },
     ]} />}
     {mode === 'browser' ? <>
       <p className="text-muted-foreground">{tr('facebook_connect.browser_desc')}</p>
@@ -97,6 +98,7 @@ export default function FacebookAccountFlow({ channel, onAdded }: { channel?: Ch
         </RunButton>}
     </> : <>
       <p className="text-muted-foreground">{tr('facebook_connect.api_desc')}</p>
+      <p className="text-xs text-muted-foreground">{tr('account_authorization.project_only')}</p>
       {!loaded ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : !local ?
         <Notice>{tr('facebook_connect.local_only')}</Notice> : !connection?.available ?
         <Notice>{tr('facebook_connect.unavailable')}</Notice> : choose ? <>
@@ -126,6 +128,13 @@ export default function FacebookAccountFlow({ channel, onAdded }: { channel?: Ch
           </Notice>}
           {!connection.accounts.length && !connection.pending && <p className="text-xs text-muted-foreground">{tr('facebook_connect.authorize_hint')}</p>}
           <Button variant="ghost" size="sm" onClick={() => { void load() }}><RefreshCw />{tr('facebook_connect.refresh')}</Button>
+          <OAuthAccountControls key={account} provider="facebook" account={selected} onDisconnected={async () => {
+            await load()
+            if (channel) {
+              await runLocal('social/facebook.checkLogin', { channel_id: channel.id }).catch(() => {})
+              onAdded()
+            }
+          }} />
         </>}
     </>}
     {error && mode === 'api' && <ErrorDetails message={error} />}

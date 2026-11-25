@@ -8,7 +8,7 @@
     "refresh": "刷新账号",
     "pending": "请在浏览器中完成授权，再返回这里。",
     "reopen": "打开授权页",
-    "preview": "内测阶段：支持账号授权、绑定和检测；此连接的发布功能尚未开放。",
+    "preview": "内测阶段：支持专业账号授权、单图和 Reel 发布及基础采集。使用资格以连接服务和 Meta 权限状态为准。",
     "disconnect_hint": "断开会移除此授权在当前项目内的连接，其他项目的连接不受影响。",
     "disconnect": "断开当前项目连接",
     "product_consent": "补充 Creght 连接授权",
@@ -1110,7 +1110,7 @@
     "channel_types": {
       "threads": {
         "label": "Threads",
-        "hint": "粘贴 Threads 口令，用官方 API 发帖"
+        "hint": "直接授权 Threads，选择本项目要运营的账号"
       },
       "creght_site": {
         "label": "Creght 网站",
@@ -1146,11 +1146,11 @@
       },
       "facebook": {
         "label": "Facebook",
-        "hint": "弹出浏览器窗口登录 Facebook，个人主页和你管理的公司主页都能加"
+        "hint": "官方授权后选择公共主页；个人主页可用浏览器登录"
       },
       "instagram": {
         "label": "Instagram",
-        "hint": "弹出浏览器窗口登录 Instagram"
+        "hint": "直接授权 Instagram 专业账号（内测）"
       },
       "youtube": {
         "label": "YouTube",
@@ -1170,7 +1170,7 @@
         "label": "Threads",
         "noun": "帖子",
         "body_hint": "最多 500 字（emoji 按字节算），最多 5 个链接；话题只能 1 个，不接在正文里；视频 MP4 / MOV，最长 5 分钟",
-        "login_hint": "粘贴 Meta 应用里生成的 Threads 口令",
+        "login_hint": "在账号页完成 Threads 官方授权",
         "m_views": "浏览",
         "m_likes": "赞",
         "m_comments": "回复",
@@ -1353,7 +1353,21 @@
     "oauth_pending": "已在浏览器里打开 Threads 授权页，同意后回到这里。",
     "oauth_reopen": "没打开？点这里",
     "oauth_hint": "授权后口令只保存在这台电脑上，到期前 Annulo 会自动续期；续不上时账号会提示重新授权。",
-    "own_app": "用自己的 Meta 应用口令（高级）"
+    "own_app": "用自己的 Meta 应用口令（高级）",
+    "oauth_save": "保存连接设置"
+  },
+  "account_authorization": {
+    "project_only": "账号授权只用于当前项目。其他项目可以连接各自的社媒账号，无需先去 Annulo 设置。",
+    "expires": "授权将于 {date} 到期。",
+    "expired": "授权已失效，请重新授权。",
+    "missing": "部分权限尚未获准，请重新授权并允许所需权限。",
+    "renew_failed_date": "自动续期未成功，请在 {date} 前重新授权。",
+    "renew_failed": "自动续期未成功，请重新授权。",
+    "disconnect": "断开此项目的授权",
+    "confirm_disconnect": "确认断开授权",
+    "disconnect_hint": "当前项目中使用此授权的所有账号将暂停发布和采集，账号记录和历史帖子会保留。其他项目不受影响。彻底撤销授权需到平台的账号安全页操作。",
+    "reconnect": "重新授权",
+    "select_account": "请先选择要断开的授权账号。"
   },
   "add_channel": {
     "added": "已添加",

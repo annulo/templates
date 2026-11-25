@@ -14,7 +14,8 @@ export const instagramApi = (ch?: Channel) => ch?.type === 'instagram' && ch.aut
 const PENDING = 'INSTAGRAM_USER_TOKEN_PENDING'
 
 /**
- * Manual token is the main way to connect. One button opens Annulo's browser on the Meta developer dashboard:
+ * Official sign-in is the default for new accounts. Existing accounts retain their connection method.
+ * Advanced manual-token setup opens Annulo's browser on the Meta developer dashboard:
  * the person logs in and approves, the browser assistant clicks the rest, and the plugin reads the token and
  * the account it belongs to. Functions can only read secrets, so the token comes back to this page once and is
  * written straight into INSTAGRAM_USER_TOKEN_<id>; it never goes into tables, inputs or state beyond this call.
@@ -22,7 +23,7 @@ const PENDING = 'INSTAGRAM_USER_TOKEN_PENDING'
  */
 export default function InstagramAccountFlow({ channel, onAdded, onChanged }: { channel?: Channel; onAdded: () => void; onChanged?: () => void }) {
   const renew = instagramApi(channel)
-  const [mode, setMode] = useState<'api' | 'browser' | 'managed'>(channel ? channel.api_credential === 'instagram_managed' ? 'managed' : renew ? 'api' : 'browser' : 'api')
+  const [mode, setMode] = useState<'api' | 'browser' | 'managed'>(channel ? channel.api_credential === 'instagram_managed' ? 'managed' : renew ? 'api' : 'browser' : 'managed')
   const [token, setToken] = useState('')
   const [username, setUsername] = useState(channel?.handle || '')
   const handle = username.trim().replace(/^@/, '').toLowerCase()
@@ -73,7 +74,7 @@ export default function InstagramAccountFlow({ channel, onAdded, onChanged }: { 
   }
   const field = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
   return <div className="space-y-4 text-sm">
-    {!renew && <Segmented value={mode} onChange={setMode} options={[{ value: 'api', label: tr('instagram_managed.manual_label') }, { value: 'managed', label: tr('instagram_managed.label') }, { value: 'browser', label: tr('instagram_connect.browser') }]} />}
+    {!renew && <Segmented value={mode} onChange={setMode} options={[{ value: 'managed', label: tr('instagram_managed.label') }, { value: 'browser', label: tr('instagram_connect.browser') }, { value: 'api', label: tr('instagram_managed.manual_label') }]} />}
     {mode === 'managed' ? <InstagramManagedFlow channel={channel} onAdded={onAdded} /> : mode === 'browser' ? <RunButton watch fn="social/social.login" input={{ type: 'instagram', channel_id: channel?.id, mode: 'browser' }} onDone={r => { if ((r as any)?.id) onAdded() }}>{tr('instagram_connect.browser_login')}</RunButton> : <>
       <p className="text-muted-foreground">{tr(renew ? 'instagram_connect.renew_intro' : 'instagram_connect.intro')}</p>
       <label className="block space-y-1"><span>{tr('instagram_connect.username')}</span><input className={field} value={username} disabled={busy || !!channel} onChange={e => setUsername(e.target.value)} autoComplete="off" placeholder="yourbrand" /></label>
