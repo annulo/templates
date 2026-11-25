@@ -5,6 +5,7 @@ import { tr } from '../lib/i18n'
 import { Badge, Button, Dialog, Notice } from './ui'
 import Select from './Select'
 import RunButton from './RunButton'
+import OAuthAccountControls from './OAuthAccountControls'
 
 type Channel = BaseChannel & { threads_media_host?: string; threads_auth_error?: string; api_host?: string }
 
@@ -23,6 +24,10 @@ export default function ThreadsAccountFlow({ channel, onAdded }: { channel?: Cha
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const oauth = useThreadsOAuth()
+  const [account, setAccount] = useState(channel?.oauth_account || '')
+  useEffect(() => {
+    setAccount(old => oauth.connection?.accounts.some(a => a.account === old) ? old : oauth.connection?.accounts[0]?.account || '')
+  }, [oauth.connection])
   // 还没选素材库、项目里正好一个网站：默认选它（本机图片、视频都要传上去 Threads 才抓得到）
   const hostOf = (c: Channel) => JSON.stringify({ api_host: c.api_host || 'https://creght.cn', project_id: c.project_id, site_id: c.site_id })
   useEffect(() => { let live = true; listChannels().then(r => { if (!live) return; const list = r.list.filter(c => c.type === 'creght_site' && c.project_id && c.site_id); setSites(list); if (list.length === 1) setHost(h => h || hostOf(list[0])) }).catch(() => {}); return () => { live = false } }, [])
@@ -47,7 +52,7 @@ export default function ThreadsAccountFlow({ channel, onAdded }: { channel?: Cha
   const connectOAuth = async () => {
     setBusy(true); setError('')
     try {
-      await runLocal('social/social.login', { type: 'threads', channel_id: channel?.id, mode: 'oauth', media_host: host })
+      await runLocal('social/social.login', { type: 'threads', channel_id: channel?.id, mode: 'oauth', account, media_host: host })
       onAdded()
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
@@ -77,14 +82,18 @@ export default function ThreadsAccountFlow({ channel, onAdded }: { channel?: Cha
   </div>
   const pastedBefore = !!channel && channel.api_credential !== 'threads_oauth'
   const authorized = !!oauth.connection?.accounts.length
+  const selected = oauth.connection?.accounts.find(a => a.account === account)
+  const needsReconnect = selected?.needs_reconnect || !!selected?.missing_scopes?.length
   return <div className="space-y-4 text-sm">
     <p className="text-muted-foreground">{tr(pastedBefore ? 'threads_connect.oauth_switch' : 'threads_connect.oauth_intro')}</p>
+    <p className="text-xs text-muted-foreground">{tr('account_authorization.project_only')}</p>
+    {authorized && <Select value={account} onChange={setAccount} options={oauth.connection!.accounts.map(a => ({ value: a.account, label: a.label || a.account, sub: a.needs_reconnect ? tr('account_authorization.expired') : undefined }))} />}
     <div className="flex flex-wrap items-center gap-2">
-      {authorized && !oauth.pending && <Button needsShuttle disabled={busy} onClick={connectOAuth}>
-        {busy && <Loader2 className="animate-spin" />}{tr(channel ? 'threads_connect.oauth_use' : 'threads_connect.oauth_add')}
+      {authorized && !oauth.pending && <Button needsShuttle disabled={busy || needsReconnect} onClick={connectOAuth}>
+        {busy && <Loader2 className="animate-spin" />}{tr(channel?.api_credential === 'threads_oauth' ? 'threads_connect.oauth_save' : channel ? 'threads_connect.oauth_use' : 'threads_connect.oauth_add')}
       </Button>}
       <Button needsShuttle variant={authorized ? 'outline' : 'default'} feedback={false} disabled={oauth.pending} onClick={() => { setError(''); oauth.start().catch(e => setError((e as Error).message)) }}>
-        <ExternalLink />{tr(authorized ? 'threads_connect.oauth_again' : 'threads_connect.oauth_authorize')}
+        <ExternalLink />{tr(needsReconnect || selected?.renew_error ? 'account_authorization.reconnect' : authorized ? 'threads_connect.oauth_again' : 'threads_connect.oauth_authorize')}
       </Button>
     </div>
     {oauth.pending && <Notice>
@@ -93,6 +102,13 @@ export default function ThreadsAccountFlow({ channel, onAdded }: { channel?: Cha
     </Notice>}
     {hostPicker}
     <p className="text-xs text-muted-foreground">{tr('threads_connect.oauth_hint')}</p>
+    <OAuthAccountControls key={account} provider="threads" account={selected} onDisconnected={async () => {
+      await oauth.load()
+      if (channel) {
+        await runLocal('social/threads.checkLogin', { channel_id: channel.id }).catch(() => {})
+        onAdded()
+      }
+    }} />
     <details className="text-sm" open={pastedBefore && !authorized}>
       <summary className="cursor-pointer select-none text-muted-foreground">{tr('threads_connect.own_app')}</summary>
       <div className="mt-2 space-y-3">{paste}</div>
@@ -135,7 +151,7 @@ function useThreadsOAuth() {
       await load()
     } catch (e) { started.current = 0; throw e }
   }
-  return { available: !!connection?.available, connection, pending, url, start }
+  return { available: !!connection?.available, connection, pending, url, start, load }
 }
 
 const STEPS = ['app', 'permissions', 'tester', 'token', 'paste'] as const

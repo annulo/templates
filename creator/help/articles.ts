@@ -45,7 +45,7 @@ export const quickstart: Article = {
 
 ## 3. 连上社媒账号
 
-左侧下方「账号 → 添加账号」，选平台：X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站、知乎。会弹出一个浏览器窗口，在里面登录（抖音、B 站、知乎用 App 扫码）。登录状态只存在这台电脑上。见「账号」一篇。
+左侧下方「账号 → 添加账号」选择平台。Facebook、Instagram 和 Threads 可以直接在这里走官方授权，回来选择要运营的主页或账号，不用先去 Annulo 设置。各项目使用各自的账号授权；其他平台按页面提示登录。见「账号」一篇。
 
 ## 4. 做第一条内容、发第一条
 
@@ -94,7 +94,7 @@ Progress comes from your data; nothing to tick by hand. Click a step to see what
 
 ## 3. Connect a social account
 
-"Accounts → Add account" at the bottom of the sidebar, then pick a platform: X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili, Zhihu. A browser window opens; log in there (Douyin, Bilibili and Zhihu use a QR code in their app). The login stays on this computer. See "Accounts".
+Choose a platform under "Accounts → Add account". Facebook, Instagram and Threads can be authorized here directly; return to select the Page or account to operate. No visit to Annulo Settings is needed. Authorizations belong to each project. Other platforms show their own sign-in instructions. See "Accounts".
 
 ## 4. Make your first piece, publish your first post
 
@@ -579,9 +579,13 @@ export const channels: Article = {
 
 ## 添加
 
-「添加账号」，选平台：X、LinkedIn、Facebook、Instagram、YouTube、小红书、抖音、B 站、知乎。点「登录…」会弹出一个浏览器窗口，在里面登录（抖音、B 站、知乎用 App 扫码），登录好了账号就加上了。
-- 登录状态只存在这台电脑上，不上传；
-- LinkedIn 先支持个人账号；Facebook 个人主页和你管理的公司主页都能加。
+「添加账号」选择平台。Facebook、Instagram、Threads 的官方授权在这里完成，不用先去 Annulo 设置。授权后选中要在这个项目运营的公共主页或账号；已授权的账号可以直接选用，无需重复授权。
+- Facebook 官方通道使用公共主页；个人主页可选浏览器方式；
+- Instagram 官方授权处于内测，支持专业账号，能否使用取决于连接服务资格和 Meta 权限；已有手动口令或浏览器账号保留原方式；
+- 每个项目有自己的授权，可分别连接不同账号。Threads 凭据由 Annulo 保存并自动续期，Instagram 官方授权由连接服务保管；
+- 其他平台按页面提示在浏览器登录，抖音、B 站、知乎可用 App 扫码。
+
+在账号的「管理连接」或「连接方式」里查看到期提示、重新授权、切换素材库或断开此项目的授权。断开前会确认；依赖同一授权的账号将暂停发布和采集，账号记录和历史帖子保留，其他项目不受影响。
 
 ## 账号详情
 
@@ -615,9 +619,13 @@ Each account has a small card at the top with its platform and status (Connected
 
 ## Adding
 
-"Add account", then pick a platform: X, LinkedIn, Facebook, Instagram, YouTube, Xiaohongshu, Douyin, Bilibili, Zhihu. Click "Log in to …" and a browser window opens; log in there (Douyin, Bilibili and Zhihu use a QR code in their app), and the account is added.
-- The login stays on this computer and isn't uploaded;
-- LinkedIn supports personal profiles for now; on Facebook you can add your profile and the Pages you manage.
+Choose a platform under "Add account". Authorize Facebook, Instagram or Threads here directly, then select the Page or account to operate. No visit to Annulo Settings is needed. Existing authorizations can be reused without signing in again.
+- Facebook official authorization supports Pages; personal profiles can use the browser option;
+- Instagram official sign-in is in beta for professional accounts, subject to service eligibility and Meta permissions. Existing manual-token and browser accounts keep their original method;
+- Each project owns its authorizations and can connect different accounts. Annulo saves and renews Threads credentials; the connection service holds official Instagram credentials;
+- Follow the browser sign-in instructions for other platforms. Douyin, Bilibili and Zhihu support QR sign-in.
+
+Open "Manage connection" or "Connection method" on an account to see expiry notices, authorize again, choose an asset library or disconnect authorization from this project. Disconnect requires confirmation and pauses publishing and collection for accounts using that authorization. Account records and past posts are kept; other projects are unaffected.
 
 ## Account details
 

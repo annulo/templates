@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.28.0
+  zh: "在账号页直接完成社媒授权、查看到期提示和断开连接；各项目使用自己的账号，新增 Facebook、Instagram 账号优先使用官方授权。"
+  en: "Manage social authorization, expiry notices and disconnection on the accounts page. Each project uses its own accounts; new Facebook and Instagram accounts default to official sign-in."
+
 - version: 0.27.0
   zh: "账号管理支持 Threads 官方授权；Instagram 授权账号可选择本机图片、视频的素材库，配合新版社媒插件发布和采集。"
   en: "Connect Threads through official authorization. Choose hosting for local images and videos on authorized Instagram accounts, with publishing and collection through the updated Social plugin."
