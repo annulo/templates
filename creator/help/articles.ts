@@ -45,7 +45,7 @@ export const quickstart: Article = {
 
 ## 3. 连上社媒账号
 
-左侧下方「账号 → 添加账号」选择平台。Facebook、Instagram 和 Threads 可以直接在这里走官方授权，回来选择要运营的主页或账号，不用先去 Annulo 设置。各项目使用各自的账号授权；其他平台按页面提示登录。见「账号」一篇。
+左侧下方「账号 → 添加账号」选择平台。Facebook、Instagram 和 Threads 可以直接在这里走官方授权，授权后回到本项目继续添加，多个资产时再选择，不用先去 Annulo 设置。各项目使用各自的账号授权；其他平台按页面提示登录。见「账号」一篇。
 
 ## 4. 做第一条内容、发第一条
 
@@ -94,7 +94,7 @@ Progress comes from your data; nothing to tick by hand. Click a step to see what
 
 ## 3. Connect a social account
 
-Choose a platform under "Accounts → Add account". Facebook, Instagram and Threads can be authorized here directly; return to select the Page or account to operate. No visit to Annulo Settings is needed. Authorizations belong to each project. Other platforms show their own sign-in instructions. See "Accounts".
+Choose a platform under "Accounts → Add account". Facebook, Instagram and Threads can be authorized here directly; return to this project to finish adding the account, choosing an asset when several are available. No visit to Annulo Settings is needed. Authorizations belong to each project. Other platforms show their own sign-in instructions. See "Accounts".
 
 ## 4. Make your first piece, publish your first post
 
@@ -579,7 +579,7 @@ export const channels: Article = {
 
 ## 添加
 
-「添加账号」选择平台。Facebook、Instagram、Threads 的官方授权在这里完成，不用先去 Annulo 设置。授权后选中要在这个项目运营的公共主页或账号；已授权的账号可以直接选用，无需重复授权。
+「添加账号」选择平台。Facebook、Instagram、Threads 的官方授权在这里完成，不用先去 Annulo 设置。授权后回到本项目，单一 Instagram 资产和 Threads 账号会继续自动添加；多个 Instagram 资产或 Facebook 主页需要选择；已授权的账号可以直接选用，无需重复授权。
 - Facebook 官方通道使用公共主页；个人主页可选浏览器方式；
 - Instagram 官方授权处于内测，支持专业账号，能否使用取决于连接服务资格和 Meta 权限；已有手动口令或浏览器账号保留原方式；
 - 每个项目有自己的授权，可分别连接不同账号。Threads 凭据由 Annulo 保存并自动续期，Instagram 官方授权由连接服务保管；

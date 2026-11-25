@@ -1,6 +1,7 @@
+import { startProjectOAuth, readOAuthReturn, continueOAuthReturn, finishOAuthReturn } from '../lib/oauthReturn'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ExternalLink, Loader2, RefreshCw } from 'lucide-react'
-import { inShuttle, listChannels, listOAuthConnections, runLocal, setSecret, startOAuthConnection, type Channel as BaseChannel, type OAuthConnection } from '../lib/shuttle'
+import { inShuttle, listChannels, listOAuthConnections, runLocal, setSecret, type Channel as BaseChannel, type OAuthConnection } from '../lib/shuttle'
 import { tr } from '../lib/i18n'
 import { Badge, Button, Dialog, Notice } from './ui'
 import Select from './Select'
@@ -18,13 +19,14 @@ const PENDING = 'THREADS_USER_TOKEN_PENDING'
  *   再写进 THREADS_USER_TOKEN_<id>；口令不进表、不进函数参数。
  */
 export default function ThreadsAccountFlow({ channel, onAdded }: { channel?: Channel; onAdded: () => void }) {
+  const resume = readOAuthReturn('threads')
   const [token, setToken] = useState('')
-  const [host, setHost] = useState(channel?.threads_media_host || '')
+  const [host, setHost] = useState(channel?.threads_media_host || resume?.mediaHost || '')
   const [sites, setSites] = useState<Channel[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const oauth = useThreadsOAuth()
-  const [account, setAccount] = useState(channel?.oauth_account || '')
+  const oauth = useThreadsOAuth(channel?.id, host)
+  const [account, setAccount] = useState(resume?.account || channel?.oauth_account || '')
   useEffect(() => {
     setAccount(old => oauth.connection?.accounts.some(a => a.account === old) ? old : oauth.connection?.accounts[0]?.account || '')
   }, [oauth.connection])
@@ -56,6 +58,15 @@ export default function ThreadsAccountFlow({ channel, onAdded }: { channel?: Cha
       onAdded()
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
+  useEffect(() => {
+    const selected = oauth.connection?.accounts.find(a => a.account === resume?.account)
+    if (!selected || selected.needs_reconnect || selected.missing_scopes?.length || oauth.pending) return
+    void continueOAuthReturn('threads', async r => {
+      setBusy(true); setError('')
+      try { await runLocal('social/social.login', { type: 'threads', channel_id: channel?.id, mode: 'oauth', account: r.account, media_host: r.mediaHost || host }); onAdded() }
+      catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+    }).catch(e => setError((e as Error).message))
+  }, [oauth.connection, oauth.pending])
   const field = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
   const hostPicker = <details className="text-sm" open={!!host}>
     <summary className="cursor-pointer select-none text-muted-foreground">{tr('threads_connect.host')}</summary>
@@ -85,6 +96,7 @@ export default function ThreadsAccountFlow({ channel, onAdded }: { channel?: Cha
   const selected = oauth.connection?.accounts.find(a => a.account === account)
   const needsReconnect = selected?.needs_reconnect || !!selected?.missing_scopes?.length
   return <div className="space-y-4 text-sm">
+    {resume?.status === 'failed' && <Notice tone="error">{tr('account_authorization.return_failed')}</Notice>}
     <p className="text-muted-foreground">{tr(pastedBefore ? 'threads_connect.oauth_switch' : 'threads_connect.oauth_intro')}</p>
     <p className="text-xs text-muted-foreground">{tr('account_authorization.project_only')}</p>
     {authorized && <Select value={account} onChange={setAccount} options={oauth.connection!.accounts.map(a => ({ value: a.account, label: a.label || a.account, sub: a.needs_reconnect ? tr('account_authorization.expired') : undefined }))} />}
@@ -118,7 +130,7 @@ export default function ThreadsAccountFlow({ channel, onAdded }: { channel?: Cha
 }
 
 /** Annulo 的 Threads 连接（设置 → 连接 里那个）：有没有、授权到一半没有；授权页在新窗口打开，回来时刷新 */
-function useThreadsOAuth() {
+function useThreadsOAuth(channelId?: string, mediaHost?: string) {
   const [connection, setConnection] = useState<OAuthConnection | null>(null)
   const [url, setURL] = useState('')
   const started = useRef(0)
@@ -145,7 +157,7 @@ function useThreadsOAuth() {
   const start = async () => {
     started.current = Date.now()
     try {
-      const { auth_url } = await startOAuthConnection('threads')
+      const { auth_url } = await startProjectOAuth('threads', { channelId, mediaHost })
       setURL(auth_url)
       window.open(auth_url, '_blank', 'noopener,noreferrer')
       await load()
@@ -167,8 +179,8 @@ export function ThreadsConnectionButton({ channel, onDone }: { channel: Channel;
     <Button size="sm" variant={channel.login_status === 'expired' ? 'default' : 'ghost'} onClick={() => setOpen(true)}>{tr('threads_connect.manage')}</Button>
     {error && <span className="basis-full text-xs text-destructive">{error}</span>}
     {checked && !error && <span className="basis-full text-xs text-muted-foreground">{tr('threads_connect.checked')}</span>}
-    <Dialog open={open} onClose={() => setOpen(false)} title={tr('threads_connect.title')} footer={<Button variant="ghost" onClick={() => setOpen(false)}>{tr('common.close')}</Button>}>
-      {open && <ThreadsAccountFlow channel={channel} onAdded={() => { setOpen(false); setError(''); onDone() }} />}
+    <Dialog open={open} onClose={() => { finishOAuthReturn(); setOpen(false) }} title={tr('threads_connect.title')} footer={<Button variant="ghost" onClick={() => { finishOAuthReturn(); setOpen(false) }}>{tr('common.close')}</Button>}>
+      {open && <ThreadsAccountFlow channel={channel} onAdded={() => { finishOAuthReturn(); setOpen(false); setError(''); onDone() }} />}
     </Dialog>
   </>
 }

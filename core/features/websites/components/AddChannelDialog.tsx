@@ -1,8 +1,9 @@
+import { readOAuthReturn, finishOAuthReturn } from '../lib/oauthReturn'
 import InstagramAccountFlow from './InstagramAccountFlow'
 import ThreadsAccountFlow from './ThreadsAccountFlow'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Check, Loader, Search, X } from 'lucide-react'
-import { addSiteChannel, addWordPressChannel, listCreghtSites, openShuttleSettings, setSecret, wpPrepare, type ChannelType, type CreghtSite } from '../lib/shuttle'
+import { listChannels, addSiteChannel, addWordPressChannel, listCreghtSites, openShuttleSettings, setSecret, wpPrepare, type ChannelType, type CreghtSite } from '../lib/shuttle'
 import { CHANNEL_TYPES } from '../lib/channels'
 import { CHANNELS } from '../lib/edition'
 import { SOCIAL } from '../lib/social'
@@ -18,7 +19,13 @@ const SITE_TYPES: ChannelType[] = ['creght_site', 'wordpress']
 /** 添加渠道：先选类型，Creght 网站再从 creght 账号下的站点里挑一个，WordPress 填地址和应用密码，小红书、X、B 站、抖音这些社媒弹浏览器登录。用原生 <dialog>，Esc 关闭、焦点自动圈住。 */
 export default function AddChannelDialog({ onClose, onAdded, initialUrl = '', allowedTypes = CHANNELS }: { onClose: () => void; onAdded: (key: string) => void; initialUrl?: string; allowedTypes?: ChannelType[] }) {
   const ref = useRef<HTMLDialogElement>(null)
-  const [type, setType] = useState<ChannelType | null>(null)
+  const [resume] = useState(readOAuthReturn)
+  const [resumeChannel, setResumeChannel] = useState<import('../lib/shuttle').Channel>()
+  const [resumeLoaded, setResumeLoaded] = useState(!resume?.channelId)
+  useEffect(() => { if (resume?.channelId) listChannels().then(r => { setResumeChannel(r.list.find(c => c.id === resume.channelId && c.type === resume.provider)); setResumeLoaded(true) }).catch(e => setError(e.message)) }, [])
+  const [type, setType] = useState<ChannelType | null>(resume && allowedTypes.includes(resume.provider) ? resume.provider : null)
+  const resuming = !!readOAuthReturn()
+  const channel = resuming && type === resume?.provider ? resumeChannel : undefined
   const [choose, setChoose] = useState<Choose | null>(null) // 登录后待勾选的账号（ChooseAccounts）
   const [sites, setSites] = useState<CreghtSite[] | null>(null)
   const [q, setQ] = useState('')
@@ -64,7 +71,7 @@ export default function AddChannelDialog({ onClose, onAdded, initialUrl = '', al
       <div className="flex max-h-[min(80vh,640px)] flex-col">
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
           {type && (
-            <Button variant="ghost" size="icon-sm" onClick={() => (setType(null), setChoose(null))} aria-label={tr('add_channel.back')} className="-ml-2 text-muted-foreground">
+            <Button variant="ghost" size="icon-sm" onClick={() => { finishOAuthReturn(); setType(null); setChoose(null) }} aria-label={tr('add_channel.back')} className="-ml-2 text-muted-foreground">
               <ArrowLeft />
             </Button>
           )}
@@ -74,7 +81,7 @@ export default function AddChannelDialog({ onClose, onAdded, initialUrl = '', al
           </Button>
         </div>
 
-        {!type ? (
+        {resuming && !resumeLoaded ? <div className="p-4">{error || <Loader className="animate-spin" />}</div> : resuming && resume?.channelId && !resumeChannel ? <div className="p-4">{tr('account_authorization.target_missing')}</div> : !type ? (
           <div className="min-h-0 space-y-4 overflow-y-auto p-4">
             {([['sites', allowedTypes.filter((t) => SITE_TYPES.includes(t))], ['social', allowedTypes.filter((t) => !SITE_TYPES.includes(t))]] as const).map(([group, types]) =>
               types.length > 0 && (
@@ -132,11 +139,11 @@ export default function AddChannelDialog({ onClose, onAdded, initialUrl = '', al
             </RunButton>
           </div>
         ) : type === 'facebook' ? (
-          <div className="min-h-0 overflow-y-auto p-4"><FacebookAccountFlow onAdded={() => onAdded('facebook')} /></div>
+          <div className="min-h-0 overflow-y-auto p-4"><FacebookAccountFlow channel={channel} onAdded={() => onAdded('facebook')} /></div>
         ) : type === 'instagram' ? (
-          <div className="min-h-0 overflow-y-auto p-4"><InstagramAccountFlow onAdded={() => onAdded('instagram')} /></div>
+          <div className="min-h-0 overflow-y-auto p-4"><InstagramAccountFlow channel={channel} onAdded={() => onAdded('instagram')} /></div>
         ) : type === 'threads' ? (
-          <div className="min-h-0 overflow-y-auto p-4"><ThreadsAccountFlow onAdded={() => onAdded('threads')} /></div>
+          <div className="min-h-0 overflow-y-auto p-4"><ThreadsAccountFlow channel={channel} onAdded={() => onAdded('threads')} /></div>
         ) : SOCIAL[type] ? (
           // 其余社媒平台（B 站、抖音…）：同样弹浏览器登录。登录都走 social.login（记下是在这台电脑登录的）
           <div className="space-y-3 p-4 text-sm">
