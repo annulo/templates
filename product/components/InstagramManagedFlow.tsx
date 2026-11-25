@@ -1,6 +1,7 @@
+import { startProjectOAuth, readOAuthReturn, continueOAuthReturn } from '../lib/oauthReturn'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ExternalLink, Loader2, RefreshCw } from 'lucide-react'
-import { listChannels, listOAuthConnections, runLocal, startOAuthConnection, type Channel, type OAuthConnection } from '../lib/shuttle'
+import { listChannels, listOAuthConnections, runLocal, type Channel, type OAuthConnection } from '../lib/shuttle'
 import { authorizeConnections, managedConnections, type ManagedConnection } from '../lib/managedConnections'
 import { tr } from '../lib/i18n'
 import { Button, Notice } from './ui'
@@ -9,6 +10,7 @@ import OAuthAccountControls from './OAuthAccountControls'
 
 type Account = { id: string; instagram_user_id?: string; instagram_connection_id?: string; instagram_media_host?: string }
 export default function InstagramManagedFlow({ channel, onAdded }: { channel?: Account; onAdded: () => void }) {
+  const resume = readOAuthReturn('instagram')
   const [loaded, setLoaded] = useState(false)
   const [available, setAvailable] = useState(false)
   const [connections, setConnections] = useState<ManagedConnection[]>([])
@@ -20,7 +22,7 @@ export default function InstagramManagedFlow({ channel, onAdded }: { channel?: A
   const [authURL, setAuthURL] = useState('')
   const started = useRef(0)
   // 本机图片、视频要先传到一个网站的素材库，Instagram 才抓得到；项目里正好一个网站就默认选它
-  const [host, setHost] = useState(channel?.instagram_media_host || '')
+  const [host, setHost] = useState(channel?.instagram_media_host || resume?.mediaHost || '')
   const [sites, setSites] = useState<Channel[]>([])
   const hostOf = (c: Channel & { api_host?: string }) => JSON.stringify({ api_host: c.api_host || 'https://creght.cn', project_id: c.project_id, site_id: c.site_id })
   useEffect(() => { let live = true; listChannels().then(r => { if (!live) return; const list = r.list.filter(c => c.type === 'creght_site' && c.project_id && c.site_id); setSites(list); if (list.length === 1) setHost(h => h || hostOf(list[0])) }).catch(() => {}); return () => { live = false } }, [])
@@ -40,10 +42,10 @@ export default function InstagramManagedFlow({ channel, onAdded }: { channel?: A
   for (const a of authorization?.accounts || []) {
     if (!channel && !options.some(o => o.value.startsWith(a.account + '|'))) options.push({ value: a.account + '|', label: a.label || a.account, sub: tr('account_authorization.reconnect') })
   }
-  useEffect(() => { setSelection(old => options.some(o => o.value === old) ? old : options[0]?.value || '') }, [JSON.stringify(options)])
+  useEffect(() => { setSelection(old => options.some(o => o.value === old) ? old : options.find(o => o.value.startsWith(resume?.account + '|'))?.value || options[0]?.value || '') }, [JSON.stringify(options)])
   const act = async (fn: () => Promise<void>) => { setBusy(true); setError(''); try { await fn() } catch (e) { setError((e as Error).message) } finally { setBusy(false) } }
   const authorize = () => act(async () => {
-    const { auth_url } = await startOAuthConnection('instagram')
+    const { auth_url } = await startProjectOAuth('instagram', { channelId: channel?.id, mediaHost: host })
     started.current = Date.now(); setAuthURL(auth_url); window.open(auth_url, '_blank', 'noopener,noreferrer'); await load()
   })
   const bind = () => act(async () => {
@@ -51,10 +53,23 @@ export default function InstagramManagedFlow({ channel, onAdded }: { channel?: A
     const result = await runLocal('social/social.login', { type: 'instagram', channel_id: channel?.id, mode: 'managed', connection_id, asset_id, media_host: host }) as { id?: string }
     if (result?.id) onAdded()
   })
+  useEffect(() => {
+    if (!loaded || resume?.status !== 'connected') return
+    const current = connections.find(c => c.id === resume.account && c.status === 'active' && !c.needs_reconnect)
+    const assets = current?.assets.filter(a => a.status === 'active' && (!channel || a.id === channel.instagram_user_id)) || []
+    if (assets.length !== 1) return
+    void continueOAuthReturn('instagram', async r => {
+      await act(async () => {
+        const result = await runLocal('social/social.login', { type: 'instagram', channel_id: channel?.id, mode: 'managed', connection_id: r.account, asset_id: assets[0].id, media_host: r.mediaHost || host }) as { id?: string }
+        if (result?.id) onAdded()
+      })
+    }).catch(e => setError((e as Error).message))
+  }, [loaded, JSON.stringify(connections)])
   const connectionID = channel?.instagram_connection_id || selection.split('|')[0]
   const [selectedConnection, selectedAsset] = selection.split('|')
   const canBind = connections.some(c => c.id === selectedConnection && c.status === 'active' && !c.needs_reconnect && c.assets.some(a => a.id === selectedAsset && a.status === 'active'))
   return <div className="space-y-3">
+    {resume?.status === 'failed' && <Notice tone="error">{tr('account_authorization.return_failed')}</Notice>}
     <p className="text-muted-foreground">{tr('instagram_managed.description')}</p>
     <p className="text-xs text-muted-foreground">{tr('account_authorization.project_only')}</p>
     {!loaded ? <Loader2 className="size-4 animate-spin" /> : !available ? <Notice>{tr('instagram_managed.unavailable')}</Notice> : <>

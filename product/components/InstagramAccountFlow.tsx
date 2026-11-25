@@ -1,3 +1,4 @@
+import { finishOAuthReturn } from '../lib/oauthReturn'
 import InstagramManagedFlow from './InstagramManagedFlow'
 import { useEffect, useState } from 'react'
 import { ExternalLink, RefreshCw } from 'lucide-react'
@@ -114,8 +115,8 @@ export function InstagramConnectionButton({ channel, onDone }: { channel: Channe
     <Button size="sm" variant={channel.login_status === 'expired' ? 'default' : 'ghost'} onClick={() => setOpen(true)}>{tr('instagram_connect.manage')}</Button>
     {error && <span className="basis-full text-xs text-destructive">{error}</span>}
     {checked && !error && <span className="basis-full text-xs text-muted-foreground">{tr('instagram_connect.checked')}</span>}
-    <Dialog open={open} onClose={() => setOpen(false)} title={tr('instagram_connect.title')} footer={<Button variant="ghost" onClick={() => setOpen(false)}>{tr('common.close')}</Button>}>
-      {open && <InstagramAccountFlow channel={channel} onAdded={() => { setOpen(false); setError(''); onDone() }} onChanged={onDone} />}
+    <Dialog open={open} onClose={() => { finishOAuthReturn(); setOpen(false) }} title={tr('instagram_connect.title')} footer={<Button variant="ghost" onClick={() => { finishOAuthReturn(); setOpen(false) }}>{tr('common.close')}</Button>}>
+      {open && <InstagramAccountFlow channel={channel} onAdded={() => { finishOAuthReturn(); setOpen(false); setError(''); onDone() }} onChanged={onDone} />}
     </Dialog>
   </>
 }

@@ -1,7 +1,7 @@
 {
   "instagram_managed": {
     "label": "官方授权（内测）",
-    "description": "在浏览器中授权 Instagram 专业账号，返回后选择要添加的账号。无需复制访问口令。",
+    "description": "在浏览器中授权 Instagram 专业账号，返回本项目后继续添加；有多个资产时请选择。无需复制访问口令。",
     "unavailable": "此版本尚未开放 Instagram 官方授权，请等待内测版本更新。",
     "bind": "添加所选账号",
     "authorize": "连接或重新授权 Instagram",
@@ -1344,7 +1344,7 @@
     "checked": "授权检测通过",
     "manage": "管理连接",
     "title": "Threads 连接",
-    "oauth_intro": "用 Threads 授权：点下面的按钮，在打开的页面里登录 Threads 并同意，回来点「添加这个账号」。不用自己建 Meta 应用。",
+    "oauth_intro": "用 Threads 授权：在打开的页面里登录并同意，返回本项目后自动添加这次授权的账号。不用自己建 Meta 应用。",
     "oauth_switch": "这个账号现在用的是粘贴的口令。改用 Threads 授权后口令会自动续期，不用每 60 天重新粘贴；要用同一个 Threads 账号授权，历史帖子都保留。",
     "oauth_authorize": "用 Threads 授权",
     "oauth_again": "用另一个账号授权",
@@ -1367,6 +1367,8 @@
     "confirm_disconnect": "确认断开授权",
     "disconnect_hint": "当前项目中使用此授权的所有账号将暂停发布和采集，账号记录和历史帖子会保留。其他项目不受影响。彻底撤销授权需到平台的账号安全页操作。",
     "reconnect": "重新授权",
+    "return_failed": "授权未完成，尚未添加账号。请重新授权。",
+    "target_missing": "原账号已被移除，请关闭此窗口后重新添加。",
     "select_account": "请先选择要断开的授权账号。"
   },
   "add_channel": {
