@@ -23,4 +23,6 @@ export const disconnectOAuthConnection = (provider: string, id: string) => {
   if (!id) throw new Error(tr('account_authorization.select_account'))
   return request(`settings/connections/${encodeURIComponent(provider)}?account=${encodeURIComponent(id)}`, 'DELETE')
 }
+// 兼容已有项目自定义页面的旧引用。
+export const disconnectManagedConnection = disconnectOAuthConnection
 export const authorizeConnections = () => request<{verify_url: string}>('login?connections=1', 'POST')
