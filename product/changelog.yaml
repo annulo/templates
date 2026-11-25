@@ -1,3 +1,7 @@
+- version: 0.39.0
+  zh: "账号管理支持 Threads 官方授权；Instagram 授权账号可选择本机图片、视频的素材库，配合新版社媒插件发布和采集。"
+  en: "Connect Threads through official authorization. Choose hosting for local images and videos on authorized Instagram accounts, with publishing and collection through the updated Social plugin."
+
 - version: 0.38.0
   zh: "自媒体内容改成左边列表、右边直接编辑，一条内容可以发多个账号；新增 Threads 账号，Instagram 官方 API 也能定时发布（要社媒插件 0.13.0）。"
   en: "Social content is now a list on the left with the editor on the right, and one piece can go to several accounts; Threads accounts added, and Instagram official API posts can be scheduled (needs the Social plugin 0.13.0)."

@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.27.0
+  zh: "账号管理支持 Threads 官方授权；Instagram 授权账号可选择本机图片、视频的素材库，配合新版社媒插件发布和采集。"
+  en: "Connect Threads through official authorization. Choose hosting for local images and videos on authorized Instagram accounts, with publishing and collection through the updated Social plugin."
+
 - version: 0.26.0
   zh: "可以添加 Threads 账号用官方 API 发帖；Instagram 官方 API 也能定时发布了（要社媒插件 0.13.0）。"
   en: "Add Threads accounts and post through the official API; Instagram official API posts can now be scheduled (needs the Social plugin 0.13.0)."

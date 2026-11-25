@@ -50,7 +50,7 @@ export type Channel = {
   fb_kind?: 'profile' | 'page'
   page_id?: string
   auth_mode?: 'browser' | 'api'
-  api_credential?: 'oauth' | 'page_token'
+  api_credential?: 'oauth' | 'page_token' | 'threads_oauth' | 'threads_user_token'
   oauth_account?: string
   /** Facebook API：可读取的指标和采集权限提示，不含凭据。 */
   facebook_api_metrics?: string
