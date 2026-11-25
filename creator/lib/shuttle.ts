@@ -124,7 +124,7 @@ export const removeChannel = (id: string) => runLocal<{ ok: boolean }>('channels
 export type OAuthConnection = { key: string; available: boolean; pending: boolean; accounts: { account: string; label?: string; connected_at: string; needs_reconnect?: boolean; missing_scopes?: string[]; expires_at?: string; renew_error?: string }[] }
 /** 连接层只返回账号标识和状态；页面拿不到 User / Page token。 */
 export const listOAuthConnections = () => api<{ list: OAuthConnection[] }>('settings/connections').then((r) => r.list)
-export const startOAuthConnection = (provider: string) => api<{ auth_url: string }>(`settings/connections/${encodeURIComponent(provider)}/connect`, { method: 'POST' })
+export const startOAuthConnection = (provider: string, returnTo?: string) => api<{ auth_url: string }>(`settings/connections/${encodeURIComponent(provider)}/connect`, { method: 'POST', body: JSON.stringify({ return_to: returnTo }) })
 
 export type ProxyResponse = {
   ok: boolean

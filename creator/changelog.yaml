@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.29.0
+  zh: "社媒授权后回到本项目继续添加账号；单一账号自动绑定，多个资产可选择，避免只在设置中显示连接。"
+  en: "Return to this project after social authorization. Bind a single account automatically or choose among multiple assets."
+
 - version: 0.28.0
   zh: "在账号页直接完成社媒授权、查看到期提示和断开连接；各项目使用自己的账号，新增 Facebook、Instagram 账号优先使用官方授权。"
   en: "Manage social authorization, expiry notices and disconnection on the accounts page. Each project uses its own accounts; new Facebook and Instagram accounts default to official sign-in."

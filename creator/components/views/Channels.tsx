@@ -1,3 +1,4 @@
+import { readOAuthReturn, finishOAuthReturn } from '../../lib/oauthReturn'
 import { InstagramConnectionButton, instagramApi } from '../InstagramAccountFlow'
 import { ThreadsConnectionButton } from '../ThreadsAccountFlow'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -41,7 +42,7 @@ const DOT: Record<Tone, string> = { ok: 'bg-emerald-500', warn: 'bg-amber-500', 
 /** 网站和账号：只管连接（添加、移除、登录、网站的发布设置），不放数据 */
 /** siteExtra：模板在网站卡片下面加自己的东西，哪种网站要加由模板判断（外贸给 WordPress 网站加「接收表单询盘」） */
 export default function Channels({ ctx, current, setCurrent, siteExtra }: { ctx: Ctx; current: string; setCurrent: (id: string) => void; siteExtra?: (ch: Channel) => ReactNode }) {
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(() => !!readOAuthReturn())
   const [addURL, setAddURL] = useState('') // 从顶部「向导里的网址」点进来：添加对话框预填这个网址
   // 添加前已有的渠道：列表重新读回来后选中多出来的那个（对话框只告诉我们加了哪种，社媒还可能一次勾好几个，选第一个）
   const before = useRef<Set<string> | null>(null)
@@ -149,8 +150,9 @@ export default function Channels({ ctx, current, setCurrent, siteExtra }: { ctx:
       {adding && (
         <AddChannelDialog
           initialUrl={addURL}
-          onClose={() => { setAdding(false); setAddURL('') }}
+          onClose={() => { finishOAuthReturn(); setAdding(false); setAddURL('') }}
           onAdded={() => {
+            finishOAuthReturn()
             before.current = new Set(ctx.channels.map((c) => c.id))
             setAdding(false)
             setAddURL('')

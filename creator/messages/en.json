@@ -1,7 +1,7 @@
 {
   "instagram_managed": {
     "label": "Official sign-in (beta)",
-    "description": "Authorize an Instagram professional account in your browser, then select the account to add. No access token needs to be copied.",
+    "description": "Authorize an Instagram professional account in your browser, then return to this project to finish adding it. Choose an asset if several are available. No access token copying is needed.",
     "unavailable": "Official Instagram authorization is not enabled in this build. Wait for a preview update.",
     "bind": "Add selected account",
     "authorize": "Connect or reconnect Instagram",
@@ -1348,7 +1348,7 @@
     "checked": "Authorization OK",
     "manage": "Manage connection",
     "title": "Threads connection",
-    "oauth_intro": "Authorize with Threads: click the button, sign in to Threads on the page that opens and approve, then come back and click Add this account. No Meta app of your own needed.",
+    "oauth_intro": "Sign in to Threads and approve in your browser. Return to this project to add the account you just authorized automatically. You do not need your own Meta app.",
     "oauth_switch": "This account uses a pasted token. With Threads authorization the token renews automatically, so you no longer paste a new one every 60 days. Authorize the same Threads account; past posts are kept.",
     "oauth_authorize": "Authorize with Threads",
     "oauth_again": "Authorize another account",
@@ -1371,6 +1371,8 @@
     "confirm_disconnect": "Confirm disconnect",
     "disconnect_hint": "All accounts using this authorization in this project will stop publishing and collecting. Account records and past posts are kept. Other projects are unaffected. To revoke access entirely, use the platform’s account security settings.",
     "reconnect": "Authorize again",
+    "return_failed": "Authorization did not complete. No account was added. Authorize again.",
+    "target_missing": "The original account was removed. Close this window and add the account again.",
     "select_account": "Select an authorized account to disconnect."
   },
   "add_channel": {
