@@ -724,5 +724,10 @@
     "auto": "自动关联",
     "pick": "选一个属性",
     "link": "关联"
-  }
+  },
+  "connect.delivery_title": "同步客户后台报告",
+  "connect.delivery_empty": "采集完成后自动同步 Google 和 AI 报告，客户无需导入",
+  "connect.delivery_pending": "有报告等待同步；Annulo 运行期间会自动重试",
+  "connect.delivery_done": "报告已同步，客户可以在网站后台查看",
+  "connect.delivery_retry": "重试报告同步"
 }

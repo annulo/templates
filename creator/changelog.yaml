@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.30.0
+  zh: "Google 搜索、收录和 AI 可见度报告可自动同步到客户网站后台，支持失败重试和历史查看。"
+  en: "Sync Google search, indexing and AI visibility reports to the customer website console, with retry status and report history."
+
 - version: 0.29.0
   zh: "社媒授权后回到本项目继续添加账号；单一账号自动绑定，多个资产可选择，避免只在设置中显示连接。"
   en: "Return to this project after social authorization. Bind a single account automatically or choose among multiple assets."

@@ -1,3 +1,4 @@
+import { publishAI } from './_delivery_reports'
 import { profile, projectBrief } from './_ai'
 import { siteBase as base, siteDigest } from './_site'
 import { status } from './_creght'
@@ -487,6 +488,7 @@ async function askAll(
   const sum = summarize(ctx, ch, run.id, asker, failed, engine.key)
   const note = failed.length ? L(ctx, `${failed.length} 条没问成`, `${failed.length} failed`) : ''
   ctx.db.update('geo_runs', run.id, { questions: sum.questions, cited: sum.cited, mentioned: sum.mentioned, visibility: sum.visibility, fact_questions: sum.brand_asked, note, summary: JSON.stringify(sum), finished_at: new Date().toISOString(), seen_at: '' })
+  await publishAI(ctx, { ...ch, ...ctx.db.get('channels', ch.id) }, run.id)
   if (!answered) throw new Error(`${name}${L(ctx, '：一个问题都没问成：', ': no question could be asked: ')}${failed.map((f) => f.error).join('; ').slice(0, 400)}`)
   return { engine: engine.key, run_id: run.id, model, summary: sum }
 }

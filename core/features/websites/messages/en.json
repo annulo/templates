@@ -724,5 +724,10 @@
     "auto": "Link automatically",
     "pick": "Pick a property",
     "link": "Link"
-  }
+  },
+  "connect.delivery_title": "Customer report sync",
+  "connect.delivery_empty": "Google and AI reports sync after collection; no customer import needed",
+  "connect.delivery_pending": "Reports are pending; Annulo retries while running",
+  "connect.delivery_done": "Reports are synced and available in the customer console",
+  "connect.delivery_retry": "Retry report sync"
 }
