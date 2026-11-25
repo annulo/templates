@@ -12,7 +12,10 @@
     "disconnect_hint": "Disconnecting removes this authorization’s connection in the current project. Connections in other projects are unaffected.",
     "disconnect": "Disconnect from this project",
     "product_consent": "Authorize connections in Creght",
-    "manual_label": "Manual token"
+    "manual_label": "Manual token",
+    "host": "Upload local images and videos to (optional)",
+    "public_only": "Use public image and video URLs only",
+    "host_hint": "Pick a connected site's asset library; local JPEG images and videos are uploaded there when publishing so Instagram can fetch them."
   },
   "content_status": {
     "title": "Change content status",
@@ -1344,7 +1347,17 @@
     "check": "Check authorization",
     "checked": "Authorization OK",
     "manage": "Manage connection",
-    "title": "Threads connection"
+    "title": "Threads connection",
+    "oauth_intro": "Authorize with Threads: click the button, sign in to Threads on the page that opens and approve, then come back and click Add this account. No Meta app of your own needed.",
+    "oauth_switch": "This account uses a pasted token. With Threads authorization the token renews automatically, so you no longer paste a new one every 60 days. Authorize the same Threads account; past posts are kept.",
+    "oauth_authorize": "Authorize with Threads",
+    "oauth_again": "Authorize another account",
+    "oauth_add": "Add this account",
+    "oauth_use": "Switch to Threads authorization",
+    "oauth_pending": "The Threads authorization page is open in your browser. Approve it, then come back here.",
+    "oauth_reopen": "Not open? Click here",
+    "oauth_hint": "The token is stored only on this computer and Annulo renews it before it expires; if renewal fails, the account asks you to authorize again.",
+    "own_app": "Use a token from your own Meta app (advanced)"
   },
   "add_channel": {
     "added": "Added",

@@ -12,7 +12,10 @@
     "disconnect_hint": "断开会移除此授权在当前项目内的连接，其他项目的连接不受影响。",
     "disconnect": "断开当前项目连接",
     "product_consent": "补充 Creght 连接授权",
-    "manual_label": "手动口令"
+    "manual_label": "手动口令",
+    "host": "本机图片、视频上传到（可选）",
+    "public_only": "只使用公开图片、视频地址",
+    "host_hint": "选一个已连接网站的素材库，发布时本机的图片（JPEG）和视频会自动传上去给 Instagram 抓取。"
   },
   "content_status": {
     "title": "修改内容状态",
@@ -1344,7 +1347,17 @@
     "check": "检测授权",
     "checked": "授权检测通过",
     "manage": "管理连接",
-    "title": "Threads 连接"
+    "title": "Threads 连接",
+    "oauth_intro": "用 Threads 授权：点下面的按钮，在打开的页面里登录 Threads 并同意，回来点「添加这个账号」。不用自己建 Meta 应用。",
+    "oauth_switch": "这个账号现在用的是粘贴的口令。改用 Threads 授权后口令会自动续期，不用每 60 天重新粘贴；要用同一个 Threads 账号授权，历史帖子都保留。",
+    "oauth_authorize": "用 Threads 授权",
+    "oauth_again": "用另一个账号授权",
+    "oauth_add": "添加这个账号",
+    "oauth_use": "改用 Threads 授权",
+    "oauth_pending": "已在浏览器里打开 Threads 授权页，同意后回到这里。",
+    "oauth_reopen": "没打开？点这里",
+    "oauth_hint": "授权后口令只保存在这台电脑上，到期前 Annulo 会自动续期；续不上时账号会提示重新授权。",
+    "own_app": "用自己的 Meta 应用口令（高级）"
   },
   "add_channel": {
     "added": "已添加",
