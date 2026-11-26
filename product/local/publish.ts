@@ -37,7 +37,7 @@ function withVariant(a: any, channelId: string) {
     ...(m ? { media: JSON.stringify(m), type: vid ? 'video' : 'post', video: vid ? String(vid.url) : '', video_cover: vid?.cover ? String(vid.cover) : '', images: JSON.stringify(imgs) } : {}) }
 }
 
-/** 编辑器里图片、视频能放多个、混放；能混放的平台（_fields.ts 的 media，X）只看总数，别的一条只发一个视频、图和视频不能同发：不满足的报出来，不要悄悄丢掉 */
+/** 编辑器里图片、视频能放多个、混放；能混放的平台（_fields.ts 的 media，X、Threads）只看总数，别的一条只发一个视频、图和视频不能同发：不满足的报出来，不要悄悄丢掉 */
 function mediaProblems(ctx: any, a: any, platform: string): string[] {
   let l: any[] = []
   try { l = JSON.parse(String(a.media || '[]')) } catch {}

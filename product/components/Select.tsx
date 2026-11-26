@@ -17,7 +17,7 @@ export type SelectOption<T extends string> = {
  * 不用系统的 <select>：各平台长得不一样、也放不了图标和第二行字。点外面或按 Esc 关掉。
  *
  * variant：field 是表单里的输入框样式（有边框、占满宽度）；inline 是页头下面那种紧凑的按钮。
- * 菜单用 fixed 定位（按按钮在窗口里的位置算），外层有 overflow-hidden 也不会被裁掉；下面放不下就往上弹，
+ * 菜单放在 popover 顶层，用 fixed 定位（按按钮在窗口里的位置算），外层有 overflow-hidden 也不会被裁掉；下面放不下就往上弹，
  * align=right 时和按钮右边对齐。页面滚动、窗口变化时收起。
  */
 export default function Select<T extends string>({
@@ -74,12 +74,13 @@ export default function Select<T extends string>({
       {open && (
         <div
           ref={menu}
+          popover="manual"
           role="menu"
           style={pos ?? { left: 0, top: 0, visibility: 'hidden' }}
-          className={cx('fixed z-50 w-72 max-w-[90vw] rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl', menuClassName)}
+          className={cx('fixed inset-auto m-0 flex flex-col z-50 w-72 max-w-[calc(100vw-16px)] rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl', menuClassName)}
         >
           {title && <div className="px-2.5 pt-1.5 pb-1 text-[11px] font-semibold text-muted-foreground">{title}</div>}
-          <div className="max-h-72 overflow-y-auto">
+          <div className="min-h-0 max-h-72 overflow-y-auto">
             {options.map((o) => (
               <button
                 key={o.value}
@@ -116,7 +117,7 @@ function usePopup(open: boolean, setOpen: (v: boolean) => void, root: RefObject<
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent) => root.current && !root.current.contains(e.target as Node) && setOpen(false)
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setOpen(false); anchor.current?.focus() } }
     const onScroll = (e: Event) => !menu.current?.contains(e.target as Node) && setOpen(false)
     const onResize = () => setOpen(false)
     document.addEventListener('mousedown', onDown)
@@ -135,14 +136,24 @@ function usePopup(open: boolean, setOpen: (v: boolean) => void, root: RefObject<
     const b = anchor.current?.getBoundingClientRect()
     const m = menu.current
     if (!b || !m) return
+    // Popover top layer escapes transformed dialogs and overflow containers.
+    // A fixed descendant of a translated dialog otherwise uses dialog coordinates.
+    m.showPopover()
+    const dialog = root.current?.closest('dialog')?.getBoundingClientRect()
+    const bounds = { left: Math.max(0, dialog?.left ?? 0), top: Math.max(0, dialog?.top ?? 0), right: Math.min(window.innerWidth, dialog?.right ?? window.innerWidth), bottom: Math.min(window.innerHeight, dialog?.bottom ?? window.innerHeight) }
+    const gap = 8
+    const maxWidth = Math.max(0, bounds.right - bounds.left - gap * 2)
+    m.style.maxWidth = `${maxWidth}px`
     const w = m.offsetWidth
     const h = m.offsetHeight
-    const gap = 8
     let left = align === 'right' ? b.right - w : b.left
-    left = Math.min(Math.max(left, gap), window.innerWidth - w - gap)
-    const below = window.innerHeight - b.bottom
-    const top = below >= h + gap || below >= b.top ? b.bottom + gap : Math.max(b.top - h - gap, gap)
-    setPos({ left, top })
+    left = Math.min(Math.max(left, bounds.left + gap), bounds.right - w - gap)
+    const below = bounds.bottom - b.bottom - gap, above = b.top - bounds.top - gap
+    const down = below >= h || below >= above
+    const maxHeight = Math.max(0, down ? below : above)
+    const top = down ? b.bottom + gap : Math.max(b.top - Math.min(h, maxHeight) - gap, bounds.top + gap)
+    setPos({ left, top, maxHeight, maxWidth })
+    return () => { if (m.matches(':popover-open')) m.hidePopover() }
   }, [open, align, size])
   return pos
 }
@@ -208,9 +219,9 @@ export function Combobox({
         )}
       </div>
       {open && shown.length > 0 && (
-        <div ref={menu} role="listbox" style={pos ?? { left: 0, top: 0, visibility: 'hidden' }} className="fixed z-50 w-72 max-w-[90vw] rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl">
+        <div ref={menu} popover="manual" role="listbox" style={pos ?? { left: 0, top: 0, visibility: 'hidden' }} className="fixed inset-auto m-0 flex flex-col z-50 w-72 max-w-[calc(100vw-16px)] rounded-xl border border-border bg-popover p-1.5 text-sm text-popover-foreground shadow-xl">
           {title && <div className="px-2.5 pt-1.5 pb-1 text-[11px] font-semibold text-muted-foreground">{title}</div>}
-          <div className="max-h-72 overflow-y-auto">
+          <div className="min-h-0 max-h-72 overflow-y-auto">
             {shown.map((o) => (
               <button
                 key={o.value}
