@@ -1,3 +1,7 @@
+- version: 0.47.0
+  zh: "Threads 支持最多 20 个图片和视频混排发布，修复授权弹窗中素材库菜单溢出。"
+  en: "Publish up to 20 images and videos together on Threads. Asset-library menus now stay inside authorization dialogs."
+
 - version: 0.46.2
   zh: "完善默认浏览器授权，兼容桌面版、网页版和远程访问。"
   en: "Keep default-browser authorization compatible with desktop, browser and remote sessions."

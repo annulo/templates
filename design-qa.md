@@ -38,3 +38,11 @@ Pure model/return/disconnect tests and creator/product/trade typechecks pass. IO
 ## Follow-up polish
 
 P3: the live runtime may place the vertically centered modal slightly differently from ImageGen's illustrative frame. Real account names, resource counts and avatars determine content height. These are data/runtime differences, not hidden controls or clipped content.
+
+## 2026-11-26 — Threads carousels and asset menu bounds
+
+- Threads rules come from Meta's official posts guide (https://developers.facebook.com/documentation/threads/posts/): up to 20 images/videos in order. Templates require social 0.15.0; the platform logic lives in the plugin.
+- Isolated product/creator/trade copies received the working source through `publish.py --local`, with no conflicts. No actual user project was upgraded or posted from.
+- Targeted plugin suite: 88 passed (Threads, Instagram managed/direct, Facebook publishing, shared content). Template prepare/content/authorization suite: 8 passed. Creator/product/trade type checks passed.
+- Browser QA used the actual Select component and authorization dialog with mocked accounts/sites. At 1440×1024 and 390×844, a 17-option menu remains within dialog bounds, has no horizontal overflow, scrolls internally and selects Talizen. Escape closes the menu while preserving the dialog; console has no errors. Desktop screenshot: /Users/liaomeirong/.gerdr/screenshots/gerdr-browser-1795686522147.png; mobile: /Users/liaomeirong/.gerdr/screenshots/gerdr-browser-1795686470874.png.
+- Broader optional test discovery encountered absent Playwright/esbuild module dependencies in unrelated browser suites. The pre-existing Instagram prepare test still expects API scheduling to be rejected, although current code supports it; an isolated HEAD baseline reproduces that failure (`/private/tmp/instagram-prepare-baseline.log`). That test and scheduling behavior were left unchanged. No live social posts were submitted in this verification.

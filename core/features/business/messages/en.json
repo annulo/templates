@@ -1684,7 +1684,7 @@
     "upload_failed": "Upload failed",
     "unsupported": "Only images and videos can be pasted",
     "one_video": "One video per post; used the first one",
-    "paste_hint": "Paste (⌘V / Ctrl+V) or drop images and videos; add several and drag to reorder. Each platform checks its own rules when you publish (e.g. X takes up to 4 images and videos; most platforms one video per post).",
+    "paste_hint": "Paste (⌘V / Ctrl+V) or drop images and videos, then drag to reorder. Publishing checks each platform: up to 20 items on Threads and 4 on X; other limits are shown before publishing.",
     "tool_media": "Image / video",
     "tool_library": "Library",
     "tags": "Hashtags",
