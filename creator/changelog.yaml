@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.33.1
+  zh: "社媒官方授权改用系统默认浏览器打开，完成后回到 Annulo 自动添加账号。"
+  en: "Open official social authorization in the system default browser, then return to Annulo to add accounts automatically."
+
 - version: 0.33.0
   zh: "社媒官方授权后自动添加到当前项目，无需再次选择平台或确认账号；添加失败可重试，已有账号不重复创建。"
   en: "Automatically add officially authorized social accounts to the current project without another platform selection or confirmation. Retry failed additions while reusing existing records."
