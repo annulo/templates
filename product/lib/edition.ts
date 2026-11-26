@@ -66,6 +66,7 @@ export const CHANNELS: ChannelType[] = [
   "xiaohongshu",
   "douyin",
   "x",
+  "facebook",
   "instagram",
   "threads",
 ];
