@@ -1122,7 +1122,7 @@
       },
       "facebook": {
         "label": "Facebook",
-        "hint": "Authorize Facebook and choose Pages for this project"
+        "hint": "Authorize Facebook to add Pages to this project automatically"
       },
       "instagram": {
         "label": "Instagram",
@@ -1335,13 +1335,17 @@
     "legacy": "Legacy connection"
   },
   "social_authorization": {
+    "adding": "Adding authorized accounts to this project…",
+    "retry_add": "Retry adding",
+    "retry_hint": "Adding is not complete. Retry to continue; existing account records will be reused.",
+    "add_cancelled": "This addition was cancelled. Start authorization again from this project.",
     "title": "Add social account",
     "manage_title": "Manage social connection",
     "manage": "Manage connection",
     "project_only": "Accounts are connected to this project only",
     "steps": "Account connection steps",
     "step_authorize": "Authorize",
-    "step_confirm": "Confirm account",
+    "step_confirm": "Add to project",
     "step_complete": "Done",
     "platform": "Select social platform",
     "loading": "Loading authorized accounts…",
@@ -1352,7 +1356,7 @@
     "account_fallback": "{platform} account",
     "connection_fallback": "{platform} authorization {n}",
     "authorize_title": "Connect {platform}",
-    "authorize_hint": "Open the official {platform} authorization page in your browser. Return to this project to confirm which account to add. No token copying is needed.",
+    "authorize_hint": "Open the official {platform} authorization page. Authorized accounts or Pages will be added to this project automatically, without selecting a platform or confirming again.",
     "use_existing": "Use existing authorization",
     "authorized": "Authorization successful",
     "confirm_title": "Confirm accounts to add",
@@ -1369,7 +1373,7 @@
     "host": "Image and video library (optional)",
     "public_only": "Use public image and video URLs only",
     "host_hint": "Choose a connected website library to upload local images and videos before {platform} uses them.",
-    "pending": "Complete authorization in your browser, then return here to confirm the account.",
+    "pending": "Complete authorization in your browser. Authorized accounts will be added to this project automatically.",
     "reopen": "Reopen authorization",
     "refresh": "Refresh authorization",
     "continue": "Continue to authorization",
