@@ -7,9 +7,9 @@ import { tr } from '../lib/i18n'
 import SocialAuthorizationFlow from './SocialAuthorizationFlow'
 import { Button } from './ui'
 
-export default function SocialAuthorizationDialog({ provider, channel, onAdded, onClose, onBack = onClose, onProviderChange, allowedProviders }: {
+export default function SocialAuthorizationDialog({ provider, channel, onAdded, onClose, onBack = onClose }: {
   provider: OAuthProvider; channel?: AuthorizationChannel; onAdded: () => void; onClose: () => void;
-  onBack?: () => void; onProviderChange?: (provider: OAuthProvider) => void; allowedProviders?: OAuthProvider[];
+  onBack?: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => { ref.current?.showModal() }, [])
@@ -20,7 +20,7 @@ export default function SocialAuthorizationDialog({ provider, channel, onAdded, 
         <div className="flex-1"><h2 className="text-lg font-semibold">{tr(channel ? 'social_authorization.manage_title' : 'social_authorization.title')}</h2><p className="mt-1 text-xs text-muted-foreground">{tr('social_authorization.project_only')}</p></div>
         <Button variant="ghost" size="icon-sm" aria-label={tr('common.close')} onClick={() => ref.current?.close()} className="-mr-2 -mt-1"><X /></Button>
       </header>
-      <SocialAuthorizationFlow key={provider} provider={provider} channel={channel} onAdded={onAdded} onBack={() => { finishOAuthReturn(); onBack() }} onProviderChange={onProviderChange} allowedProviders={allowedProviders} />
+      <SocialAuthorizationFlow key={provider} provider={provider} channel={channel} onAdded={onAdded} onBack={() => { finishOAuthReturn(); onBack() }} />
     </div>
   </dialog>
 }

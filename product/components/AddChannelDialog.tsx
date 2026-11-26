@@ -64,7 +64,6 @@ export default function AddChannelDialog({ onClose, onAdded, initialUrl = '', al
   if (type && socialAuthorizationProviders.includes(type as OAuthProvider) && !(resuming && (!resumeLoaded || (resume?.channelId && !resumeChannel)))) return <SocialAuthorizationDialog
     provider={type as OAuthProvider} channel={channel} onClose={onClose} onAdded={() => onAdded(type)}
     onBack={() => { finishOAuthReturn(); setType(null) }}
-    onProviderChange={provider => setType(provider)} allowedProviders={socialAuthorizationProviders.filter(p => allowedTypes.includes(p))}
   />
 
   return (
