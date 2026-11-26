@@ -1331,6 +1331,7 @@
     "legacy": "旧连接"
   },
   "social_authorization": {
+    "invalid_url": "授权地址无效，请重新发起授权。",
     "adding": "正在将授权账号添加到当前项目…",
     "retry_add": "重试添加",
     "retry_hint": "添加尚未完成，可重试；已有账号会复用，不会重复创建。",

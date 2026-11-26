@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, CheckCircle2, ChevronDown, ExternalLink, Image, Loader2, Plus, RefreshCw } from 'lucide-react'
-import { inShuttle, listChannels, listOAuthConnections, runLocal, shuttleImage, type Channel, type OAuthConnection } from '../lib/shuttle'
+import { inShuttle, listChannels, listOAuthConnections, openExternalURL, runLocal, shuttleImage, type Channel, type OAuthConnection } from '../lib/shuttle'
 import { authorizeConnections, managedConnections } from '../lib/managedConnections'
 import { continueOAuthReturn, finishOAuthReturn, readOAuthReturn, startProjectOAuth, watchOAuthCompletion, type OAuthProvider } from '../lib/oauthReturn'
 import { authorizationReady, authorizationTarget, defaultResources, instagramResources, resourceKey, selectAuthorization, type AuthorizationChannel, type AuthorizationResource } from '../lib/socialAuthorization'
@@ -112,7 +112,7 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
       cancelled.current = false; selectingExisting.current = !!channel; setReturnFailed(false)
       const { auth_url } = await startProjectOAuth(provider, { channelId: target?.id, mediaHost: host })
       started.current = Date.now(); setAuthURL(auth_url)
-      window.open(auth_url, '_blank', 'noopener,noreferrer')
+      await openExternalURL(auth_url)
       await load()
     } catch (e) { setError((e as Error).message) }
     finally { savingRef.current = false; setSaving(false) }
@@ -215,11 +215,11 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
           }} />
         </div>}
       </div>}
-      {pending && <Notice>{tr('social_authorization.pending')}{authURL && <a className="ml-1 underline" href={authURL} target="_blank" rel="noopener noreferrer">{tr('social_authorization.reopen')}</a>}</Notice>}
+      {pending && <Notice>{tr('social_authorization.pending')}{authURL && <a className="ml-1 underline" href={authURL} target="_blank" rel="noopener noreferrer" onClick={e => { e.preventDefault(); void openExternalURL(authURL).catch(e => setError(e.message)) }}>{tr('social_authorization.reopen')}</a>}</Notice>}
       {active && !ready && <Notice>{tr(active.missing_scopes?.length ? 'account_authorization.missing' : 'account_authorization.expired')}</Notice>}
       {error && <Notice tone="error">{error}</Notice>}
       {(error || (loaded && (!connection?.available || !ready))) && <Button variant="ghost" disabled={busy} onClick={() => { void load() }}><RefreshCw />{tr('social_authorization.refresh')}</Button>}
-      {/insufficient_scope|creght isn't connected|creght: reconnect required|还没连接 creght|重新连接 creght/.test(error) && <Button variant="outline" disabled={busy} onClick={async () => { try { const { verify_url } = await authorizeConnections(); window.open(verify_url, '_blank', 'noopener,noreferrer') } catch (e) { setError((e as Error).message) } }}>{tr('instagram_managed.product_consent')}</Button>}
+      {/insufficient_scope|creght isn't connected|creght: reconnect required|还没连接 creght|重新连接 creght/.test(error) && <Button variant="outline" disabled={busy} onClick={async () => { try { const { verify_url } = await authorizeConnections(); await openExternalURL(verify_url) } catch (e) { setError((e as Error).message) } }}>{tr('instagram_managed.product_consent')}</Button>}
     </div>
     <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-6 py-4">
       {step === 2 || onBack ? <Button variant="outline" disabled={saving} onClick={() => { if (step === 2) { setStep(1); setError('') } else onBack?.() }}>{tr('social_authorization.back')}</Button> : <span />}
