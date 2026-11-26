@@ -206,7 +206,7 @@
       },
       "facebook": {
         "label": "Facebook",
-        "hint": "官方授权后选择公共主页；个人主页可用浏览器登录"
+        "hint": "官方授权后选择本项目要运营的公共主页"
       },
       "instagram": {
         "label": "Instagram",

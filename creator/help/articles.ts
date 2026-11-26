@@ -579,7 +579,7 @@ export const channels: Article = {
 
 ## 添加
 
-「添加账号」选择平台。Facebook、Instagram、Threads 的官方授权在这里完成，不用先去 Annulo 设置。授权后回到本项目，单一 Instagram 资产和 Threads 账号会继续自动添加；多个 Instagram 资产或 Facebook 主页需要选择；已授权的账号可以直接选用，无需重复授权。
+「添加账号」选择平台。Facebook、Instagram、Threads 的官方授权在这里完成，不用先去 Annulo 设置。授权后回到本项目的统一弹窗，先确认账号再点击「添加到项目」；单一账号默认选中，多个资产或 Facebook 主页可选择；已授权的账号可以直接选用，无需重复授权。
 - Facebook 官方通道使用公共主页；个人主页可选浏览器方式；
 - Instagram 和 Threads 只提供官方授权入口，不需要复制口令；Instagram 需使用专业账号，实际能力以 Meta 授予的权限为准。旧连接及历史记录保留，不会自动迁移或删除；
 - 每个项目有自己的授权，可分别连接不同账号。Threads 凭据由 Annulo 保存并自动续期，Instagram 官方授权由连接服务保管；

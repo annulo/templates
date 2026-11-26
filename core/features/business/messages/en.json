@@ -201,7 +201,7 @@
       },
       "facebook": {
         "label": "Facebook",
-        "hint": "Authorize and select a Page; browser sign-in is available for personal profiles"
+        "hint": "Authorize Facebook and choose Pages for this project"
       },
       "instagram": {
         "label": "Instagram",
