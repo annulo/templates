@@ -1,6 +1,7 @@
 import { readOAuthReturn, finishOAuthReturn } from '../lib/oauthReturn'
-import InstagramAccountFlow from './InstagramAccountFlow'
-import ThreadsAccountFlow from './ThreadsAccountFlow'
+import SocialAuthorizationDialog from './SocialAuthorizationDialog'
+import { socialAuthorizationProviders } from './SocialAuthorizationFlow'
+import type { OAuthProvider } from '../lib/oauthReturn'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Check, Loader, Search, X } from 'lucide-react'
 import { listChannels, addSiteChannel, addWordPressChannel, listCreghtSites, openShuttleSettings, setSecret, wpPrepare, type ChannelType, type CreghtSite } from '../lib/shuttle'
@@ -9,7 +10,6 @@ import { CHANNELS } from '../lib/edition'
 import { SOCIAL } from '../lib/social'
 import RunButton from './RunButton'
 import ChooseAccounts, { type Choose } from './ChooseAccounts'
-import FacebookAccountFlow from './FacebookAccountFlow'
 import { Button, Field, cx, inputCls } from './ui'
 import { tr } from '../lib/i18n'
 
@@ -36,7 +36,7 @@ export default function AddChannelDialog({ onClose, onAdded, initialUrl = '', al
 
   useEffect(() => {
     ref.current?.showModal()
-  }, [])
+  }, [type])
   useEffect(() => {
     if (type !== 'creght_site' || sites) return
     setLoadError('')
@@ -60,6 +60,12 @@ export default function AddChannelDialog({ onClose, onAdded, initialUrl = '', al
       return false
     }
   }
+
+  if (type && socialAuthorizationProviders.includes(type as OAuthProvider) && !(resuming && (!resumeLoaded || (resume?.channelId && !resumeChannel)))) return <SocialAuthorizationDialog
+    provider={type as OAuthProvider} channel={channel} onClose={onClose} onAdded={() => onAdded(type)}
+    onBack={() => { finishOAuthReturn(); setType(null) }}
+    onProviderChange={provider => setType(provider)} allowedProviders={socialAuthorizationProviders.filter(p => allowedTypes.includes(p))}
+  />
 
   return (
     <dialog
@@ -138,12 +144,6 @@ export default function AddChannelDialog({ onClose, onAdded, initialUrl = '', al
               {tr('add_channel.x_login')}
             </RunButton>
           </div>
-        ) : type === 'facebook' ? (
-          <div className="min-h-0 overflow-y-auto p-4"><FacebookAccountFlow channel={channel} onAdded={() => onAdded('facebook')} /></div>
-        ) : type === 'instagram' ? (
-          <div className="min-h-0 overflow-y-auto p-4"><InstagramAccountFlow channel={channel} onAdded={() => onAdded('instagram')} /></div>
-        ) : type === 'threads' ? (
-          <div className="min-h-0 overflow-y-auto p-4"><ThreadsAccountFlow channel={channel} onAdded={() => onAdded('threads')} /></div>
         ) : SOCIAL[type] ? (
           // 其余社媒平台（B 站、抖音…）：同样弹浏览器登录。登录都走 social.login（记下是在这台电脑登录的）
           <div className="space-y-3 p-4 text-sm">
