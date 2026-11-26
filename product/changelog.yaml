@@ -1,3 +1,7 @@
+- version: 0.45.1
+  zh: "修复点击“继续官方授权”时提示请求体不是合法 JSON 的问题。"
+  en: "Fix the invalid JSON request error when continuing official authorization."
+
 - version: 0.45.0
   zh: "Instagram、Threads 和 Facebook 统一为三步授权弹窗；授权后确认账号再添加，连接管理与素材库位置保持一致。"
   en: "Connect Instagram, Threads and Facebook in one three-step dialog. Confirm accounts before adding them, with consistent connection controls and media settings."
