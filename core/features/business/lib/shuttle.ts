@@ -144,7 +144,9 @@ export async function openExternalURL(href: string) {
   const url = new URL(href)
   if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new Error(tr('social_authorization.invalid_url'))
   const status = await api<{ server: boolean; remote: boolean }>('status')
-  if (status.server || status.remote) { window.open(url.href, '_blank', 'noopener,noreferrer'); return }
+  let desktop = false
+  try { desktop = !!(window as unknown as { shuttleDesktop?: unknown }).shuttleDesktop || !!(window.parent as unknown as { shuttleDesktop?: unknown })?.shuttleDesktop } catch { /* Cross-origin parents are not the desktop host. */ }
+  if (status.server || status.remote || !desktop) { window.open(url.href, '_blank', 'noopener,noreferrer'); return }
   await api('local/open_url', { method: 'POST', body: { url: url.href } })
 }
 

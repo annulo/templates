@@ -1,3 +1,7 @@
+- version: 0.46.2
+  zh: "完善默认浏览器授权，兼容桌面版、网页版和远程访问。"
+  en: "Keep default-browser authorization compatible with desktop, browser and remote sessions."
+
 - version: 0.46.1
   zh: "社媒官方授权改用系统默认浏览器打开，完成后回到 Annulo 自动添加账号。"
   en: "Open official social authorization in the system default browser, then return to Annulo to add accounts automatically."

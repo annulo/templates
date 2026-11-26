@@ -42,9 +42,10 @@ const origin = `http://127.0.0.1:${server.address().port}`
 function load(path) {
   const source = transformSync(readFileSync(new URL(path, import.meta.url), 'utf8'), { loader: 'ts', format: 'cjs', target: 'es2022' }).code
   const module = { exports: {} }
+  const browserWindow = { parent: { shuttleDesktop: {} }, open: (...args) => opened.push(args) }
   vm.runInNewContext(source, {
     module, URL,
-    window: { open: (...args) => opened.push(args) },
+    window: browserWindow,
     fetch: (url, init) => fetch(new URL(url, origin), init),
     require: id => {
       if (id === './remote') return { shuttleMissing: () => false, markShuttle: () => {}, ShuttleUnavailable: class extends Error {} }
@@ -53,14 +54,14 @@ function load(path) {
       throw Error(`Unexpected dependency: ${id}`)
     },
   })
-  return module.exports
+  return { ...module.exports, browserWindow }
 }
 
 for (const [name, path] of [
   ['business (product and trade)', '../../core/features/business/lib/shuttle.ts'],
   ['creator', '../../creator/lib/shuttle.ts'],
 ]) {
-  const { startOAuthConnection, openExternalURL } = load(path)
+  const { startOAuthConnection, openExternalURL, browserWindow } = load(path)
   test(`${name}: all three providers send a JSON object with the project return path`, async () => {
     const returnTo = '/en/?view=channels&oauth_intent=test-intent'
     for (const provider of ['instagram', 'threads', 'facebook']) {
@@ -97,6 +98,15 @@ for (const [name, path] of [
       assert.equal(requests.at(-1).path, '/_shuttle/api/status')
       assert.equal(opened[0][0], 'https://auth.example.test/authorize')
     }
+  })
+  test(`${name}: a local browser session keeps its own profile for the OAuth return`, async () => {
+    environment = { server: false, remote: false }; opened.length = 0
+    const parent = browserWindow.parent
+    browserWindow.parent = {}
+    try { await openExternalURL('https://auth.example.test/authorize') }
+    finally { browserWindow.parent = parent }
+    assert.equal(requests.at(-1).path, '/_shuttle/api/status')
+    assert.equal(opened.length, 1)
   })
   test(`${name}: browser launch failures stay visible and never fall back into the app`, async () => {
     environment = { server: false, remote: false }; rejectOpen = true; opened.length = 0

@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.33.2
+  zh: "完善默认浏览器授权，兼容桌面版、网页版和远程访问。"
+  en: "Keep default-browser authorization compatible with desktop, browser and remote sessions."
+
 - version: 0.33.1
   zh: "社媒官方授权改用系统默认浏览器打开，完成后回到 Annulo 自动添加账号。"
   en: "Open official social authorization in the system default browser, then return to Annulo to add accounts automatically."
