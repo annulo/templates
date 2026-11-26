@@ -1,5 +1,14 @@
 # Unified social authorization dialog — design QA
 
+## 2026-11-26 automatic project binding update
+
+The latest user request supersedes the confirmation and platform-tab behavior described below. Platform selection now appears only at the add-account entry. Official authorization returns directly to automatic binding of the exact returned grant's authorized assets; the dialog closes and the current project refreshes. Reconnecting a target stays scoped to that target. Manual reuse and account management retain their asset controls.
+
+Verified with the actual components and mocked provider IO: Instagram and Threads authorization-to-add; Facebook three-Page and Instagram two-asset auto-add; cancelled authorization performs no writes; a failed bind shows Retry adding and succeeds after retry; a real second browser tab notifies the initiating tab to close its dialog, with one Page binding call. Browser console is clear. The final English 390 × 844 viewport has no modal overflow: /Users/liaomeirong/.gerdr/screenshots/gerdr-browser-1795676369852.png. This run did not perform a new real Meta authorization or modify the user's project.
+
+Type checking passes for creator/product/trade. All 27 authorization request, return, automatic binding, selection and disconnect tests pass, including strict returned identity, missing/expired/cancelled grants, target isolation, duplicate/retry handling and initiating-tab completion notification.
+
+
 final result: passed
 
 Selected visual truth: /Users/liaomeirong/.codex/generated_images/01a20cb6-88f0-7f72-afec-698ad67a9fbf/exec-f11f3f00-1936-42e7-8c2b-97e035e9c7fc.png (1487 × 1058).

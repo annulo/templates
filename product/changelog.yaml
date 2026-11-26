@@ -1,3 +1,7 @@
+- version: 0.46.0
+  zh: "社媒官方授权后自动添加到当前项目，无需再次选择平台或确认账号；添加失败可重试，已有账号不重复创建。"
+  en: "Automatically add officially authorized social accounts to the current project without another platform selection or confirmation. Retry failed additions while reusing existing records."
+
 - version: 0.45.1
   zh: "修复点击“继续官方授权”时提示请求体不是合法 JSON 的问题。"
   en: "Fix the invalid JSON request error when continuing official authorization."

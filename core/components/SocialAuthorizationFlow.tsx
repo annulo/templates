@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, CheckCircle2, ChevronDown, ExternalLink, Image, Loader2, Plus, RefreshCw } from 'lucide-react'
 import { inShuttle, listChannels, listOAuthConnections, runLocal, shuttleImage, type Channel, type OAuthConnection } from '../lib/shuttle'
 import { authorizeConnections, managedConnections } from '../lib/managedConnections'
-import { finishOAuthReturn, readOAuthReturn, startProjectOAuth, type OAuthProvider } from '../lib/oauthReturn'
+import { continueOAuthReturn, finishOAuthReturn, readOAuthReturn, startProjectOAuth, watchOAuthCompletion, type OAuthProvider } from '../lib/oauthReturn'
 import { authorizationReady, authorizationTarget, defaultResources, instagramResources, resourceKey, selectAuthorization, type AuthorizationChannel, type AuthorizationResource } from '../lib/socialAuthorization'
+import { bindReturnedAuthorization } from '../lib/socialAuthorizationReturn'
 import { tr } from '../lib/i18n'
 import { InstagramLogo, ThreadsLogo, FacebookLogo } from './BrandIcons'
 import { Button, cx, Notice } from './ui'
@@ -15,14 +16,19 @@ const platforms = { instagram: { label: 'Instagram', icon: InstagramLogo }, thre
 export const socialAuthorizationProviders: OAuthProvider[] = ['instagram', 'threads', 'facebook']
 
 /** One UI contract; provider-specific reads/writes still use the existing Social plugin. */
-export default function SocialAuthorizationFlow({ provider, channel, onAdded, onBack, onProviderChange, allowedProviders = socialAuthorizationProviders }: {
+export default function SocialAuthorizationFlow({ provider, channel, onAdded, onBack }: {
   provider: OAuthProvider; channel?: AuthorizationChannel; onAdded: () => void; onBack?: () => void;
-  onProviderChange?: (provider: OAuthProvider) => void; allowedProviders?: OAuthProvider[];
 }) {
   const [resume] = useState(() => readOAuthReturn(provider))
+  const autoReturn = resume?.status === 'connected'
+  const [returnBusy, setReturnBusy] = useState(autoReturn)
+  const autoStarted = useRef(false)
+  const addedRef = useRef(onAdded)
+  addedRef.current = onAdded
   const cancelled = useRef(resume?.status === 'failed')
   const [returnFailed, setReturnFailed] = useState(!!cancelled.current)
   const target = authorizationTarget(provider, channel)
+  const selectingExisting = useRef(!!channel)
   const [connection, setConnection] = useState<OAuthConnection>()
   const [account, setAccount] = useState(resume?.account || target?.instagram_connection_id || target?.oauth_account || '')
   const accountRef = useRef(account)
@@ -49,6 +55,7 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
   }).catch(() => {}); return () => { live = false } }, [])
 
   const load = useCallback(async (preferred?: string) => {
+    if (preferred) selectingExisting.current = true
     const id = ++request.current
     setLoading(true); setError(''); setResources([]); setChoose(undefined)
     try {
@@ -67,6 +74,7 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
       const a = c.accounts.find(a => a.account === next)
       if (!authorizationReady(a)) return
       if (cancelled.current) { setStep(1); return }
+      if (!selectingExisting.current && !preferred && !resume) { setStep(1); return }
       let rows: AuthorizationResource[] = []
       let pages: Choose | undefined
       if (provider === 'instagram') rows = instagramResources(await managedConnections(provider), next, target)
@@ -85,11 +93,12 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
     finally { if (id === request.current) { setLoaded(true); setLoading(false) } }
   }, [provider, target?.id, target?.instagram_user_id, resume?.account, resume?.status])
   useEffect(() => {
+    if (autoReturn) return
     void load()
     const refresh = () => { if (!savingRef.current) void load() }
     window.addEventListener('focus', refresh)
     return () => { request.current++; window.removeEventListener('focus', refresh) }
-  }, [load])
+  }, [load, autoReturn])
   useEffect(() => {
     if (!connection?.pending && !authURL) return
     const timer = window.setInterval(() => { if (!savingRef.current) void load() }, 2000)
@@ -100,7 +109,7 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
     if (savingRef.current) return
     savingRef.current = true; setSaving(true); setError('')
     try {
-      cancelled.current = false; setReturnFailed(false)
+      cancelled.current = false; selectingExisting.current = !!channel; setReturnFailed(false)
       const { auth_url } = await startProjectOAuth(provider, { channelId: target?.id, mediaHost: host })
       started.current = Date.now(); setAuthURL(auth_url)
       window.open(auth_url, '_blank', 'noopener,noreferrer')
@@ -126,12 +135,33 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
     } catch (e) { setError((e as Error).message) }
     finally { savingRef.current = false; setSaving(false) }
   }
+  const completeReturn = useCallback(async (retry = false) => {
+    setReturnBusy(true); setError('')
+    try {
+      const completed = await continueOAuthReturn(provider, result => bindReturnedAuthorization(result, () => readOAuthReturn(provider)?.nonce === result.nonce), retry)
+      if (!completed) throw new Error(tr('social_authorization.retry_hint'))
+      finishOAuthReturn(); addedRef.current()
+    } catch (e) { setError((e as Error).message) }
+    finally { setReturnBusy(false) }
+  }, [provider])
+  useEffect(() => {
+    if (autoReturn && !autoStarted.current) { autoStarted.current = true; void completeReturn() }
+  }, [autoReturn, completeReturn])
+  useEffect(() => watchOAuthCompletion(() => { finishOAuthReturn(); addedRef.current() }), [])
   const active = connection?.accounts.find(a => a.account === account)
   const ready = authorizationReady(active)
   const pending = !!connection?.pending || !!authURL
   const busy = loading || saving
   const label = platforms[provider].label
   const Icon = platforms[provider].icon
+  if (autoReturn) return <div className="space-y-4 p-6 text-sm" aria-live="polite">
+    <div className="flex items-center gap-2 font-medium"><Icon size={24} />{label}</div>
+    {returnBusy ? <div role="status" className="flex items-center gap-2 py-6"><Loader2 className="size-4 animate-spin" />{tr('social_authorization.adding')}</div> : <>
+      <Notice tone="error">{error || tr('social_authorization.bind_failed')}</Notice>
+      <p className="text-muted-foreground">{tr('social_authorization.retry_hint')}</p>
+      <Button feedback={false} onClick={() => completeReturn(true)}>{tr('social_authorization.retry_add')}</Button>
+    </>}
+  </div>
   return <div className="flex min-h-0 flex-1 flex-col text-sm">
     <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
       <ol aria-label={tr('social_authorization.steps')} className="flex items-center gap-3 py-1 text-xs sm:text-sm">
@@ -141,29 +171,10 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
           {i < 2 && <span className="ml-1 h-px min-w-2 flex-1 bg-border" />}
         </li>)}
       </ol>
-      <div role="tablist" aria-label={tr('social_authorization.platform')} className="grid grid-cols-3 gap-2" onKeyDown={e => {
-        if (busy || !onProviderChange || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
-        e.preventDefault()
-        const choices = socialAuthorizationProviders.filter(p => allowedProviders.includes(p))
-        const index = choices.indexOf(provider)
-        const next = e.key === 'Home' ? 0 : e.key === 'End' ? choices.length - 1 : (index + (e.key === 'ArrowRight' ? 1 : -1) + choices.length) % choices.length
-        ;(e.currentTarget.querySelector(`[data-provider="${choices[next]}"]`) as HTMLButtonElement | null)?.click()
-      }}>
-        {socialAuthorizationProviders.map(p => {
-          const Logo = platforms[p].icon
-          return <button key={p} type="button" role="tab" data-provider={p} tabIndex={p === provider ? 0 : -1} aria-selected={p === provider} disabled={busy || !allowedProviders.includes(p) || (!onProviderChange && p !== provider)} onClick={e => { if (p !== provider) {
-            const dialog = e.currentTarget.closest('dialog')
-            finishOAuthReturn(); onProviderChange?.(p)
-            requestAnimationFrame(() => (dialog?.querySelector('[role="tab"][aria-selected="true"]') as HTMLButtonElement | null)?.focus())
-          } }} className={cx('flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-40 sm:text-sm', p === provider ? 'border-primary bg-primary/5 text-foreground' : 'border-border hover:bg-accent')}>
-            <Logo size={20} /><span>{platforms[p].label}</span>
-          </button>
-        })}
-      </div>
+      <div className="flex items-center gap-2 text-sm font-medium"><Icon size={24} /><span>{label}</span></div>
       {returnFailed && <Notice tone="error">{tr('account_authorization.return_failed')}</Notice>}
       {channel && !target && <Notice>{tr('social_authorization.legacy_separate')}</Notice>}
       {!loaded ? <div role="status" className="flex items-center gap-2 py-6 text-muted-foreground"><Loader2 className="size-4 animate-spin" />{tr('social_authorization.loading')}</div> : !connection?.available ? <Notice>{tr('social_authorization.unavailable', { platform: label })}</Notice> : step === 1 ? <div className="space-y-4 py-2">
-        <Icon size={32} />
         <h3 className="text-lg font-semibold">{tr('social_authorization.authorize_title', { platform: label })}</h3>
         <p className="leading-relaxed text-muted-foreground">{tr('social_authorization.authorize_hint', { platform: label })}</p>
         {ready && <Button variant="outline" disabled={busy} onClick={() => { cancelled.current = false; setReturnFailed(false); void load(account) }}>{tr('social_authorization.use_existing')}</Button>}

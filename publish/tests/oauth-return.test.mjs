@@ -9,11 +9,12 @@ const { transformSync } = require(process.env.ESBUILD_MODULE || 'esbuild')
 const source = transformSync(readFileSync(new URL('../../core/lib/oauthReturn.ts', import.meta.url), 'utf8'), { loader: 'ts', format: 'cjs', target: 'es2022' }).code
 
 function harness() {
-  const data = new Map(), calls = [], queues = new Map()
+  const data = new Map(), calls = [], queues = new Map(), storageListeners = new Set()
   const location = { href: 'http://project-a.localhost:7799/en/?view=channels' }
   const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) }
   const module = { exports: {} }
   const context = { module, URL, crypto: webcrypto, Date, location, localStorage: storage,
+    window: { addEventListener: (_, fn) => storageListeners.add(fn), removeEventListener: (_, fn) => storageListeners.delete(fn) },
     history: { state: null, replaceState: (_, __, path) => { location.href = new URL(path, location.href).href } },
     navigator: { locks: { request: async (key, run) => {
       const next = (queues.get(key) || Promise.resolve()).catch(() => {}).then(run)
@@ -27,7 +28,7 @@ function harness() {
     to.searchParams.set('connection_account', account)
     location.href = to.href
   }
-  return { ...module.exports, calls, returned, location, data }
+  return { ...module.exports, calls, returned, location, data, storageEvent: event => storageListeners.forEach(fn => fn(event)) }
 }
 
 test('return restores the actual authorized identity, target record and media host', async () => {
@@ -86,4 +87,35 @@ test('closing the initiating add flow cancels binding even if OAuth later succee
   h.returned(h.calls[0])
   await h.continueOAuthReturn('instagram', async () => assert.fail('closed add flow must not bind'))
   assert.equal(h.readOAuthReturn(), undefined)
+})
+
+test('successful binding records completion; a failed binding requires explicit retry', async () => {
+  const h = harness()
+  await h.startProjectOAuth('threads'); h.returned(h.calls[0])
+  let count = 0
+  await assert.rejects(h.continueOAuthReturn('threads', async () => { count++; throw Error('retry me') }))
+  await h.continueOAuthReturn('threads', async () => { count++ })
+  assert.equal(count, 1)
+  assert.equal(await h.continueOAuthReturn('threads', async () => { count++ }, true), true)
+  assert.equal(count, 2)
+  assert.equal(h.readOAuthReturn('threads').completed, true)
+  assert.equal(await h.continueOAuthReturn('threads', async () => { count++ }, true), true)
+  assert.equal(count, 2)
+})
+
+test('the initiating tab refreshes only for completion of its own authorization', async () => {
+  const h = harness()
+  let count = 0
+  const stop = h.watchOAuthCompletion(() => count++)
+  await h.startProjectOAuth('instagram')
+  const [key, raw] = [...h.data][0], intent = JSON.parse(raw)
+  h.storageEvent({ key, newValue: raw })
+  h.storageEvent({ key: 'unrelated', newValue: JSON.stringify({ ...intent, completed: true }) })
+  h.storageEvent({ key, newValue: null })
+  assert.equal(count, 0)
+  h.storageEvent({ key, newValue: JSON.stringify({ ...intent, completed: true }) })
+  assert.equal(count, 1)
+  stop()
+  h.storageEvent({ key, newValue: JSON.stringify({ ...intent, completed: true }) })
+  assert.equal(count, 1)
 })

@@ -201,7 +201,7 @@
       },
       "facebook": {
         "label": "Facebook",
-        "hint": "Authorize Facebook and choose Pages for this project"
+        "hint": "Authorize Facebook to add Pages to this project automatically"
       },
       "instagram": {
         "label": "Instagram",

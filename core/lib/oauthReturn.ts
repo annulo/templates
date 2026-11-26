@@ -1,7 +1,7 @@
 import { startOAuthConnection } from './shuttle'
 
 export type OAuthProvider = 'instagram' | 'threads' | 'facebook'
-type Intent = { nonce: string; provider: OAuthProvider; at: number; channelId?: string; mediaHost?: string; handled?: boolean }
+type Intent = { nonce: string; provider: OAuthProvider; at: number; channelId?: string; mediaHost?: string; handled?: boolean; completed?: boolean }
 export type OAuthReturn = Intent & { account: string; status: string }
 const key = 'annulo.project-account-oauth:'
 const intentKey = (nonce: string) => key + nonce
@@ -35,16 +35,34 @@ export function readOAuthReturn(provider?: OAuthProvider): OAuthReturn | undefin
 }
 
 /** 刷新或两个窗口同时返回时只自动执行一次。失败后保留界面，由用户明确重试。 */
-export async function continueOAuthReturn(provider: OAuthProvider, run: (result: OAuthReturn) => Promise<void>) {
+export async function continueOAuthReturn(provider: OAuthProvider, run: (result: OAuthReturn) => Promise<void>, retry = false) {
   if (!navigator.locks) return // 不支持锁的浏览器仍可在恢复的界面手动添加
   const nonce = readOAuthReturn(provider)?.nonce
   if (!nonce) return
-  await navigator.locks.request(intentKey(nonce), async () => {
+  return navigator.locks.request(intentKey(nonce), async () => {
     const result = readOAuthReturn(provider)
-    if (!result || result.handled || result.status !== 'connected' || !result.account) return
-    localStorage.setItem(intentKey(result.nonce), JSON.stringify({ nonce: result.nonce, provider: result.provider, at: result.at, channelId: result.channelId, mediaHost: result.mediaHost, handled: true }))
+    if (!result || result.status !== 'connected' || !result.account) return
+    if (result.completed) return true
+    if (result.handled && !retry) return
+    const intent: Intent = { nonce: result.nonce, provider: result.provider, at: result.at, channelId: result.channelId, mediaHost: result.mediaHost, handled: true }
+    localStorage.setItem(intentKey(result.nonce), JSON.stringify(intent))
     await run(result)
+    if (localStorage.getItem(intentKey(nonce))) localStorage.setItem(intentKey(nonce), JSON.stringify({ ...intent, completed: true }))
+    return true
   })
+}
+
+/** The initiating tab refreshes only after its own returned authorization finished binding. */
+export function watchOAuthCompletion(done: () => void) {
+  const changed = (event: StorageEvent) => {
+    if (!activeNonce || event.key !== intentKey(activeNonce) || !event.newValue) return
+    try {
+      const intent = JSON.parse(event.newValue) as Intent
+      if (intent.nonce === activeNonce && intent.completed) done()
+    } catch { /* Ignore unrelated or malformed storage events. */ }
+  }
+  window.addEventListener('storage', changed)
+  return () => window.removeEventListener('storage', changed)
 }
 
 export function finishOAuthReturn() {
