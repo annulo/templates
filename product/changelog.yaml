@@ -1,3 +1,7 @@
+- version: 0.44.0
+  zh: "Instagram、Threads 统一使用官方授权，移除手动口令和内测提示，保留已有账号与历史记录。"
+  en: "Use official authorization for Instagram and Threads, remove manual-token setup and beta labels, and retain existing accounts and history."
+
 - version: 0.43.0
   zh: "添加账号支持 Facebook，可通过官方授权选择并绑定公共主页。"
   en: "Add Facebook accounts through official authorization and choose a Page to connect to this project."
