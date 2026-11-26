@@ -126,6 +126,15 @@ export type OAuthConnection = { key: string; available: boolean; pending: boolea
 export const listOAuthConnections = () => api<{ list: OAuthConnection[] }>('settings/connections').then((r) => r.list)
 export const startOAuthConnection = (provider: string, returnTo?: string) => api<{ auth_url: string }>(`settings/connections/${encodeURIComponent(provider)}/connect`, { method: 'POST', body: { return_to: returnTo } })
 
+/** Local desktop links use the OS default browser; server/remote users open links on their own device. */
+export async function openExternalURL(href: string) {
+  const url = new URL(href)
+  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new Error(tr('social_authorization.invalid_url'))
+  const status = await api<{ server: boolean; remote: boolean }>('status')
+  if (status.server || status.remote) { window.open(url.href, '_blank', 'noopener,noreferrer'); return }
+  await api('local/open_url', { method: 'POST', body: { url: url.href } })
+}
+
 export type ProxyResponse = {
   ok: boolean
   status: number

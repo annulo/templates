@@ -1,3 +1,7 @@
+- version: 0.46.1
+  zh: "社媒官方授权改用系统默认浏览器打开，完成后回到 Annulo 自动添加账号。"
+  en: "Open official social authorization in the system default browser, then return to Annulo to add accounts automatically."
+
 - version: 0.46.0
   zh: "社媒官方授权后自动添加到当前项目，无需再次选择平台或确认账号；添加失败可重试，已有账号不重复创建。"
   en: "Automatically add officially authorized social accounts to the current project without another platform selection or confirmation. Retry failed additions while reusing existing records."

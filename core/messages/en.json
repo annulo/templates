@@ -739,6 +739,7 @@
     "legacy": "Legacy connection"
   },
   "social_authorization": {
+    "invalid_url": "Invalid authorization address. Start authorization again.",
     "adding": "Adding authorized accounts to this project…",
     "retry_add": "Retry adding",
     "retry_hint": "Adding is not complete. Retry to continue; existing account records will be reused.",
