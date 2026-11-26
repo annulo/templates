@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.31.0
+  zh: "Instagram、Threads 统一使用官方授权，移除手动口令和内测提示，保留已有账号与历史记录。"
+  en: "Use official authorization for Instagram and Threads, remove manual-token setup and beta labels, and retain existing accounts and history."
+
 - version: 0.30.0
   zh: "Google 搜索、收录和 AI 可见度报告可自动同步到客户网站后台，支持失败重试和历史查看。"
   en: "Sync Google search, indexing and AI visibility reports to the customer website console, with retry status and report history."

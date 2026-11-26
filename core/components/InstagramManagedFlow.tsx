@@ -85,7 +85,6 @@ export default function InstagramManagedFlow({ channel, onAdded }: { channel?: A
         <Button variant="ghost" disabled={busy} onClick={() => { void load() }}><RefreshCw />{tr('instagram_managed.refresh')}</Button>
       </div>
       {(pending || authURL) && <Notice>{tr('instagram_managed.pending')}{authURL && <a className="ml-1 underline" href={authURL} target="_blank" rel="noopener noreferrer">{tr('instagram_managed.reopen')}</a>}</Notice>}
-      <Notice>{tr('instagram_managed.preview')}</Notice>
       <OAuthAccountControls key={connectionID} provider="instagram" account={authorization?.accounts.find(a => a.account === connectionID)} onDisconnected={async () => {
         await load()
         if (channel) {

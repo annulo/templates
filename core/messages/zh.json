@@ -1,21 +1,20 @@
 {
   "instagram_managed": {
-    "label": "官方授权（内测）",
+    "label": "官方授权",
     "description": "在浏览器中授权 Instagram 专业账号，返回本项目后继续添加；有多个资产时请选择。无需复制访问口令。",
-    "unavailable": "此版本尚未开放 Instagram 官方授权，请等待内测版本更新。",
+    "unavailable": "Instagram 官方授权暂不可用，请确认已连接 Creght 或稍后重试。",
     "bind": "添加所选账号",
     "authorize": "连接或重新授权 Instagram",
     "refresh": "刷新账号",
     "pending": "请在浏览器中完成授权，再返回这里。",
     "reopen": "打开授权页",
-    "preview": "内测阶段：支持专业账号授权、单图和 Reel 发布及基础采集。使用资格以连接服务和 Meta 权限状态为准。",
     "disconnect_hint": "断开会移除此授权在当前项目内的连接，其他项目的连接不受影响。",
     "disconnect": "断开当前项目连接",
     "product_consent": "补充 Creght 连接授权",
-    "manual_label": "手动口令",
     "host": "本机图片、视频上传到（可选）",
     "public_only": "只使用公开图片、视频地址",
-    "host_hint": "选一个已连接网站的素材库，发布时本机的图片（JPEG）和视频会自动传上去给 Instagram 抓取。"
+    "host_hint": "选一个已连接网站的素材库，发布时本机的图片（JPEG）和视频会自动传上去给 Instagram 抓取。",
+    "legacy_connection": "此账号使用旧连接。请通过下方官方授权添加账号，原账号及历史记录会保留。"
   },
   "content_status": {
     "title": "修改内容状态",
@@ -673,39 +672,12 @@
     "title_competitor": "打法卡"
   },
   "instagram_connect": {
-    "api": "官方 API",
-    "browser": "浏览器方式",
-    "browser_login": "在浏览器登录",
-    "token": "访问口令",
-    "token_placeholder": "留空使用已保存的口令",
-    "token_hint": "口令只保存在这台电脑的密钥里，不会上传。大约 60 天后失效，到时在「管理连接」里重新粘贴一次。",
-    "host": "本机图片、视频上传到（可选）",
-    "host_saved": "已保存",
-    "public_only": "只使用公开图片地址",
-    "host_hint": "选择已连接网站的素材库后，本机 JPEG 和视频会在发布时自动上传。图片要这台电脑登录对应区域的 Creght CLI，视频要 Annulo 连着对应区域的 creght。",
-    "connect": "验证并连接",
     "check": "检测授权",
     "manage": "管理连接",
     "title": "Instagram 连接",
     "recovery": "这条帖子已提交过发布请求。请先核对结果；系统不会再次提交，以免重复发帖。",
     "check_result": "核对发布结果",
-    "checked": "授权检测通过",
-    "intro": "点下面的按钮，Annulo 会打开浏览器替你完成大部分操作：你只需要登录 Facebook 和 Instagram、点「允许」。第一次大约 3 分钟。",
-    "renew_intro": "口令大约 60 天失效。点下面的按钮重新生成，一般只需要在弹窗里点「允许」。",
-    "manual_step_facebook": "打开 developers.facebook.com，登录 Facebook。",
-    "manual_step_register": "第一次用：点「开始使用」注册成为开发者，验证手机或邮箱，免费。",
-    "manual_step_app": "点「我的应用 → 创建应用」，用例选「管理 Instagram 上的消息和内容」，商业组合选暂不关联，一路下一步创建。",
-    "manual_step_account": "进入应用 →「应用角色 → 角色」→「添加人员」→ 选「Instagram 测试员」，填要连的用户名；再到 Instagram 设置 → 应用和网站 →「测试员邀请」点「接受」（账号要是专业账号）。然后到「用例」→「管理 Instagram 上的消息和内容」→「自定义」→「API setup with Instagram login」，账号没列着就点「添加账号」登录它。",
-    "manual_step_token": "账号右边点「生成口令」，在弹窗里登录 Instagram 并点「允许」，勾选「我了解」后复制口令（IG 开头的一长串）。",
-    "manual_step_paste": "把口令粘贴到上面，点「验证并连接」。",
-    "token_paste_placeholder": "粘贴口令（IG 开头）",
-    "token_missing": "先粘贴口令。",
-    "wrong_account": "这个口令属于 @{username}，不是这个账号。请用原来那个 Instagram 账号生成口令。",
-    "start": "连接 Instagram",
-    "renew": "重新生成口令",
-    "start_hint": "第一次用要注册 Meta 开发者（免费，验证一次手机或邮箱），账号要是 Instagram 专业账号（创作者或商家）。浏览器会把这个账号加成应用的测试员，你在 Instagram 里点「接受」、在弹窗里登录并点「允许」就行。右下角会提示每一步。",
-    "have_token": "已经有口令？直接粘贴",
-    "username": "要连接的 Instagram 用户名"
+    "checked": "授权检测通过"
   },
   "meta": {
     "channel_types": {
@@ -730,30 +702,15 @@
   },
   "threads_connect": {
     "api": "官方 API",
-    "intro": "Threads 用官方 API 发帖：在你自己的 Meta 应用里生成一个 Threads 口令，粘贴到下面。第一次大约 5 分钟，步骤见下面。",
-    "renew_intro": "口令大约 60 天失效。重新生成一个粘贴进来即可；只想换图片素材库，口令留空直接点「验证并连接」。",
-    "token_paste_placeholder": "粘贴口令（TH 开头）",
-    "token_placeholder": "留空使用已保存的口令",
-    "token_missing": "先粘贴口令。",
-    "connect": "验证并连接",
-    "how": "怎么拿到 Threads 口令",
-    "step_app": "打开 developers.facebook.com，登录 Facebook，点「我的应用 → 创建应用」，用例选「访问 Threads API」，一路下一步创建（第一次要先免费注册成开发者）。",
-    "step_permissions": "进入应用 →「用例」→「访问 Threads API」→「自定义」→「权限」，确认 threads_basic、threads_content_publish 已添加，再加上 threads_manage_insights（读帖子数据和粉丝数要用）。",
-    "step_tester": "「应用角色 → 角色」→「添加人员」→ 选「Threads 测试员」，填要连的 Threads 用户名；再到 Threads 网页版 设置 → 账户 → 网站权限 →「邀请」里点「接受」。",
-    "step_token": "回到「用例 → 访问 Threads API → 自定义 → 设置」，在「用户口令生成工具」里给这个测试员点「生成访问口令」，登录 Threads 并允许，复制口令（TH 开头的一长串）。",
-    "step_paste": "把口令粘贴到上面，点「验证并连接」。",
-    "open_meta": "打开 Meta 开发者后台",
     "host": "本机图片、视频上传到（可选）",
     "public_only": "只使用公开图片地址",
     "host_hint": "选一个已连接网站的素材库，发布时本机的图片（JPEG）和视频会自动传上去给 Threads 抓取。图片要这台电脑登录对应区域的 Creght CLI，视频要 Annulo 连着那个区域的 creght。",
-    "token_hint": "口令只保存在这台电脑的密钥里，不会上传。大约 60 天后失效，到时在「管理连接」里重新粘贴。",
-    "wrong_account": "这个口令属于 @{username}，不是这个账号。请用原来那个 Threads 账号生成口令。",
     "check": "检测授权",
     "checked": "授权检测通过",
     "manage": "管理连接",
     "title": "Threads 连接",
     "oauth_intro": "用 Threads 授权：在打开的页面里登录并同意，返回本项目后自动添加这次授权的账号。不用自己建 Meta 应用。",
-    "oauth_switch": "这个账号现在用的是粘贴的口令。改用 Threads 授权后口令会自动续期，不用每 60 天重新粘贴；要用同一个 Threads 账号授权，历史帖子都保留。",
+    "oauth_switch": "此账号使用旧连接。请使用同一个 Threads 账号完成官方授权，账号和历史帖子会保留。",
     "oauth_authorize": "用 Threads 授权",
     "oauth_again": "用另一个账号授权",
     "oauth_add": "添加这个账号",
@@ -761,8 +718,9 @@
     "oauth_pending": "已在浏览器里打开 Threads 授权页，同意后回到这里。",
     "oauth_reopen": "没打开？点这里",
     "oauth_hint": "授权后口令只保存在这台电脑上，到期前 Annulo 会自动续期；续不上时账号会提示重新授权。",
-    "own_app": "用自己的 Meta 应用口令（高级）",
-    "oauth_save": "保存连接设置"
+    "oauth_save": "保存连接设置",
+    "unavailable": "Threads 官方授权暂不可用，请确认客户端的连接服务配置后重试。",
+    "oauth_refresh": "刷新连接状态"
   },
   "account_authorization": {
     "project_only": "账号授权只用于当前项目。其他项目可以连接各自的社媒账号，无需先去 Annulo 设置。",
@@ -777,6 +735,7 @@
     "reconnect": "重新授权",
     "return_failed": "授权未完成，尚未添加账号。请重新授权。",
     "target_missing": "原账号已被移除，请关闭此窗口后重新添加。",
-    "select_account": "请先选择要断开的授权账号。"
+    "select_account": "请先选择要断开的授权账号。",
+    "legacy": "旧连接"
   }
 }
