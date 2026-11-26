@@ -1991,6 +1991,11 @@
     "pick": "Pick a property",
     "link": "Link"
   },
+  "connect.delivery_title": "Customer report sync",
+  "connect.delivery_empty": "Google and AI reports sync after collection; no customer import needed",
+  "connect.delivery_pending": "Reports are pending; Annulo retries while running",
+  "connect.delivery_done": "Reports are synced and available in the customer console",
+  "connect.delivery_retry": "Retry report sync",
   "plan": {
     "title": "Growth plan",
     "desc": "Goals and weekly work for 90 days: set targets, record where you start, work through keywords, competitors, content and links in phases, and check Google data and inquiries on day 30, 60 and 90 to adjust.",

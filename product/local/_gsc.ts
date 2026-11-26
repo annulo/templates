@@ -75,9 +75,10 @@ async function accountFor(ctx: any, property: string): Promise<string> {
  * searchAnalytics.query。page 给了就只看这个页面、query 给了就只看这个搜索词（都是 equals，两个都给是 AND）；
  * 多个页面要 OR 时每页查一次，调用方自己合（一组 filters 里 GSC 是 AND）
  */
-export async function query(ctx: any, property: string, opts: { start: string; end: string; dimensions: string[]; rowLimit?: number; page?: string; query?: string }): Promise<Row[]> {
+export async function query(ctx: any, property: string, opts: { start: string; end: string; dimensions: string[]; rowLimit?: number; page?: string; query?: string; pagePrefix?: string }): Promise<Row[]> {
   const body: any = { startDate: opts.start, endDate: opts.end, dimensions: opts.dimensions, rowLimit: opts.rowLimit ?? 1000, dataState: 'final' }
   const filters = [
+    ...(opts.pagePrefix ? [{ dimension: 'page', operator: 'includingRegex', expression: '^' + opts.pagePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }] : []),
     ...(opts.page ? [{ dimension: 'page', operator: 'equals', expression: opts.page }] : []),
     ...(opts.query ? [{ dimension: 'query', operator: 'equals', expression: opts.query }] : []),
   ]

@@ -1,3 +1,11 @@
+- version: 0.43.0
+  zh: "添加账号支持 Facebook，可通过官方授权选择并绑定公共主页。"
+  en: "Add Facebook accounts through official authorization and choose a Page to connect to this project."
+
+- version: 0.42.0
+  zh: "Google 搜索、收录和 AI 可见度报告可自动同步到客户网站后台，支持失败重试和历史查看。"
+  en: "Sync Google search, indexing and AI visibility reports to the customer website console, with retry status and report history."
+
 - version: 0.41.0
   zh: "社媒授权后回到本项目继续添加账号；单一账号自动绑定，多个资产可选择，避免只在设置中显示连接。"
   en: "Return to this project after social authorization. Bind a single account automatically or choose among multiple assets."

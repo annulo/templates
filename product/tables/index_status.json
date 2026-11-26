@@ -35,6 +35,10 @@
       "inspected_at": {
         "type": "string",
         "description": "这条结果是什么时候查的 ISO8601；7 天内的不重查"
+      },
+      "verdict": {
+        "type": "string",
+        "description": "URL Inspection 原始 verdict；不以历史曝光推断当前收录"
       }
     },
     "required": [

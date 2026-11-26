@@ -1991,6 +1991,11 @@
     "pick": "选一个属性",
     "link": "关联"
   },
+  "connect.delivery_title": "同步客户后台报告",
+  "connect.delivery_empty": "采集完成后自动同步 Google 和 AI 报告，客户无需导入",
+  "connect.delivery_pending": "有报告等待同步；Annulo 运行期间会自动重试",
+  "connect.delivery_done": "报告已同步，客户可以在网站后台查看",
+  "connect.delivery_retry": "重试报告同步",
   "plan": {
     "title": "增长计划",
     "desc": "90 天的目标和每周要做的事：先定目标、记下开始时的数据，按阶段做关键词、竞品、内容和外链，第 30 / 60 / 90 天对着谷歌数据和询盘检查效果、调整计划。",

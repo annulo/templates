@@ -1,0 +1,5 @@
+{
+  "fn": "deliverysync.sync",
+  "every": "1h",
+  "name": "重试客户后台报告同步"
+}
