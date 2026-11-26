@@ -581,7 +581,7 @@ export const channels: Article = {
 
 「添加账号」选择平台。Facebook、Instagram、Threads 的官方授权在这里完成，不用先去 Annulo 设置。授权后回到本项目，单一 Instagram 资产和 Threads 账号会继续自动添加；多个 Instagram 资产或 Facebook 主页需要选择；已授权的账号可以直接选用，无需重复授权。
 - Facebook 官方通道使用公共主页；个人主页可选浏览器方式；
-- Instagram 官方授权处于内测，支持专业账号，能否使用取决于连接服务资格和 Meta 权限；已有手动口令或浏览器账号保留原方式；
+- Instagram 和 Threads 只提供官方授权入口，不需要复制口令；Instagram 需使用专业账号，实际能力以 Meta 授予的权限为准。旧连接及历史记录保留，不会自动迁移或删除；
 - 每个项目有自己的授权，可分别连接不同账号。Threads 凭据由 Annulo 保存并自动续期，Instagram 官方授权由连接服务保管；
 - 其他平台按页面提示在浏览器登录，抖音、B 站、知乎可用 App 扫码。
 
@@ -621,7 +621,7 @@ Each account has a small card at the top with its platform and status (Connected
 
 Choose a platform under "Add account". Authorize Facebook, Instagram or Threads here directly, then select the Page or account to operate. No visit to Annulo Settings is needed. Existing authorizations can be reused without signing in again.
 - Facebook official authorization supports Pages; personal profiles can use the browser option;
-- Instagram official sign-in is in beta for professional accounts, subject to service eligibility and Meta permissions. Existing manual-token and browser accounts keep their original method;
+- Instagram and Threads use official authorization without copying tokens. Instagram requires a professional account and the required Meta permissions. Legacy connections and history are kept without automatic migration or deletion;
 - Each project owns its authorizations and can connect different accounts. Annulo saves and renews Threads credentials; the connection service holds official Instagram credentials;
 - Follow the browser sign-in instructions for other platforms. Douyin, Bilibili and Zhihu support QR sign-in.
 

@@ -1,3 +1,4 @@
+import { publishIndex, flushReports } from './_delivery_reports'
 // 站点体检里的谷歌收录检查（文件名以 _ 开头：只给 audit.ts import）。设计见 docs/site-audit.md「谷歌收录」。
 //
 // 关联了 Search Console 的网站，体检时用网址检查（URL Inspection）查这次抓到的页面有没有被 Google 收录、没收录的原因，
@@ -44,6 +45,7 @@ export function stateOf(r: any): IndexState {
  */
 export async function indexChecks(ch: { id: string; gsc_property?: string; gsc_link_disabled?: boolean }, pages: P[], root: string, ctx: any, dry = false, complete = true): Promise<{ found: Found[]; summary: IndexSummary | null }> {
   if (!ch.gsc_property || ch.gsc_link_disabled) return { found: [], summary: null }
+  if (!dry) await flushReports(ctx, { ...ch, ...ctx.db.get('channels', ch.id) })
   const en = isEn(ctx)
   const property = ch.gsc_property
   // 能收录的页面才查：打不开的、noindex 的体检已经单独报了
@@ -80,7 +82,7 @@ export async function indexChecks(ch: { id: string; gsc_property?: string; gsc_l
       const row = {
         channel_id: ch.id, page: r.url, state: stateOf(r.result), coverage: String(r.result.coverageState ?? ''),
         google_canonical: String(r.result.googleCanonical ?? ''), user_canonical: String(r.result.userCanonical ?? ''),
-        last_crawl: String(r.result.lastCrawlTime ?? ''), inspected_at: at,
+        last_crawl: String(r.result.lastCrawlTime ?? ''), inspected_at: at, verdict: String(r.result.verdict || ''),
       }
       const prev = old.get(pathKey(r.url))
       if (!dry) {
@@ -89,6 +91,7 @@ export async function indexChecks(ch: { id: string; gsc_property?: string; gsc_l
       }
       if (prev || dry) old.set(pathKey(r.url), { ...prev, ...row })
     }
+    if (!dry) await publishIndex(ctx, { ...ch, ...ctx.db.get('channels', ch.id) }, failed.length)
   } catch (e: any) {
     ctx.log(L(ctx, '查收录没做成：', 'Indexing check failed: ') + (e?.message ?? e))
     if (!old.size) return { found: [], summary: null }

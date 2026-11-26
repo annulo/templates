@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { BarChart3, Check, Link2, Loader2, Search, Sparkles } from 'lucide-react'
+import { BarChart3, Check, Link2, Loader2, Search, Sparkles, RefreshCw } from 'lucide-react'
 import Select from './Select'
 import { Button, cx } from './ui'
 import { listOAuthConnections, runLocal, startOAuthConnection } from '../lib/shuttle'
@@ -11,6 +11,7 @@ import type { Ctx } from './views/types'
 type Status = {
   site: { id: string; name: string; type: string; url: string } | null
   gsc?: { property: string; synced_at: string; clicks: number; impressions: number } | null
+  delivery?: { kind: string; status: string; synced_at: string; error: string }[] | null
   ga4?: { property: string }
   geo?: { engines: string[]; last: { at: string; visibility: number | null; questions: number } | null }
 }
@@ -25,8 +26,8 @@ type Picks = { gsc: { value: string; label: string }[] | null; ga4: { value: str
 export default function DataConnect({ ctx }: { ctx: Ctx }) {
   const [st, setSt] = useState<Status | null>(null)
   const [google, setGoogle] = useState<boolean | null>(null) // null = 读不到（不在 Annulo 里）
-  const [busy, setBusy] = useState<'' | 'google' | 'link' | 'geo'>('')
-  const [errs, setErrs] = useState<{ gsc?: string; ga4?: string; geo?: string; google?: string }>({})
+  const [busy, setBusy] = useState<'' | 'google' | 'link' | 'geo' | 'delivery'>('')
+  const [errs, setErrs] = useState<{ gsc?: string; ga4?: string; geo?: string; google?: string; delivery?: string }>({})
   const [picks, setPicks] = useState<Picks>({ gsc: null, ga4: null })
   const [open, setOpen] = useState(false)
   const tried = useRef(false) // 这次打开页面自动关联过没有：只试一次，失败了给手动选，不每次刷新都去读 Google
@@ -113,7 +114,8 @@ export default function DataConnect({ ctx }: { ctx: Ctx }) {
   const gscDone = !st.gsc || !!st.gsc.property
   const ga4Done = !!st.ga4?.property
   const geoDone = !!st.geo?.engines.length
-  const allDone = google !== false && gscDone && ga4Done && geoDone
+  const deliveryPending = st.delivery?.some(r => r.status !== 'synced')
+  const allDone = google !== false && gscDone && ga4Done && geoDone && !deliveryPending
 
   // 都连好了：收成一行，点开看每一项
   if (allDone && !open)
@@ -136,6 +138,16 @@ export default function DataConnect({ ctx }: { ctx: Ctx }) {
         {allDone && <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>{tr('connect.collapse')}</Button>}
       </div>
       <div className="divide-y divide-border">
+        {st.delivery && <Row icon={<RefreshCw className="size-4" />} title={tr('connect.delivery_title')} done={!!st.delivery.length && !deliveryPending}
+          detail={!st.delivery.length ? tr('connect.delivery_empty') : deliveryPending ? tr('connect.delivery_pending') : tr('connect.delivery_done')}
+          error={errs.delivery || st.delivery.find(r => r.status === 'failed')?.error}
+          action={!!st.delivery.length && <Button size="sm" disabled={disabled} onClick={async () => {
+            setBusy('delivery'); setErrs(e => ({ ...e, delivery: '' }))
+            try { await runLocal('deliverysync.sync', { channel_id: st.site!.id }); await load() }
+            catch (e) { setErrs(x => ({ ...x, delivery: (e as Error).message })) }
+            finally { setBusy('') }
+          }}>{busy === 'delivery' ? <Loader2 className="animate-spin" /> : null}{tr('connect.delivery_retry')}</Button>} />}
+
         <Row icon={<Link2 className="size-4" />} title={tr('connect.google')} done={google === true}
           detail={google === null ? tr('connect.google_offline') : google ? tr('connect.google_on') : tr('connect.google_off')} error={errs.google}
           action={google === false && (

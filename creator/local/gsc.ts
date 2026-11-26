@@ -1,3 +1,4 @@
+import { publishSearch, flushReports, metric, deliveryOrigin } from './_delivery_reports'
 import { L } from './_i18n'
 import { profile, projectBrief } from './_ai'
 import { siteBase } from './_site'
@@ -121,16 +122,22 @@ async function syncChannel(ch: Channel, property: string, ctx: any) {
   const prev = { start: ymd(end - (2 * WINDOW - 1) * DAY), end: ymd(end - WINDOW * DAY) }
   const brands = brandTerms(property, profile(ctx).brand_terms)
   ctx.progress({ message: L(ctx, `读取「${ch.name}」的页面数据（${cur.start} ~ ${cur.end}）`, `Reading page data for "${ch.name}" (${cur.start} – ${cur.end})`) })
-  const [now, before, byQuery, byDate] = await Promise.all([
-    query(ctx, property, { ...cur, dimensions: ['page'], rowLimit: 1000 }),
-    query(ctx, property, { ...prev, dimensions: ['page'], rowLimit: 1000 }),
-    query(ctx, property, { ...cur, dimensions: ['query'], rowLimit: 1000 }),
-    query(ctx, property, { start: ymd(end - (HISTORY - 1) * DAY), end: ymd(end), dimensions: ['date'], rowLimit: 1000 }),
+  const reportOrigin = await deliveryOrigin(ctx, ch).catch(() => {
+    const cached = (ctx.db.get('channels', ch.id) as any)?.live_url
+    try { return cached ? new URL(cached).origin : '' } catch { return '' }
+  })
+  const pagePrefix = reportOrigin ? reportOrigin + '/' : undefined
+  const [now, before, byQuery, byDate, totals] = await Promise.all([
+    query(ctx, property, { ...cur, pagePrefix, dimensions: ['page'], rowLimit: 1000 }),
+    query(ctx, property, { ...prev, pagePrefix, dimensions: ['page'], rowLimit: 1000 }),
+    query(ctx, property, { ...cur, pagePrefix, dimensions: ['query'], rowLimit: 1000 }),
+    query(ctx, property, { start: ymd(end - (HISTORY - 1) * DAY), end: ymd(end), dimensions: ['date'], pagePrefix, rowLimit: 1000 }),
+    query(ctx, property, { ...cur, pagePrefix, dimensions: [], rowLimit: 1 }),
   ])
   const prevBy = new Map(before.map((r) => [r.keys[0], r]))
   // 主要搜索词：一次按 page+query 拉，只留曝光前 50 的页面
   const top50 = new Set([...now].sort((a, b) => b.impressions - a.impressions).slice(0, 50).map((r) => r.keys[0]))
-  const pq = top50.size ? await query(ctx, property, { ...cur, dimensions: ['page', 'query'], rowLimit: 5000 }) : []
+  const pq = top50.size ? await query(ctx, property, { ...cur, pagePrefix, dimensions: ['page', 'query'], rowLimit: 5000 }) : []
   const latest: Channel | null = ctx.db.get('channels', ch.id)
   if (!latest || latest.gsc_link_disabled || latest.gsc_property !== property) return { skipped: L(ctx, '网站关联已变更，本次同步未写入数据', 'The site link changed. This sync did not write data.') }
   const queries = new Map<string, Row[]>()
@@ -142,7 +149,14 @@ async function syncChannel(ch: Channel, property: string, ctx: any) {
   const res = writePages(ch, now, prevBy, queries, cur, brands, ctx)
   const days = writeDaily(ch, byDate, ymd(end - (RECENT - 1) * DAY), ctx)
   const topics = writeQueryTopics(byQuery, brands, ctx)
-  return { ...res, days, new_topics: topics }
+  const delivery = await publishSearch(ctx, latest, {
+    property, site_url: reportOrigin, period_start: cur.start, period_end: cur.end, summary: metric(totals[0] || {}),
+    daily: byDate.filter(r => r.keys[0] >= cur.start && r.keys[0] <= cur.end).map(r => ({ date: r.keys[0], ...metric(r) })),
+    pages: now.map(r => ({ url: r.keys[0], ...metric(r), queries: (queries.get(r.keys[0]) || []).slice(0, 10).map(q => ({ query: q.keys[1], ...metric(q) })) })),
+    queries: [...byQuery].sort((a, b) => b.impressions - a.impressions).slice(0, 100).map(r => ({ query: r.keys[0], ...metric(r) })),
+    truncated: now.length >= 1000 || byQuery.length >= 1000,
+  })
+  return { ...res, days, new_topics: topics, delivery }
 }
 
 /** 把一次同步的结果写进 search_pages：有的更新、新的建、不再出现的删掉（改过标题正在复查的保留） */
@@ -244,6 +258,7 @@ export async function sync(input: { channel_id?: string; manual?: boolean }, ctx
   }
   const results: any[] = []
   for (const ch of chs) {
+    await flushReports(ctx, ch)
     const current: Channel | null = ctx.db.get('channels', ch.id)
     if (!current || current.gsc_link_disabled) continue
     const property = await resolveProperty(current, ctx, props)

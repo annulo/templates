@@ -49,6 +49,7 @@ export function status(input: { channel_id?: string }, ctx: any) {
       clicks: pages.reduce((n, p) => n + (Number(p.clicks) || 0), 0),
       impressions: pages.reduce((n, p) => n + (Number(p.impressions) || 0), 0),
     } : null,
+    delivery: site.type === 'creght_site' ? rows(ctx, 'delivery_sync', { channel_id: site.id }).map((r: any) => ({ kind: String(r.key || '').split(':')[1] || '', status: r.status, synced_at: r.synced_at || '', error: r.error || '' })) : null,
     ga4: { property: site.ga4_property ?? '' },
     geo: { engines, last: runs[0] ? { at: runs[0].finished_at, visibility: runs[0].visibility ?? null, questions: runs[0].questions ?? 0 } : null },
   }
