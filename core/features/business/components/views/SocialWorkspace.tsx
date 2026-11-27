@@ -97,7 +97,7 @@ type Props = {
 }
 
 export default function SocialWorkspace({ ctx, data, entries, params, setParam, reload, detail, openEntry, tools, onAssign }: Props) {
-  const [tab, setTab] = useState<Tab>('drafts')
+  const [tab, setTab] = useState<Tab>(params.tab === 'posted' || params.status === 'published' ? 'posted' : 'drafts')
   // 「已发布」按来源筛：全部 / 从 Annulo 发的 / 平台上直接发的（采集时发现的，没有出处）
   const [src, setSrc] = useState<'' | 'annulo' | 'platform'>('')
   const [query, setQuery] = useState('')
@@ -289,7 +289,7 @@ export default function SocialWorkspace({ ctx, data, entries, params, setParam, 
       </div>}
       {selected && mode === 'edit' && <SocialEditor key={selected.id} fallback={quickIds} ctx={ctx} a={selected} posts={selectedPosts} pubs={data.publications.filter((p) => p.article_id === selected.id)}
         onChanged={reload} onDeleted={() => { setParam('article', ''); reload() }} data={data} onFull={() => setFull(selected.id)} />}
-      {selected && mode === 'posted' && <PostedView key={selected.id} ctx={ctx} a={selected} posts={selectedPosts} data={data} order={targetsOf(selected)} onChanged={reload}
+      {selected && mode === 'posted' && <PostedView key={selected.id} ctx={ctx} a={selected} posts={selectedPosts} data={data} order={targetsOf(selected)} focus={params.version} onChanged={reload}
         onCopy={async () => { const r = await runLocal<{ article_id: string }>('convert.copy', { article_id: selected.id }); reload(); setTab('drafts'); setParam('article', r.article_id); toast(s('copied')) }}
         menu={<RowMore items={[{ label: s('full_detail'), icon: <Layers className="size-4" />, onSelect: () => setFull(selected.id) }]} />} />}
       {selected && mode === 'full' && <div className="px-6 py-5">
