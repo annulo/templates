@@ -1,3 +1,7 @@
+- version: 0.48.2
+  zh: "修正帖子预览的检查提示，按当前平台显示名称。"
+  en: "Show the current platform in post-preview check messages."
+
 - version: 0.48.1
   zh: "社媒列表中的已发布帖子统一弹窗预览，可快捷跳转到对应的已发布记录。"
   en: "Preview published posts in a dialog from social lists, with a shortcut to their Posted records."

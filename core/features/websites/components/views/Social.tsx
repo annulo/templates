@@ -800,7 +800,7 @@ function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReje
                 <Loader2 className="size-3.5 animate-spin" /> {tr('social.checking')}
               </div>
             ) : problems.length === 0 ? (
-              <div className="text-xs text-ok">{pf.cover ? tr('social.ok_xhs') : tr('social.ok_x')}</div>
+              <div className="text-xs text-ok">{pf.cover ? tr('social.ok_xhs') : tr('social.ok_platform', { platform: pf.label })}</div>
             ) : (
               <ul className="list-disc space-y-1 pl-4 text-xs text-destructive">
                 {problems.map((x) => (

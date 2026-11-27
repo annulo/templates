@@ -898,7 +898,7 @@
     "spec_tags": "话题 {n}/{max}",
     "checking": "检查中…",
     "ok_xhs": "没发现问题：没有站外链接、没有引导加微信、没有广告法绝对化用语。",
-    "ok_x": "没发现问题：字数、话题、配图都在 X 的限制内。",
+    "ok_platform": "{platform} 发布检查未发现问题。",
     "images_count": "{n} 张配图",
     "no_images_cover": "没有配图：发布时用左边这张文字封面",
     "no_images": "没有配图，只发文字",

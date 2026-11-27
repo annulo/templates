@@ -898,7 +898,7 @@
     "spec_tags": "Hashtags {n}/{max}",
     "checking": "Checking…",
     "ok_xhs": "No issues: no external links, no prompts to add WeChat, no banned absolute claims.",
-    "ok_x": "No issues: length, hashtags and images are within X's limits.",
+    "ok_platform": "No issues found by the {platform} publishing checks.",
     "images_count": "{n} images",
     "no_images_cover": "No images: the text cover on the left is used",
     "no_images": "No images, text only",
