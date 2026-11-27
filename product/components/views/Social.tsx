@@ -6,6 +6,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, HardDrive, Loader2, Pencil, Plus, RefreshCw, Send, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import RunButton from '../RunButton'
 import FacebookPublishRecovery from '../FacebookPublishRecovery'
+import FacebookPostActions, { facebookPostActions } from '../FacebookPostActions'
 import { facebookPublishRecovery } from '../../lib/facebookPublishRecovery'
 import { FacebookConnectionButton } from '../FacebookAccountFlow'
 import VideoField from '../VideoField'
@@ -523,11 +524,12 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
               <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
                 {tr('social.open_post', { noun: pf.noun })} <ArrowUpRight className="size-4" />
               </a>
-              <RunButton inline onError={setErr} fn="social/social.remove" input={{ post_id: p.id }} icon={Trash2} variant="ghost" onDone={onChanged}>
+              {!facebookPostActions(p, owner) && <RunButton inline onError={setErr} fn="social/social.remove" input={{ post_id: p.id }} icon={Trash2} variant="ghost" onDone={onChanged}>
                 {tr('social.delete_from', { p: pf.label })}
-              </RunButton>
+              </RunButton>}
             </>
           )}
+          <FacebookPostActions post={p} channel={owner} onChanged={onChanged} disabled={busy} />
         </div>
       </div>
       <PreviewDialog
@@ -540,6 +542,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
         onApprove={async () => { await patch({ status: 'approved' }); setPreviewing(false) }}
         onReject={async () => { await patch({ status: 'rejected' }); setPreviewing(false) }}
         onEdit={() => { setPreviewing(false); setEditing(true) }}
+        onChanged={onChanged}
       />
       <EditDialog open={editing} p={p} pf={pf} onClose={() => setEditing(false)} onSave={async (d) => { await patch({ ...d, status: 'pending_review' }); setEditing(false) }} />
     </div>
@@ -696,7 +699,7 @@ export function TextCover({ text, className }: { text: string; className?: strin
 }
 
 /** 预览：小红书按笔记页、X 按推文的样子排出来，旁边是规格检查（和发布时同一个检查，social.check）和审核按钮 */
-function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReject, onEdit }: {
+function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReject, onEdit, onChanged }: {
   open: boolean
   p: SocialPost
   pf: SocialPlatform
@@ -706,6 +709,7 @@ function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReje
   onApprove: () => Promise<void>
   onReject: () => Promise<void>
   onEdit: () => void
+  onChanged: () => void
 }) {
   const images = parse<string[]>(p.images, [])
   const tags = parse<string[]>(p.tags, [])
@@ -816,10 +820,11 @@ function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReje
                 {tr('social.approve')}
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={onEdit}>
+            {!['published', 'publishing', 'removed'].includes(p.status) && <Button size="sm" variant="outline" onClick={onEdit}>
               <Pencil />
               {tr('social.edit')}
-            </Button>
+            </Button>}
+            <FacebookPostActions post={p} channel={owner} onChanged={onChanged} disabled={busy} />
             {pending && (
               <Button size="sm" variant="ghost" onClick={() => act(onReject)} disabled={busy}>
                 <X />

@@ -46,3 +46,10 @@
   「复用」复制成一条新草稿（`content-workspace.reusePost`，发到原来的账号，不关联原帖子）；「让 AI 照这条再写一条」复制后交给 `revise-article` 重写；「并入内容」在「更多」里（`?adopt=<帖子 id>` 打开原来的 `AdoptPostDialog`）。
 - 采集时社媒插件先按 id、再按文字和时间把平台帖子对回 Annulo 发出去、没记上 id 的那条（`plugins/social/local/_snapshot.ts` 的 `matchUnlinked`：文字一样，或相似度 ≥ 0.85 且发布时间相差 3 天内；显示失败、卡在发布中其实发出去的也认），对上就不再算「平台上发的」。X、Instagram、Threads、LinkedIn、Facebook 用它。
 - **没有归属的内容**不单独一栏：放在列表里（自媒体在「草稿」），行上一个「选发到哪」，点开是原来的确认归属。源头上 `topics.save` 必须带 `workspace`（geo、competitor 来源自动是 website）；读的时候来源是 search / keyword / geo / competitor 的、记了搜索关键词的选题归网站（`lib/contentWorkspace.ts` 的 `recordWorkspaces`）。
+
+
+## 已发布 Facebook 原帖管理（2026-11-27）
+
+官方 API 连接的 Facebook 公共主页，在 `SentContent`、文章发布记录和社媒帖子预览共用 `FacebookPostActions`：编辑正文与话题调 `social/social.edit`，独立编辑弹窗不自动保存，点击「保存到 Facebook」才执行。原文章、图片、发布时间与互动数据保留。Facebook 仅允许应用编辑同应用创建的帖子，弹窗中说明此限制。
+
+已发布内容页和数据页的删除先核对账号、正文，再确认 `social/social.remove`。等待期间不允许重复操作或关闭弹窗；失败显示原因并保留输入，成功刷新记录。已发布预览不再提供只修改本机记录的草稿编辑入口。模板最低 social 版本为 0.16.0，无需 Annulo 新原语。
