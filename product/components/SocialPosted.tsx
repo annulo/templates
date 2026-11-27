@@ -139,14 +139,14 @@ export function SentContent({ ctx, post, data, onChanged, hint = true }: { ctx: 
  * 已发布：只读，和草稿同一个版式。账号页签（每个账号发出去的那一版），状态栏，数据，正文和媒体；右栏是各账号的发布记录。
  * 改文案、换图走「复制再发一条」
  */
-export function PostedView({ ctx, a, posts, data, order, onChanged, onCopy, menu }: { ctx: Ctx; a: Article; posts: Post[]; data: ContentData; order: string[]; onChanged: () => void; onCopy: () => Promise<void>; menu: React.ReactNode }) {
+export function PostedView({ ctx, a, posts, data, order, focus, onChanged, onCopy, menu }: { ctx: Ctx; a: Article; posts: Post[]; data: ContentData; order: string[]; focus?: string; onChanged: () => void; onCopy: () => Promise<void>; menu: React.ReactNode }) {
   const groups = postsByChannel(posts, order)
-  const [active, setActive] = useState(groups.find((g) => g.posts.some((p) => p.status === 'published'))?.id || groups[0]?.id || '')
+  const [active, setActive] = useState(groups.find((g) => g.posts.some((p) => p.id === focus))?.id || groups.find((g) => g.posts.some((p) => p.status === 'published'))?.id || groups[0]?.id || '')
   const [busy, setBusy] = useState(false)
   const queue = usePublishQueue()
   const group = groups.find((g) => g.id === active) || groups[0]
   const ch = ctx.channels.find((c) => c.id === group?.id)
-  const post = group?.posts.find((p) => p.status === 'published') || group?.posts[0]
+  const post = group?.posts.find((p) => p.id === focus) || group?.posts.find((p) => p.status === 'published') || group?.posts[0]
   const failed = posts.filter((p) => p.status === 'failed' && !queue.some((j) => j.key === `${p.article_id}:${p.channel_id}` || j.key === p.id))
   const first = groups.flatMap((g) => g.posts).filter((p) => p.status === 'published').map((p) => String(p.published_at)).sort()[0]
   const nameOf = (id: string) => ctx.channels.find((c) => c.id === id)?.name ?? tr('content.removed_channel')
