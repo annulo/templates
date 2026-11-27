@@ -122,7 +122,9 @@ export default function Social({ ctx, params, setParam, title, hideTabs = false,
   const openSection = (next: Section, extra: Record<string, string> = {}) => onSectionChange ? onSectionChange(next, extra) : ctx.go('social', { section: next, ...extra })
   const manage = () => ctx.go('channels', selected ? { channel: selected.id } : {})
   const focused = owned.find((p) => p.id === params.post)
-  const openPost = (p: SocialPost) => p.article_id ? ctx.go('content', { article: p.article_id, version: p.id }) : setParam('post', p.id)
+  const openPost = (p: SocialPost) => setParam('post', p.id)
+  const openPosted = (p: SocialPost) => ctx.go('content', { workspace: 'social', status: 'published', tab: 'posted', account: p.channel_id,
+    ...(p.article_id && articles.some(a => a.id === p.article_id) ? { article: p.article_id, version: p.id } : { post: p.id }) })
   const tableHead = 'px-4 py-2.5 text-left text-xs font-medium text-muted-foreground'
   const tableCell = 'px-4 py-3 text-sm'
   const num = 'px-4 py-3 text-right text-sm tabular-nums'
@@ -215,7 +217,7 @@ export default function Social({ ctx, params, setParam, title, hideTabs = false,
         <SocialOverview key={`${selected.id}:${selected.collected_at ?? ''}:${ctx.rev}`} channel={selected} days={days} />
         <AllPosts key={selected.id} ch={selected} days={days} posts={posts === null ? null : owned.filter((p) => p.channel_id === selected.id && p.status === 'published')} onOpen={openPost} />
       </> : null}
-      {focused && <div className="rounded-lg border border-border bg-background"><div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2"><span className="text-sm font-semibold">{tr('social.view_content')}</span><Button variant="ghost" size="sm" onClick={() => setParam('post', '')}><X />{tr('common.close')}</Button></div><PostRow key={focused.id} p={focused} owner={accounts.find((a) => a.id === focused.channel_id)} showAccount articles={articles} onChanged={onChanged} focus onUnfocus={() => setParam('post', '')} /></div>}
+      {focused && <div className="rounded-lg border border-border bg-background"><div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2"><span className="text-sm font-semibold">{tr('social.view_content')}</span><Button variant="ghost" size="sm" onClick={() => setParam('post', '')}><X />{tr('common.close')}</Button></div><PostRow key={focused.id} p={focused} owner={accounts.find((a) => a.id === focused.channel_id)} showAccount articles={articles} onChanged={onChanged} onPosted={() => openPosted(focused)} focus onUnfocus={() => setParam('post', '')} /></div>}
     </div>
   </div>
 }
@@ -364,7 +366,7 @@ function Account({ ch, other, health, selected, onSelect, onDone }: { ch: Channe
   )
 }
 
-function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus }: { p: SocialPost; owner?: Channel; showAccount: boolean; articles: Article[]; onChanged: () => void; focus?: boolean; onUnfocus?: () => void }) {
+function PostRow({ p, owner, showAccount, articles, onChanged, onPosted, focus, onUnfocus }: { p: SocialPost; owner?: Channel; showAccount: boolean; articles: Article[]; onChanged: () => void; onPosted: () => void; focus?: boolean; onUnfocus?: () => void }) {
   const account = showAccount ? owner : undefined
   // B 站的专栏（图文、长文）和视频投稿字段不一样：按这一条换（postPlatform）
   const pf = postPlatform(platformOf(owner) ?? Object.values(SOCIAL)[0]!, owner?.type, p)
@@ -543,6 +545,7 @@ function PostRow({ p, owner, showAccount, articles, onChanged, focus, onUnfocus 
         onReject={async () => { await patch({ status: 'rejected' }); setPreviewing(false) }}
         onEdit={() => { setPreviewing(false); setEditing(true) }}
         onChanged={onChanged}
+        onPosted={onPosted}
       />
       <EditDialog open={editing} p={p} pf={pf} onClose={() => setEditing(false)} onSave={async (d) => { await patch({ ...d, status: 'pending_review' }); setEditing(false) }} />
     </div>
@@ -699,7 +702,7 @@ export function TextCover({ text, className }: { text: string; className?: strin
 }
 
 /** 预览：小红书按笔记页、X 按推文的样子排出来，旁边是规格检查（和发布时同一个检查，social.check）和审核按钮 */
-function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReject, onEdit, onChanged }: {
+function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReject, onEdit, onChanged, onPosted }: {
   open: boolean
   p: SocialPost
   pf: SocialPlatform
@@ -710,6 +713,7 @@ function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReje
   onReject: () => Promise<void>
   onEdit: () => void
   onChanged: () => void
+  onPosted: () => void
 }) {
   const images = parse<string[]>(p.images, [])
   const tags = parse<string[]>(p.tags, [])
@@ -736,7 +740,10 @@ function PreviewDialog({ open, p, pf, owner, article, onClose, onApprove, onReje
   const pending = p.status === 'pending_review'
 
   return (
-    <Dialog open={open} onClose={onClose} title={tr('social.preview_title', { noun: pf.noun })} width={820}>
+    <Dialog open={open} onClose={onClose} title={tr('social.preview_title', { noun: pf.noun })} width={820} footer={<>
+      <Button variant="ghost" feedback={false} onClick={onClose}>{tr('common.close')}</Button>
+      {p.status === 'published' && <Button variant="outline" feedback={false} onClick={onPosted}><ArrowUpRight />{tr('published_post.view_posted')}</Button>}
+    </>}>
       <div className="flex flex-col gap-6 md:flex-row">
         {isVideoPost(pf, p) ? (
           <VideoCard p={p} owner={owner} tags={tags} />
