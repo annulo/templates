@@ -1,3 +1,7 @@
+- version: 0.48.3
+  zh: "明确账号发布状态指通过 Annulo 发布，避免与采集到的已有帖子混淆。"
+  en: "Clarify that account publishing status refers to publishing via Annulo, separately from collected posts."
+
 - version: 0.48.2
   zh: "修正帖子预览的检查提示，按当前平台显示名称。"
   en: "Show the current platform in post-preview check messages."
