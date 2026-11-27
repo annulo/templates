@@ -67,7 +67,7 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
       const next = selectAuthorization(c?.accounts || [], preferred || accountRef.current, exact)
       accountRef.current = next; setAccount(next)
       if (started.current && ((!c?.pending && Date.now() - started.current > 1000) || Date.now() - started.current > 10 * 60_000)) { started.current = 0; setAuthURL('') }
-      if (!c?.available || c.pending || !next) {
+      if (!c?.available || !next) {
         if (exact && c?.available && !c.pending && !next) throw new Error(tr('social_authorization.source_missing'))
         return
       }
@@ -196,7 +196,7 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
           </button></li>)}
         </ul>}
         {!loading && ready && !resources.length && !error && <Notice>{tr('social_authorization.empty_' + provider)}</Notice>}
-        <Button variant="ghost" className="-ml-3 text-primary" disabled={busy || pending} feedback={false} onClick={authorize}><Plus />{tr(target || (active && !ready) ? 'account_authorization.reconnect' : 'social_authorization.another')}</Button>
+        <Button variant="ghost" className="-ml-3 text-primary" disabled={saving} feedback={false} onClick={authorize}><Plus />{tr(target || (active && !ready) ? 'account_authorization.reconnect' : 'social_authorization.another')}</Button>
         {provider !== 'facebook' && <details className="border-t border-border pt-4">
           <summary className="flex cursor-pointer list-none items-center gap-2 font-medium"><Image className="size-4" /><span className="flex-1">{tr('social_authorization.host')}</span><ChevronDown className="size-4 text-muted-foreground" /></summary>
           <div className="mt-3 space-y-2"><Select value={host} onChange={setHost} options={[{ value: '', label: tr('social_authorization.public_only') }, ...sites.map(c => ({ value: hostOf(c), label: c.name }))]} /><p className="text-xs leading-relaxed text-muted-foreground">{tr('social_authorization.host_hint', { platform: label })}</p></div>
@@ -223,7 +223,7 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
     </div>
     <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-6 py-4">
       {step === 2 || onBack ? <Button variant="outline" disabled={saving} onClick={() => { if (step === 2) { setStep(1); setError('') } else onBack?.() }}>{tr('social_authorization.back')}</Button> : <span />}
-      <Button needsShuttle={step === 2} disabled={step === 2 && (busy || !connection?.available || !ready || !selected.length || !!error || pending)} feedback={false} onClick={step === 1 ? authorize : bind}>
+      <Button needsShuttle={step === 2} disabled={step === 2 && (busy || !connection?.available || !ready || !selected.length || !!error)} feedback={false} onClick={step === 1 ? authorize : bind}>
         {saving && <Loader2 className="size-4 animate-spin" />}{tr(step === 1 ? 'social_authorization.continue' : target ? 'social_authorization.save' : 'social_authorization.add')}{step === 2 && selected.length > 1 ? `（${selected.length}）` : ''}
       </Button>
     </div>

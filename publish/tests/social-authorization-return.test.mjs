@@ -68,6 +68,25 @@ test('Threads reuses its existing official row when retrying', async () => {
   assert.equal(h.writes[1].input.channel_id, 'threads-row')
   assert.equal(h.state.channels.length, 1)
 })
+test('an older pending authorization does not block the exact completed grant', async () => {
+  for (const provider of ['facebook', 'instagram', 'threads']) {
+    const h = harness()
+    h.state.connections.find(c => c.key === provider).pending = true
+    await h.bind(provider)
+    assert.ok(h.writes.length > 0)
+  }
+})
+test('pending authorization never permits a missing or invalid returned account', async () => {
+  for (const accounts of [[{ account: 'old' }], [{ account: 'new', needs_reconnect: true }], [{ account: 'new', missing_scopes: ['required'] }]]) {
+    const h = harness()
+    const connection = h.state.connections.find(c => c.key === 'facebook')
+    connection.pending = true
+    connection.accounts = accounts
+    await assert.rejects(h.bind('facebook'), /source_missing/)
+    assert.equal(h.writes.length, 0)
+    assert.equal(h.reads.length, 0)
+  }
+})
 test('missing, expired or cancelled returned grants never fall back to another authorization', async () => {
   for (const change of [
     h => { h.state.connections[0].accounts = [{ account: 'old' }] },

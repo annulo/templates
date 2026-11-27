@@ -1,3 +1,7 @@
+- version: 0.47.2
+  zh: "修复重复发起社媒授权后，已成功授权的账号仍提示不可用、无法添加的问题。"
+  en: "Fix completed social authorizations being blocked by older pending authorization requests."
+
 - version: 0.47.1
   zh: "社媒“继续授权”按钮始终可点击，关闭授权页面或等待授权时也能重试。"
   en: "Keep Continue to authorization clickable so authorization can be retried after closing the browser page or while waiting."
