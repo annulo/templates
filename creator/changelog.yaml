@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.35.2
+  zh: "修正帖子预览的检查提示，按当前平台显示名称。"
+  en: "Show the current platform in post-preview check messages."
+
 - version: 0.35.1
   zh: "社媒列表中的已发布帖子统一弹窗预览，可快捷跳转到对应的已发布记录。"
   en: "Preview published posts in a dialog from social lists, with a shortcut to their Posted records."
