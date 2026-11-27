@@ -9,7 +9,9 @@ import { tr } from './i18n'
 export async function bindReturnedAuthorization(result: OAuthReturn, stillActive: () => boolean) {
   const { provider, account } = result
   const connection = (await listOAuthConnections()).find(c => c.key === provider)
-  if (result.status !== 'connected' || !account || !connection?.available || connection.pending || !authorizationReady(connection.accounts.find(a => a.account === account))) {
+  // pending is provider-wide: an older, abandoned authorization may still be open.
+  // Only the exact returned account determines whether this grant can be used.
+  if (result.status !== 'connected' || !account || !connection?.available || !authorizationReady(connection.accounts.find(a => a.account === account))) {
     throw new Error(tr('social_authorization.source_missing'))
   }
   const channels = (await listChannels()).list as AuthorizationChannel[]
