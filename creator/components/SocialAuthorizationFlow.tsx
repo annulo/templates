@@ -113,7 +113,7 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
       const { auth_url } = await startProjectOAuth(provider, { channelId: target?.id, mediaHost: host })
       started.current = Date.now(); setAuthURL(auth_url)
       await openExternalURL(auth_url)
-      await load()
+      void load()
     } catch (e) { setError((e as Error).message) }
     finally { savingRef.current = false; setSaving(false) }
   }
@@ -223,7 +223,7 @@ export default function SocialAuthorizationFlow({ provider, channel, onAdded, on
     </div>
     <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-6 py-4">
       {step === 2 || onBack ? <Button variant="outline" disabled={saving} onClick={() => { if (step === 2) { setStep(1); setError('') } else onBack?.() }}>{tr('social_authorization.back')}</Button> : <span />}
-      <Button needsShuttle disabled={busy || !connection?.available || (step === 2 && (!ready || !selected.length || !!error || pending)) || (step === 1 && pending)} feedback={false} onClick={step === 1 ? authorize : bind}>
+      <Button needsShuttle={step === 2} disabled={step === 2 && (busy || !connection?.available || !ready || !selected.length || !!error || pending)} feedback={false} onClick={step === 1 ? authorize : bind}>
         {saving && <Loader2 className="size-4 animate-spin" />}{tr(step === 1 ? 'social_authorization.continue' : target ? 'social_authorization.save' : 'social_authorization.add')}{step === 2 && selected.length > 1 ? `（${selected.length}）` : ''}
       </Button>
     </div>

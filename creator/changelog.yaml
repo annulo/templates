@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.34.1
+  zh: "社媒“继续授权”按钮始终可点击，关闭授权页面或等待授权时也能重试。"
+  en: "Keep Continue to authorization clickable so authorization can be retried after closing the browser page or while waiting."
+
 - version: 0.34.0
   zh: "Threads 支持最多 20 个图片和视频混排发布，修复授权弹窗中素材库菜单溢出。"
   en: "Publish up to 20 images and videos together on Threads. Asset-library menus now stay inside authorization dialogs."
