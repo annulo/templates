@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.34.3
+  zh: "账号数据中的“看原帖”改为使用系统默认浏览器打开。"
+  en: "Open View post links in account performance using the system default browser."
+
 - version: 0.34.2
   zh: "修复重复发起社媒授权后，已成功授权的账号仍提示不可用、无法添加的问题。"
   en: "Fix completed social authorizations being blocked by older pending authorization requests."
