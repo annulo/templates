@@ -4,6 +4,7 @@ import { instagramApi } from './InstagramAccountFlow'
 import { metricText } from '../lib/apiMetrics'
 import { facebookPublishRecovery } from '../lib/facebookPublishRecovery'
 import FacebookPublishRecovery from './FacebookPublishRecovery'
+import FacebookPostActions from './FacebookPostActions'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle, ArrowUpRight, Bookmark, Eye, Film, Heart, Loader2, MessageCircle, RefreshCw, Send, Share2, Trash2 } from 'lucide-react'
 import RunButton from './RunButton'
@@ -321,6 +322,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
             </span>
             {p.post_url && p.status === 'published' && <a href={p.post_url} target="_blank" rel="noreferrer" aria-label={tr('content.view_live')} title={tr('content.view_live')} className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text"><span className="hidden sm:inline">{tr('content.view_live')}</span><ArrowUpRight className="size-4 sm:size-3" /></a>}
             {jobOf(p.id) ? <Badge tone="primary">{jobOf(p.id)!.state === 'running' ? tr('meta.social_status.publishing') : tr('article.pub_queued')}</Badge> : <Badge tone={statusTone(p.status)}>{tr(`meta.social_status.${p.status}`)}</Badge>}
+            <FacebookPostActions post={p} channel={ch} onChanged={onChanged} disabled={!!busy || !!jobOf(p.id)} remove={false} />
             {p.status === 'published' && !jobOf(p.id) && ch && (
               <DeleteMenu label={CHANNEL_TYPES[ch.type]?.label ?? ''} busy={busy === 'remove' + p.id} disabled={!!busy}
                 onRemote={instagramApi(ch) ? undefined : () => act('remove' + p.id, () => runLocal('social/social.remove', { post_id: p.id }))}

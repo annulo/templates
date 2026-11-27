@@ -1,3 +1,7 @@
+- version: 0.48.0
+  zh: "Facebook 已发布帖子可直接修改正文和话题；删除前可核对确认，平台成功后再同步本地记录。"
+  en: "Edit published Facebook captions and hashtags, and confirm post deletion before updating local records after Facebook succeeds."
+
 - version: 0.47.3
   zh: "账号数据中的“看原帖”改为使用系统默认浏览器打开。"
   en: "Open View post links in account performance using the system default browser."

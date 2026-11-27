@@ -1,4 +1,18 @@
 {
+  "published_post": {
+    "edit": "Edit Facebook post",
+    "delete": "Delete from Facebook",
+    "save": "Save to Facebook",
+    "confirm_delete": "Confirm deletion from Facebook",
+    "edited": "Facebook post updated",
+    "removed": "Facebook post deleted",
+    "body": "Text",
+    "tags": "Hashtags",
+    "tags_hint": "Separate with spaces, up to 5.",
+    "too_many_tags": "Use up to 5 hashtags.",
+    "edit_hint": "Changes update the original Facebook post’s text and hashtags, keeping its images and engagement. Facebook only lets an app edit posts created using that app.",
+    "delete_hint": "This deletes the original post on Facebook and marks its local record as removed. Check the account and post before confirming."
+  },
   "instagram_managed": {
     "label": "Official sign-in",
     "description": "Authorize an Instagram professional account in your browser, then return to this project to finish adding it. Choose an asset if several are available. No access token copying is needed.",

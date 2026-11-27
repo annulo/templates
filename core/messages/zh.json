@@ -1,4 +1,18 @@
 {
+  "published_post": {
+    "edit": "编辑 Facebook 原帖",
+    "delete": "从 Facebook 删除",
+    "save": "保存到 Facebook",
+    "confirm_delete": "确认从 Facebook 删除",
+    "edited": "Facebook 原帖已更新",
+    "removed": "Facebook 帖子已删除",
+    "body": "正文",
+    "tags": "话题",
+    "tags_hint": "用空格分隔，最多 5 个。",
+    "too_many_tags": "最多填写 5 个话题。",
+    "edit_hint": "修改会同步到 Facebook 原帖，仅更新正文和话题，保留图片与互动数据。Facebook 仅允许本应用编辑由本应用创建的帖子。",
+    "delete_hint": "这会删除 Facebook 上的原帖，并将本地发布记录标为已删除。请确认当前账号及要删除的帖子。"
+  },
   "instagram_managed": {
     "label": "官方授权",
     "description": "在浏览器中授权 Instagram 专业账号，返回本项目后继续添加；有多个资产时请选择。无需复制访问口令。",

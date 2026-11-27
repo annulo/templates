@@ -1132,6 +1132,7 @@
   "health": {
     "broken": "{platform}「{name}」的{op}流程走不通了：平台可能改了页面",
     "when": "{when} · 连续 {n} 次",
+    "op_edit": "编辑",
     "op_publish": "发布",
     "op_remove": "删除",
     "op_collect": "采集",

@@ -1245,6 +1245,7 @@
   "health": {
     "broken": "{op} for {platform} account \"{name}\" isn't working: the platform may have changed its page",
     "when": "{when} · {n} in a row",
+    "op_edit": "Editing",
     "op_publish": "Publishing",
     "op_remove": "Deleting",
     "op_collect": "Collecting",

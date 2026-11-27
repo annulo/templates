@@ -8,6 +8,7 @@ import { CHANNEL_TYPES } from '../lib/channels'
 import { enqueue, usePublishQueue } from '../lib/publishQueue'
 import InstagramPublishRecovery from './InstagramPublishRecovery'
 import FacebookPublishRecovery from './FacebookPublishRecovery'
+import FacebookPostActions, { facebookPostActions } from './FacebookPostActions'
 import { instagramPublishRecovery } from '../lib/instagramPublishRecovery'
 import { facebookPublishRecovery } from '../lib/facebookPublishRecovery'
 import { fileSrc } from '../lib/files'
@@ -105,7 +106,8 @@ export function SentContent({ ctx, post, data, onChanged, hint = true }: { ctx: 
   return <>
     {published
       ? <Bar tone="ok"><Check className="size-4 shrink-0" /><b className="shrink-0">{s('st_published', { name: ch ? CHANNEL_TYPES[ch.type]?.label : '' })}</b><span>{fmtTime(post.published_at)}</span>
-        <span className="ml-auto flex items-center gap-2">
+        <span className="ml-auto flex flex-wrap items-center gap-2">
+          <FacebookPostActions key={post.id} post={post as any} channel={ch} onChanged={onChanged} />
           {post.post_url && <a href={post.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary-text hover:underline">{s('open_post')}<ArrowUpRight className="size-3" /></a>}
           <RunButton inline watch fn="social/social.collect" input={{ channel_id: post.channel_id }} icon={RefreshCw} variant="outline" size="sm" onDone={(r) => { const note = (r as any)?.channels?.find((c: any) => c?.note)?.note; if (note) toast(note, 'ok', { ms: 10000 }); onChanged() }}>{s('refresh_data')}</RunButton></span></Bar>
       : <Bar tone={post.status === 'failed' ? 'bad' : 'info'}><span>{s('st_not_published', { name: nameOf(post.channel_id) })}</span></Bar>}
@@ -128,7 +130,7 @@ export function SentContent({ ctx, post, data, onChanged, hint = true }: { ctx: 
           </div>
         </div>
       </div>
-      {hint && <p className="mt-6 text-xs text-muted-foreground">{s('readonly_hint')}</p>}
+      {hint && <p className="mt-6 text-xs text-muted-foreground">{facebookPostActions(post as any, ch) ? tr('published_post.edit_hint') : s('readonly_hint')}</p>}
     </div>
   </>
 }
