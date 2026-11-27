@@ -1,3 +1,4 @@
+import PlatformLink from './PlatformLink'
 // 内容的状态标签和「状态与发布链接」弹窗（网站、自媒体两个工作区共用；外贸和产品运营共用的 business 模块）
 import { useState } from 'react'
 import { ExternalLink, Link2, Pencil, Plus, Trash2 } from 'lucide-react'
@@ -55,7 +56,7 @@ function StatusDialog({ entry, workspace, onChanged, onClose }: Props & { onClos
           {(records.length > 0 || links.length > 0) && <Button size="sm" variant="ghost" disabled={busy || links.length >= MAX_LINKS} onClick={() => setLinks([...links, ''])}><Plus />{w('add_link')}</Button>}
         </div>
         {records.map(url => <div key={url} className="flex min-w-0 items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
-          <a href={url} target="_blank" rel="noreferrer" title={url} className="min-w-0 flex-1 truncate text-primary-text hover:underline">{url}</a>
+          <PlatformLink href={url} title={url} className="min-w-0 flex-1 truncate text-primary-text hover:underline">{url}</PlatformLink>
           <Badge>{w('from_records')}</Badge>
         </div>)}
         {links.map((value, i) => <div key={i} className="flex items-center gap-2">
@@ -103,9 +104,9 @@ export function PublicationLinks({ entry, workspace, onChanged, recordsShown = f
       <p className="text-xs font-medium text-muted-foreground">{w(recordsShown ? 'linked_publications' : 'publication_links')}</p>
       <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>{urls.length ? <><Pencil />{w('edit_links')}</> : <><Plus />{w('add_link')}</>}</Button>
     </div>
-    {urls.length ? urls.map(url => <a key={url} href={url} target="_blank" rel="noreferrer" className="flex items-start gap-1.5 break-all text-xs text-primary-text hover:underline">
+    {urls.length ? urls.map(url => <PlatformLink key={url} href={url} className="flex items-start gap-1.5 break-all text-xs text-primary-text hover:underline">
       <ExternalLink className="mt-0.5 size-3 shrink-0" /><span>{url}</span>
-    </a>) : <p className="text-xs text-muted-foreground">{w(recordsShown ? 'links_empty_manual' : 'links_empty')}</p>}
+    </PlatformLink>) : <p className="text-xs text-muted-foreground">{w(recordsShown ? 'links_empty_manual' : 'links_empty')}</p>}
     {open && <StatusDialog entry={entry} workspace={workspace} onChanged={onChanged} onClose={() => setOpen(false)} />}
   </div>
 }
@@ -114,10 +115,10 @@ export function PublicationLinks({ entry, workspace, onChanged, recordsShown = f
 export function LinkChips({ urls }: { urls: string[] }) {
   if (!urls.length) return null
   return <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
-    {urls.slice(0, 2).map(url => <a key={url} href={url} target="_blank" rel="noreferrer" title={url}
+    {urls.slice(0, 2).map(url => <PlatformLink key={url} href={url} title={url}
       className="inline-flex max-w-56 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-primary-text hover:bg-accent">
       <Link2 className="size-3 shrink-0" /><span className="truncate">{shortUrl(url)}</span>
-    </a>)}
+    </PlatformLink>)}
     {urls.length > 2 && <span>+{urls.length - 2}</span>}
   </span>
 }

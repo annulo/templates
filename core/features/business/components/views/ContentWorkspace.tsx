@@ -1,3 +1,4 @@
+import PlatformLink from '../PlatformLink'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ArrowUpRight, ClipboardList, Link2, Loader, NotebookPen, Plus, Search as SearchIcon, Sparkles } from 'lucide-react'
 import { ArticleDetail, RowMore, removeArticle } from './Content'
@@ -361,7 +362,7 @@ function AdoptPostDialog({ entry, metrics, account, articles, onClose, onDone }:
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <StageBadge stage={entry.stage} /><span>{account}</span>
         {p.published_at && <span>{new Date(p.published_at).toLocaleString(isEn() ? 'en' : 'zh-CN')}</span>}
-        {entry.publicationUrls[0] && <a href={entry.publicationUrls[0]} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 hover:text-primary-text">{w('open_on_platform')}<ArrowUpRight className="size-3.5" /></a>}
+        {entry.publicationUrls[0] && <PlatformLink href={entry.publicationUrls[0]} className="inline-flex items-center gap-0.5 hover:text-primary-text">{w('open_on_platform')}<ArrowUpRight className="size-3.5" /></PlatformLink>}
       </div>
       <MetricsLine m={metrics} />
       {p.body && <p className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-lg bg-muted/50 p-3 text-sm">{p.body}</p>}
