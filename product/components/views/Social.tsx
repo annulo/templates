@@ -16,7 +16,7 @@ import WorkspaceTabs from '../WorkspaceTabs'
 import RichEditor from '../RichEditor'
 import SchedulePopover, { ScheduledLine } from '../SchedulePopover'
 import { Badge, Button, Dialog, ErrorDetails, Field, Notice, PageHeader, RangeToggle, Segmented, Skeleton, cx, fmtTime, inputCls, type Tone } from '../ui'
-import { dbList, dbPatch, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, uploadLocalFile, videoSrc } from '../../lib/shuttle'
+import { dbList, dbPatch, openExternalURL, runLocal, shuttleImage, type Article, type Channel, type PlatformHealth, type SocialDaily, type SocialPost, type SocialPostStatus, uploadLocalFile, videoSrc } from '../../lib/shuttle'
 import { SOCIAL, isSocial, type MetricKey, fieldsOf, isRich, isVideoPost, loggedInElsewhere, postPlatform, postText, richImages, toRich, platformOf, postTitle, socialTypes, useElsewhere, type SocialPlatform } from '../../lib/social'
 import Select from '../Select'
 import AssetPicker from '../AssetPicker'
@@ -48,6 +48,19 @@ const parse = <T,>(s: string | undefined, d: T): T => {
   }
 }
 const n = (v?: number) => (v ?? 0).toLocaleString(numLocale())
+
+/** Open published posts in the system browser, with launch errors visible beside the link. */
+function ViewPostLink({ url }: { url: string }) {
+  const [error, setError] = useState('')
+  return <span className="inline-flex flex-col items-start gap-1">
+    <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline" onClick={e => {
+      e.preventDefault()
+      setError('')
+      void openExternalURL(url).catch(e => setError(e instanceof Error ? e.message : String(e)))
+    }}>{tr('social.view_live')}<ArrowUpRight className="size-3" /></a>
+    {error && <ErrorDetails message={error} />}
+  </span>
+}
 
 /** 本机时区的日期 YYYY-MM-DD（和采集时记的日期一致） */
 function localDay(d: Date) {
@@ -183,7 +196,7 @@ export default function Social({ ctx, params, setParam, title, hideTabs = false,
                   <td className={tableCell}><button type="button" onClick={() => openPost(p)} className="block max-w-80 cursor-pointer truncate text-left font-medium hover:text-primary-text" title={postTitle(p)}>{postTitle(p)}</button><span className="mt-0.5 block text-xs text-muted-foreground">{owner?.name} · {fmtTime(p.published_at)}</span></td>
                   <td className={tableCell}><PlatformName type={owner?.type} name={platformOf(owner)?.label ?? ''} /></td>
                   <td className={num}>{metricText(p, 'views')}</td><td className={num}>{metricText(p, 'likes')}</td><td className={num}>{metricText(p, 'comments')}</td>
-                  <td className={tableCell}><div className="flex flex-wrap items-center gap-x-3 gap-y-2">{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => openPost(p)}>{tr('social.view_content')}</button>}</div></td>
+                  <td className={tableCell}><div className="flex flex-wrap items-center gap-x-3 gap-y-2">{p.post_url ? <ViewPostLink url={p.post_url} /> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => openPost(p)}>{tr('social.view_content')}</button>}</div></td>
                 </tr>
               })}</tbody>
             </table>
@@ -281,7 +294,7 @@ function AllPosts({ ch, days, posts, onOpen }: { ch: Channel; days: number; post
           <tbody className="divide-y divide-border">{rows.slice(0, shown).map((p) => <tr key={p.id} className="hover:bg-muted/30">
             <td className="px-4 py-3 text-sm"><button type="button" onClick={() => onOpen(p)} className="block max-w-96 cursor-pointer truncate text-left font-medium hover:text-primary-text" title={postTitle(p)}>{postTitle(p)}</button><span className="mt-0.5 block text-xs text-muted-foreground">{fmtTime(p.published_at)}</span></td>
             {metrics.map((m) => <td key={m.key} className="px-4 py-3 text-right text-sm tabular-nums">{metricText(p, m.key)}</td>)}
-            <td className="px-4 py-3 text-sm"><div className="flex flex-wrap items-center gap-x-3 gap-y-2">{p.post_url ? <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary-text hover:underline">{tr('social.view_live')}<ArrowUpRight className="size-3" /></a> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => onOpen(p)}>{tr('social.view_content')}</button>}</div></td>
+            <td className="px-4 py-3 text-sm"><div className="flex flex-wrap items-center gap-x-3 gap-y-2">{p.post_url ? <ViewPostLink url={p.post_url} /> : <button type="button" className="cursor-pointer whitespace-nowrap font-medium text-primary-text hover:underline" onClick={() => onOpen(p)}>{tr('social.view_content')}</button>}</div></td>
           </tr>)}</tbody>
         </table>
       </div>

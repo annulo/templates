@@ -1,3 +1,7 @@
+- version: 0.47.3
+  zh: "账号数据中的“看原帖”改为使用系统默认浏览器打开。"
+  en: "Open View post links in account performance using the system default browser."
+
 - version: 0.47.2
   zh: "修复重复发起社媒授权后，已成功授权的账号仍提示不可用、无法添加的问题。"
   en: "Fix completed social authorizations being blocked by older pending authorization requests."
