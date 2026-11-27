@@ -2,6 +2,10 @@
 # Annulo 的升级卡片按界面语言从这里取（没有这种语言用 en）；git tag 的说明只写英文，文件里没有这一版时才用它。
 # Upgrade notes, newest first: each entry has a version plus one note per language (zh, en, … add more as needed).
 
+- version: 0.35.3
+  zh: "明确账号发布状态指通过 Annulo 发布，避免与采集到的已有帖子混淆。"
+  en: "Clarify that account publishing status refers to publishing via Annulo, separately from collected posts."
+
 - version: 0.35.2
   zh: "修正帖子预览的检查提示，按当前平台显示名称。"
   en: "Show the current platform in post-preview check messages."
