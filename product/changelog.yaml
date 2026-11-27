@@ -1,3 +1,7 @@
+- version: 0.48.4
+  zh: "内容详情、发布记录和效果页面中的原帖链接统一使用系统默认浏览器打开。"
+  en: "Open published-content links from details, publishing records and performance views in the system default browser."
+
 - version: 0.48.3
   zh: "明确账号发布状态指通过 Annulo 发布，避免与采集到的已有帖子混淆。"
   en: "Clarify that account publishing status refers to publishing via Annulo, separately from collected posts."

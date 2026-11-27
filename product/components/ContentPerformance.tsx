@@ -1,3 +1,4 @@
+import PlatformLink from './PlatformLink'
 import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowUpRight, Eye, Heart, MessageCircle, TrendingUp } from 'lucide-react'
 import TrendChart from './charts/TrendChart'
@@ -60,7 +61,7 @@ export default function ContentPerformance({ ctx, entry, data, reviews }: { ctx:
               {Icon && <Icon size={14} />}
               <span className="min-w-0 truncate font-medium">{a?.name || tr('content.removed_channel')}</span>
               <span className="text-xs text-muted-foreground">{platformOf(a)?.label}</span>
-              {url && <a href={url} target="_blank" rel="noreferrer" className="ml-auto inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-primary-text">{w('open_on_platform')}<ArrowUpRight className="size-3.5" /></a>}
+              {url && <PlatformLink href={url} className="ml-auto inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-primary-text">{w('open_on_platform')}<ArrowUpRight className="size-3.5" /></PlatformLink>}
             </div>
             <MetricsLine m={postsMetrics([p], data)} />
             <div className="mt-3">

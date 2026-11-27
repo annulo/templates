@@ -1,3 +1,4 @@
+import PlatformLink from './PlatformLink'
 import { useState } from 'react'
 import { AlertTriangle, ArrowUpRight, Check, Clock, Copy, Loader2, RefreshCw, Send } from 'lucide-react'
 import RunButton from './RunButton'
@@ -108,7 +109,7 @@ export function SentContent({ ctx, post, data, onChanged, hint = true }: { ctx: 
       ? <Bar tone="ok"><Check className="size-4 shrink-0" /><b className="shrink-0">{s('st_published', { name: ch ? CHANNEL_TYPES[ch.type]?.label : '' })}</b><span>{fmtTime(post.published_at)}</span>
         <span className="ml-auto flex flex-wrap items-center gap-2">
           <FacebookPostActions key={post.id} post={post as any} channel={ch} onChanged={onChanged} />
-          {post.post_url && <a href={post.post_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary-text hover:underline">{s('open_post')}<ArrowUpRight className="size-3" /></a>}
+          {post.post_url && <PlatformLink href={post.post_url} className="inline-flex items-center gap-1 text-primary-text hover:underline">{s('open_post')}<ArrowUpRight className="size-3" /></PlatformLink>}
           <RunButton inline watch fn="social/social.collect" input={{ channel_id: post.channel_id }} icon={RefreshCw} variant="outline" size="sm" onDone={(r) => { const note = (r as any)?.channels?.find((c: any) => c?.note)?.note; if (note) toast(note, 'ok', { ms: 10000 }); onChanged() }}>{s('refresh_data')}</RunButton></span></Bar>
       : <Bar tone={post.status === 'failed' ? 'bad' : 'info'}><span>{s('st_not_published', { name: nameOf(post.channel_id) })}</span></Bar>}
     <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -172,7 +173,7 @@ export function PostedView({ ctx, a, posts, data, order, focus, onChanged, onCop
         return <div key={p.id} className="space-y-1.5 rounded-xl border border-border bg-background p-3 text-xs">
           <p className="flex items-center gap-2">{Icon && <Icon size={14} />}<b className="min-w-0 flex-1 truncate text-sm">{nameOf(p.channel_id)}</b><Badge tone={statusTone(p.status)}>{tr(`meta.social_status.${p.status}`)}</Badge></p>
           <p className="text-muted-foreground">{p.status === 'scheduled' ? fmtTime(p.scheduled_at) : fmtTime(p.published_at || p.updated_at)}</p>
-          {p.post_url && p.status === 'published' && <a href={p.post_url} target="_blank" rel="noreferrer" className="block truncate text-primary-text hover:underline">{p.post_url}</a>}
+          {p.post_url && p.status === 'published' && <PlatformLink href={p.post_url} className="block truncate text-primary-text hover:underline">{p.post_url}</PlatformLink>}
           {p.error && p.status !== 'published' && <p className="text-destructive">{p.error}</p>}
         </div> })}
       {!!failed.length && <Button size="sm" variant="outline" className="w-full" onClick={() => { enqueuePosts(a, failed, ctx.channels); onChanged() }}><RefreshCw />{s('st_retry')}</Button>}

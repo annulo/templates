@@ -1,3 +1,4 @@
+import PlatformLink from '../PlatformLink'
 import { InstagramConnectionButton, instagramApi } from '../InstagramAccountFlow'
 import { ThreadsConnectionButton } from '../ThreadsAccountFlow'
 import InstagramPublishRecovery from '../InstagramPublishRecovery'
@@ -523,9 +524,9 @@ function PostRow({ p, owner, showAccount, articles, onChanged, onPosted, focus, 
             ))}
           {p.status === 'published' && p.post_url && (
             <>
-              <a href={p.post_url} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
+              <PlatformLink href={p.post_url} className="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
                 {tr('social.open_post', { noun: pf.noun })} <ArrowUpRight className="size-4" />
-              </a>
+              </PlatformLink>
               {!facebookPostActions(p, owner) && <RunButton inline onError={setErr} fn="social/social.remove" input={{ post_id: p.id }} icon={Trash2} variant="ghost" onDone={onChanged}>
                 {tr('social.delete_from', { p: pf.label })}
               </RunButton>}
