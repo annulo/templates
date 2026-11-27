@@ -1,3 +1,4 @@
+import PlatformLink from './PlatformLink'
 import InstagramPublishRecovery from './InstagramPublishRecovery'
 import { instagramPublishRecovery } from '../lib/instagramPublishRecovery'
 import { instagramApi } from './InstagramAccountFlow'
@@ -320,7 +321,7 @@ export function PublishRecords({ ctx, article, posts, pubs, focus, onChanged, on
                 {p.status === 'published' ? <>{fmtTime(p.published_at)}{p.metrics_at && !detailed ? ` · ${metricsLine(p)}` : ''}</> : p.status === 'removed' ? tr('social.removed_from', { when: fmtTime(p.removed_at), p: ch ? CHANNEL_TYPES[ch.type]?.label : '' }) : legacy ? tr('article.legacy_version') : ch ? CHANNEL_TYPES[ch.type]?.label : ''}
               </span>
             </span>
-            {p.post_url && p.status === 'published' && <a href={p.post_url} target="_blank" rel="noreferrer" aria-label={tr('content.view_live')} title={tr('content.view_live')} className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text"><span className="hidden sm:inline">{tr('content.view_live')}</span><ArrowUpRight className="size-4 sm:size-3" /></a>}
+            {p.post_url && p.status === 'published' && <PlatformLink href={p.post_url} aria-label={tr('content.view_live')} title={tr('content.view_live')} className="inline-flex shrink-0 items-center gap-1 text-xs text-primary-text"><span className="hidden sm:inline">{tr('content.view_live')}</span><ArrowUpRight className="size-4 sm:size-3" /></PlatformLink>}
             {jobOf(p.id) ? <Badge tone="primary">{jobOf(p.id)!.state === 'running' ? tr('meta.social_status.publishing') : tr('article.pub_queued')}</Badge> : <Badge tone={statusTone(p.status)}>{tr(`meta.social_status.${p.status}`)}</Badge>}
             <FacebookPostActions post={p} channel={ch} onChanged={onChanged} disabled={!!busy || !!jobOf(p.id)} remove={false} />
             {p.status === 'published' && !jobOf(p.id) && ch && (
