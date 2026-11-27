@@ -688,7 +688,7 @@ export type PlatformHealth = {
   id: string
   channel_id: string
   platform: string
-  op: 'probe' | 'publish' | 'remove' | 'collect'
+  op: 'probe' | 'publish' | 'edit' | 'remove' | 'collect'
   ok: boolean
   kind?: '' | 'broken' | 'expired' | 'permission' | 'restricted' | 'network'
   step?: string

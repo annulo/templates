@@ -45,7 +45,7 @@ export function HealthAlerts({ accounts, rows, posts, onOpenPost, onChanged }: {
   return (
     <div className="space-y-2">
       {broken.map(({ a, r }) => {
-        const post = r.op === 'publish' || r.op === 'remove' ? r.post_id || posts?.find((p) => p.channel_id === a.id && p.status === 'failed' && p.error === r.error)?.id : ''
+        const post = r.op === 'publish' || r.op === 'edit' || r.op === 'remove' ? r.post_id || posts?.find((p) => p.channel_id === a.id && p.status === 'failed' && p.error === r.error)?.id : ''
         return (
         // 上下布局：说明在上（报错常常很长），操作在下面一行，关闭在右上角
         <div key={a.id} className="relative rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 pr-10 text-sm">
