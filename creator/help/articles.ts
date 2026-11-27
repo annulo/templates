@@ -149,7 +149,7 @@ Workspace → Operations overview in the sidebar, from top to bottom:
 - **Four numbers**: Followers (the total across accounts from the latest collection, plus how many posts went out in the last 30 days), Ready to publish (pieces that are done but not posted yet), Social accounts (signed in), Publishing issues (accounts whose publishing failed; click it to handle them on the Accounts page). Click one to go there;
 - **Today's work**: what needs you now: pieces ready to publish ("Publish"), social publishing that needs repair ("Have the assistant fix it"), this week's summary not written yet ("Write now"). Click "×" to dismiss one; it comes back if the number grows;
 - **Weekly summary**: the title and summary of the newest weekly summary; "View weekly summary" opens it (so does "View weekly summary" at the top right);
-- **Accounts**: each account's platform, data collection time and publishing status (Healthy, Nothing published yet, Publishing issue, Login expired). Click a name to go to Accounts; "Manage accounts" goes there too;
+- **Accounts**: each account's platform, data collection time and publishing status (Healthy, Not published via Annulo yet, Publishing issue, Login expired). Click a name to go to Accounts; "Manage accounts" goes there too;
 - **More operations data** (click to expand): pieces ready to publish, and topics (when there are none, "Suggest topics" is right there).
 
 ![Operations overview: four numbers, today's work, weekly summary, accounts](https://fsu.creght.com/site/2103669300995821568/1792413756439__creator_help_overview_v3.png)
